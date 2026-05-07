@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestmentInformatics.AI — World Events. Market Signals. Plain English.</title>
+  <meta name="description" content="InvestmentInformatics.AI reads global news daily and explains what it means for your investments — from geopolitical shifts to supply chain disruptions, translated into sector outlooks and specific stocks." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0a0a0a; --paper: #f5f2eb; --accent: #c8ff00;
+      --muted: #6b6b6b; --card: #ffffff; --border: #e0ddd6;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
+    .nav-logo span { background: var(--accent); padding: 1px 6px; }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-cta { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; text-decoration: none; }
+    .nav-cta:hover { opacity: 0.85; }
+    .hero { padding: 96px 48px 80px; max-width: 960px; animation: fadeUp 0.7s ease both; }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+    .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(42px, 6.5vw, 76px); line-height: 1.0; letter-spacing: -2.5px; margin-bottom: 28px; }
+    .hero h1 em { font-style: normal; background: var(--accent); padding: 2px 10px; }
+    .hero-sub { font-size: 18px; color: var(--muted); max-width: 580px; line-height: 1.75; margin-bottom: 44px; font-weight: 300; }
+    .hero-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .btn-primary { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
+    .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn-secondary { font-size: 14px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; transition: color 0.2s; }
+    .btn-secondary:hover { color: var(--ink); }
+    .ticker-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 13px 0; overflow: hidden; background: var(--ink); color: var(--accent); font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1px; white-space: nowrap; user-select: none; }
+    .ticker-inner { display: inline-flex; gap: 56px; animation: ticker 28s linear infinite; }
+    .ticker-strip:hover .ticker-inner { animation-play-state: paused; }
+    .ticker-item { display: inline-flex; align-items: center; gap: 12px; }
+    .ticker-sep { opacity: 0.35; }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .section { padding: 88px 48px; }
+    .section-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 52px; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+    .step { background: var(--card); padding: 40px 36px; border: 1px solid var(--border); transition: transform 0.2s; }
+    .step:first-child { border-radius: 10px 0 0 10px; }
+    .step:last-child { border-radius: 0 10px 10px 0; }
+    .step:hover { transform: translateY(-3px); }
+    .step-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 52px; color: var(--border); line-height: 1; margin-bottom: 24px; }
+    .step h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; margin-bottom: 12px; }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+    .example-section { padding: 0 48px 88px; }
+    .example-card { background: var(--ink); color: #f0ede6; border-radius: 14px; padding: 52px; }
+    .example-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 28px; }
+    .example-event { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 22px; margin-bottom: 8px; line-height: 1.3; }
+    .example-source { font-size: 13px; color: #666; margin-bottom: 40px; }
+    .example-chain { display: flex; flex-direction: column; }
+    .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 22px 0; border-top: 1px solid #1e1e1e; }
+    .chain-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #555; min-width: 130px; padding-top: 3px; flex-shrink: 0; }
+    .chain-content { font-size: 15px; color: #bbb; line-height: 1.7; flex: 1; }
+    .chain-tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .ticker-pill { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 4px; letter-spacing: 0.5px; }
+    .pill-up { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
+    .pill-down { background: rgba(255,80,80,0.1); color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
+    .pill-neutral { background: rgba(255,255,255,0.06); color: #888; border: 1px solid rgba(255,255,255,0.1); }
+    .features-section { padding: 0 48px 88px; }
+    .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 32px; transition: border-color 0.2s, transform 0.2s; }
+    .feature-card:hover { border-color: #c0bdb6; transform: translateY(-2px); }
+    .feature-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; }
+    .feature-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
+    .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+    .waitlist-section { padding: 88px 48px; background: var(--ink); color: #f0ede6; text-align: center; }
+    .waitlist-section .section-label { color: var(--accent); margin-bottom: 24px; }
+    .waitlist-section h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; margin-bottom: 16px; line-height: 1.1; }
+    .waitlist-section h2 em { font-style: normal; background: var(--accent); color: var(--ink); padding: 0 8px; }
+    .waitlist-section p { font-size: 16px; color: #777; margin-bottom: 40px; font-weight: 300; }
+    .waitlist-form { display: flex; gap: 12px; max-width: 460px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
+    .waitlist-form input { flex: 1; min-width: 220px; padding: 14px 18px; border-radius: 4px; border: 1px solid #2a2a2a; background: #1a1a1a; color: #f0ede6; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .waitlist-form input::placeholder { color: #555; }
+    .waitlist-form input:focus { border-color: var(--accent); }
+    .waitlist-form button { background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 14px 28px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
+    .waitlist-form button:hover { opacity: 0.88; }
+    .waitlist-note { margin-top: 16px; font-size: 12px; color: #444; }
+    .disclaimer { padding: 36px 48px; border-top: 1px solid #1e1e1e; font-size: 12px; color: #555; line-height: 1.8; max-width: 780px; background: var(--ink); }
+    footer { padding: 28px 48px; border-top: 1px solid #1e1e1e; background: var(--ink); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--paper); }
+    .footer-logo span { background: var(--accent); color: var(--ink); padding: 1px 5px; }
+    footer p { font-size: 13px; color: #444; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; } .nav-links { display: none; }
+      .hero { padding: 64px 24px 56px; } .section { padding: 64px 24px; }
+      .example-section { padding: 0 24px 64px; } .features-section { padding: 0 24px 64px; }
+      .steps { grid-template-columns: 1fr; gap: 2px; }
+      .step:first-child { border-radius: 10px 10px 0 0; } .step:last-child { border-radius: 0 0 10px 10px; }
+      .features-grid { grid-template-columns: 1fr; } .example-card { padding: 32px 24px; }
+      .chain-row { flex-direction: column; gap: 8px; } .chain-label { min-width: unset; }
+      .waitlist-section { padding: 64px 24px; } .disclaimer { padding: 28px 24px; } footer { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="#"><span>Investment</span>Informatics.AI</a>
+    <ul class="nav-links">
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#example">Example</a></li>
+      <li><a href="#features">Features</a></li>
+    </ul>
+    <a class="nav-cta" href="#waitlist">Get early access</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-tag"><span class="hero-tag-dot"></span> AI-powered market intelligence</div>
+    <h1>World events.<br><em>Market signals.</em><br>Plain English.</h1>
+    <p class="hero-sub">InvestmentInformatics.AI reads global news daily and explains what it means for your investments — from geopolitical shifts to supply chain disruptions, translated into sector outlooks and specific stocks.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#waitlist">Join the waitlist</a>
+      <button class="btn-secondary" onclick="document.getElementById('example').scrollIntoView({behavior:'smooth'})">See a live example →</button>
+    </div>
+  </section>
+
+  <div class="ticker-strip" aria-hidden="true">
+    <div class="ticker-inner">
+      <span class="ticker-item">STRAIT OF HORMUZ BLOCKADE <span class="ticker-sep">·</span> ENERGY +++ <span class="ticker-sep">·</span> XOM CVX OXY</span>
+      <span class="ticker-item">FED RATE HOLD <span class="ticker-sep">·</span> BANKS NEUTRAL <span class="ticker-sep">·</span> REITS CAUTIOUS</span>
+      <span class="ticker-item">CHINA EXPORT CONTROLS <span class="ticker-sep">·</span> SEMIS --- <span class="ticker-sep">·</span> NVDA AMAT LRCX</span>
+      <span class="ticker-item">DROUGHT IN MIDWEST <span class="ticker-sep">·</span> AG COMMODITIES +++ <span class="ticker-sep">·</span> ADM BG MOS</span>
+      <span class="ticker-item">PORT STRIKE EAST COAST <span class="ticker-sep">·</span> LOGISTICS --- <span class="ticker-sep">·</span> RETAIL AT RISK</span>
+      <span class="ticker-item">STRAIT OF HORMUZ BLOCKADE <span class="ticker-sep">·</span> ENERGY +++ <span class="ticker-sep">·</span> XOM CVX OXY</span>
+      <span class="ticker-item">FED RATE HOLD <span class="ticker-sep">·</span> BANKS NEUTRAL <span class="ticker-sep">·</span> REITS CAUTIOUS</span>
+      <span class="ticker-item">CHINA EXPORT CONTROLS <span class="ticker-sep">·</span> SEMIS --- <span class="ticker-sep">·</span> NVDA AMAT LRCX</span>
+      <span class="ticker-item">DROUGHT IN MIDWEST <span class="ticker-sep">·</span> AG COMMODITIES +++ <span class="ticker-sep">·</span> ADM BG MOS</span>
+      <span class="ticker-item">PORT STRIKE EAST COAST <span class="ticker-sep">·</span> LOGISTICS --- <span class="ticker-sep">·</span> RETAIL AT RISK</span>
+    </div>
+  </div>
+
+  <section class="section" id="how-it-works">
+    <div class="section-label">How it works</div>
+    <div class="steps">
+      <div class="step fade-in">
+        <div class="step-num">01</div>
+        <h3>We read the news</h3>
+        <p>Every morning, InvestmentInformatics.AI ingests hundreds of global news sources — geopolitics, macro data, supply chains, earnings, natural events — and filters for what actually matters.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">02</div>
+        <h3>AI reasons through it</h3>
+        <p>Our AI identifies which events carry real economic weight — then traces the full chain reaction from the event to supply and demand shifts, to sectors, to specific companies.</p>
+      </div>
+      <div class="step fade-in">
+        <div class="step-num">03</div>
+        <h3>You get clarity</h3>
+        <p>No jargon, no noise. A clear daily briefing: what happened, why it matters economically, and which sectors and stocks are in play — written for humans, not analysts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="example-section" id="example">
+    <div class="example-card fade-in">
+      <div class="example-label">Live example</div>
+      <div class="example-event">Strait of Hormuz partially blocked by Iranian naval exercises</div>
+      <div class="example-source">Reuters · May 6, 2026</div>
+      <div class="example-chain">
+        <div class="chain-row">
+          <div class="chain-label">Why it matters</div>
+          <div class="chain-content">Roughly 20% of global oil and LNG passes through the Strait of Hormuz daily. Any restriction creates immediate supply anxiety and has historically spiked Brent crude within 24–48 hours of similar events.</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Sectors in play</div>
+          <div class="chain-content">
+            <div class="chain-tickers">
+              <span class="ticker-pill pill-up">Energy +++</span>
+              <span class="ticker-pill pill-up">Defense ++</span>
+              <span class="ticker-pill pill-down">Airlines ---</span>
+              <span class="ticker-pill pill-down">Shipping --</span>
+              <span class="ticker-pill pill-neutral">Utilities ~</span>
+            </div>
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Likely beneficiaries</div>
+          <div class="chain-content">
+            US domestic producers are insulated from Middle East supply disruption. Defense contractors often see elevated contract activity during periods of regional tension.
+            <div class="chain-tickers">
+              <span class="ticker-pill pill-up">XOM</span>
+              <span class="ticker-pill pill-up">CVX</span>
+              <span class="ticker-pill pill-up">OXY</span>
+              <span class="ticker-pill pill-up">LMT</span>
+              <span class="ticker-pill pill-up">RTX</span>
+            </div>
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Likely losers</div>
+          <div class="chain-content">
+            Airlines face immediate jet fuel cost pressure with limited short-term hedging options. Asian shipping routes face longer detours around the Cape of Good Hope.
+            <div class="chain-tickers">
+              <span class="ticker-pill pill-down">DAL</span>
+              <span class="ticker-pill pill-down">UAL</span>
+              <span class="ticker-pill pill-down">AAL</span>
+              <span class="ticker-pill pill-down">ZIM</span>
+            </div>
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Confidence</div>
+          <div class="chain-content">High — based on 4 corroborating sources and historical precedent from similar events in 2019 and 2023. Situation is developing; check back for updates.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features-section" id="features">
+    <div class="section-label">What you get</div>
+    <div class="features-grid">
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="2" width="14" height="3.5" rx="1.5" fill="#0a0a0a"/>
+            <rect x="2" y="7.5" width="9" height="2.5" rx="1.25" fill="#0a0a0a"/>
+            <rect x="2" y="12" width="11" height="2.5" rx="1.25" fill="#0a0a0a"/>
+          </svg>
+        </div>
+        <h4>Daily event briefing</h4>
+        <p>Every morning, the 5–10 most market-relevant global events — summarized with full economic reasoning, not just headlines. Know what moved while you slept.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M3 14L7 9.5l3.5 3.5L16 5" stroke="#0a0a0a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h4>Chain reaction analysis</h4>
+        <p>We don't stop at the headline. We trace the full economic chain: event → supply/demand shift → sector impact → company-level exposure. Context is everything.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <circle cx="9" cy="9" r="6.5" stroke="#0a0a0a" stroke-width="1.8"/>
+            <path d="M9 5.5V9l2.5 2.5" stroke="#0a0a0a" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h4>Sector + ticker signals</h4>
+        <p>Each event maps to affected sectors and specific stocks or ETFs, with a clear signal: likely beneficiary, likely loser, or neutral — so you can act on what you learn.</p>
+      </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 2L11 7h5.5L12 10.5l1.5 5L9 13l-4.5 2.5L6 10.5 1.5 7H7z" stroke="#0a0a0a" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h4>No recommendations, ever</h4>
+        <p>We never tell you what to buy or sell. InvestmentInformatics.AI gives you the context and the reasoning — the decision is always yours. Informed, not directed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="waitlist-section" id="waitlist">
+    <div class="section-label">Early access</div>
+    <h2>Be first to know<br>when we <em>launch</em></h2>
+    <p>We're building in public. Join the waitlist and get early access plus a say in what we build next.</p>
+    <form class="waitlist-form" onsubmit="handleWaitlist(event)">
+      <input type="email" placeholder="your@email.com" required autocomplete="email" />
+      <button type="submit">Join waitlist</button>
+    </form>
+    <p class="waitlist-note">No spam. Unsubscribe anytime.</p>
+  </section>
+
+  <div class="disclaimer">
+    <strong style="color:#666;">Disclaimer:</strong> InvestmentInformatics.AI is an informational tool only. Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any security. All analysis is AI-generated based on publicly available information and is provided for educational and informational purposes only. Past patterns and historical precedents do not guarantee future market results. Always conduct your own research and consult a licensed financial advisor before making any investment decisions.
+  </div>
+
+  <footer>
+    <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
+    <p>© 2026 · Built for curious investors</p>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('visible'), i * 80);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    function handleWaitlist(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button');
+      const input = e.target.querySelector('input');
+      btn.textContent = "You're on the list!";
+      btn.style.background = '#a8e600';
+      input.value = '';
+      input.disabled = true;
+      btn.disabled = true;
+    }
+  </script>
+
+</body>
+</html>
