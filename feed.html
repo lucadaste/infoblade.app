@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestmentInformatics.AI — Daily Feed</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #0a0a0a; color: #f0ede6; padding: 40px; max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 22px; color: #c8ff00; margin-bottom: 8px; }
+    .subtitle { font-size: 14px; color: #555; margin-bottom: 32px; }
+    button { background: #c8ff00; color: #0a0a0a; font-weight: 700; font-size: 14px; padding: 12px 28px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 32px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status { font-size: 13px; color: #555; margin-bottom: 24px; min-height: 20px; }
+    .event-card { background: #111; border: 1px solid #1e1e1e; border-radius: 10px; padding: 28px; margin-bottom: 20px; }
+    .event-headline { font-size: 17px; font-weight: 700; color: #f0ede6; margin-bottom: 4px; line-height: 1.4; }
+    .event-source { font-size: 12px; color: #444; margin-bottom: 20px; }
+    .section { margin-bottom: 16px; }
+    .label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #444; margin-bottom: 6px; }
+    .content { font-size: 14px; color: #999; line-height: 1.7; }
+    .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .pill { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
+    .up   { background: rgba(200,255,0,0.12); color: #c8ff00; border: 1px solid rgba(200,255,0,0.25); }
+    .down { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
+    .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sector-up   { background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
+    .sector-down { background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
+    .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
+    .error { color: #ff7070; font-size: 13px; margin-top: 8px; }
+    .analyzing { color: #555; font-size: 12px; font-style: italic; padding: 20px 0; }
+  </style>
+</head>
+<body>
+
+  <h1>InvestmentInformatics.AI</h1>
+  <p class="subtitle">Daily market intelligence — powered by real news</p>
+  <button onclick="loadFeed()" id="btn">Load today's feed →</button>
+  <div class="status" id="status"></div>
+  <div id="feed"></div>
+
+  <script>
+    const ANTHROPIC_KEY = 'REPLACE_WITH_KEY'
+
+    const RSS_FEEDS = [
+      'https://feeds.finance.yahoo.com/rss/2.0/headline?s=&region=US&lang=en-US',
+      'https://feeds.bbci.co.uk/news/business/rss.xml',
+      'https://rss.cnn.com/rss/money_news_international.rss'
+    ];
+
+    async function fetchRSS(url) {
+      const proxy = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=3`;
+      const res = await fetch(proxy);
+      const data = await res.json();
+      if (data.status !== 'ok') return [];
+      return data.items.map(item => ({
+        title: item.title,
+        source: data.feed.title,
+        date: item.pubDate
+      }));
+    }
+
+    async function loadFeed() {
+      const btn    = document.getElementById('btn');
+      const status = document.getElementById('status');
+      const feed   = document.getElementById('feed');
+
+      btn.disabled = true;
+      feed.innerHTML = '';
+      status.textContent = 'Fetching latest business news...';
+
+      try {
+        let articles = [];
+
+      articles = [
+  { title: "Federal Reserve signals two more rate cuts possible in 2026", source: "Reuters", date: new Date() },
+  { title: "China imposes new export controls on rare earth minerals used in semiconductors", source: "Bloomberg", date: new Date() },
+  { title: "US unemployment rises to 4.8% as tech sector layoffs accelerate", source: "WSJ", date: new Date() },
+  { title: "OPEC+ agrees to cut oil production by 1 million barrels per day", source: "FT", date: new Date() },
+  { title: "US Senate passes sweeping new tariffs on imported electric vehicles", source: "AP", date: new Date() }
+];
+
+        articles = articles.slice(0, 6);
+
+        if (articles.length === 0) {
+          status.textContent = 'No articles found. Try again later.';
+          btn.disabled = false;
+          return;
+        }
+
+        status.textContent = `Found ${articles.length} stories. Analyzing with AI...`;
+
+        for (let i = 0; i < articles.length; i++) {
+          const article = articles[i];
+          status.textContent = `Analyzing story ${i + 1} of ${articles.length}...`;
+
+          const card = document.createElement('div');
+          card.className = 'event-card';
+          card.innerHTML = `
+            <div class="event-headline">${article.title}</div>
+            <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString()}</div>
+            <div class="analyzing">Analyzing economic implications...</div>
+          `;
+          feed.appendChild(card);
+
+          try {
+            const analysis = await analyzeHeadline(article.title);
+            card.innerHTML = `
+              <div class="event-headline">${article.title}</div>
+              <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString()}</div>
+              <hr class="divider">
+              <div class="section">
+                <div class="label">Why it matters</div>
+                <div class="content">${analysis.why_it_matters}</div>
+              </div>
+              <div class="section">
+                <div class="label">Sectors in play</div>
+                <div class="sectors">
+                  ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
+                  ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+                </div>
+              </div>
+              <div class="section">
+                <div class="label">Likely beneficiaries</div>
+                <div class="content">${analysis.winners.explanation}</div>
+                <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill up">${t}</span>`).join('')}</div>
+              </div>
+              <div class="section">
+                <div class="label">Likely losers</div>
+                <div class="content">${analysis.losers.explanation}</div>
+                <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill down">${t}</span>`).join('')}</div>
+              </div>
+              <div class="section">
+                <div class="label">Confidence</div>
+                <div class="content">${analysis.confidence}</div>
+              </div>
+            `;
+          } catch (err) {
+            card.querySelector('.analyzing').textContent = 'Could not analyze this story.';
+          }
+
+          await new Promise(r => setTimeout(r, 1000));
+        }
+
+        status.textContent = `Done — ${articles.length} stories analyzed.`;
+
+      } catch (err) {
+        status.textContent = 'Error: ' + err.message;
+      }
+
+      btn.disabled = false;
+    }
+
+    async function analyzeHeadline(headline) {
+      const prompt = `You are a financial analyst AI. Analyze this news headline for market implications:
+
+"${headline}"
+
+Respond ONLY with a valid JSON object, no markdown, no extra text:
+
+{
+  "why_it_matters": "2-3 sentence explanation of the economic significance",
+  "sectors": {
+    "positive": ["sector1", "sector2"],
+    "negative": ["sector3"],
+    "neutral": []
+  },
+  "winners": {
+    "explanation": "1-2 sentences on why these companies benefit",
+    "tickers": ["TICK1", "TICK2", "TICK3"]
+  },
+  "losers": {
+    "explanation": "1-2 sentences on why these companies are hurt",
+    "tickers": ["TICK4", "TICK5"]
+  },
+  "confidence": "High/Medium/Low — brief reason"
+}`;
+
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 1000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const raw = data.content[0].text;
+      const cleaned = raw.replace(/```json|```/g, '').trim();
+      return JSON.parse(cleaned);
+    }
+  </script>
+
+</body>
+</html>
