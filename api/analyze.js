@@ -41,7 +41,8 @@ export default async function handler(req, res) {
       }
 
       // Process NewsData
-      if (newsdataData.results && Array.isArray(newsdataData.results)) {
+      console.log('NewsData response:', JSON.stringify(newsdataData).substring(0, 500));
+if (newsdataData.results && Array.isArray(newsdataData.results)) {
   const newsdata = newsdataData.results.map(a => ({
     title: a.title,
     source: a.source_id || 'Unknown',
