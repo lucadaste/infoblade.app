@@ -151,6 +151,15 @@
     }
 
     async function analyzeHeadline(headline) {
+  const res = await fetch('/api/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ headline })
+  });
+
+  if (!res.ok) throw new Error('API request failed');
+  return await res.json();
+}
       const prompt = `You are a financial analyst AI. Analyze this news headline for market implications:
 
 "${headline}"
