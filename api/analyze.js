@@ -28,13 +28,11 @@ export default async function handler(req, res) {
         'logistics', 'china', 'europe', 'imf', 'world bank'
       ];
 
-      // Filter to economic articles only
       const filtered = newsData.articles.filter(a => {
         const title = a.title.toLowerCase();
         return economicKeywords.some(k => title.includes(k));
       });
 
-      // Group similar headlines using Claude
       const groupPrompt = `You are a news editor. Here are ${filtered.length} news headlines. Group them by topic — headlines covering the same event or story should be in the same group. Then give each group a clear, concise topic title (max 10 words) that summarizes the theme.
 
 Headlines:
@@ -45,8 +43,7 @@ Respond ONLY with valid JSON, no markdown:
   "groups": [
     {
       "topic": "Short topic title summarizing the theme",
-      "indices": [1, 3, 5],
-      "sources": ["Source A", "Source B"]
+      "indices": [1, 3, 5]
     }
   ]
 }
@@ -54,7 +51,7 @@ Respond ONLY with valid JSON, no markdown:
 Rules:
 - Each index should appear in exactly one group
 - Only include groups with genuine economic/market relevance
-- Ignore non-economic stories entirely (don't include their indices)
+- Ignore non-economic stories entirely
 - Maximum 6 groups
 - indices are 1-based matching the numbered list above`;
 
@@ -76,13 +73,17 @@ Rules:
       const groupRaw = groupData.content[0].text.replace(/```json|```/g, '').trim();
       const grouped = JSON.parse(groupRaw);
 
-      // Build groups with their articles
-      const groups = grouped.groups.map(g => ({
-        topic: g.topic,
-        sources: g.sources,
-        headlines: g.indices.map(i => filtered[i - 1]?.title).filter(Boolean),
-        dates: g.indices.map(i => filtered[i - 1]?.publishedAt).filter(Boolean)
-      }));
+      const groups = grouped.groups.map(g => {
+        const articles = g.indices.map(i => filtered[i - 1]).filter(Boolean);
+        const uniqueSources = [...new Set(articles.map(a => a.source.name))];
+        return {
+          topic: g.topic,
+          sources: uniqueSources,
+          totalSources: uniqueSources.length,
+          headlines: articles.map(a => a.title),
+          dates: articles.map(a => a.publishedAt)
+        };
+      });
 
       return res.status(200).json({ groups });
 
