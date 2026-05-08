@@ -4,47 +4,130 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI — Daily Feed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #0a0a0a; color: #f0ede6; padding: 40px; max-width: 900px; margin: 0 auto; }
-    h1 { font-size: 22px; color: #c8ff00; margin-bottom: 8px; }
-    .subtitle { font-size: 14px; color: #555; margin-bottom: 32px; }
-    button { background: #c8ff00; color: #0a0a0a; font-weight: 700; font-size: 14px; padding: 12px 28px; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 32px; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .status { font-size: 13px; color: #555; margin-bottom: 24px; min-height: 20px; }
-    .event-card { background: #111; border: 1px solid #1e1e1e; border-radius: 10px; padding: 28px; margin-bottom: 20px; }
-    .event-headline { font-size: 17px; font-weight: 700; color: #f0ede6; margin-bottom: 4px; line-height: 1.4; }
-    .event-source { font-size: 12px; color: #444; margin-bottom: 20px; }
-    .section { margin-bottom: 16px; }
-    .label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #444; margin-bottom: 6px; }
-    .content { font-size: 14px; color: #999; line-height: 1.7; }
-    .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-    .pill { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
-    .up   { background: rgba(200,255,0,0.12); color: #c8ff00; border: 1px solid rgba(200,255,0,0.25); }
-    .down { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #0a0a0a;
+      --paper: #f5f2eb;
+      --accent: #c8ff00;
+      --muted: #6b6b6b;
+      --border: #e0ddd6;
+      --card: #ffffff;
+    }
+
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+    /* NAV */
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
+    .nav-logo span { background: var(--accent); padding: 1px 6px; }
+    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 500; }
+
+    /* HERO */
+    .hero { padding: 56px 48px 40px; border-bottom: 1px solid var(--border); }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
+    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; }
+    .hero-actions { margin-top: 28px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .btn-load { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; }
+    .btn-load:hover { opacity: 0.85; }
+    .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
+    .status-text { font-size: 13px; color: var(--muted); }
+
+    /* FEED */
+    .feed-container { max-width: 860px; margin: 0 auto; padding: 48px 48px 80px; }
+    .feed-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+
+    /* EVENT CARD */
+    .event-card { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 36px 40px; margin-bottom: 20px; animation: fadeUp 0.4s ease both; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .event-headline { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
+    .event-source { font-size: 12px; color: #555; margin-bottom: 28px; }
+    .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid #1e1e1e; }
+    .chain-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #555; min-width: 120px; padding-top: 3px; flex-shrink: 0; }
+    .chain-content { font-size: 14px; color: #bbb; line-height: 1.7; flex: 1; }
+    .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .pill { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .pill-up   { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
+    .pill-down { background: rgba(255,80,80,0.1);  color: #ff7070;       border: 1px solid rgba(255,80,80,0.2); }
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
-    .sector-up   { background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
-    .sector-down { background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
-    .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
-    .error { color: #ff7070; font-size: 13px; margin-top: 8px; }
+    .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); }
+    .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
+    .confidence-high   { color: var(--accent); font-size: 14px; }
+    .confidence-medium { color: #ffaa00; font-size: 14px; }
+    .confidence-low    { color: #ff7070; font-size: 14px; }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
+    .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state p { font-size: 14px; }
+
+    /* FOOTER */
+    footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
+    .footer-logo span { background: var(--accent); padding: 1px 5px; }
+    footer p { font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .hero { padding: 40px 24px 32px; }
+      .feed-container { padding: 32px 24px 60px; }
+      .event-card { padding: 24px; }
+      .chain-row { flex-direction: column; gap: 6px; }
+      .chain-label { min-width: unset; }
+      footer { padding: 24px; }
+    }
   </style>
 </head>
 <body>
 
-  <h1>InvestmentInformatics.AI</h1>
-  <p class="subtitle">Daily market intelligence — powered by real news</p>
-  <button onclick="loadFeed()" id="btn">Load today's feed →</button>
-  <div class="status" id="status"></div>
-  <div id="feed"></div>
+  <nav>
+    <a class="nav-logo" href="/"><span>Investment</span>Informatics.AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/feed.html" class="active">Daily Feed</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
+    <h1>Today's market-moving events</h1>
+    <p class="hero-sub">Real news analyzed in real time — economic implications, affected sectors, and specific stocks laid out clearly.</p>
+    <div class="hero-actions">
+      <button class="btn-load" onclick="loadFeed()" id="btn">Load today's feed →</button>
+      <span class="status-text" id="status"></span>
+    </div>
+  </div>
+
+  <div class="feed-container">
+    <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
+    <div id="feed"></div>
+  </div>
+
+  <footer>
+    <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
+    <p>For informational purposes only. Not financial advice.</p>
+  </footer>
 
   <script>
     async function loadFeed() {
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
       const feed   = document.getElementById('feed');
+      const label  = document.getElementById('feed-label');
 
       btn.disabled = true;
       feed.innerHTML = '';
+      label.style.display = 'none';
       status.textContent = 'Fetching latest market news...';
 
       try {
@@ -53,12 +136,19 @@
         const articles = newsData.articles || [];
 
         if (articles.length === 0) {
-          status.textContent = 'No relevant market stories found right now. Check back soon.';
+          status.textContent = '';
+          feed.innerHTML = `
+            <div class="empty-state">
+              <h3>No market stories right now</h3>
+              <p>Check back soon — the feed updates throughout the day.</p>
+            </div>`;
           btn.disabled = false;
           return;
         }
 
-        status.textContent = `Found ${articles.length} stories. Analyzing...`;
+        label.style.display = 'block';
+        status.textContent = `Analyzing ${articles.length} stories...`;
+        let displayed = 0;
 
         for (let i = 0; i < articles.length; i++) {
           const article = articles[i];
@@ -66,51 +156,58 @@
 
           try {
             const analysis = await analyzeHeadline(article.title);
-
             if (analysis.irrelevant) continue;
+
+            displayed++;
+            const confidence = analysis.confidence.toLowerCase();
+            const confClass = confidence.startsWith('high') ? 'confidence-high' : confidence.startsWith('medium') ? 'confidence-medium' : 'confidence-low';
 
             const card = document.createElement('div');
             card.className = 'event-card';
+            card.style.animationDelay = `${displayed * 0.08}s`;
             card.innerHTML = `
               <div class="event-headline">${article.title}</div>
-              <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString()}</div>
-              <hr class="divider">
-              <div class="section">
-                <div class="label">Why it matters</div>
-                <div class="content">${analysis.why_it_matters}</div>
+              <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+              <div class="chain-row">
+                <div class="chain-label">Why it matters</div>
+                <div class="chain-content">${analysis.why_it_matters}</div>
               </div>
-              <div class="section">
-                <div class="label">Sectors in play</div>
-                <div class="sectors">
-                  ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
-                  ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+              <div class="chain-row">
+                <div class="chain-label">Sectors in play</div>
+                <div class="chain-content">
+                  <div class="sectors">
+                    ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
+                    ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+                  </div>
                 </div>
               </div>
-              <div class="section">
-                <div class="label">Likely beneficiaries</div>
-                <div class="content">${analysis.winners.explanation}</div>
-                <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill up">${t}</span>`).join('')}</div>
+              <div class="chain-row">
+                <div class="chain-label">Beneficiaries</div>
+                <div class="chain-content">
+                  ${analysis.winners.explanation}
+                  <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill pill-up">${t}</span>`).join('')}</div>
+                </div>
               </div>
-              <div class="section">
-                <div class="label">Likely losers</div>
-                <div class="content">${analysis.losers.explanation}</div>
-                <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill down">${t}</span>`).join('')}</div>
+              <div class="chain-row">
+                <div class="chain-label">Likely losers</div>
+                <div class="chain-content">
+                  ${analysis.losers.explanation}
+                  <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill pill-down">${t}</span>`).join('')}</div>
+                </div>
               </div>
-              <div class="section">
-                <div class="label">Confidence</div>
-                <div class="content">${analysis.confidence}</div>
+              <div class="chain-row">
+                <div class="chain-label">Confidence</div>
+                <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
               </div>
             `;
             feed.appendChild(card);
 
-          } catch (err) {
-            // skip silently
-          }
+          } catch (err) { /* skip */ }
 
           await new Promise(r => setTimeout(r, 1000));
         }
 
-        status.textContent = 'Done — feed loaded.';
+        status.textContent = displayed > 0 ? `${displayed} stories analyzed` : 'No market-relevant stories found right now.';
 
       } catch (err) {
         status.textContent = 'Error: ' + err.message;
