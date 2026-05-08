@@ -7,15 +7,6 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     try {
-      const newsRes = await fetch(
-        `https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=50&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`
-      );
-      const newsData = await newsRes.json();
-
-      if (!newsData.articles || newsData.articles.length === 0) {
-        return res.status(200).json({ groups: [] });
-      }
-
       const economicKeywords = [
         'economy', 'market', 'stock', 'fed', 'federal reserve', 'rate', 'inflation',
         'gdp', 'trade', 'tariff', 'oil', 'opec', 'recession', 'bank', 'earnings',
@@ -28,15 +19,63 @@ export default async function handler(req, res) {
         'logistics', 'china', 'europe', 'imf', 'world bank'
       ];
 
-      const filtered = newsData.articles.filter(a => {
+      // Fetch from both sources in parallel
+      const [gnewsRes, newsdataRes] = await Promise.allSettled([
+        fetch(`https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=30&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`),
+        fetch(`https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business`)
+      ]);
+
+      let articles = [];
+
+      // Process GNews
+      if (gnewsRes.status === 'fulfilled') {
+        const gnewsData = await gnewsRes.value.json();
+        if (gnewsData.articles) {
+          const gnews = gnewsData.articles.map(a => ({
+            title: a.title,
+            source: a.source?.name || 'Unknown',
+            date: a.publishedAt
+          }));
+          articles = articles.concat(gnews);
+        }
+      }
+
+      // Process NewsData
+      if (newsdataRes.status === 'fulfilled') {
+        const newsdataData = await newsdataRes.value.json();
+        if (newsdataData.results) {
+          const newsdata = newsdataData.results.map(a => ({
+            title: a.title,
+            source: a.source_id || 'Unknown',
+            date: a.pubDate
+          }));
+          articles = articles.concat(newsdata);
+        }
+      }
+
+      if (articles.length === 0) {
+        return res.status(200).json({ groups: [] });
+      }
+
+      // Filter to economic articles only
+      const filtered = articles.filter(a => {
         const title = a.title.toLowerCase();
         return economicKeywords.some(k => title.includes(k));
       });
 
-      const groupPrompt = `You are a news editor. Here are ${filtered.length} news headlines. Group them by topic — headlines covering the same event or story should be in the same group. Then give each group a clear, concise topic title (max 10 words) that summarizes the theme.
+      // Deduplicate by similar titles
+      const seen = new Set();
+      const deduped = filtered.filter(a => {
+        const key = a.title.substring(0, 50).toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      const groupPrompt = `You are a news editor. Here are ${deduped.length} news headlines from multiple sources. Group them by topic — headlines covering the same event or story should be in the same group. Give each group a clear, concise topic title (max 10 words).
 
 Headlines:
-${filtered.map((a, i) => `${i + 1}. "${a.title}" — ${a.source.name}`).join('\n')}
+${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 Respond ONLY with valid JSON, no markdown:
 {
@@ -49,11 +88,11 @@ Respond ONLY with valid JSON, no markdown:
 }
 
 Rules:
-- Each index should appear in exactly one group
+- Each index appears in exactly one group
 - Only include groups with genuine economic/market relevance
 - Ignore non-economic stories entirely
 - Maximum 6 groups
-- indices are 1-based matching the numbered list above`;
+- indices are 1-based`;
 
       const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -74,14 +113,14 @@ Rules:
       const grouped = JSON.parse(groupRaw);
 
       const groups = grouped.groups.map(g => {
-        const articles = g.indices.map(i => filtered[i - 1]).filter(Boolean);
-        const uniqueSources = [...new Set(articles.map(a => a.source.name))];
+        const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+        const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         return {
           topic: g.topic,
           sources: uniqueSources,
           totalSources: uniqueSources.length,
-          headlines: articles.map(a => a.title),
-          dates: articles.map(a => a.publishedAt)
+          headlines: groupArticles.map(a => a.title),
+          dates: groupArticles.map(a => a.date)
         };
       });
 
