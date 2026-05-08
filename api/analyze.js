@@ -54,8 +54,8 @@ export default async function handler(req, res) {
       }
 
       if (articles.length === 0) {
-        return res.status(200).json({ groups: [] });
-      }
+  return res.status(500).json({ error: 'No articles from either source', debug: 'Both APIs returned empty' });
+}
 
       // Filter to economic articles only
       const filtered = articles.filter(a => {
@@ -127,8 +127,8 @@ Rules:
       return res.status(200).json({ groups });
 
     } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
+  return res.status(500).json({ error: err.message, stack: err.stack });
+}
   }
 
   if (req.method === 'POST') {
