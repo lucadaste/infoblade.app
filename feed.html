@@ -39,24 +39,6 @@
   <div id="feed"></div>
 
   <script>
-    const RSS_FEEDS = [
-      'https://feeds.finance.yahoo.com/rss/2.0/headline?s=&region=US&lang=en-US',
-      'https://feeds.bbci.co.uk/news/business/rss.xml',
-      'https://rss.cnn.com/rss/money_news_international.rss'
-    ];
-
-    async function fetchRSS(url) {
-      const proxy = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=3`;
-      const res = await fetch(proxy);
-      const data = await res.json();
-      if (data.status !== 'ok') return [];
-      return data.items.map(item => ({
-        title: item.title,
-        source: data.feed.title,
-        date: item.pubDate
-      }));
-    }
-
     async function loadFeed() {
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
@@ -67,16 +49,9 @@
       status.textContent = 'Fetching latest business news...';
 
       try {
-        let articles = [];
-
-        for (const url of RSS_FEEDS) {
-          try {
-            const items = await fetchRSS(url);
-            articles = articles.concat(items);
-          } catch (e) {}
-        }
-
-        articles = articles.slice(0, 6);
+        const newsRes = await fetch('/api/analyze');
+        const newsData = await newsRes.json();
+        const articles = newsData.articles || [];
 
         if (articles.length === 0) {
           status.textContent = 'No articles found. Try again later.';
