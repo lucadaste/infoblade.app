@@ -38,14 +38,14 @@
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     .event-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
     .event-sources { font-size: 12px; color: #555; margin-bottom: 28px; }
-    .event-sources span { color: #777; margin-right: 8px; }
+    .event-sources span { color: #777; }
     .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid #1e1e1e; }
     .chain-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #555; min-width: 120px; padding-top: 3px; flex-shrink: 0; }
     .chain-content { font-size: 14px; color: #bbb; line-height: 1.7; flex: 1; }
     .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .pill { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up   { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
-    .pill-down { background: rgba(255,80,80,0.1);  color: #ff7070;       border: 1px solid rgba(255,80,80,0.2); }
+    .pill-down { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); }
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
@@ -55,6 +55,7 @@
 
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state p { font-size: 14px; }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
@@ -105,10 +106,10 @@
 
   <script>
     async function loadFeed() {
-      const btn   = document.getElementById('btn');
+      const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
-      const feed  = document.getElementById('feed');
-      const label = document.getElementById('feed-label');
+      const feed   = document.getElementById('feed');
+      const label  = document.getElementById('feed-label');
 
       btn.disabled = true;
       feed.innerHTML = '';
@@ -138,12 +139,14 @@
             const analysis = await analyzeGroup(group);
             const confClass = analysis.confidence.toLowerCase().startsWith('high') ? 'confidence-high' : analysis.confidence.toLowerCase().startsWith('medium') ? 'confidence-medium' : 'confidence-low';
 
+            const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
+
             const card = document.createElement('div');
             card.className = 'event-card';
             card.style.animationDelay = `${i * 0.1}s`;
             card.innerHTML = `
               <div class="event-topic">${group.topic}</div>
-              <div class="event-sources">Reported by: <span>${group.sources.join(' · ')}</span></div>
+              <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
               <div class="chain-row">
                 <div class="chain-label">Why it matters</div>
                 <div class="chain-content">${analysis.why_it_matters}</div>
@@ -173,7 +176,7 @@
               </div>
               <div class="chain-row">
                 <div class="chain-label">Confidence</div>
-                <div class="event-sources">Reported by: <span>${group.sources.slice(0, 3).join(' · ')}${group.headlines.length > 3 ? ` · +${group.headlines.length - 3} more` : ''}</span></div>
+                <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
               </div>
             `;
             feed.appendChild(card);
