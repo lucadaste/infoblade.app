@@ -173,7 +173,7 @@
               </div>
               <div class="chain-row">
                 <div class="chain-label">Confidence</div>
-                <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
+                <div class="event-sources">Reported by: <span>${group.sources.slice(0, 3).join(' · ')}${group.headlines.length > 3 ? ` · +${group.headlines.length - 3} more` : ''}</span></div>
               </div>
             `;
             feed.appendChild(card);
