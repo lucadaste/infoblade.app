@@ -26,8 +26,8 @@
     .sector-up   { background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
     .sector-down { background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
     .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
-    .error { color: #ff7070; font-size: 13px; margin-top: 8px; }
     .analyzing { color: #555; font-size: 12px; font-style: italic; padding: 20px 0; }
+    .error { color: #ff7070; font-size: 13px; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -39,8 +39,6 @@
   <div id="feed"></div>
 
   <script>
-    const ANTHROPIC_KEY = 'REPLACE_WITH_KEY'
-
     const RSS_FEEDS = [
       'https://feeds.finance.yahoo.com/rss/2.0/headline?s=&region=US&lang=en-US',
       'https://feeds.bbci.co.uk/news/business/rss.xml',
@@ -71,13 +69,12 @@
       try {
         let articles = [];
 
-      articles = [
-  { title: "Federal Reserve signals two more rate cuts possible in 2026", source: "Reuters", date: new Date() },
-  { title: "China imposes new export controls on rare earth minerals used in semiconductors", source: "Bloomberg", date: new Date() },
-  { title: "US unemployment rises to 4.8% as tech sector layoffs accelerate", source: "WSJ", date: new Date() },
-  { title: "OPEC+ agrees to cut oil production by 1 million barrels per day", source: "FT", date: new Date() },
-  { title: "US Senate passes sweeping new tariffs on imported electric vehicles", source: "AP", date: new Date() }
-];
+        for (const url of RSS_FEEDS) {
+          try {
+            const items = await fetchRSS(url);
+            articles = articles.concat(items);
+          } catch (e) {}
+        }
 
         articles = articles.slice(0, 6);
 
@@ -151,59 +148,14 @@
     }
 
     async function analyzeHeadline(headline) {
-  const res = await fetch('/api/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ headline })
-  });
-
-  if (!res.ok) throw new Error('API request failed');
-  return await res.json();
-}
-      const prompt = `You are a financial analyst AI. Analyze this news headline for market implications:
-
-"${headline}"
-
-Respond ONLY with a valid JSON object, no markdown, no extra text:
-
-{
-  "why_it_matters": "2-3 sentence explanation of the economic significance",
-  "sectors": {
-    "positive": ["sector1", "sector2"],
-    "negative": ["sector3"],
-    "neutral": []
-  },
-  "winners": {
-    "explanation": "1-2 sentences on why these companies benefit",
-    "tickers": ["TICK1", "TICK2", "TICK3"]
-  },
-  "losers": {
-    "explanation": "1-2 sentences on why these companies are hurt",
-    "tickers": ["TICK4", "TICK5"]
-  },
-  "confidence": "High/Medium/Low — brief reason"
-}`;
-
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-5',
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline })
       });
 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      const raw = data.content[0].text;
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      return JSON.parse(cleaned);
+      if (!res.ok) throw new Error('API request failed');
+      return await res.json();
     }
   </script>
 
