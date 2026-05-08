@@ -1,46 +1,40 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  // If GET request, fetch news
-  if (req.method === 'GET') {
-    try {
-      const newsRes = await fetch(
-        `https://gnews.io/api/v4/top-headlines?category=business&lang=en&country=us&max=6&apikey=${process.env.GNEWS_KEY}`
-      );
-      const newsData = await newsRes.json();
-
-      if (!newsData.articles || newsData.articles.length === 0) {
-        return res.status(200).json({ articles: [] });
-      }
-
-      const articles = newsData.articles.map(a => ({
-        title: a.title,
-        source: a.source.name,
-        date: a.publishedAt
-      }));
-
-      return res.status(200).json({ articles });
-
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
-  // If POST request, analyze headline
-  if (req.method === 'POST') {
+if (req.method === 'POST') {
     const { headline } = req.body;
 
     if (!headline) {
       return res.status(400).json({ error: 'No headline provided' });
     }
 
-    const prompt = `You are a financial analyst AI. Analyze this news headline for market implications:
+    try {
+      // Step 1: Check if headline is economically relevant
+      const filterRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 10,
+          messages: [{ 
+            role: 'user', 
+            content: `Does this headline have direct implications for financial markets, stocks, or the economy? Reply only "yes" or "no".
+
+"${headline}"` 
+          }]
+        })
+      });
+
+      const filterData = await filterRes.json();
+      const relevant = filterData.content[0].text.trim().toLowerCase();
+
+      if (relevant === 'no') {
+        return res.status(200).json({ irrelevant: true });
+      }
+
+      // Step 2: Full analysis
+      const prompt = `You are a financial analyst AI. Analyze this news headline for market implications:
 
 "${headline}"
 
@@ -64,7 +58,6 @@ Respond ONLY with a valid JSON object, no markdown, no extra text:
   "confidence": "High/Medium/Low — brief reason"
 }`;
 
-    try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -80,10 +73,7 @@ Respond ONLY with a valid JSON object, no markdown, no extra text:
       });
 
       const data = await response.json();
-
-      if (data.error) {
-        return res.status(500).json({ error: data.error.message });
-      }
+      if (data.error) return res.status(500).json({ error: data.error.message });
 
       const raw = data.content[0].text;
       const cleaned = raw.replace(/```json|```/g, '').trim();
@@ -95,6 +85,3 @@ Respond ONLY with a valid JSON object, no markdown, no extra text:
       return res.status(500).json({ error: err.message });
     }
   }
-
-  return res.status(405).json({ error: 'Method not allowed' });
-}
