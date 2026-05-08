@@ -41,16 +41,14 @@ export default async function handler(req, res) {
       }
 
       // Process NewsData
-      if (newsdataRes.status === 'fulfilled') {
-        const newsdataData = await newsdataRes.value.json();
-        if (newsdataData.results) {
-          const newsdata = newsdataData.results.map(a => ({
-            title: a.title,
-            source: a.source_id || 'Unknown',
-            date: a.pubDate
-          }));
-          articles = articles.concat(newsdata);
-        }
+      if (newsdataData.results && Array.isArray(newsdataData.results)) {
+  const newsdata = newsdataData.results.map(a => ({
+    title: a.title,
+    source: a.source_id || 'Unknown',
+    date: a.pubDate
+  }));
+  articles = articles.concat(newsdata);
+}
       }
 
       if (articles.length === 0) {
