@@ -26,7 +26,6 @@
     .sector-up   { background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
     .sector-down { background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); font-size: 11px; padding: 3px 10px; border-radius: 4px; }
     .divider { border: none; border-top: 1px solid #1a1a1a; margin: 16px 0; }
-    .analyzing { color: #555; font-size: 12px; font-style: italic; padding: 20px 0; }
     .error { color: #ff7070; font-size: 13px; margin-top: 8px; }
   </style>
 </head>
@@ -46,7 +45,7 @@
 
       btn.disabled = true;
       feed.innerHTML = '';
-      status.textContent = 'Fetching latest business news...';
+      status.textContent = 'Fetching latest market news...';
 
       try {
         const newsRes = await fetch('/api/analyze');
@@ -54,28 +53,24 @@
         const articles = newsData.articles || [];
 
         if (articles.length === 0) {
-          status.textContent = 'No articles found. Try again later.';
+          status.textContent = 'No relevant market stories found right now. Check back soon.';
           btn.disabled = false;
           return;
         }
 
-        status.textContent = `Found ${articles.length} stories. Analyzing with AI...`;
+        status.textContent = `Found ${articles.length} stories. Analyzing...`;
 
         for (let i = 0; i < articles.length; i++) {
           const article = articles[i];
           status.textContent = `Analyzing story ${i + 1} of ${articles.length}...`;
 
-          const card = document.createElement('div');
-          card.className = 'event-card';
-          card.innerHTML = `
-            <div class="event-headline">${article.title}</div>
-            <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString()}</div>
-            <div class="analyzing">Analyzing economic implications...</div>
-          `;
-          feed.appendChild(card);
-
           try {
             const analysis = await analyzeHeadline(article.title);
+
+            if (analysis.irrelevant) continue;
+
+            const card = document.createElement('div');
+            card.className = 'event-card';
             card.innerHTML = `
               <div class="event-headline">${article.title}</div>
               <div class="event-source">${article.source} · ${new Date(article.date).toLocaleDateString()}</div>
@@ -106,14 +101,16 @@
                 <div class="content">${analysis.confidence}</div>
               </div>
             `;
+            feed.appendChild(card);
+
           } catch (err) {
-            card.querySelector('.analyzing').textContent = 'Could not analyze this story.';
+            // skip failed stories silently
           }
 
           await new Promise(r => setTimeout(r, 1000));
         }
 
-        status.textContent = `Done — ${articles.length} stories analyzed.`;
+        status.textContent = 'Done — feed loaded.';
 
       } catch (err) {
         status.textContent = 'Error: ' + err.message;
@@ -128,7 +125,6 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ headline })
       });
-
       if (!res.ok) throw new Error('API request failed');
       return await res.json();
     }
