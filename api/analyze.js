@@ -41,7 +41,7 @@ export default async function handler(req, res) {
       // Fetch NewsData
       try {
         const newsdataRes = await fetch(
-          `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business`
+          `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business&country=us,gb,ca,au`
         );
         const newsdataData = await newsdataRes.json();
         if (newsdataData.results && Array.isArray(newsdataData.results)) {
@@ -122,16 +122,16 @@ Rules:
       const grouped = JSON.parse(groupRaw);
 
       const groups = grouped.groups.map(g => {
-        const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
-        const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
-        return {
-          topic: g.topic,
-          sources: uniqueSources,
-          totalSources: uniqueSources.length,
-          headlines: groupArticles.map(a => a.title),
-          dates: groupArticles.map(a => a.date)
-        };
-      });
+  const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+  const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
+  return {
+    topic: g.topic,
+    sources: uniqueSources,
+    totalSources: groupArticles.length,
+    headlines: groupArticles.map(a => a.title),
+    dates: groupArticles.map(a => a.date)
+  };
+});
 
       return res.status(200).json({ groups });
 
