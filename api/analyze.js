@@ -169,7 +169,41 @@ Respond ONLY with valid JSON, no markdown:
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
     try {
-      const prompt = `You are a senior financial analyst. Multiple news outlets are reporting on this specific market event:
+  const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
+
+Topic: "${topic}"
+
+Headlines from ${sources.length} sources:
+${headlines.map(h => `- ${h}`).join('\n')}
+
+Analyze the economic and market implications with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event described, not general trends. The user wants to understand the impact over: ${impactTimeframe || '1 month'}.
+
+CRITICAL RULES:
+- Beneficiaries and losers must ONLY reference stocks, ETFs, or bonds traded on US exchanges (NYSE, NASDAQ, CBOE)
+- No foreign-listed stocks (no .NS, .TO, .L, .DE, .HK suffixes)
+- If the event affects a foreign company that also trades as an ADR in the US, you may include the US ADR ticker
+- Sectors should reflect US market sectors only
+
+Respond ONLY with valid JSON, no markdown:
+
+{
+  "why_it_matters": "2-3 sentences explaining the SPECIFIC economic significance of this event, with concrete numbers or mechanisms where possible",
+  "impact_timeframe": "Specific timeframe when this impact materializes (e.g. 'Immediate — within 48 hours', 'Over the next 2-4 weeks')",
+  "sectors": {
+    "positive": ["specific US sector 1", "specific US sector 2"],
+    "negative": ["specific US sector 3"],
+    "neutral": []
+  },
+  "winners": {
+    "explanation": "1-2 sentences on WHY these specific US-listed companies or ETFs benefit from THIS specific event",
+    "tickers": ["TICK1", "TICK2", "TICK3"]
+  },
+  "losers": {
+    "explanation": "1-2 sentences on WHY these specific US-listed companies or ETFs are hurt by THIS specific event",
+    "tickers": ["TICK4", "TICK5"]
+  },
+  "confidence": "High/Medium/Low — specific reason tied to this event"
+}`;
 
 Topic: "${topic}"
 
