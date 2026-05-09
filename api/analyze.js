@@ -62,14 +62,19 @@ try {
       }
 
       // Filter to economic articles only
-      const indianSources = ['livemint', 'mint', 'economic times', 'moneycontrol', 'business standard', 'ndtv', 'hindustan times', 'times of india', 'the hindu', 'financial express', 'free press journal', 'the week'];
+    
+
+const indianSources = ['livemint', 'mint', 'economic times', 'moneycontrol', 'business standard', 'ndtv', 'hindustan times', 'times of india', 'the hindu', 'financial express', 'free press journal', 'the week', 'livemint.com'];
+
+const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato', 'tata', 'reliance', 'infosys', 'wipro'];
 
 const filtered = articles.filter(a => {
   const title = a.title.toLowerCase();
   const source = a.source.toLowerCase();
   const hasKeyword = economicKeywords.some(k => title.includes(k));
-  const isIndian = indianSources.some(s => source.includes(s));
-  return hasKeyword && !isIndian;
+  const isIndianSource = indianSources.some(s => source.includes(s));
+  const hasIndianKeyword = indianKeywords.some(k => title.includes(k));
+  return hasKeyword && !isIndianSource && !hasIndianKeyword;
 });
 
       // Deduplicate
