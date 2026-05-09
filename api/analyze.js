@@ -9,105 +9,94 @@ export default async function handler(req, res) {
     try {
       const { category, timeframe } = req.query;
 
-      const economicKeywords = [
-        'economy', 'market', 'stock', 'fed', 'federal reserve', 'rate', 'inflation',
-        'gdp', 'trade', 'tariff', 'oil', 'opec', 'recession', 'bank', 'earnings',
-        'revenue', 'profit', 'loss', 'investment', 'debt', 'deficit', 'export',
-        'import', 'supply chain', 'semiconductor', 'energy', 'dollar', 'bond',
-        'treasury', 'wall street', 'nasdaq', 'dow', 'crypto', 'bitcoin',
-        'merger', 'acquisition', 'ipo', 'layoff', 'hiring', 'unemployment', 'jobs',
-        'housing', 'mortgage', 'retail', 'consumer', 'manufacturing',
-        'sanctions', 'crude', 'natural gas', 'agriculture', 'shipping',
-        'logistics', 'china', 'europe', 'imf', 'world bank', 'gold', 'silver',
-        'copper', 'platinum', 'precious metal', 'commodity', 'futures'
-      ];
-
-      const categoryKeywords = {
-        'energy': ['oil', 'gas', 'opec', 'crude', 'energy', 'petroleum', 'lng', 'pipeline', 'refinery', 'exxon', 'chevron', 'bp', 'shell'],
-        'technology': ['tech', 'ai', 'semiconductor', 'chip', 'nvidia', 'apple', 'microsoft', 'google', 'meta', 'amazon', 'software', 'hardware', 'cloud'],
-        'financials': ['bank', 'fed', 'federal reserve', 'interest rate', 'inflation', 'treasury', 'bond', 'yield', 'lending', 'credit', 'jpmorgan', 'goldman'],
-        'precious-metals': ['gold', 'silver', 'platinum', 'palladium', 'copper', 'precious metal', 'bullion', 'mining', 'commodity'],
-        'real-estate': ['housing', 'mortgage', 'real estate', 'reit', 'property', 'home price', 'construction', 'rent'],
-        'crypto': ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'defi', 'nft', 'coinbase', 'binance', 'digital currency'],
-        'macro': ['gdp', 'recession', 'inflation', 'unemployment', 'jobs', 'fed', 'central bank', 'trade war', 'tariff', 'deficit', 'imf', 'world bank'],
-        'consumer': ['retail', 'consumer', 'spending', 'walmart', 'amazon', 'target', 'sales', 'e-commerce', 'luxury'],
-        'healthcare': ['pharma', 'drug', 'fda', 'healthcare', 'biotech', 'clinical', 'medicare', 'insurance', 'pfizer', 'johnson'],
-        'defense': ['defense', 'military', 'lockheed', 'boeing', 'raytheon', 'northrop', 'weapons', 'pentagon', 'nato']
+      const categoryQueries = {
+        'any':            'stock market OR economy OR inflation OR federal reserve OR GDP OR earnings OR tariffs OR recession',
+        'macro':          'federal reserve OR inflation OR GDP OR recession OR interest rates OR unemployment OR central bank',
+        'energy':         'oil prices OR OPEC OR crude oil OR natural gas OR energy sector OR petroleum OR LNG',
+        'technology':     'AI stocks OR semiconductor OR nvidia OR tech earnings OR apple OR microsoft OR google',
+        'financials':     'federal reserve OR bank earnings OR interest rates OR JPMorgan OR Goldman Sachs OR treasury yields',
+        'precious-metals':'gold price OR silver price OR precious metals OR gold ETF OR mining stocks',
+        'real-estate':    'housing market OR mortgage rates OR real estate OR home prices OR REIT',
+        'crypto':         'bitcoin OR ethereum OR crypto market OR cryptocurrency OR coinbase OR blockchain',
+        'consumer':       'retail sales OR consumer spending OR walmart OR amazon earnings OR consumer confidence',
+        'healthcare':     'pharma stocks OR FDA approval OR healthcare earnings OR biotech OR drug prices',
+        'defense':        'defense stocks OR military spending OR lockheed OR raytheon OR boeing defense OR geopolitical'
       };
 
-      const indianSources = ['livemint', 'mint', 'economic times', 'moneycontrol', 'business standard', 'ndtv', 'hindustan times', 'times of india', 'the hindu', 'financial express', 'free press journal', 'the week'];
-      const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato'];
+      const query = categoryQueries[category] || categoryQueries['any'];
 
-      // Build timeframe filter
-      let fromDate = '';
-      const now = new Date();
-      if (timeframe === '3days') {
-        const d = new Date(now); d.setDate(d.getDate() - 3);
-        fromDate = d.toISOString().split('T')[0];
-      } else if (timeframe === '7days') {
-        const d = new Date(now); d.setDate(d.getDate() - 7);
-        fromDate = d.toISOString().split('T')[0];
-      } else {
-        // Default: today
-        fromDate = now.toISOString().split('T')[0];
+      // Fetch from multiple Google News RSS feeds in parallel
+      const rssUrls = [
+        `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`,
+        `https://news.google.com/rss/search?q=${encodeURIComponent(query + ' market')}&hl=en-US&gl=US&ceid=US:en`,
+        `https://news.google.com/rss/search?q=${encodeURIComponent(query + ' stocks')}&hl=en-US&gl=US&ceid=US:en`
+      ];
+
+      const rssResults = await Promise.allSettled(rssUrls.map(url => fetch(url)));
+      let rawXml = '';
+
+      for (const result of rssResults) {
+        if (result.status === 'fulfilled') {
+          const text = await result.value.text();
+          rawXml += text;
+        }
       }
 
-      let articles = [];
+      // Parse RSS XML
+      const itemMatches = rawXml.matchAll(/<item>([\s\S]*?)<\/item>/g);
+      const articles = [];
+      const seen = new Set();
 
-      // Fetch GNews
-      try {
-        const query = category && category !== 'any' && categoryKeywords[category]
-          ? categoryKeywords[category].slice(0, 5).join(' OR ')
-          : 'economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"';
+      for (const match of itemMatches) {
+        const item = match[1];
+        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+        const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/) || item.match(/- (.*?)$/);
+        const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
 
-        const url = `https://gnews.io/api/v4/search?q=${encodeURIComponent(query)}&lang=en&max=50&sortby=publishedAt&from=${fromDate}&apikey=${process.env.GNEWS_KEY}`;
-        const gnewsRes = await fetch(url);
-        const gnewsData = await gnewsRes.json();
-        if (gnewsData.articles && Array.isArray(gnewsData.articles)) {
-          gnewsData.articles.forEach(a => {
-            articles.push({
-              title: a.title,
-              source: a.source && a.source.name ? a.source.name : 'Unknown',
-              date: a.publishedAt
-            });
-          });
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+          const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : 'Google News';
+          const pubDate = pubDateMatch ? pubDateMatch[1] : '';
+
+          // Deduplicate
+          const key = title.substring(0, 60).toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          // Timeframe filter
+          if (timeframe && timeframe !== 'any' && pubDate) {
+            const articleDate = new Date(pubDate);
+            const now = new Date();
+            const daysDiff = (now - articleDate) / (1000 * 60 * 60 * 24);
+            if (timeframe === 'today' && daysDiff > 2) continue;
+            if (timeframe === '3days' && daysDiff > 3) continue;
+            if (timeframe === '7days' && daysDiff > 7) continue;
+          }
+
+          // Filter out non-English and Indian content
+          const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato'];
+          const titleLower = title.toLowerCase();
+          const isIndian = indianKeywords.some(k => titleLower.includes(k));
+          if (isIndian) continue;
+
+          if (title.length > 10) {
+            articles.push({ title, source, date: pubDate });
+          }
         }
-      } catch (e) {}
+      }
 
       if (articles.length === 0) {
         return res.status(200).json({ groups: [] });
       }
 
-      // Filter
-      const filtered = articles.filter(a => {
-        const title = a.title.toLowerCase();
-        const source = a.source.toLowerCase();
-        const hasKeyword = economicKeywords.some(k => title.includes(k));
-        const isIndianSource = indianSources.some(s => source.includes(s));
-        const hasIndianKeyword = indianKeywords.some(k => title.includes(k));
-        const passesCategory = !category || category === 'any' || !categoryKeywords[category] ||
-          categoryKeywords[category].some(k => title.includes(k.toLowerCase()));
-        return hasKeyword && !isIndianSource && !hasIndianKeyword && passesCategory;
-      });
-
-      // Deduplicate
-      const seen = new Set();
-      const deduped = filtered.filter(a => {
-        const key = a.title.substring(0, 50).toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      if (deduped.length === 0) {
-        return res.status(200).json({ groups: [] });
-      }
+      // Limit to 60 most recent for grouping
+      const limited = articles.slice(0, 60);
 
       // Group with Claude
-      const groupPrompt = `You are a news editor. Here are ${deduped.length} news headlines. Group them by topic. Give each group a clear concise title (max 10 words).
+      const groupPrompt = `You are a financial news editor. Here are ${limited.length} headlines. Group them by topic — headlines covering the same event should be in one group. Give each group a clear concise title (max 10 words).
 
 Headlines:
-${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+${limited.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 Respond ONLY with valid JSON, no markdown:
 {
@@ -121,7 +110,9 @@ Respond ONLY with valid JSON, no markdown:
 
 Rules:
 - Each index in exactly one group
-- Only economic/market relevant groups
+- Only include groups with genuine economic/market relevance
+- Ignore sports, entertainment, crime, personal stories
+- Aim for 8-10 groups if enough articles support it
 - Maximum 10 groups
 - indices are 1-based`;
 
@@ -144,7 +135,7 @@ Rules:
       const grouped = JSON.parse(groupRaw);
 
       const groups = grouped.groups.map(g => {
-        const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+        const groupArticles = g.indices.map(i => limited[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         return {
           topic: g.topic,
@@ -183,7 +174,7 @@ Respond ONLY with valid JSON, no markdown:
 
 {
   "why_it_matters": "2-3 sentence explanation synthesizing what this means economically",
-  "impact_timeframe": "Brief note on when this impact is likely to materialize (e.g. 'Immediate to 2 weeks', 'Over the next 1-3 months')",
+  "impact_timeframe": "Brief note on when this impact is likely to materialize",
   "sectors": {
     "positive": ["sector1", "sector2"],
     "negative": ["sector3"],
