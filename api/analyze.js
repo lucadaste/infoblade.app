@@ -24,7 +24,7 @@ export default async function handler(req, res) {
       // Fetch GNews
       try {
         const gnewsRes = await fetch(
-          `https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=30&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`
+          `https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=50&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`
         );
         const gnewsData = await gnewsRes.json();
         if (gnewsData.articles && Array.isArray(gnewsData.articles)) {
@@ -39,23 +39,23 @@ export default async function handler(req, res) {
       } catch (e) {}
 
       // Fetch NewsData
-      try {
-        const newsdataRes = await fetch(
-          `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business&country=us,gb,ca,au`
-        );
-        const newsdataData = await newsdataRes.json();
-        if (newsdataData.results && Array.isArray(newsdataData.results)) {
-          newsdataData.results.forEach(a => {
-            if (a.title) {
-              articles.push({
-                title: a.title,
-                source: a.source_id || 'Unknown',
-                date: a.pubDate || ''
-              });
-            }
-          });
-        }
-      } catch (e) {}
+try {
+  const newsdataRes = await fetch(
+    `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business&country=us,gb,ca,au`
+  );
+  const newsdataData = await newsdataRes.json();
+  if (newsdataData.results && Array.isArray(newsdataData.results)) {
+    newsdataData.results.forEach(a => {
+      if (a.title) {
+        articles.push({
+          title: a.title,
+          source: a.source_id || 'Unknown',
+          date: a.pubDate || ''
+        });
+      }
+    });
+  }
+} catch (e) {}
 
       if (articles.length === 0) {
         return res.status(200).json({ groups: [] });
