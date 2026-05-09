@@ -12,49 +12,54 @@ export default async function handler(req, res) {
         'gdp', 'trade', 'tariff', 'oil', 'opec', 'recession', 'bank', 'earnings',
         'revenue', 'profit', 'loss', 'investment', 'debt', 'deficit', 'export',
         'import', 'supply chain', 'semiconductor', 'energy', 'dollar', 'bond',
-        'treasury', 'wall street', 'nasdaq', 'dow', 's&p', 'crypto', 'bitcoin',
+        'treasury', 'wall street', 'nasdaq', 'dow', 'crypto', 'bitcoin',
         'merger', 'acquisition', 'ipo', 'layoff', 'hiring', 'unemployment', 'jobs',
-        'housing', 'mortgage', 'retail', 'consumer', 'manufacturing', 'output',
-        'sanctions', 'crude', 'natural gas', 'agriculture', 'shipping', 'port',
+        'housing', 'mortgage', 'retail', 'consumer', 'manufacturing',
+        'sanctions', 'crude', 'natural gas', 'agriculture', 'shipping',
         'logistics', 'china', 'europe', 'imf', 'world bank'
       ];
 
-      // Fetch from both sources in parallel
-      const [gnewsRes, newsdataRes] = await Promise.allSettled([
-        fetch(`https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=30&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`),
-        fetch(`https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business`)
-      ]);
-
       let articles = [];
 
-      // Process GNews
-      if (gnewsRes.status === 'fulfilled') {
-        const gnewsData = await gnewsRes.value.json();
-        if (gnewsData.articles) {
-          const gnews = gnewsData.articles.map(a => ({
-            title: a.title,
-            source: a.source?.name || 'Unknown',
-            date: a.publishedAt
-          }));
-          articles = articles.concat(gnews);
+      // Fetch GNews
+      try {
+        const gnewsRes = await fetch(
+          `https://gnews.io/api/v4/search?q=economy OR "interest rates" OR "federal reserve" OR inflation OR tariffs OR "trade policy" OR OPEC OR "oil prices" OR recession OR "central bank" OR "earnings report" OR GDP OR "stock market"&lang=en&max=30&sortby=publishedAt&apikey=${process.env.GNEWS_KEY}`
+        );
+        const gnewsData = await gnewsRes.json();
+        if (gnewsData.articles && Array.isArray(gnewsData.articles)) {
+          gnewsData.articles.forEach(a => {
+            articles.push({
+              title: a.title,
+              source: a.source && a.source.name ? a.source.name : 'Unknown',
+              date: a.publishedAt
+            });
+          });
         }
-      }
+      } catch (e) {}
 
-      // Process NewsData
-      console.log('NewsData response:', JSON.stringify(newsdataData).substring(0, 500));
-if (newsdataData.results && Array.isArray(newsdataData.results)) {
-  const newsdata = newsdataData.results.map(a => ({
-    title: a.title,
-    source: a.source_id || 'Unknown',
-    date: a.pubDate
-  }));
-  articles = articles.concat(newsdata);
-}
-      }
+      // Fetch NewsData
+      try {
+        const newsdataRes = await fetch(
+          `https://newsdata.io/api/1/news?apikey=${process.env.NEWSDATA_KEY}&q=economy OR inflation OR "stock market" OR "federal reserve" OR tariffs OR GDP OR earnings&language=en&category=business`
+        );
+        const newsdataData = await newsdataRes.json();
+        if (newsdataData.results && Array.isArray(newsdataData.results)) {
+          newsdataData.results.forEach(a => {
+            if (a.title) {
+              articles.push({
+                title: a.title,
+                source: a.source_id || 'Unknown',
+                date: a.pubDate || ''
+              });
+            }
+          });
+        }
+      } catch (e) {}
 
       if (articles.length === 0) {
-  return res.status(500).json({ error: 'No articles from either source', debug: 'Both APIs returned empty' });
-}
+        return res.status(200).json({ groups: [] });
+      }
 
       // Filter to economic articles only
       const filtered = articles.filter(a => {
@@ -62,7 +67,7 @@ if (newsdataData.results && Array.isArray(newsdataData.results)) {
         return economicKeywords.some(k => title.includes(k));
       });
 
-      // Deduplicate by similar titles
+      // Deduplicate
       const seen = new Set();
       const deduped = filtered.filter(a => {
         const key = a.title.substring(0, 50).toLowerCase();
@@ -71,6 +76,11 @@ if (newsdataData.results && Array.isArray(newsdataData.results)) {
         return true;
       });
 
+      if (deduped.length === 0) {
+        return res.status(200).json({ groups: [] });
+      }
+
+      // Group with Claude
       const groupPrompt = `You are a news editor. Here are ${deduped.length} news headlines from multiple sources. Group them by topic — headlines covering the same event or story should be in the same group. Give each group a clear, concise topic title (max 10 words).
 
 Headlines:
@@ -126,8 +136,8 @@ Rules:
       return res.status(200).json({ groups });
 
     } catch (err) {
-  return res.status(500).json({ error: err.message, stack: err.stack });
-}
+      return res.status(500).json({ error: err.message });
+    }
   }
 
   if (req.method === 'POST') {
