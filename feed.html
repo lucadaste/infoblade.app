@@ -24,15 +24,14 @@
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
-    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; margin-bottom: 32px; }
+    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; margin-bottom: 0; }
 
-    /* FILTERS */
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: white; border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6b6b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
     .filter-select:focus { outline: none; border-color: var(--ink); }
-    .filter-actions { display: flex; gap: 12px; align-items: flex-end; margin-left: auto; }
+    .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
     .btn-load { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .btn-load:hover { opacity: 0.85; }
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -97,16 +96,15 @@
 
   <div class="hero">
     <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
-    <h1>Today's market-moving events</h1>
+    <h1 id="page-title">Today's market-moving events</h1>
     <p class="hero-sub">Real news synthesized across sources — economic implications, affected sectors, and specific stocks laid out clearly.</p>
   </div>
 
-  <!-- FILTERS -->
   <div class="filters">
     <div class="filter-group">
       <div class="filter-label">Category</div>
       <select class="filter-select" id="filter-category">
-        <option value="any">Any / All categories</option>
+        <option value="any" selected>Any / All categories</option>
         <option value="macro">Macro & Fed Policy</option>
         <option value="energy">Energy & Oil</option>
         <option value="technology">Technology & AI</option>
@@ -123,7 +121,7 @@
     <div class="filter-group">
       <div class="filter-label">News timeframe</div>
       <select class="filter-select" id="filter-timeframe">
-        <option value="today">Today</option>
+        <option value="today" selected>Today</option>
         <option value="3days">Last 3 days</option>
         <option value="7days">Last 7 days</option>
         <option value="any">Any / All time</option>
@@ -133,7 +131,7 @@
     <div class="filter-group">
       <div class="filter-label">Impact timeframe</div>
       <select class="filter-select" id="filter-impact">
-        <option value="1 month">~1 month</option>
+        <option value="1 month" selected>~1 month</option>
         <option value="1 week">~1 week</option>
         <option value="3 months">~3 months</option>
         <option value="6 months">~6 months</option>
@@ -159,6 +157,20 @@
   </footer>
 
   <script>
+    const titleMap = {
+      'today': "Today's market-moving events",
+      '3days': "Market-moving events — last 3 days",
+      '7days': "Market-moving events — last 7 days",
+      'any': "All market-moving events"
+    };
+
+    const feedLabelMap = {
+      'today': "Today's analysis",
+      '3days': "Last 3 days — analysis",
+      '7days': "Last 7 days — analysis",
+      'any': "Latest analysis"
+    };
+
     async function loadFeed() {
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
@@ -168,6 +180,10 @@
       const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
       const impact = document.getElementById('filter-impact').value;
+
+      // Update page title dynamically
+      document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
+      label.textContent = feedLabelMap[timeframe] || "Today's analysis";
 
       btn.disabled = true;
       feed.innerHTML = '';
@@ -182,7 +198,7 @@
 
         if (groups.length === 0) {
           status.textContent = '';
-          feed.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Try adjusting your filters or check back soon.</p></div>`;
+          feed.innerHTML = `<div class="empty-state"><h3>No stories found</h3><p>Try selecting a broader timeframe or different category.</p></div>`;
           btn.disabled = false;
           return;
         }
