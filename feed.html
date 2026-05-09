@@ -509,12 +509,78 @@
         label.style.display = 'block';
         status.textContent = `Found ${groups.length} topics. Analyzing...`;
 
-        for (let i = 0; i < groups.length; i++) {
-          const group = groups[i];
-          status.textContent = `Analyzing topic ${i + 1} of ${groups.length}...`;
+   // Analyze all groups first
+const analyzed = [];
+for (let i = 0; i < groups.length; i++) {
+  const group = groups[i];
+  status.textContent = `Analyzing topic ${i + 1} of ${groups.length}...`;
+  try {
+    const analysis = await analyzeGroup(group, impact);
+    analyzed.push({ group, analysis });
+  } catch(err) {}
+  await new Promise(r => setTimeout(r, 1000));
+}
 
-          try {
-            const analysis = await analyzeGroup(group, impact);
+// Sort by confidence: High first, then Medium, then Low
+const confidenceOrder = { 'high': 0, 'medium': 1, 'low': 2 };
+analyzed.sort((a, b) => {
+  const aConf = a.analysis.confidence.toLowerCase().startsWith('high') ? 0 : a.analysis.confidence.toLowerCase().startsWith('medium') ? 1 : 2;
+  const bConf = b.analysis.confidence.toLowerCase().startsWith('high') ? 0 : b.analysis.confidence.toLowerCase().startsWith('medium') ? 1 : 2;
+  return aConf - bConf;
+});
+
+// Now display in sorted order
+for (let i = 0; i < analyzed.length; i++) {
+  const { group, analysis } = analyzed[i];
+  const { match, matchedTickers } = checkWatchlistMatch(analysis);
+  const confClass = analysis.confidence.toLowerCase().startsWith('high') ? 'confidence-high' : analysis.confidence.toLowerCase().startsWith('medium') ? 'confidence-medium' : 'confidence-low';
+  const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
+
+  const card = document.createElement('div');
+  card.className = 'event-card' + (match ? ' watchlist-match' : '');
+  card.style.animationDelay = `${i * 0.08}s`;
+  card.innerHTML = `
+    ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
+    <div class="event-topic">${group.topic}</div>
+    <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
+    <div class="chain-row">
+      <div class="chain-label">Why it matters</div>
+      <div class="chain-content">${analysis.why_it_matters}</div>
+    </div>
+    <div class="chain-row">
+      <div class="chain-label">Impact window</div>
+      <div class="chain-content"><span class="impact-badge">${analysis.impact_timeframe || impact}</span></div>
+    </div>
+    <div class="chain-row">
+      <div class="chain-label">Sectors in play</div>
+      <div class="chain-content">
+        <div class="sectors">
+          ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
+          ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="chain-row">
+      <div class="chain-label">Beneficiaries</div>
+      <div class="chain-content">
+        ${analysis.winners.explanation}
+        <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="chain-row">
+      <div class="chain-label">Likely losers</div>
+      <div class="chain-content">
+        ${analysis.losers.explanation}
+        <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="chain-row">
+      <div class="chain-label">Confidence</div>
+      <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
+    </div>
+  `;
+  feed.appendChild(card);
+}    
             const { match, matchedTickers } = checkWatchlistMatch(analysis);
             const confClass = analysis.confidence.toLowerCase().startsWith('high') ? 'confidence-high' : analysis.confidence.toLowerCase().startsWith('medium') ? 'confidence-medium' : 'confidence-low';
             const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
