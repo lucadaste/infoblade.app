@@ -13,16 +13,17 @@
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
 
     /* NAV */
-    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
     .nav-logo span { background: var(--accent); padding: 1px 6px; }
-    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; flex: 1; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
-    .nav-panel-toggle { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.2s; }
-    .nav-panel-toggle:hover { background: var(--border); }
-    .nav-panel-toggle.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .nav-buttons { display: flex; gap: 8px; }
+    .nav-panel-btn { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
+    .nav-panel-btn:hover { background: var(--border); }
+    .nav-panel-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
     /* HERO */
     .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
@@ -44,21 +45,18 @@
     .status-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
 
     /* MAIN LAYOUT */
-    .main-layout { display: flex; align-items: flex-start; gap: 0; }
+    .main-layout { display: flex; align-items: flex-start; }
 
     /* FEED */
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
     .feed-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
 
     /* EVENT CARDS */
-    .event-card { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 36px 40px; margin-bottom: 20px; animation: fadeUp 0.4s ease both; position: relative; transition: transform 0.2s; }
+    .event-card { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 36px 40px; margin-bottom: 20px; animation: fadeUp 0.4s ease both; position: relative; transition: transform 0.2s; border: 2px solid transparent; }
     .event-card:hover { transform: translateY(-2px); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* WATCHLIST MATCH HIGHLIGHT */
-    .event-card.watchlist-match { border: 2px solid var(--accent); }
+    .event-card.watchlist-match { border-color: var(--accent); }
     .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
-
     .event-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
     .event-sources { font-size: 12px; color: #555; margin-bottom: 28px; }
     .event-sources span { color: #777; }
@@ -68,8 +66,8 @@
     .impact-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); margin-top: 6px; }
     .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .pill { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
-    .pill-up   { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
-    .pill-down { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
+    .pill-up      { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
+    .pill-down    { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-watched { background: rgba(200,255,0,0.3); color: var(--ink); border: 1px solid var(--accent); }
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); }
@@ -77,48 +75,51 @@
     .confidence-high   { color: var(--accent); font-size: 14px; }
     .confidence-medium { color: #ffaa00; font-size: 14px; }
     .confidence-low    { color: #ff7070; font-size: 14px; }
-
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
 
-    /* SIDEBAR PANEL */
+    /* SIDE PANELS */
     .side-panel { width: 300px; flex-shrink: 0; position: sticky; top: 73px; max-height: calc(100vh - 73px); overflow-y: auto; border-left: 1px solid var(--border); background: var(--card); display: none; flex-direction: column; }
     .side-panel.open { display: flex; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .panel-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+    .panel-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; }
+    .panel-close:hover { color: var(--ink); }
+    .panel-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 
-    .panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
-    .panel-tab { flex: 1; padding: 14px; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-align: center; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.2s; background: none; border-top: none; border-left: none; border-right: none; }
-    .panel-tab.active { color: var(--ink); border-bottom-color: var(--ink); }
-    .panel-tab.disabled { cursor: not-allowed; opacity: 0.4; }
-
-    .panel-content { display: none; flex-direction: column; padding: 20px; gap: 20px; flex: 1; }
-    .panel-content.active { display: flex; }
-
-    /* WATCHLIST PANEL */
+    /* WATCHLIST */
     .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-
-    .sector-checkboxes { display: flex; flex-direction: column; gap: 6px; }
+    .sector-checkboxes { display: flex; flex-direction: column; gap: 8px; }
     .sector-checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .sector-checkbox-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--ink); cursor: pointer; }
+    .sector-checkbox-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--ink); cursor: pointer; flex-shrink: 0; }
     .sector-checkbox-item label { font-size: 13px; color: var(--ink); cursor: pointer; }
-
+    .ticker-input-wrapper { position: relative; }
     .ticker-input-row { display: flex; gap: 8px; }
-    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; outline: none; text-transform: uppercase; transition: border-color 0.2s; }
+    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
     .ticker-input:focus { border-color: var(--ink); }
     .ticker-input::placeholder { text-transform: none; color: #aaa; }
     .btn-add-ticker { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
     .btn-add-ticker:hover { opacity: 0.8; }
 
-    .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    /* AUTOCOMPLETE */
+    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
+    .autocomplete-dropdown.open { display: block; }
+    .autocomplete-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0ede6; transition: background 0.15s; }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: var(--paper); }
+    .autocomplete-ticker { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
+    .autocomplete-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .ticker-tag { display: flex; align-items: center; gap: 4px; background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
     .ticker-tag button { background: none; border: none; color: #888; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; }
     .ticker-tag button:hover { color: var(--paper); }
+    .watchlist-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
 
-    .watchlist-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 16px 0; }
-
-    /* CHAT COMING SOON */
+    /* CHAT PANEL */
     .chat-coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px 20px; text-align: center; gap: 12px; }
-    .chat-coming-soon .icon { font-size: 32px; margin-bottom: 4px; }
+    .chat-coming-soon .icon { font-size: 32px; }
     .chat-coming-soon h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; }
     .chat-coming-soon p { font-size: 13px; color: var(--muted); line-height: 1.6; }
     .coming-soon-badge { background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 1px; }
@@ -153,9 +154,10 @@
       <li><a href="/">Home</a></li>
       <li><a href="/feed.html" class="active">Daily Feed</a></li>
     </ul>
-    <button class="nav-panel-toggle" id="panel-toggle" onclick="togglePanel()">
-      ☰ Watchlist
-    </button>
+    <div class="nav-buttons">
+      <button class="nav-panel-btn" id="watchlist-btn" onclick="togglePanel('watchlist')">☆ Watchlist</button>
+      <button class="nav-panel-btn" id="chat-btn" onclick="togglePanel('chat')">💬 Chat</button>
+    </div>
   </nav>
 
   <div class="hero">
@@ -208,56 +210,55 @@
   </div>
 
   <div class="main-layout">
-
-    <!-- FEED -->
     <div class="feed-container">
       <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
       <div id="feed"></div>
     </div>
 
-    <!-- SIDE PANEL -->
-    <div class="side-panel" id="side-panel">
-
-      <div class="panel-tabs">
-        <button class="panel-tab active" onclick="switchTab('watchlist')">Watchlist</button>
-        <button class="panel-tab disabled" title="Coming soon">Chat ✦</button>
+    <!-- WATCHLIST PANEL -->
+    <div class="side-panel" id="panel-watchlist">
+      <div class="panel-header">
+        <h3>☆ Watchlist</h3>
+        <button class="panel-close" onclick="togglePanel('watchlist')">×</button>
       </div>
-
-      <!-- WATCHLIST TAB -->
-      <div class="panel-content active" id="tab-watchlist">
-
-        <!-- Sectors -->
+      <div class="panel-body">
         <div>
           <div class="watchlist-section-title">Sectors</div>
           <div class="sector-checkboxes">
-            <label class="sector-checkbox-item"><input type="checkbox" value="macro" onchange="saveWatchlist()"> <span>Macro & Fed Policy</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="energy" onchange="saveWatchlist()"> <span>Energy & Oil</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="technology" onchange="saveWatchlist()"> <span>Technology & AI</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="financials" onchange="saveWatchlist()"> <span>Financials & Banking</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="precious-metals" onchange="saveWatchlist()"> <span>Precious Metals</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="real-estate" onchange="saveWatchlist()"> <span>Real Estate</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="crypto" onchange="saveWatchlist()"> <span>Crypto & Digital Assets</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="consumer" onchange="saveWatchlist()"> <span>Consumer & Retail</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="healthcare" onchange="saveWatchlist()"> <span>Healthcare & Pharma</span></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="defense" onchange="saveWatchlist()"> <span>Defense & Geopolitics</span></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="macro" onchange="saveWatchlist()"><label>Macro & Fed Policy</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="energy" onchange="saveWatchlist()"><label>Energy & Oil</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="technology" onchange="saveWatchlist()"><label>Technology & AI</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="financials" onchange="saveWatchlist()"><label>Financials & Banking</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="precious-metals" onchange="saveWatchlist()"><label>Precious Metals</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="real-estate" onchange="saveWatchlist()"><label>Real Estate</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="crypto" onchange="saveWatchlist()"><label>Crypto & Digital Assets</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="consumer" onchange="saveWatchlist()"><label>Consumer & Retail</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="healthcare" onchange="saveWatchlist()"><label>Healthcare & Pharma</label></label>
+            <label class="sector-checkbox-item"><input type="checkbox" value="defense" onchange="saveWatchlist()"><label>Defense & Geopolitics</label></label>
           </div>
         </div>
-
-        <!-- Tickers -->
         <div>
           <div class="watchlist-section-title">Tickers</div>
-          <div class="ticker-input-row">
-            <input class="ticker-input" id="ticker-input" type="text" placeholder="Add ticker (e.g. NVDA)" maxlength="6" onkeydown="if(event.key==='Enter') addTicker()" />
-            <button class="btn-add-ticker" onclick="addTicker()">Add</button>
+          <div class="ticker-input-wrapper">
+            <div class="ticker-input-row">
+              <input class="ticker-input" id="ticker-input" type="text" placeholder="Search ticker (e.g. AAPL)" onkeyup="handleTickerInput(event)" onkeydown="handleTickerKeydown(event)" autocomplete="off" />
+              <button class="btn-add-ticker" onclick="addTickerFromInput()">Add</button>
+            </div>
+            <div class="autocomplete-dropdown" id="autocomplete"></div>
           </div>
-          <div class="ticker-list" id="ticker-list" style="margin-top:10px"></div>
+          <div class="ticker-list" id="ticker-list"></div>
           <div class="watchlist-empty" id="ticker-empty">No tickers added yet</div>
         </div>
-
       </div>
+    </div>
 
-      <!-- CHAT TAB (coming soon) -->
-      <div class="panel-content" id="tab-chat">
+    <!-- CHAT PANEL -->
+    <div class="side-panel" id="panel-chat">
+      <div class="panel-header">
+        <h3>💬 AI Market Chat</h3>
+        <button class="panel-close" onclick="togglePanel('chat')">×</button>
+      </div>
+      <div class="panel-body">
         <div class="chat-coming-soon">
           <div class="icon">💬</div>
           <span class="coming-soon-badge">Coming soon</span>
@@ -265,8 +266,8 @@
           <p>Ask questions about any story in your feed, dig deeper into sector implications, or get a plain English explanation of any market event.</p>
         </div>
       </div>
-
     </div>
+
   </div>
 
   <footer>
@@ -289,9 +290,132 @@
       'any': "Latest analysis"
     };
 
-    // WATCHLIST STATE
-    let watchlist = { sectors: [], tickers: [] };
+    // Popular tickers for autocomplete
+    const TICKERS = [
+      {s:'AAPL',n:'Apple Inc.'},{s:'MSFT',n:'Microsoft Corp.'},{s:'GOOGL',n:'Alphabet Inc.'},
+      {s:'AMZN',n:'Amazon.com Inc.'},{s:'NVDA',n:'NVIDIA Corp.'},{s:'META',n:'Meta Platforms'},
+      {s:'TSLA',n:'Tesla Inc.'},{s:'BRK.B',n:'Berkshire Hathaway'},{s:'JPM',n:'JPMorgan Chase'},
+      {s:'V',n:'Visa Inc.'},{s:'JNJ',n:'Johnson & Johnson'},{s:'WMT',n:'Walmart Inc.'},
+      {s:'XOM',n:'Exxon Mobil'},{s:'CVX',n:'Chevron Corp.'},{s:'OXY',n:'Occidental Petroleum'},
+      {s:'LMT',n:'Lockheed Martin'},{s:'RTX',n:'Raytheon Technologies'},{s:'NOC',n:'Northrop Grumman'},
+      {s:'GLD',n:'SPDR Gold ETF'},{s:'SLV',n:'iShares Silver ETF'},{s:'GDX',n:'VanEck Gold Miners'},
+      {s:'BAC',n:'Bank of America'},{s:'GS',n:'Goldman Sachs'},{s:'MS',n:'Morgan Stanley'},
+      {s:'KRE',n:'Regional Banking ETF'},{s:'VNQ',n:'Vanguard Real Estate ETF'},
+      {s:'BTC',n:'Bitcoin'},{s:'ETH',n:'Ethereum'},{s:'COIN',n:'Coinbase Global'},
+      {s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
+      {s:'TLT',n:'iShares 20yr Treasury'},{s:'VIX',n:'CBOE Volatility Index'},
+      {s:'DAL',n:'Delta Air Lines'},{s:'UAL',n:'United Airlines'},{s:'AAL',n:'American Airlines'},
+      {s:'UPS',n:'United Parcel Service'},{s:'FDX',n:'FedEx Corp.'},
+      {s:'PFE',n:'Pfizer Inc.'},{s:'MRNA',n:'Moderna Inc.'},{s:'JNJ',n:'Johnson & Johnson'},
+      {s:'AMD',n:'Advanced Micro Devices'},{s:'INTC',n:'Intel Corp.'},{s:'QCOM',n:'Qualcomm'},
+      {s:'AMAT',n:'Applied Materials'},{s:'LRCX',n:'Lam Research'},
+      {s:'CVS',n:'CVS Health'},{s:'UNH',n:'UnitedHealth Group'},
+      {s:'DIS',n:'Walt Disney Co.'},{s:'NFLX',n:'Netflix Inc.'},
+      {s:'KO',n:'Coca-Cola Co.'},{s:'PEP',n:'PepsiCo Inc.'},{s:'MCD',n:'McDonald\'s Corp.'},
+      {s:'NKE',n:'Nike Inc.'},{s:'SBUX',n:'Starbucks Corp.'},
+      {s:'DHI',n:'D.R. Horton'},{s:'LEN',n:'Lennar Corp.'},{s:'PLD',n:'Prologis'},
+      {s:'COP',n:'ConocoPhillips'},{s:'SLB',n:'Schlumberger'},{s:'HAL',n:'Halliburton'},
+      {s:'MOS',n:'Mosaic Co.'},{s:'ADM',n:'Archer-Daniels-Midland'},{s:'BG',n:'Bunge Ltd.'}
+    ];
 
+    let selectedAutocompleteIndex = -1;
+    let watchlist = { sectors: [], tickers: [] };
+    let activePanel = null;
+
+    // PANEL TOGGLE
+    function togglePanel(panelName) {
+      const panel = document.getElementById(`panel-${panelName}`);
+      const btn = document.getElementById(`${panelName}-btn`);
+
+      if (activePanel === panelName) {
+        panel.classList.remove('open');
+        btn.classList.remove('active');
+        activePanel = null;
+      } else {
+        // Close any open panel first
+        if (activePanel) {
+          document.getElementById(`panel-${activePanel}`).classList.remove('open');
+          document.getElementById(`${activePanel}-btn`).classList.remove('active');
+        }
+        panel.classList.add('open');
+        btn.classList.add('active');
+        activePanel = panelName;
+      }
+    }
+
+    // AUTOCOMPLETE
+    function handleTickerInput(e) {
+      const val = e.target.value.toUpperCase().trim();
+      const dropdown = document.getElementById('autocomplete');
+      selectedAutocompleteIndex = -1;
+
+      if (val.length < 1) { dropdown.classList.remove('open'); return; }
+
+      const matches = TICKERS.filter(t =>
+        t.s.startsWith(val) || t.n.toUpperCase().includes(val)
+      ).slice(0, 7);
+
+      if (matches.length === 0) { dropdown.classList.remove('open'); return; }
+
+      dropdown.innerHTML = matches.map((t, i) => `
+        <div class="autocomplete-item" onmousedown="selectTicker('${t.s}')" data-index="${i}">
+          <span class="autocomplete-ticker">${t.s}</span>
+          <span class="autocomplete-name">${t.n}</span>
+        </div>
+      `).join('');
+      dropdown.classList.add('open');
+    }
+
+    function handleTickerKeydown(e) {
+      const dropdown = document.getElementById('autocomplete');
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1);
+        items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : '');
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, -1);
+        items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : '');
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedAutocompleteIndex >= 0 && items[selectedAutocompleteIndex]) {
+          const ticker = items[selectedAutocompleteIndex].querySelector('.autocomplete-ticker').textContent;
+          selectTicker(ticker);
+        } else {
+          addTickerFromInput();
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.remove('open');
+      }
+    }
+
+    function selectTicker(ticker) {
+      document.getElementById('ticker-input').value = '';
+      document.getElementById('autocomplete').classList.remove('open');
+      if (!watchlist.tickers.includes(ticker)) {
+        watchlist.tickers.push(ticker);
+        localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+        renderTickers();
+      }
+    }
+
+    function addTickerFromInput() {
+      const input = document.getElementById('ticker-input');
+      const ticker = input.value.trim().toUpperCase();
+      if (!ticker) return;
+      selectTicker(ticker);
+    }
+
+    // Close autocomplete on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.ticker-input-wrapper')) {
+        document.getElementById('autocomplete').classList.remove('open');
+      }
+    });
+
+    // WATCHLIST
     function loadWatchlist() {
       try {
         const saved = localStorage.getItem('ii_watchlist');
@@ -306,11 +430,9 @@
     }
 
     function renderWatchlist() {
-      // Restore sector checkboxes
       document.querySelectorAll('.sector-checkboxes input').forEach(input => {
         input.checked = watchlist.sectors.includes(input.value);
       });
-      // Restore tickers
       renderTickers();
     }
 
@@ -331,49 +453,22 @@
       }
     }
 
-    function addTicker() {
-      const input = document.getElementById('ticker-input');
-      const ticker = input.value.trim().toUpperCase();
-      if (!ticker || watchlist.tickers.includes(ticker)) { input.value = ''; return; }
-      watchlist.tickers.push(ticker);
-      localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
-      input.value = '';
-      renderTickers();
-    }
-
     function removeTicker(ticker) {
       watchlist.tickers = watchlist.tickers.filter(t => t !== ticker);
       localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
       renderTickers();
     }
 
-    // PANEL TOGGLE
-    function togglePanel() {
-      const panel = document.getElementById('side-panel');
-      const toggle = document.getElementById('panel-toggle');
-      panel.classList.toggle('open');
-      toggle.classList.toggle('active');
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.panel-content').forEach(c => c.classList.remove('active'));
-      document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
-      document.getElementById(`tab-${tab}`).classList.add('active');
-    }
-
-    // CHECK IF CARD MATCHES WATCHLIST
-    function checkWatchlistMatch(analysis, sectors) {
+    // WATCHLIST MATCH CHECK
+    function checkWatchlistMatch(analysis) {
       if (watchlist.sectors.length === 0 && watchlist.tickers.length === 0) return { match: false, matchedTickers: [] };
 
       const allSectors = [...(analysis.sectors?.positive || []), ...(analysis.sectors?.negative || [])].map(s => s.toLowerCase());
       const allTickers = [...(analysis.winners?.tickers || []), ...(analysis.losers?.tickers || [])];
 
       const sectorMatch = watchlist.sectors.some(ws =>
-        allSectors.some(s => s.includes(ws.replace('-', ' '))) ||
-        sectors.some(s => s.toLowerCase().includes(ws.replace('-', ' ')))
+        allSectors.some(s => s.includes(ws.replace(/-/g, ' ')))
       );
-
       const matchedTickers = watchlist.tickers.filter(t => allTickers.includes(t));
 
       return { match: sectorMatch || matchedTickers.length > 0, matchedTickers };
@@ -420,19 +515,15 @@
 
           try {
             const analysis = await analyzeGroup(group, impact);
+            const { match, matchedTickers } = checkWatchlistMatch(analysis);
             const confClass = analysis.confidence.toLowerCase().startsWith('high') ? 'confidence-high' : analysis.confidence.toLowerCase().startsWith('medium') ? 'confidence-medium' : 'confidence-low';
             const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
-
-            const { match, matchedTickers } = checkWatchlistMatch(analysis, group.sources);
 
             const card = document.createElement('div');
             card.className = 'event-card' + (match ? ' watchlist-match' : '');
             card.style.animationDelay = `${i * 0.08}s`;
-
-            const watchlistBadge = match ? `<div class="watchlist-badge">★ In your watchlist</div>` : '';
-
             card.innerHTML = `
-              ${watchlistBadge}
+              ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
               <div class="event-topic">${group.topic}</div>
               <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
               <div class="chain-row">
@@ -502,7 +593,6 @@
       return await res.json();
     }
 
-    // Init
     loadWatchlist();
   </script>
 
