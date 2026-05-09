@@ -523,11 +523,13 @@ for (let i = 0; i < groups.length; i++) {
 
 // Sort by confidence: High first, then Medium, then Low
 const confidenceOrder = { 'high': 0, 'medium': 1, 'low': 2 };
-analyzed.sort((a, b) => {
-  const aConf = a.analysis.confidence.toLowerCase().startsWith('high') ? 0 : a.analysis.confidence.toLowerCase().startsWith('medium') ? 1 : 2;
-  const bConf = b.analysis.confidence.toLowerCase().startsWith('high') ? 0 : b.analysis.confidence.toLowerCase().startsWith('medium') ? 1 : 2;
-  return aConf - bConf;
-});
+const getConfScore = (conf) => {
+  const c = (conf || '').toLowerCase();
+  if (c.includes('high')) return 0;
+  if (c.includes('medium')) return 1;
+  return 2;
+};
+analyzed.sort((a, b) => getConfScore(a.analysis.confidence) - getConfScore(b.analysis.confidence));
 
 // Now display in sorted order
 for (let i = 0; i < analyzed.length; i++) {
