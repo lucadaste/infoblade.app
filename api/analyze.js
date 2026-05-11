@@ -15,6 +15,39 @@ async function _readReputation() {
   }
 }
 
+function _parseTimeframeDays(str) {
+  if (!str) return 30;
+  const s = str.toLowerCase();
+  if (s.includes('48 hour') || (s.includes('2') && s.includes('day'))) return 2;
+  if (s.includes('week')) {
+    const range = s.match(/(\d+)[^\d]+(\d+)\s*week/);
+    if (range) return Math.round((+range[1] + +range[2]) / 2) * 7;
+    const single = s.match(/(\d+)\s*week/);
+    return single ? +single[1] * 7 : 14;
+  }
+  if (s.includes('month')) {
+    const range = s.match(/(\d+)[^\d]+(\d+)\s*month/);
+    if (range) return Math.round((+range[1] + +range[2]) / 2) * 30;
+    const single = s.match(/(\d+)\s*month/);
+    return single ? +single[1] * 30 : 30;
+  }
+  return 30;
+}
+
+async function _fetchPrices(tickers) {
+  if (!tickers || !tickers.length) return {};
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=regularMarketPrice`;
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const data = await res.json();
+    const prices = {};
+    for (const q of data?.quoteResponse?.result || []) {
+      if (q.regularMarketPrice) prices[q.symbol] = q.regularMarketPrice;
+    }
+    return prices;
+  } catch (_) { return {}; }
+}
+
 async function _savePrediction(record) {
   try {
     let entries = [];
@@ -439,6 +472,13 @@ Respond ONLY with valid JSON, no markdown:
       const analysis = JSON.parse(raw);
 
       const predictionId = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      const winnerTickers = analysis.winners?.tickers || [];
+      const loserTickers = analysis.losers?.tickers || [];
+      const allTickers = [...new Set([...winnerTickers, ...loserTickers])];
+      const baselinePrices = await _fetchPrices(allTickers);
+      const timeframeDays = _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe);
+      const validationDate = new Date(Date.now() + timeframeDays * 86400000).toISOString();
+
       await _savePrediction({
         id: predictionId,
         createdAt: new Date().toISOString(),
@@ -446,6 +486,11 @@ Respond ONLY with valid JSON, no markdown:
         minGrade: minGrade || 'medium',
         impactTimeframe: impactTimeframe || null,
         analysis,
+        winnerTickers,
+        loserTickers,
+        baselinePrices,
+        validationDate,
+        validationMethod: null,
         actualOutcome: null,
         correct: null,
         notes: null
