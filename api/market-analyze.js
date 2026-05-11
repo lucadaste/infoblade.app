@@ -1,3 +1,15 @@
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const _dir = path.dirname(fileURLToPath(import.meta.url));
+const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
+
+async function readReputation() {
+  try { return JSON.parse(await fs.readFile(reputationPath, 'utf-8') || '{}'); }
+  catch (e) { if (e.code === 'ENOENT') return {}; throw e; }
+}
+
 const SOURCE_QUALITY = {
   // Wire / Financial
   'Reuters': 'High', 'Associated Press': 'High', 'AP': 'High',
@@ -51,7 +63,7 @@ export default async function handler(req, res) {
   const { question, currentOdds } = req.body;
   if (!question) return res.status(400).json({ error: 'No question provided' });
 
-  const searchQuery = buildSearchQuery(question);
+  const [searchQuery, reputation] = [buildSearchQuery(question), await readReputation()];
 
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=en-US&gl=US&ceid=US:en`;
@@ -70,7 +82,14 @@ export default async function handler(req, res) {
       if (!titleMatch) continue;
       const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
       const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : 'Unknown';
-      if (title.length > 10) items.push({ title, source, grade: getSourceGrade(source) });
+      if (title.length > 10) {
+        const grade = getSourceGrade(source);
+        const rep = reputation[source];
+        const empirical = rep && rep.attempts >= 10
+          ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
+          : '';
+        items.push({ title, source, grade, empirical });
+      }
     }
 
     if (items.length < 5) {
@@ -96,9 +115,9 @@ Market question: "${question}"
 ${oddsContext}
 
 Recent news (${items.length} articles):
-${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}]`).join('\n')}
+${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}]`).join('\n')}
 
-Based ONLY on what the news reporting indicates, determine the likely outcome. Weight High-grade sources more heavily. Be direct — if sources clearly point one way, say so.
+Based ONLY on what the news reporting indicates, determine the likely outcome. Weight High-grade sources more heavily. Where empirical accuracy is shown, prioritize that over the static grade. Be direct — if sources clearly point one way, say so.
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
 

@@ -236,6 +236,7 @@
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
+        const isFirstAnalysis = !cardEl.querySelector('.analysis-block');
         const existing = cardEl.querySelector('.analysis-block');
         if (existing) existing.remove();
 
@@ -253,6 +254,26 @@
         `;
         cardEl.appendChild(block);
         btn.innerHTML = 'Re-analyze';
+
+        // Silently log the first clear lean as a tracked prediction
+        if (isFirstAnalysis && (data.lean === 'Yes' || data.lean === 'No')) {
+          fetch('/api/predictions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'prediction-market',
+              topic: market.question,
+              lean: data.lean,
+              lean_confidence: data.lean_confidence,
+              marketOddsAtTime: market.yesPrice,
+              marketSlug: market.slug,
+              daysLeft: market.daysLeft,
+              signal: data.signal,
+              sources: data.key_sources || [],
+              analysis: { lean: data.lean, lean_confidence: data.lean_confidence, signal: data.signal, reasoning: data.reasoning }
+            })
+          }).catch(() => {});
+        }
       } catch (err) {
         const block = document.createElement('div');
         block.className = 'analysis-block';

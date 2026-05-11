@@ -26,6 +26,11 @@
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
+    .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 48px; background: var(--paper); position: sticky; top: 61px; z-index: 90; }
+    .tab { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600; padding: 16px 24px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; letter-spacing: -0.2px; white-space: nowrap; }
+    .tab:hover { color: var(--ink); }
+    .tab.active { color: var(--ink); border-bottom-color: var(--ink); }
+
     .stats-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
     .stat-cell { flex: 1; padding: 28px 36px; border-right: 1px solid var(--border); }
     .stat-cell:last-child { border-right: none; }
@@ -55,12 +60,15 @@
     .rep-full { background: rgba(200,255,0,0.15); color: #5a8000; border: 1px solid rgba(200,255,0,0.3); }
     .rep-ramping { background: rgba(200,125,0,0.1); color: #c87d00; border: 1px solid rgba(200,125,0,0.2); }
     .rep-building { background: var(--border); color: var(--muted); border: 1px solid transparent; }
-    .leaderboard-empty { font-size: 14px; color: var(--muted); padding: 20px 0; }
 
-    .filter-row { display: flex; gap: 10px; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
+    .filter-row { display: flex; gap: 10px; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); flex-wrap: wrap; }
     .filter-chip { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .filter-chip:hover { border-color: var(--ink); color: var(--ink); }
     .filter-chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .action-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; margin-left: auto; }
+    .action-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .action-status { font-size: 12px; color: var(--muted); }
 
     .pred-list { padding: 32px 48px 80px; }
     .pred-empty { text-align: center; padding: 80px 0; color: var(--muted); }
@@ -91,7 +99,6 @@
     .pill { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up   { background: rgba(42,158,79,0.1); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.2); }
     .pill-down { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
-    .pill-neutral { background: var(--border); color: var(--muted); border: 1px solid transparent; }
 
     .pred-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
     .conf-label { font-size: 12px; color: var(--muted); }
@@ -101,9 +108,16 @@
     .score-detail { font-size: 12px; color: var(--muted); }
     .score-detail strong { color: var(--ink); }
 
-    .validate-btn { background: none; border: 1px solid var(--border); border-radius: 4px; padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-    .validate-btn:hover { border-color: var(--ink); color: var(--ink); }
-    .validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    /* Prediction market card styles */
+    .lean-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .lean-pill { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 6px; }
+    .lean-yes { background: rgba(42,158,79,0.12); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.25); }
+    .lean-no { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
+    .lean-uncertain { background: var(--border); color: var(--muted); border: 1px solid transparent; }
+    .signal-pill { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; }
+    .signal-aligns { background: rgba(42,158,79,0.08); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.15); }
+    .signal-contradicts { background: rgba(200,125,0,0.12); color: #c87d00; border: 1px solid rgba(200,125,0,0.25); }
+    .signal-inconclusive { background: var(--border); color: var(--muted); border: 1px solid transparent; }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
@@ -114,10 +128,11 @@
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
       .hero { padding: 40px 24px 24px; }
+      .tab-bar { padding: 0 24px; top: 57px; overflow-x: auto; }
       .stats-bar { flex-direction: column; }
       .stat-cell { border-right: none; border-bottom: 1px solid var(--border); padding: 20px 24px; }
       .section { padding: 32px 24px; }
-      .filter-row { padding: 16px 24px; overflow-x: auto; }
+      .filter-row { padding: 16px 24px; }
       .pred-list { padding: 24px 24px 60px; }
       footer { padding: 24px; }
     }
@@ -142,6 +157,12 @@
     <p class="hero-sub">Every analysis generates a prediction. This tracks whether they come true — and which sources are historically most accurate.</p>
   </div>
 
+  <div class="tab-bar">
+    <button class="tab active" data-tab="stock">Stock Markets</button>
+    <button class="tab" data-tab="crypto">Crypto Markets</button>
+    <button class="tab" data-tab="prediction-market">Prediction Markets</button>
+  </div>
+
   <div class="stats-bar" id="stats-bar">
     <div class="stat-cell">
       <div class="stat-value" id="stat-total">—</div>
@@ -149,15 +170,15 @@
     </div>
     <div class="stat-cell">
       <div class="stat-value amber" id="stat-pending">—</div>
-      <div class="stat-label">Awaiting validation</div>
+      <div class="stat-label" id="stat-pending-label">Awaiting validation</div>
     </div>
     <div class="stat-cell">
       <div class="stat-value green" id="stat-accuracy">—</div>
-      <div class="stat-label">Accuracy rate</div>
+      <div class="stat-label" id="stat-accuracy-label">Accuracy rate</div>
     </div>
     <div class="stat-cell">
-      <div class="stat-value" id="stat-sources">—</div>
-      <div class="stat-label">Sources tracked</div>
+      <div class="stat-value" id="stat-fourth">—</div>
+      <div class="stat-label" id="stat-fourth-label">Sources tracked</div>
     </div>
   </div>
 
@@ -170,18 +191,16 @@
   </div>
 
   <div class="filter-row">
-    <button class="filter-chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
-    <button class="filter-chip" data-filter="pending" onclick="setFilter('pending', this)">Pending</button>
-    <button class="filter-chip" data-filter="correct" onclick="setFilter('correct', this)">Correct</button>
-    <button class="filter-chip" data-filter="incorrect" onclick="setFilter('incorrect', this)">Incorrect</button>
-    <button class="validate-btn" id="validate-btn" onclick="runValidation()">Run validation</button>
-    <span id="validate-status" style="font-size:12px;color:var(--muted);margin-left:4px"></span>
+    <button class="filter-chip active" data-filter="all">All</button>
+    <button class="filter-chip" data-filter="pending">Pending</button>
+    <button class="filter-chip" data-filter="correct">Correct</button>
+    <button class="filter-chip" data-filter="incorrect">Incorrect</button>
+    <button class="action-btn" id="action-btn">Run validation</button>
+    <span class="action-status" id="action-status"></span>
   </div>
 
   <div class="pred-list" id="pred-list">
-    <div class="pred-empty">
-      <h3>Loading predictions...</h3>
-    </div>
+    <div class="pred-empty"><h3>Loading...</h3></div>
   </div>
 
   <footer>
@@ -191,36 +210,151 @@
 
   <script>
     let allEntries = [];
+    let allReputation = {};
     let currentFilter = 'all';
+    let currentTab = 'stock';
 
-    async function runValidation() {
-      const btn = document.getElementById('validate-btn');
-      const status = document.getElementById('validate-status');
+    // ── Tab management ────────────────────────────────────────────────
+    function getTabEntries() {
+      if (currentTab === 'prediction-market') return allEntries.filter(e => e.type === 'prediction-market');
+      if (currentTab === 'crypto') return allEntries.filter(e => e.type === 'crypto');
+      return allEntries.filter(e => !e.type || e.type === 'stock');
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', function () {
+        currentTab = this.dataset.tab;
+        currentFilter = 'all';
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.filter-chip').forEach(c => {
+          c.classList.remove('active');
+          if (c.dataset.filter === 'all') c.classList.add('active');
+        });
+        updateActionButton();
+        updateStats();
+        renderPredictions();
+      });
+    });
+
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.addEventListener('click', function () {
+        currentFilter = this.dataset.filter;
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        renderPredictions();
+      });
+    });
+
+    function updateActionButton() {
+      const btn = document.getElementById('action-btn');
+      document.getElementById('action-status').textContent = '';
+      if (currentTab === 'prediction-market') {
+        btn.textContent = 'Check outcomes';
+        btn.style.display = '';
+      } else if (currentTab === 'stock') {
+        btn.textContent = 'Run validation';
+        btn.style.display = '';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    document.getElementById('action-btn').addEventListener('click', async function () {
+      if (currentTab === 'stock') await runValidation();
+      else if (currentTab === 'prediction-market') await runCheckMarkets();
+    });
+
+    // ── Actions ───────────────────────────────────────────────────────
+    async function runAction(url, successMsg) {
+      const btn = document.getElementById('action-btn');
+      const status = document.getElementById('action-status');
       btn.disabled = true;
-      status.textContent = 'Validating...';
+      status.textContent = 'Checking...';
       try {
-        const res = await fetch('/api/validate');
+        const res = await fetch(url);
         const data = await res.json();
-        if (data.validated > 0) {
-          status.textContent = `${data.validated} prediction${data.validated > 1 ? 's' : ''} validated`;
-          await loadData();
-        } else {
-          status.textContent = data.message || 'Nothing to validate yet';
-        }
+        if (data.error) throw new Error(data.error);
+        const count = data.validated ?? data.resolved ?? 0;
+        status.textContent = count > 0 ? `${count} ${successMsg}` : data.message || 'Nothing to update yet';
+        if (count > 0) await loadData();
       } catch (e) {
-        status.textContent = 'Validation error';
+        status.textContent = 'Error: ' + e.message;
       }
       btn.disabled = false;
-      setTimeout(() => { status.textContent = ''; }, 4000);
+      setTimeout(() => { status.textContent = ''; }, 5000);
     }
 
-    function setFilter(filter, el) {
-      currentFilter = filter;
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
-      renderPredictions();
+    function runValidation() { return runAction('/api/validate', 'stock prediction(s) validated'); }
+    function runCheckMarkets() { return runAction('/api/check-markets', 'market outcome(s) resolved'); }
+
+    // ── Stats ─────────────────────────────────────────────────────────
+    function updateStats() {
+      const entries = getTabEntries();
+      const total = entries.length;
+      const pending = entries.filter(e => e.correct === null).length;
+      const validated = entries.filter(e => e.correct !== null).length;
+      const wins = entries.filter(e => e.correct === true).length;
+      const accuracy = validated > 0 ? Math.round(wins / validated * 100) : null;
+
+      document.getElementById('stat-total').textContent = total || '0';
+      document.getElementById('stat-pending').textContent = pending || '0';
+      document.getElementById('stat-accuracy').textContent = accuracy !== null ? `${accuracy}%` : '—';
+
+      if (currentTab === 'prediction-market') {
+        document.getElementById('stat-pending-label').textContent = 'Pending resolution';
+        document.getElementById('stat-accuracy-label').textContent = 'Win rate';
+        document.getElementById('stat-fourth').textContent = wins || '0';
+        document.getElementById('stat-fourth-label').textContent = 'Total wins';
+      } else {
+        document.getElementById('stat-pending-label').textContent = 'Awaiting validation';
+        document.getElementById('stat-accuracy-label').textContent = 'Accuracy rate';
+        document.getElementById('stat-fourth').textContent = Object.keys(allReputation).length || '0';
+        document.getElementById('stat-fourth-label').textContent = 'Sources tracked';
+      }
     }
 
+    // ── Leaderboard ───────────────────────────────────────────────────
+    function buildLeaderboard() {
+      const sources = Object.entries(allReputation)
+        .filter(([, s]) => s.attempts > 0)
+        .sort((a, b) => (b[1].correct / b[1].attempts) - (a[1].correct / a[1].attempts));
+
+      const section = document.getElementById('leaderboard-section');
+      if (!sources.length) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      document.getElementById('leaderboard-badge').textContent = `${sources.length} source${sources.length > 1 ? 's' : ''}`;
+
+      const table = document.getElementById('leaderboard');
+      table.innerHTML = `
+        <thead><tr>
+          <th style="width:220px">Source</th>
+          <th>Accuracy</th>
+          <th style="width:80px;text-align:right">Predictions</th>
+          <th style="width:100px;text-align:right">Status</th>
+        </tr></thead>
+        <tbody>${sources.map(([name, s]) => {
+          const acc = s.correct / s.attempts;
+          const pct = (acc * 100).toFixed(0);
+          const fillClass = acc >= 0.65 ? 'fill-green' : acc >= 0.45 ? 'fill-amber' : 'fill-red';
+          const repStatus = s.attempts >= 60
+            ? '<span class="rep-badge rep-full">Full weight</span>'
+            : s.attempts >= 30
+            ? '<span class="rep-badge rep-ramping">Ramping</span>'
+            : '<span class="rep-badge rep-building">Building</span>';
+          return `<tr>
+            <td><span class="source-name">${name}</span></td>
+            <td><div class="accuracy-bar-wrap">
+              <div class="accuracy-bar-bg"><div class="accuracy-bar-fill ${fillClass}" style="width:${pct}%"></div></div>
+              <span class="accuracy-pct">${pct}%</span>
+            </div></td>
+            <td style="text-align:right;color:var(--muted)">${s.attempts}</td>
+            <td style="text-align:right">${repStatus}</td>
+          </tr>`;
+        }).join('')}</tbody>`;
+    }
+
+    // ── Card builders ─────────────────────────────────────────────────
     function formatDate(iso) {
       if (!iso) return '—';
       return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -228,124 +362,44 @@
 
     function daysUntil(iso) {
       if (!iso) return null;
-      const diff = new Date(iso) - new Date();
-      return Math.ceil(diff / 86400000);
+      return Math.ceil((new Date(iso) - new Date()) / 86400000);
     }
 
-    function getConfClass(conf) {
-      const c = (conf || '').toLowerCase();
-      if (c.startsWith('high')) return 'conf-high';
-      if (c.startsWith('medium')) return 'conf-medium';
-      return 'conf-low';
-    }
-
-    function buildLeaderboard(reputation) {
-      const sources = Object.entries(reputation)
-        .filter(([, s]) => s.attempts > 0)
-        .sort((a, b) => {
-          const accA = a[1].correct / a[1].attempts;
-          const accB = b[1].correct / b[1].attempts;
-          return accB - accA;
-        });
-
-      const section = document.getElementById('leaderboard-section');
-      if (sources.length === 0) { section.style.display = 'none'; return; }
-      section.style.display = 'block';
-      document.getElementById('leaderboard-badge').textContent = `${sources.length} source${sources.length > 1 ? 's' : ''}`;
-
-      const table = document.getElementById('leaderboard');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th style="width:220px">Source</th>
-            <th>Accuracy</th>
-            <th style="width:80px;text-align:right">Predictions</th>
-            <th style="width:100px;text-align:right">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${sources.map(([name, stats]) => {
-            const acc = stats.correct / stats.attempts;
-            const pct = (acc * 100).toFixed(0);
-            const fillClass = acc >= 0.65 ? 'fill-green' : acc >= 0.45 ? 'fill-amber' : 'fill-red';
-            const repStatus = stats.attempts >= 60
-              ? '<span class="rep-badge rep-full">Full weight</span>'
-              : stats.attempts >= 30
-              ? '<span class="rep-badge rep-ramping">Ramping</span>'
-              : '<span class="rep-badge rep-building">Building</span>';
-            return `
-              <tr>
-                <td><span class="source-name">${name}</span></td>
-                <td>
-                  <div class="accuracy-bar-wrap">
-                    <div class="accuracy-bar-bg"><div class="accuracy-bar-fill ${fillClass}" style="width:${pct}%"></div></div>
-                    <span class="accuracy-pct">${pct}%</span>
-                  </div>
-                </td>
-                <td style="text-align:right;color:var(--muted)">${stats.attempts}</td>
-                <td style="text-align:right">${repStatus}</td>
-              </tr>`;
-          }).join('')}
-        </tbody>`;
-    }
-
-    function buildCard(entry) {
-      const isCorrect = entry.correct === true;
-      const isIncorrect = entry.correct === false;
-      const isPending = entry.correct === null;
-
-      const cardClass = isCorrect ? 'correct' : isIncorrect ? 'incorrect' : 'pending';
+    function statusBadgeHTML(entry) {
+      if (entry.correct === true) return `<span class="status-badge status-correct">✓ WIN</span>`;
+      if (entry.correct === false) return `<span class="status-badge status-incorrect">✗ LOSS</span>`;
       const days = daysUntil(entry.validationDate);
+      if (days !== null && days > 0) return `<span class="status-badge status-pending">⏳ ${days}d left</span>`;
+      return `<span class="status-badge status-pending">⏳ Pending</span>`;
+    }
 
-      let statusBadge;
-      if (isCorrect) {
-        statusBadge = `<span class="status-badge status-correct">✓ Correct</span>`;
-      } else if (isIncorrect) {
-        statusBadge = `<span class="status-badge status-incorrect">✗ Incorrect</span>`;
-      } else if (days !== null && days > 0) {
-        statusBadge = `<span class="status-badge status-pending">⏳ ${days}d until validation</span>`;
-      } else if (days !== null && days <= 0) {
-        statusBadge = `<span class="status-badge status-pending">⏳ Validation pending</span>`;
-      } else {
-        statusBadge = `<span class="status-badge status-pending">⏳ Pending</span>`;
-      }
-
+    function buildStockCard(entry) {
+      const cardClass = entry.correct === true ? 'correct' : entry.correct === false ? 'incorrect' : 'pending';
       const winners = entry.winnerTickers || entry.analysis?.winners?.tickers || [];
       const losers = entry.loserTickers || entry.analysis?.losers?.tickers || [];
       const sources = (entry.sources || []).slice(0, 4);
       const moreCount = (entry.sources || []).length - 4;
-      const sourceLine = sources.join(' · ') + (moreCount > 0 ? ` · +${moreCount} more` : '');
-
       const conf = entry.analysis?.confidence || '—';
-      const confClass = getConfClass(conf);
-
+      const confClass = conf.toLowerCase().startsWith('high') ? 'conf-high' : conf.toLowerCase().startsWith('medium') ? 'conf-medium' : 'conf-low';
       let scoreDetail = '';
       if (entry.actualOutcome?.scores) {
         const s = entry.actualOutcome.scores;
-        scoreDetail = `<span class="score-detail"><strong>${s.correct}</strong> correct · <strong>${s.incorrect}</strong> incorrect · <strong>${s.neutral}</strong> neutral tickers</span>`;
+        scoreDetail = `<span class="score-detail"><strong>${s.correct}</strong> correct · <strong>${s.incorrect}</strong> incorrect · <strong>${s.neutral}</strong> neutral</span>`;
       }
-
       return `
         <div class="pred-card ${cardClass}">
           <div class="pred-header">
             <div class="pred-topic">${entry.topic || 'Untitled prediction'}</div>
-            ${statusBadge}
+            ${statusBadgeHTML(entry)}
           </div>
           <div class="pred-meta">
             <div class="pred-meta-item">📅 <strong>${formatDate(entry.createdAt)}</strong></div>
             ${entry.validationDate ? `<div class="pred-meta-item">🎯 Validates <strong>${formatDate(entry.validationDate)}</strong></div>` : ''}
-            ${sourceLine ? `<div class="pred-meta-item">📰 ${sourceLine}</div>` : ''}
+            ${sources.length ? `<div class="pred-meta-item">📰 ${sources.join(' · ')}${moreCount > 0 ? ` · +${moreCount} more` : ''}</div>` : ''}
           </div>
-          ${(winners.length || losers.length) ? `
-          <div class="pred-tickers">
-            ${winners.length ? `<div class="ticker-group">
-              <div class="ticker-group-label">Beneficiaries</div>
-              <div class="ticker-pills">${winners.map(t => `<span class="pill pill-up">${t}</span>`).join('')}</div>
-            </div>` : ''}
-            ${losers.length ? `<div class="ticker-group">
-              <div class="ticker-group-label">Losers</div>
-              <div class="ticker-pills">${losers.map(t => `<span class="pill pill-down">${t}</span>`).join('')}</div>
-            </div>` : ''}
+          ${(winners.length || losers.length) ? `<div class="pred-tickers">
+            ${winners.length ? `<div class="ticker-group"><div class="ticker-group-label">Beneficiaries</div><div class="ticker-pills">${winners.map(t => `<span class="pill pill-up">${t}</span>`).join('')}</div></div>` : ''}
+            ${losers.length ? `<div class="ticker-group"><div class="ticker-group-label">Losers</div><div class="ticker-pills">${losers.map(t => `<span class="pill pill-down">${t}</span>`).join('')}</div></div>` : ''}
           </div>` : ''}
           <div class="pred-footer">
             <span class="conf-label">Confidence: <span class="${confClass}">${conf}</span></span>
@@ -354,56 +408,73 @@
         </div>`;
     }
 
+    function buildMarketCard(entry) {
+      const cardClass = entry.correct === true ? 'correct' : entry.correct === false ? 'incorrect' : 'pending';
+      const leanClass = entry.lean === 'Yes' ? 'lean-yes' : entry.lean === 'No' ? 'lean-no' : 'lean-uncertain';
+      const signalClass = entry.signal === 'Aligns with market' ? 'signal-aligns'
+        : entry.signal === 'Contradicts market' ? 'signal-contradicts' : 'signal-inconclusive';
+      const sources = (entry.sources || []).slice(0, 3);
+      const moreCount = (entry.sources || []).length - 3;
+      return `
+        <div class="pred-card ${cardClass}">
+          <div class="pred-header">
+            <div class="pred-topic">${entry.topic || 'Untitled'}</div>
+            ${statusBadgeHTML(entry)}
+          </div>
+          <div class="lean-row">
+            <span class="lean-pill ${leanClass}">AI leans ${entry.lean || 'Uncertain'} — ${entry.lean_confidence || '?'} confidence</span>
+            ${entry.signal ? `<span class="signal-pill ${signalClass}">${entry.signal}</span>` : ''}
+          </div>
+          <div class="pred-meta">
+            ${entry.marketOddsAtTime !== null && entry.marketOddsAtTime !== undefined ? `<div class="pred-meta-item">Odds at analysis: <strong>${entry.marketOddsAtTime}%</strong></div>` : ''}
+            <div class="pred-meta-item">📅 <strong>${formatDate(entry.createdAt)}</strong></div>
+            ${entry.resolvedOutcome ? `<div class="pred-meta-item">Resolved: <strong>${entry.resolvedOutcome}</strong></div>` : entry.daysLeft ? `<div class="pred-meta-item">Closes in: <strong>${entry.daysLeft}d</strong></div>` : ''}
+            ${sources.length ? `<div class="pred-meta-item">📰 ${sources.join(' · ')}${moreCount > 0 ? ` · +${moreCount} more` : ''}</div>` : ''}
+          </div>
+        </div>`;
+    }
+
+    // ── Render ────────────────────────────────────────────────────────
     function renderPredictions() {
       const container = document.getElementById('pred-list');
-      let filtered = allEntries;
-      if (currentFilter === 'pending') filtered = allEntries.filter(e => e.correct === null);
-      else if (currentFilter === 'correct') filtered = allEntries.filter(e => e.correct === true);
-      else if (currentFilter === 'incorrect') filtered = allEntries.filter(e => e.correct === false);
+      let entries = getTabEntries();
+      if (currentFilter === 'pending')   entries = entries.filter(e => e.correct === null);
+      if (currentFilter === 'correct')   entries = entries.filter(e => e.correct === true);
+      if (currentFilter === 'incorrect') entries = entries.filter(e => e.correct === false);
 
-      if (filtered.length === 0) {
-        const msgs = {
-          all: { h: 'No predictions yet', p: 'Load the Daily Feed to start generating predictions.' },
-          pending: { h: 'No pending predictions', p: 'All predictions have been validated.' },
-          correct: { h: 'No correct predictions yet', p: 'Predictions will auto-validate when their timeframe expires.' },
-          incorrect: { h: 'No incorrect predictions yet', p: 'Predictions will auto-validate when their timeframe expires.' }
+      if (!entries.length) {
+        const tabLabel = currentTab === 'prediction-market' ? 'prediction market' : currentTab;
+        const emptyMsgs = {
+          all: { h: `No ${tabLabel} predictions yet`, p: currentTab === 'prediction-market' ? 'Analyze a market on the Prediction Markets page to start tracking.' : 'Load the feed to generate predictions.' },
+          pending: { h: 'No pending predictions', p: 'All predictions have been resolved.' },
+          correct: { h: 'No wins yet', p: 'Resolved predictions will appear here.' },
+          incorrect: { h: 'No losses yet', p: 'Resolved predictions will appear here.' }
         };
-        const m = msgs[currentFilter] || msgs.all;
+        const m = emptyMsgs[currentFilter] || emptyMsgs.all;
         container.innerHTML = `<div class="pred-empty"><h3>${m.h}</h3><p>${m.p}</p></div>`;
         return;
       }
 
-      container.innerHTML = filtered.map(e => buildCard(e)).join('');
+      const buildFn = currentTab === 'prediction-market' ? buildMarketCard : buildStockCard;
+      container.innerHTML = entries.map(e => buildFn(e)).join('');
     }
 
-    function updateStats(entries, reputation) {
-      const total = entries.length;
-      const pending = entries.filter(e => e.correct === null).length;
-      const validated = entries.filter(e => e.correct !== null).length;
-      const correct = entries.filter(e => e.correct === true).length;
-      const accuracy = validated > 0 ? Math.round(correct / validated * 100) : null;
-      const sources = Object.keys(reputation || {}).length;
-
-      document.getElementById('stat-total').textContent = total || '0';
-      document.getElementById('stat-pending').textContent = pending || '0';
-      document.getElementById('stat-accuracy').textContent = accuracy !== null ? `${accuracy}%` : '—';
-      document.getElementById('stat-sources').textContent = sources || '0';
-    }
-
+    // ── Data loading ──────────────────────────────────────────────────
     async function loadData() {
       try {
         const res = await fetch('/api/predictions?withReputation=1');
         const data = await res.json();
         allEntries = (data.entries || []).slice().reverse();
-        const reputation = data.reputation || {};
-        updateStats(data.entries || [], reputation);
-        buildLeaderboard(reputation);
+        allReputation = data.reputation || {};
+        updateStats();
+        buildLeaderboard();
         renderPredictions();
       } catch (e) {
         document.getElementById('pred-list').innerHTML = `<div class="pred-empty"><h3>Could not load predictions</h3><p>${e.message}</p></div>`;
       }
     }
 
+    updateActionButton();
     loadData();
   </script>
 

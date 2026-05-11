@@ -51,6 +51,7 @@ function buildRecord(body) {
   return {
     id: `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
     createdAt: new Date().toISOString(),
+    type: body.type || null,
     topic: body.topic || null,
     headlines: body.headlines || [],
     sources: body.sources || [],
@@ -58,6 +59,14 @@ function buildRecord(body) {
     minGrade: body.minGrade || 'medium',
     impactTimeframe: body.impactTimeframe || null,
     analysis: body.analysis || null,
+    // prediction-market specific
+    lean: body.lean || null,
+    lean_confidence: body.lean_confidence || null,
+    marketOddsAtTime: body.marketOddsAtTime ?? null,
+    marketSlug: body.marketSlug || null,
+    signal: body.signal || null,
+    daysLeft: body.daysLeft ?? null,
+    resolvedOutcome: body.resolvedOutcome || null,
     actualOutcome: body.actualOutcome || null,
     correct: typeof body.correct === 'boolean' ? body.correct : null,
     notes: body.notes || null
