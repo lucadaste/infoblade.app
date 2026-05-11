@@ -72,14 +72,9 @@
     .feature-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; }
     .feature-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
     .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
-    .modules-section { padding: 0 48px 88px; }
-    .modules-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .module-card { background: var(--ink); color: #f0ede6; border-radius: 10px; padding: 32px; text-decoration: none; display: flex; flex-direction: column; transition: transform 0.2s, opacity 0.2s; border: 2px solid transparent; }
-    .module-card:hover { transform: translateY(-3px); opacity: 0.9; }
-    .module-tag { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
-    .module-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 12px; line-height: 1.2; }
-    .module-card p { font-size: 14px; color: #888; line-height: 1.75; flex: 1; }
-    .module-link { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 24px; letter-spacing: 0.5px; }
+    .platform-header { padding: 80px 48px 48px; border-top: 1px solid var(--border); }
+    .platform-header h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(24px, 3.5vw, 38px); letter-spacing: -1.2px; line-height: 1.1; margin-top: 16px; margin-bottom: 12px; }
+    .platform-header p { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.75; font-weight: 300; }
     .waitlist-section { padding: 88px 48px; background: var(--ink); color: #f0ede6; text-align: center; }
     .waitlist-section .section-label { color: var(--accent); margin-bottom: 24px; }
     .waitlist-section h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; margin-bottom: 16px; line-height: 1.1; }
@@ -163,7 +158,7 @@
       .steps { grid-template-columns: 1fr; gap: 2px; }
       .step:first-child { border-radius: 10px 10px 0 0; } .step:last-child { border-radius: 0 0 10px 10px; }
       .features-grid { grid-template-columns: 1fr; } .example-card { padding: 32px 24px; }
-      .modules-section { padding: 0 24px 64px; } .modules-grid { grid-template-columns: 1fr; }
+      .platform-header { padding: 56px 24px 36px; }
       .chain-row { flex-direction: column; gap: 8px; } .chain-label { min-width: unset; }
       .split-section { grid-template-columns: 1fr; gap: 40px; padding: 64px 24px; }
       .cs-section { padding: 64px 24px; } .cs-inner { grid-template-columns: 1fr; gap: 36px; padding: 36px 28px; }
@@ -328,33 +323,11 @@
     </div>
   </section>
 
-  <section class="modules-section" id="tools">
-    <div class="section-label">More tools</div>
-    <div class="modules-grid">
-
-      <a class="module-card fade-in" href="/feed.html">
-        <div class="module-tag">Daily Feed</div>
-        <h4>Market-moving events, explained</h4>
-        <p>Every day, our AI reads hundreds of news sources, groups them into distinct market events, and traces the full economic chain — from headline to sector to specific stocks. Filtered by category, timeframe, and source quality.</p>
-        <div class="module-link">Open daily feed →</div>
-      </a>
-
-      <a class="module-card fade-in" href="/predictions.html">
-        <div class="module-tag">Prediction Tracker</div>
-        <h4>Did the AI get it right?</h4>
-        <p>Every analysis we generate becomes a logged prediction — with the exact tickers called, the impact timeframe, and the confidence level. Track how our calls age over time and which sources consistently lead to accurate outcomes.</p>
-        <div class="module-link">View prediction history →</div>
-      </a>
-
-      <a class="module-card fade-in" href="/crypto.html">
-        <div class="module-tag">Crypto Markets</div>
-        <h4>On-chain signals meet macro context</h4>
-        <p>Dedicated crypto analysis that goes beyond price — connecting macro triggers, regulatory shifts, and institutional flows to specific tokens. BTC, ETH, and the broader digital asset landscape, analyzed the same way we cover equities.</p>
-        <div class="module-link">Explore crypto feed →</div>
-      </a>
-
-    </div>
-  </section>
+  <div class="platform-header fade-in">
+    <div class="section-label">The platform</div>
+    <h2>Four tools. One pipeline.</h2>
+    <p>Every section of the site runs on the same source-weighted AI — applied to stocks, prediction markets, crypto, and our own track record.</p>
+  </div>
 
   <!-- Prediction Markets -->
   <section class="split-section fade-in" id="prediction-markets">
