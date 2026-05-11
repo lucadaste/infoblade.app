@@ -39,8 +39,9 @@
     .btn-load { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .btn-load:hover { opacity: 0.85; }
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
-    .status-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
-    .loader { display: none; align-items: flex-end; gap: 3px; height: 18px; }
+    .status-wrap { display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0; flex: 1; max-width: 420px; }
+    .status-text { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .loader { display: none; align-items: flex-end; gap: 3px; height: 18px; flex-shrink: 0; }
     .loader.active { display: flex; }
     .loader span { display: block; width: 3px; border-radius: 2px; background: var(--ink); animation: eq 1s ease-in-out infinite; }
     .loader span:nth-child(1) { animation-delay: 0s;    height: 6px; }
@@ -49,6 +50,12 @@
     .loader span:nth-child(4) { animation-delay: 0.45s; height: 10px; }
     .loader span:nth-child(5) { animation-delay: 0.6s;  height: 6px; }
     @keyframes eq { 0%,100% { transform: scaleY(0.4); opacity: 0.4; } 50% { transform: scaleY(1); opacity: 1; } }
+    .feed-pending { display: none; align-items: center; gap: 6px; padding: 24px 0; }
+    .feed-pending.active { display: flex; }
+    .feed-pending span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); animation: bdot 1.2s ease-in-out infinite; }
+    .feed-pending span:nth-child(2) { animation-delay: 0.2s; }
+    .feed-pending span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bdot { 0%,100% { transform: translateY(0); opacity: 0.3; } 50% { transform: translateY(-7px); opacity: 1; } }
 
     .main-layout { display: flex; align-items: flex-start; }
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
@@ -203,8 +210,10 @@
     </div>
     <div class="filter-actions">
       <button class="btn-load" onclick="loadFeed()" id="btn">Load feed →</button>
-      <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
-      <span class="status-text" id="status"></span>
+      <div class="status-wrap">
+        <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
+        <span class="status-text" id="status"></span>
+      </div>
     </div>
   </div>
 
@@ -212,6 +221,7 @@
     <div class="feed-container">
       <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
       <div id="feed"></div>
+      <div class="feed-pending" id="feed-pending"><span></span><span></span><span></span></div>
     </div>
 
     <!-- WATCHLIST PANEL -->
@@ -501,6 +511,7 @@
       const feed   = document.getElementById('feed');
       const label  = document.getElementById('feed-label');
       const loader = document.getElementById('loader');
+      const feedPending = document.getElementById('feed-pending');
 
       const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
@@ -513,6 +524,7 @@
       feed.innerHTML = '';
       label.style.display = 'none';
       loader.classList.add('active');
+      feedPending.classList.add('active');
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
 
       try {
@@ -544,6 +556,7 @@
             const analysis = await analyzeGroup(group, impact);
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
+            if (i < groups.length - 1) feedPending.classList.add('active');
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
             const errCard = document.createElement('div');
@@ -562,10 +575,12 @@
         cards.forEach(card => feed.appendChild(card));
 
         loader.classList.remove('active');
+        feedPending.classList.remove('active');
         status.textContent = `${cards.length} topics analyzed — sorted by confidence`;
 
       } catch (err) {
         loader.classList.remove('active');
+        feedPending.classList.remove('active');
         if (err.name === 'AbortError') {
           status.textContent = 'Request timed out — try again';
         } else {
