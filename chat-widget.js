@@ -267,7 +267,7 @@
       <div class="ii-ph-title"><em>II</em> AI Informant</div>
     </div>
     <div class="ii-msgs" id="ii-msgs">
-      <div class="ii-m ii-m-ai">I'm the AI Informant. Ask me about any stock, sector, or market theme — or how this site works.</div>
+      <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for — drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
       <div class="ii-starters" id="ii-starters"></div>
     </div>
     <div class="ii-input-row">
