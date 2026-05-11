@@ -55,12 +55,13 @@
     .loader span:nth-child(4) { animation-delay: 0.45s; height: 10px; }
     .loader span:nth-child(5) { animation-delay: 0.6s;  height: 6px; }
     @keyframes eq { 0%,100% { transform: scaleY(0.4); opacity: 0.4; } 50% { transform: scaleY(1); opacity: 1; } }
-    .feed-pending { display: none; align-items: center; gap: 6px; padding: 24px 0; }
+    .feed-pending { display: none; align-items: center; gap: 8px; padding: 24px 0; }
     .feed-pending.active { display: flex; }
-    .feed-pending span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); animation: bdot 1.2s ease-in-out infinite; }
-    .feed-pending span:nth-child(2) { animation-delay: 0.2s; }
-    .feed-pending span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bdot { 0%,100% { transform: translateY(0); opacity: 0.3; } 50% { transform: translateY(-7px); opacity: 1; } }
+    .feed-pending span { width: 11px; height: 11px; border-radius: 50%; animation: bdot 1.2s ease-in-out infinite; }
+    .feed-pending span:nth-child(1) { background: #86efac; animation-delay: 0s; }
+    .feed-pending span:nth-child(2) { background: #4ade80; animation-delay: 0.2s; }
+    .feed-pending span:nth-child(3) { background: #16a34a; animation-delay: 0.4s; }
+    @keyframes bdot { 0%,100% { transform: translateY(0); opacity: 0.35; } 50% { transform: translateY(-8px); opacity: 1; } }
 
     .main-layout { display: flex; align-items: flex-start; }
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
