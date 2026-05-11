@@ -85,9 +85,8 @@
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); }
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
-    .confidence-high   { color: var(--accent); font-size: 14px; }
-    .confidence-medium { color: #ffaa00; font-size: 14px; }
-    .confidence-low    { color: #ff7070; font-size: 14px; }
+    .confidence-high   { color: #4ade80; font-size: 14px; }
+    .confidence-medium { color: #fbbf24; font-size: 14px; }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
@@ -613,6 +612,7 @@
           status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
           try {
             const analysis = await analyzeGroup(group, impact);
+            if ((analysis.confidence || '').toLowerCase().startsWith('low')) continue;
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
             if (i < groups.length - 1) feedPending.classList.add('active');

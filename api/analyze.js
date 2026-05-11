@@ -432,7 +432,7 @@ CRITICAL RULES:
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only
-- Confidence must start with exactly "High", "Medium", or "Low" followed by a dash and reason
+- Confidence must start with exactly "High" or "Medium" followed by a dash and reason — never output "Low"
 
 Respond ONLY with valid JSON, no markdown:
 {
@@ -451,7 +451,7 @@ Respond ONLY with valid JSON, no markdown:
     "explanation": "Why these specific US-listed stocks or ETFs are hurt by this specific event",
     "tickers": ["TICK4", "TICK5"]
   },
-  "confidence": "High — specific reason OR Medium — specific reason OR Low — specific reason"
+  "confidence": "High — specific reason OR Medium — specific reason"
 }`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
