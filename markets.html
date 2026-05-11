@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestmentInformatics.AI — Live Markets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --ink: #0a0a0a; --paper: #f5f2eb; --accent: #c8ff00; --muted: #6b6b6b; --border: #e0ddd6; --card: #ffffff; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
+    .nav-logo span { background: var(--accent); padding: 1px 6px; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 500; }
+
+    .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
+    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 600px; }
+
+    .category-bar { display: flex; gap: 10px; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 61px; z-index: 90; overflow-x: auto; }
+    .cat-chip { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
+    .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
+    .cat-chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+    .market-status { padding: 12px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 44px; display: flex; align-items: center; gap: 10px; }
+    .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .market-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 32px 48px 80px; }
+
+    .market-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; transition: transform 0.15s, box-shadow 0.15s; animation: fadeUp 0.35s ease both; }
+    .market-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .market-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+    .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; flex: 1; }
+
+    .odds-block { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+    .odds-number { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -1px; line-height: 1; }
+    .odds-number.high { color: #2a9e4f; }
+    .odds-number.medium { color: var(--ink); }
+    .odds-number.low { color: #c84040; }
+    .odds-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); text-align: right; margin-top: 2px; }
+
+    .market-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+    .meta-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
+    .meta-item strong { color: var(--ink); font-weight: 500; }
+
+    .btn-analyze { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.2s; align-self: flex-start; letter-spacing: 0.2px; }
+    .btn-analyze:hover { opacity: 0.8; }
+    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-analyze.loading { display: flex; align-items: center; gap: 8px; }
+
+    .analysis-block { border-top: 1px solid var(--border); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
+
+    .analysis-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .lean-badge { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 6px; letter-spacing: 0.3px; }
+    .lean-yes { background: rgba(42,158,79,0.12); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.25); }
+    .lean-no { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
+    .lean-uncertain { background: var(--border); color: var(--muted); border: 1px solid transparent; }
+
+    .signal-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.3px; }
+    .signal-aligns { background: rgba(42,158,79,0.08); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.15); }
+    .signal-contradicts { background: rgba(200,125,0,0.12); color: #c87d00; border: 1px solid rgba(200,125,0,0.25); font-weight: 700; }
+    .signal-inconclusive { background: var(--border); color: var(--muted); border: 1px solid transparent; }
+
+    .analysis-reasoning { font-size: 13px; color: #444; line-height: 1.65; }
+    .analysis-signal-detail { font-size: 12px; color: var(--muted); font-style: italic; }
+    .analysis-sources { font-size: 12px; color: var(--muted); }
+    .analysis-sources strong { color: var(--ink); font-weight: 500; }
+    .analysis-error { font-size: 13px; color: #c84040; }
+
+    .empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 0; color: var(--muted); }
+    .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state p { font-size: 14px; max-width: 360px; margin: 0 auto; }
+
+    .polymarket-note { padding: 12px 48px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .polymarket-note a { color: var(--muted); }
+
+    footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
+    .footer-logo span { background: var(--accent); padding: 1px 5px; }
+    footer p { font-size: 13px; color: var(--muted); }
+
+    @media (max-width: 900px) { .market-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) {
+      nav { padding: 16px 24px; }
+      .nav-links { display: none; }
+      .hero { padding: 40px 24px 24px; }
+      .category-bar { padding: 16px 24px; top: 57px; }
+      .market-status { padding: 10px 24px; }
+      .polymarket-note { padding: 10px 24px; }
+      .market-grid { padding: 20px 24px 60px; }
+      footer { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="nav-logo" href="/"><span>Investment</span>Informatics.AI</a>
+    <ul class="nav-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/feed.html">Daily Feed</a></li>
+      <li><a href="/predictions.html">Predictions</a></li>
+      <li><a href="/markets.html" class="active">Live Markets</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-tag"><span class="hero-tag-dot"></span> Powered by Polymarket</div>
+    <h1>Live prediction markets</h1>
+    <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing — then let the news tell you whether they're right.</p>
+  </div>
+
+  <div class="category-bar">
+    <button class="cat-chip active" data-cat="sports" onclick="selectCategory('sports', this)">Sports</button>
+    <button class="cat-chip" data-cat="politics" onclick="selectCategory('politics', this)">Politics</button>
+    <button class="cat-chip" data-cat="finance" onclick="selectCategory('finance', this)">Finance</button>
+    <button class="cat-chip" data-cat="entertainment" onclick="selectCategory('entertainment', this)">Entertainment</button>
+    <button class="cat-chip" data-cat="celebrity" onclick="selectCategory('celebrity', this)">Celebrity</button>
+    <button class="cat-chip" data-cat="law" onclick="selectCategory('law', this)">Law</button>
+  </div>
+
+  <div class="market-status" id="market-status"></div>
+
+  <div class="polymarket-note">
+    Market data via <a href="https://polymarket.com" target="_blank" rel="noopener">Polymarket</a>. Odds reflect crowd probability estimates, not financial advice.
+  </div>
+
+  <div class="market-grid" id="market-grid">
+    <div class="empty-state">
+      <h3>Select a category</h3>
+      <p>Pick a category above to load live prediction markets.</p>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
+    <p>For informational purposes only. Not financial advice.</p>
+  </footer>
+
+  <script>
+    let currentCategory = null;
+
+    function setStatus(msg, loading = false) {
+      const el = document.getElementById('market-status');
+      el.innerHTML = loading
+        ? `<div class="spinner"></div><span>${msg}</span>`
+        : `<span>${msg}</span>`;
+    }
+
+    function oddsClass(pct) {
+      if (pct >= 65) return 'high';
+      if (pct <= 35) return 'low';
+      return 'medium';
+    }
+
+    function formatVolume(v) {
+      if (v >= 1000000) return `$${(v / 1000000).toFixed(1)}M`;
+      if (v >= 1000) return `$${(v / 1000).toFixed(0)}K`;
+      return `$${v}`;
+    }
+
+    function leanBadgeClass(lean) {
+      if (lean === 'Yes') return 'lean-yes';
+      if (lean === 'No') return 'lean-no';
+      return 'lean-uncertain';
+    }
+
+    function signalBadgeClass(signal) {
+      if (signal === 'Aligns with market') return 'signal-aligns';
+      if (signal === 'Contradicts market') return 'signal-contradicts';
+      return 'signal-inconclusive';
+    }
+
+    async function analyzeMarket(market, cardEl) {
+      const btn = cardEl.querySelector('.btn-analyze');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.innerHTML = `<div class="spinner" style="border-top-color:var(--paper)"></div> Analyzing news...`;
+
+      try {
+        const res = await fetch('/api/market-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const existing = cardEl.querySelector('.analysis-block');
+        if (existing) existing.remove();
+
+        const block = document.createElement('div');
+        block.className = 'analysis-block';
+        block.innerHTML = `
+          <div class="analysis-header">
+            <span class="lean-badge ${leanBadgeClass(data.lean)}">News leans ${data.lean} — ${data.lean_confidence} confidence</span>
+            <span class="signal-badge ${signalBadgeClass(data.signal)}">${data.signal}</span>
+          </div>
+          <div class="analysis-reasoning">${data.reasoning}</div>
+          ${data.signal_detail ? `<div class="analysis-signal-detail">${data.signal_detail}</div>` : ''}
+          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Key sources:</strong> ${data.key_sources.join(' · ')}</div>` : ''}
+          ${data.articlesFound !== undefined ? `<div class="analysis-sources">${data.articlesFound} articles analyzed</div>` : ''}
+        `;
+        cardEl.appendChild(block);
+        btn.innerHTML = 'Re-analyze';
+      } catch (err) {
+        const block = document.createElement('div');
+        block.className = 'analysis-block';
+        block.innerHTML = `<div class="analysis-error">Analysis failed: ${err.message}</div>`;
+        cardEl.appendChild(block);
+        btn.innerHTML = 'Retry';
+      }
+
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
+
+    function buildCard(market, index) {
+      const card = document.createElement('div');
+      card.className = 'market-card';
+      card.style.animationDelay = `${index * 60}ms`;
+
+      const closesText = market.daysLeft !== null
+        ? (market.daysLeft <= 0 ? 'Closing soon' : `Closes in ${market.daysLeft}d`)
+        : 'No expiry set';
+
+      card.innerHTML = `
+        <div class="market-card-top">
+          <div class="market-question">${market.question}</div>
+          <div class="odds-block">
+            <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
+            <div class="odds-label">YES odds</div>
+          </div>
+        </div>
+        <div class="market-meta">
+          <div class="meta-item">Vol: <strong>${formatVolume(market.volume24h)}/24h</strong></div>
+          <div class="meta-item"><strong>${closesText}</strong></div>
+          ${market.totalMarkets > 1 ? `<div class="meta-item">${market.totalMarkets} markets in event</div>` : ''}
+        </div>
+        <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))">Analyze news →</button>
+      `;
+
+      return card;
+    }
+
+    async function selectCategory(cat, chipEl) {
+      if (currentCategory === cat) return;
+      currentCategory = cat;
+
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+
+      const grid = document.getElementById('market-grid');
+      grid.innerHTML = '';
+      setStatus(`Loading ${cat} markets...`, true);
+
+      try {
+        const res = await fetch(`/api/markets?category=${cat}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const markets = data.markets || [];
+        if (markets.length === 0) {
+          setStatus('');
+          grid.innerHTML = `
+            <div class="empty-state">
+              <h3>No active markets found</h3>
+              <p>No open prediction markets in this category right now. Try another category or check back later.</p>
+            </div>`;
+          return;
+        }
+
+        setStatus(`${markets.length} open markets — click "Analyze news →" on any card`);
+        markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
+      } catch (err) {
+        setStatus('');
+        grid.innerHTML = `
+          <div class="empty-state">
+            <h3>Could not load markets</h3>
+            <p>${err.message}</p>
+          </div>`;
+      }
+    }
+
+    // Auto-load sports on page open
+    selectCategory('sports', document.querySelector('[data-cat="sports"]'));
+  </script>
+
+</body>
+</html>
