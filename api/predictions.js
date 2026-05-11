@@ -74,6 +74,10 @@ export default async function handler(req, res) {
   try {
     if (req.method === 'GET') {
       const entries = await readStore();
+      if (req.query?.withReputation === '1') {
+        const reputation = await readReputation();
+        return res.status(200).json({ entries, reputation });
+      }
       return res.status(200).json({ entries });
     }
 
