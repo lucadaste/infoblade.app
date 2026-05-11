@@ -476,13 +476,11 @@
         }
 
         label.style.display = 'block';
-        status.textContent = `Found ${groups.length} topics. Analyzing implications...`;
+        status.textContent = `Found ${groups.length} topics. Analyzing all simultaneously...`;
 
-        // Analyze and render each card immediately as it's ready
+        // Fire all analyses in parallel — each card appears as soon as its own Claude call finishes
         const analyzed = [];
-        for (let i = 0; i < groups.length; i++) {
-          const group = groups[i];
-          status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
+        await Promise.all(groups.map(async (group) => {
           try {
             const analysis = await analyzeGroup(group, impact);
             logPrediction(group, analysis, impact);
@@ -490,9 +488,9 @@
             const card = buildCard(group, analysis, matchedTickers, match, impact);
             feed.appendChild(card);
             analyzed.push({ analysis, card });
+            status.textContent = `${analyzed.length} of ${groups.length} topics ready...`;
           } catch(err) {}
-          await new Promise(r => setTimeout(r, 500));
-        }
+        }));
 
         // Reorder existing DOM nodes by confidence — no re-render needed
         analyzed.sort((a, b) => getConfScore(a.analysis.confidence) - getConfScore(b.analysis.confidence));
