@@ -16,13 +16,13 @@
     }
     html { scroll-behavior: smooth; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; -webkit-font-smoothing: antialiased; }
-    nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
-    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
+    nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
     .nav-logo span { background: var(--accent); padding: 1px 6px; }
-    .nav-links { display: flex; gap: 32px; list-style: none; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
-    .nav-cta { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; text-decoration: none; }
+    .nav-cta { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; text-decoration: none; margin-left: auto; }
     .nav-cta:hover { opacity: 0.85; }
     .hero { padding: 96px 48px 80px; max-width: 960px; animation: fadeUp 0.7s ease both; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
