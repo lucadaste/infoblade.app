@@ -1,9 +1,10 @@
+// Tags are intentionally exclusive — no tag appears in more than one category
 const CATEGORY_TAGS = {
-  sports:        ['sports', 'nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball'],
-  politics:      ['politics', 'elections', 'government', 'trump', 'congress', 'legal', 'law', 'supreme-court', 'court'],
-  finance:       ['crypto', 'finance', 'economics', 'business', 'markets', 'bitcoin', 'ethereum'],
-  entertainment: ['pop-culture', 'entertainment', 'music', 'movies', 'tv', 'awards', 'oscars', 'grammys'],
-  celebrity:     ['pop-culture', 'celebrity', 'entertainment', 'music', 'culture']
+  sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
+  politics:      ['politics', 'elections', 'government', 'congress', 'supreme-court', 'trump'],
+  finance:       ['finance', 'economics', 'bitcoin', 'ethereum', 'crypto', 'business', 'markets'],
+  entertainment: ['entertainment', 'movies', 'tv', 'awards', 'oscars', 'grammys', 'music'],
+  celebrity:     ['celebrity', 'pop-culture', 'culture']
 };
 
 export default async function handler(req, res) {

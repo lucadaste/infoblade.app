@@ -151,7 +151,6 @@
 
   <script>
     let currentCategory = null;
-    const seenMarketIds = new Set();
 
     function setStatus(msg, loading = false) {
       const el = document.getElementById('market-status');
@@ -272,16 +271,14 @@
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        const allMarkets = data.markets || [];
-        const markets = allMarkets.filter(m => !seenMarketIds.has(m.id));
-        markets.forEach(m => seenMarketIds.add(m.id));
+        const markets = data.markets || [];
 
         if (markets.length === 0) {
           setStatus('');
           grid.innerHTML = `
             <div class="empty-state">
-              <h3>No unique markets found</h3>
-              <p>All top markets in this category have already appeared in another tab, or there are no open markets right now.</p>
+              <h3>No active markets found</h3>
+              <p>No open prediction markets in this category right now. Try another category or check back later.</p>
             </div>`;
           return;
         }
