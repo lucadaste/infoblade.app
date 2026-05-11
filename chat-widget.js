@@ -307,10 +307,26 @@
   toggle.addEventListener('click', () => setOpen(!open));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
 
+  function mdToHtml(text) {
+    return text
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,'<em>$1</em>')
+      .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/s, '<ul style="padding-left:16px;margin:6px 0">$1</ul>')
+      .replace(/\n\n/g,'</p><p style="margin-top:8px">')
+      .replace(/\n/g,'<br>')
+      .replace(/^(.)/,'<p>$1').replace(/(.)$/,'$1</p>');
+  }
+
   function addMsg(role, text) {
     const d = document.createElement('div');
     d.className = 'ii-m ' + (role === 'user' ? 'ii-m-user' : 'ii-m-ai');
-    d.textContent = text;
+    if (role === 'user') {
+      d.textContent = text;
+    } else {
+      d.innerHTML = mdToHtml(text);
+    }
     msgsEl.appendChild(d);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return d;

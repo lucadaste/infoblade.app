@@ -22,6 +22,7 @@ HOW CONFIDENCE STARS WORK (Stock Markets):
 - 1–2 stars: Poor signal — filtered out and never shown
 
 HOW TO HELP USERS:
+- When you have live headlines provided below, use them as your primary source to answer market/news questions. Synthesize the headlines into a real analysis with specific stocks and sector implications.
 - Discuss any US stock, ETF, sector, or market theme in depth
 - Explain how to interpret the analysis cards, odds, and confidence ratings
 - Help users think through an investment thesis or event they're tracking
@@ -30,10 +31,54 @@ HOW TO HELP USERS:
 
 RULES:
 - You are NOT a licensed financial advisor. Never give direct "buy" or "sell" commands. Help users think, not just act.
-- Always recommend doing independent research and consulting a financial professional for actual investment decisions.
-- Be concise. Favor 2–4 sentences over long walls of text unless the question demands depth.
-- Do not make up real-time prices or live data you don't have — acknowledge the limitation.
-- You can use markdown formatting lightly (bold, bullet points) — the chat renders basic formatting.`;
+- When live headlines are provided, lead with what you actually see in the news before adding broader context.
+- Be conversational but analytical — like a sharp research desk, not a disclaimer machine.
+- Use markdown formatting (bold, bullet points) — the chat renders it properly.`;
+
+// Fetch live headlines for a given query from Google News RSS
+async function fetchLiveHeadlines(query) {
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: ctrl.signal });
+    clearTimeout(t);
+    const text = await res.text();
+    const items = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+    const headlines = [];
+    for (const match of items.slice(0, 12)) {
+      const item = match[1];
+      const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+      const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/);
+      const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+      if (titleMatch) {
+        const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+        const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : '';
+        const pub = pubDateMatch ? new Date(pubDateMatch[1]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+        if (title.length > 15) headlines.push(`- "${title}"${source ? ` — ${source}` : ''}${pub ? ` (${pub})` : ''}`);
+      }
+    }
+    return headlines;
+  } catch (e) {
+    clearTimeout(t);
+    return [];
+  }
+}
+
+// Detect if the message is asking about market news/stocks (vs site functionality)
+function isMarketQuestion(text) {
+  const lower = text.toLowerCase();
+  const marketTerms = [
+    'stock', 'ticker', 'etf', 'market', 'sector', 'price', 'earnings', 'news',
+    'invest', 'trade', 'buy', 'sell', 'short', 'crypto', 'bitcoin', 'fed',
+    'rate', 'inflation', 'recession', 'gdp', 'treasury', 'bond', 'yield',
+    'ipo', 'nasdaq', 'nyse', 's&p', 'dow', 'index', 'quarter', 'revenue',
+    'profit', 'loss', 'guidance', 'analyst', 'upgrade', 'downgrade', 'target',
+    'impact', 'affect', 'move', 'surge', 'drop', 'rally', 'crash', 'bull', 'bear',
+    'week', 'today', 'latest', 'recent', 'this month', 'happening'
+  ];
+  return marketTerms.some(term => lower.includes(term));
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -44,15 +89,25 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { messages, pageContext } = req.body || {};
-
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required' });
   }
 
-  const pageDesc = PAGE_DESCRIPTIONS[pageContext] || PAGE_DESCRIPTIONS.general;
-  const contextualSystem = `${SYSTEM_PROMPT}\n\nCURRENT PAGE CONTEXT: ${pageDesc}`;
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
 
-  // Cap history to last 12 messages to keep costs reasonable
+  // Fetch live headlines in parallel if the question is market-related
+  let liveContext = '';
+  if (isMarketQuestion(lastUserMsg)) {
+    const query = lastUserMsg.slice(0, 120) + ' stock market';
+    const headlines = await fetchLiveHeadlines(query);
+    if (headlines.length > 0) {
+      liveContext = `\n\nLIVE NEWS HEADLINES (fetched right now from Google News — use these to answer the user's question):\n${headlines.join('\n')}\n\nAnalyze the above headlines and use them as the basis for your response. Identify which stocks, sectors, or ETFs are affected and explain the market implications.`;
+    }
+  }
+
+  const pageDesc = PAGE_DESCRIPTIONS[pageContext] || PAGE_DESCRIPTIONS.general;
+  const contextualSystem = `${SYSTEM_PROMPT}\n\nCURRENT PAGE CONTEXT: ${pageDesc}${liveContext}`;
+
   const trimmed = messages.slice(-12).map(m => ({
     role: m.role === 'user' ? 'user' : 'assistant',
     content: String(m.content).slice(0, 2000)
@@ -68,7 +123,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 600,
+        max_tokens: 800,
         system: contextualSystem,
         messages: trimmed
       }),
