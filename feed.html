@@ -229,14 +229,17 @@
     </div>
     <div class="filter-group">
       <div class="filter-label">Impact timeframe</div>
-      <select class="filter-select" id="filter-impact">
-        <option value="1 month" selected>~1 month</option>
-        <option value="1 week">~1 week</option>
-        <option value="3 months">~3 months</option>
-        <option value="6 months">~6 months</option>
-        <option value="1 year+">1 year+</option>
-        <option value="any timeframe">Any / All timeframes</option>
+      <select class="filter-select" id="filter-impact" onchange="handleImpactChange()">
+        <option value="1 day">1 day</option>
+        <option value="1 week">1 week</option>
+        <option value="1 month" selected>1 month</option>
+        <option value="3 months">3 months</option>
+        <option value="6 months">6 months</option>
+        <option value="1 year">1 year</option>
+        <option value="any timeframe">All timeframes</option>
+        <option value="custom">Custom</option>
       </select>
+      <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
     </div>
     <div class="filter-actions">
       <button class="btn-load" onclick="loadFeed()" id="btn">Load feed →</button>
@@ -365,6 +368,11 @@
     let selectedAutocompleteIndex = -1;
     let watchlist = { sectors: [], tickers: [] };
     let activePanel = null;
+
+    function handleImpactChange() {
+      const custom = document.getElementById('filter-impact-custom');
+      custom.style.display = document.getElementById('filter-impact').value === 'custom' ? 'block' : 'none';
+    }
 
     function quickLoad(category) {
       document.getElementById('filter-category').value = category;
@@ -559,7 +567,10 @@
 
       const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
-      const impact = document.getElementById('filter-impact').value;
+      const rawImpact = document.getElementById('filter-impact').value;
+      const impact = rawImpact === 'custom'
+        ? (document.getElementById('filter-impact-custom').value.trim() || '1 month')
+        : rawImpact;
 
       document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
       label.textContent = feedLabelMap[timeframe] || "Today's analysis";
