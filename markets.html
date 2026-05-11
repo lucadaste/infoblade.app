@@ -111,7 +111,7 @@
     <ul class="nav-links">
       <li><a href="/">Home</a></li>
       <li><a href="/feed.html">Daily Feed</a></li>
-      <li><a href="/predictions.html">Predictions</a></li>
+      <li><a href="/predictions.html">Accuracy History</a></li>
       <li><a href="/markets.html" class="active">Prediction Markets</a></li>
       <li><a href="/crypto.html">Crypto</a></li>
     </ul>
@@ -129,7 +129,6 @@
     <button class="cat-chip" data-cat="finance" onclick="selectCategory('finance', this)">Finance</button>
     <button class="cat-chip" data-cat="entertainment" onclick="selectCategory('entertainment', this)">Entertainment</button>
     <button class="cat-chip" data-cat="celebrity" onclick="selectCategory('celebrity', this)">Celebrity</button>
-    <button class="cat-chip" data-cat="law" onclick="selectCategory('law', this)">Law</button>
   </div>
 
   <div class="market-status" id="market-status"></div>
@@ -152,6 +151,7 @@
 
   <script>
     let currentCategory = null;
+    const seenMarketIds = new Set();
 
     function setStatus(msg, loading = false) {
       const el = document.getElementById('market-status');
@@ -272,13 +272,16 @@
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        const markets = data.markets || [];
+        const allMarkets = data.markets || [];
+        const markets = allMarkets.filter(m => !seenMarketIds.has(m.id));
+        markets.forEach(m => seenMarketIds.add(m.id));
+
         if (markets.length === 0) {
           setStatus('');
           grid.innerHTML = `
             <div class="empty-state">
-              <h3>No active markets found</h3>
-              <p>No open prediction markets in this category right now. Try another category or check back later.</p>
+              <h3>No unique markets found</h3>
+              <p>All top markets in this category have already appeared in another tab, or there are no open markets right now.</p>
             </div>`;
           return;
         }

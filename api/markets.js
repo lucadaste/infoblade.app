@@ -1,8 +1,7 @@
 const CATEGORY_TAGS = {
   sports:        ['sports', 'nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball'],
-  politics:      ['politics', 'elections', 'government', 'trump', 'congress'],
+  politics:      ['politics', 'elections', 'government', 'trump', 'congress', 'legal', 'law', 'supreme-court', 'court'],
   finance:       ['crypto', 'finance', 'economics', 'business', 'markets', 'bitcoin', 'ethereum'],
-  law:           ['politics', 'legal', 'law', 'supreme-court', 'court'],
   entertainment: ['pop-culture', 'entertainment', 'music', 'movies', 'tv', 'awards', 'oscars', 'grammys'],
   celebrity:     ['pop-culture', 'celebrity', 'entertainment', 'music', 'culture']
 };
@@ -31,7 +30,7 @@ export default async function handler(req, res) {
       return targetTags.some(tag => eventTags.some(et => et.includes(tag)));
     });
 
-    const markets = filtered.slice(0, 16).map(event => {
+    const markets = filtered.slice(0, 5).map(event => {
       const ms = event.markets || [];
       const primary = ms.length === 1
         ? ms[0]
