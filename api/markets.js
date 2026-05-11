@@ -15,14 +15,15 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { category = 'sports', maxDays = '365' } = req.query;
+  const { category = 'sports', maxDays = '365', minDays = '0' } = req.query;
   const targetTags = CATEGORY_TAGS[category] || CATEGORY_TAGS.sports;
   const daysCap = Math.min(Math.max(parseInt(maxDays) || 365, 1), 365);
+  const daysMin = Math.max(parseInt(minDays) || 0, 0);
 
   try {
     const now = new Date();
     const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
-    const endDateMin = now.toISOString();
+    const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
 
     const polyUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
 
@@ -49,8 +50,8 @@ export default async function handler(req, res) {
       const endDate = primary.endDate || event.endDate || null;
       const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
 
-      // enforce timeframe cap now that we have the real endDate
-      if (daysLeft !== null && (daysLeft > daysCap || daysLeft < 0)) return null;
+      // enforce timeframe window now that we have the real endDate
+      if (daysLeft !== null && (daysLeft > daysCap || daysLeft < daysMin)) return null;
 
       let yesPrice = null;
       try {

@@ -162,27 +162,30 @@
 
   <script>
     const CATEGORY_TIMEFRAMES = {
-      sports:        { options: [{days:1,label:'1 day'},{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'}], default: 30 },
-      politics:      { options: [{days:7,label:'7 days'},{days:30,label:'30 days'},{days:90,label:'3 months'},{days:365,label:'1 year'}], default: 365 },
-      finance:       { options: [{days:7,label:'7 days'},{days:30,label:'30 days'},{days:90,label:'3 months'},{days:365,label:'1 year'}], default: 365 },
-      entertainment: { options: [{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'},{days:365,label:'1 year'}], default: 90 },
-      celebrity:     { options: [{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'},{days:365,label:'1 year'}], default: 90 },
+      sports:        { options: [{days:1,min:0,label:'1 day'},{days:7,min:3,label:'1 week'},{days:30,min:11,label:'1 month'},{days:90,min:34,label:'3 months'},{days:180,min:68,label:'6 months'}], default: 30 },
+      politics:      { options: [{days:7,min:3,label:'7 days'},{days:30,min:11,label:'30 days'},{days:90,min:34,label:'3 months'},{days:365,min:137,label:'1 year'}], default: 365 },
+      finance:       { options: [{days:7,min:3,label:'7 days'},{days:30,min:11,label:'30 days'},{days:90,min:34,label:'3 months'},{days:365,min:137,label:'1 year'}], default: 365 },
+      entertainment: { options: [{days:7,min:3,label:'1 week'},{days:30,min:11,label:'1 month'},{days:90,min:34,label:'3 months'},{days:180,min:68,label:'6 months'},{days:365,min:137,label:'1 year'}], default: 90 },
+      celebrity:     { options: [{days:7,min:3,label:'1 week'},{days:30,min:11,label:'1 month'},{days:90,min:34,label:'3 months'},{days:180,min:68,label:'6 months'},{days:365,min:137,label:'1 year'}], default: 90 },
     };
 
     let currentCategory = null;
     let currentMaxDays = 365;
+    let currentMinDays = 0;
 
     function renderTimeframeBar(cat) {
       const config = CATEGORY_TIMEFRAMES[cat] || CATEGORY_TIMEFRAMES.politics;
-      currentMaxDays = config.default;
+      const defaultOpt = config.options.find(o => o.days === config.default) || config.options[config.options.length - 1];
+      currentMaxDays = defaultOpt.days;
+      currentMinDays = defaultOpt.min;
       const bar = document.getElementById('timeframe-bar');
       bar.innerHTML = '<span class="timeframe-label">Closes in</span>' +
         config.options.map(o =>
-          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}">${o.label}</button>`
+          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}" data-min="${o.min}">${o.label}</button>`
         ).join('');
       bar.querySelectorAll('.tf-chip').forEach(btn => {
         btn.addEventListener('click', function () {
-          selectTimeframe(parseInt(this.dataset.days), this);
+          selectTimeframe(parseInt(this.dataset.days), parseInt(this.dataset.min), this);
         });
       });
     }
@@ -290,13 +293,13 @@
       return card;
     }
 
-    async function loadMarkets(cat, maxDays) {
+    async function loadMarkets(cat, maxDays, minDays = 0) {
       const grid = document.getElementById('market-grid');
       grid.innerHTML = '';
       setStatus(`Loading ${cat} markets...`, true);
 
       try {
-        const res = await fetch(`/api/markets?category=${cat}&maxDays=${maxDays}`);
+        const res = await fetch(`/api/markets?category=${cat}&maxDays=${maxDays}&minDays=${minDays}`);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
@@ -329,14 +332,15 @@
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
       chipEl.classList.add('active');
       renderTimeframeBar(cat);
-      loadMarkets(cat, currentMaxDays);
+      loadMarkets(cat, currentMaxDays, currentMinDays);
     }
 
-    function selectTimeframe(days, chipEl) {
+    function selectTimeframe(days, minDays, chipEl) {
       currentMaxDays = days;
+      currentMinDays = minDays;
       document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
       chipEl.classList.add('active');
-      if (currentCategory) loadMarkets(currentCategory, days);
+      if (currentCategory) loadMarkets(currentCategory, days, minDays);
     }
 
     // Auto-load sports on page open
