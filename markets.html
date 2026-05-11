@@ -138,12 +138,8 @@
     <button class="cat-chip" data-cat="celebrity" onclick="selectCategory('celebrity', this)">Celebrity</button>
   </div>
 
-  <div class="timeframe-bar">
+  <div class="timeframe-bar" id="timeframe-bar">
     <span class="timeframe-label">Closes in</span>
-    <button class="tf-chip" data-days="7" onclick="selectTimeframe(7, this)">7 days</button>
-    <button class="tf-chip" data-days="30" onclick="selectTimeframe(30, this)">30 days</button>
-    <button class="tf-chip" data-days="90" onclick="selectTimeframe(90, this)">3 months</button>
-    <button class="tf-chip active" data-days="365" onclick="selectTimeframe(365, this)">1 year</button>
   </div>
 
   <div class="market-status" id="market-status"></div>
@@ -165,8 +161,26 @@
   </footer>
 
   <script>
+    const CATEGORY_TIMEFRAMES = {
+      sports:        { options: [{days:1,label:'1 day'},{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'}], default: 30 },
+      politics:      { options: [{days:7,label:'7 days'},{days:30,label:'30 days'},{days:90,label:'3 months'},{days:365,label:'1 year'}], default: 365 },
+      finance:       { options: [{days:7,label:'7 days'},{days:30,label:'30 days'},{days:90,label:'3 months'},{days:365,label:'1 year'}], default: 365 },
+      entertainment: { options: [{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'},{days:365,label:'1 year'}], default: 90 },
+      celebrity:     { options: [{days:7,label:'1 week'},{days:30,label:'1 month'},{days:90,label:'3 months'},{days:180,label:'6 months'},{days:365,label:'1 year'}], default: 90 },
+    };
+
     let currentCategory = null;
     let currentMaxDays = 365;
+
+    function renderTimeframeBar(cat) {
+      const config = CATEGORY_TIMEFRAMES[cat] || CATEGORY_TIMEFRAMES.politics;
+      currentMaxDays = config.default;
+      const bar = document.getElementById('timeframe-bar');
+      bar.innerHTML = '<span class="timeframe-label">Closes in</span>' +
+        config.options.map(o =>
+          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}" onclick="selectTimeframe(${o.days}, this)">${o.label}</button>`
+        ).join('');
+    }
 
     function setStatus(msg, loading = false) {
       const el = document.getElementById('market-status');
@@ -309,6 +323,7 @@
       currentCategory = cat;
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
       chipEl.classList.add('active');
+      renderTimeframeBar(cat);
       loadMarkets(cat, currentMaxDays);
     }
 
