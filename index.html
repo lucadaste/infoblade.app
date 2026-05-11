@@ -96,6 +96,20 @@
     .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
     .fade-in.visible { opacity: 1; transform: translateY(0); }
 
+    /* Stock markets dark preview card */
+    .sm-preview { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 24px 28px; }
+    .sm-preview-source { font-size: 11px; color: #555; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .sm-preview-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.4; padding-bottom: 16px; border-bottom: 1px solid #1e1e1e; margin-bottom: 16px; }
+    .sm-preview-row { margin-bottom: 12px; }
+    .sm-preview-row-lbl { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #555; margin-bottom: 6px; }
+    .sm-preview-conf { font-size: 12px; color: #555; margin-top: 14px; padding-top: 14px; border-top: 1px solid #1e1e1e; }
+    /* Light feature list for crypto preview */
+    .light-feat { display: flex; flex-direction: column; gap: 10px; }
+    .light-feat-row { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; background: var(--paper); border: 1px solid var(--border); border-radius: 8px; }
+    .light-feat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); flex-shrink: 0; margin-top: 5px; }
+    .light-feat-text { font-size: 13px; color: var(--muted); line-height: 1.55; }
+    .light-feat-text strong { color: var(--ink); font-weight: 500; }
+
     /* Split sections */
     .split-section { padding: 88px 48px; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; border-top: 1px solid var(--border); }
     .split-left { display: flex; flex-direction: column; gap: 20px; }
@@ -161,7 +175,7 @@
       .platform-header { padding: 56px 24px 36px; }
       .chain-row { flex-direction: column; gap: 8px; } .chain-label { min-width: unset; }
       .split-section { grid-template-columns: 1fr; gap: 40px; padding: 64px 24px; }
-      .cs-section { padding: 64px 24px; } .cs-inner { grid-template-columns: 1fr; gap: 36px; padding: 36px 28px; }
+      .features-section { padding: 0 24px 64px; }
       .waitlist-section { padding: 64px 24px; } .disclaimer { padding: 28px 24px; } footer { padding: 24px; }
     }
   </style>
@@ -230,65 +244,115 @@
     </div>
   </section>
 
-  <section class="example-section" id="example">
-    <div class="example-card fade-in">
-      <div class="example-label">Stock Markets — live example</div>
-      <div class="example-event">Strait of Hormuz partially blocked by Iranian naval exercises</div>
-      <div class="example-source">Reuters · May 6, 2026</div>
-      <div class="example-chain">
-        <div class="chain-row">
-          <div class="chain-label">Why it matters</div>
-          <div class="chain-content">Roughly 20% of global oil and LNG passes through the Strait of Hormuz daily. Any restriction creates immediate supply anxiety and has historically spiked Brent crude within 24–48 hours of similar events.</div>
-        </div>
-        <div class="chain-row">
-          <div class="chain-label">Sectors in play</div>
-          <div class="chain-content">
-            <div class="chain-tickers">
-              <span class="ticker-pill pill-up">Energy +++</span>
-              <span class="ticker-pill pill-up">Defense ++</span>
-              <span class="ticker-pill pill-down">Airlines ---</span>
-              <span class="ticker-pill pill-down">Shipping --</span>
-              <span class="ticker-pill pill-neutral">Utilities ~</span>
-            </div>
-          </div>
-        </div>
-        <div class="chain-row">
-          <div class="chain-label">Likely beneficiaries</div>
-          <div class="chain-content">
-            US domestic producers are insulated from Middle East supply disruption. Defense contractors often see elevated contract activity during periods of regional tension.
-            <div class="chain-tickers">
-              <span class="ticker-pill pill-up">XOM</span>
-              <span class="ticker-pill pill-up">CVX</span>
-              <span class="ticker-pill pill-up">OXY</span>
-              <span class="ticker-pill pill-up">LMT</span>
-              <span class="ticker-pill pill-up">RTX</span>
-            </div>
-          </div>
-        </div>
-        <div class="chain-row">
-          <div class="chain-label">Likely losers</div>
-          <div class="chain-content">
-            Airlines face immediate jet fuel cost pressure with limited short-term hedging options. Asian shipping routes face longer detours around the Cape of Good Hope.
-            <div class="chain-tickers">
-              <span class="ticker-pill pill-down">DAL</span>
-              <span class="ticker-pill pill-down">UAL</span>
-              <span class="ticker-pill pill-down">AAL</span>
-              <span class="ticker-pill pill-down">ZIM</span>
-            </div>
-          </div>
-        </div>
-        <div class="chain-row">
-          <div class="chain-label">Confidence</div>
-          <div class="chain-content">High — based on 4 corroborating sources and historical precedent from similar events in 2019 and 2023. Situation is developing; check back for updates.</div>
-        </div>
-      </div>
+  <!-- Stock Markets -->
+  <section class="split-section fade-in" id="stock-markets">
+    <div class="split-left">
+      <div class="split-label">Stock Markets</div>
+      <h2>Market-moving events, traced to the ticker</h2>
+      <p>Every day, our AI reads hundreds of sources, groups related headlines into distinct market events, and maps the full economic chain — from the story to affected sectors and specific stocks.</p>
+      <p>Filtered by category, timeframe, and source quality. Updated daily.</p>
+      <a class="btn-outline" href="/feed.html">Open Stock Markets →</a>
     </div>
-    <div style="text-align:center; margin-top: 32px;">
-      <a class="btn-primary" href="/feed.html" style="display:inline-block;">Open Stock Markets feed →</a>
+    <div>
+      <div class="sm-preview">
+        <div class="sm-preview-source">Reuters · May 6, 2026</div>
+        <div class="sm-preview-topic">Strait of Hormuz partially blocked by Iranian naval exercises</div>
+        <div class="sm-preview-row">
+          <div class="sm-preview-row-lbl">Sectors in play</div>
+          <div class="chain-tickers">
+            <span class="ticker-pill pill-up">Energy +++</span>
+            <span class="ticker-pill pill-up">Defense ++</span>
+            <span class="ticker-pill pill-down">Airlines ---</span>
+            <span class="ticker-pill pill-down">Shipping --</span>
+          </div>
+        </div>
+        <div class="sm-preview-row">
+          <div class="sm-preview-row-lbl">Beneficiaries</div>
+          <div class="chain-tickers">
+            <span class="ticker-pill pill-up">XOM</span>
+            <span class="ticker-pill pill-up">CVX</span>
+            <span class="ticker-pill pill-up">LMT</span>
+            <span class="ticker-pill pill-up">RTX</span>
+          </div>
+        </div>
+        <div class="sm-preview-row">
+          <div class="sm-preview-row-lbl">Likely losers</div>
+          <div class="chain-tickers">
+            <span class="ticker-pill pill-down">DAL</span>
+            <span class="ticker-pill pill-down">UAL</span>
+            <span class="ticker-pill pill-down">ZIM</span>
+          </div>
+        </div>
+        <div class="sm-preview-conf">High confidence — 4 corroborating sources</div>
+      </div>
     </div>
   </section>
 
-  <section class="features-section" id="features">
+  <!-- Prediction Markets -->
+  <section class="split-section fade-in" id="prediction-markets">
+    <div class="split-left">
+      <div class="split-label">Prediction Markets</div>
+      <h2>Does the market know something the news doesn't?</h2>
+      <p>We pull live questions from Polymarket and run them through the same news-analysis pipeline that powers the daily feed. The result: a real-time signal showing whether current market odds align with — or contradict — what the news is actually saying.</p>
+      <p>If the crowd is pricing a 72% chance of a rate cut and our news analysis tells a different story, you'll see exactly that tension — and why it exists.</p>
+      <a class="btn-outline" href="/markets.html">Explore prediction markets →</a>
+    </div>
+    <div>
+      <div class="preview-card">
+        <div class="pm-tag">Live question · Polymarket</div>
+        <div class="pm-question">Will the Fed cut rates at the June 2026 FOMC meeting?</div>
+        <div class="pm-odds-row">
+          <div>
+            <div class="pm-odds">68%</div>
+            <div class="pm-odds-label">Market odds · Yes</div>
+          </div>
+          <div class="pm-vol">$2.4M volume</div>
+        </div>
+        <div class="pm-signal-row">
+          <span class="pm-signal-label">AI lean</span>
+          <span class="lean-badge lean-yes">Leans Yes</span>
+          <span class="signal-badge signal-aligns">News aligns</span>
+        </div>
+        <div class="pm-reasoning">Recent CPI data and Fed commentary support a pause-then-cut scenario. Labor market softening is accelerating into Q2, reducing pressure to hold.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Crypto Markets -->
+  <section class="split-section fade-in" id="crypto-markets">
+    <div class="split-left">
+      <div class="split-label">Crypto Markets</div>
+      <h2>The same rigor, applied to digital assets</h2>
+      <p>Crypto coverage is on the way — on-chain signals, macro triggers, and news-event correlation for BTC, ETH, SOL, and beyond. Analyzed with the same source-weighted pipeline as Stock Markets.</p>
+      <div class="cs-badge" style="margin-top:4px">In development</div>
+      <a class="btn-outline" href="/crypto.html">Preview Crypto Markets →</a>
+    </div>
+    <div>
+      <div class="preview-card">
+        <div class="light-feat">
+          <div class="light-feat-row">
+            <div class="light-feat-dot"></div>
+            <div class="light-feat-text"><strong>News-to-price analysis</strong> — same pipeline as Stock Markets, tuned for crypto events and regulatory shifts</div>
+          </div>
+          <div class="light-feat-row">
+            <div class="light-feat-dot"></div>
+            <div class="light-feat-text"><strong>Macro correlation</strong> — rate decisions, dollar strength, and risk-on/risk-off flows mapped to digital assets</div>
+          </div>
+          <div class="light-feat-row">
+            <div class="light-feat-dot"></div>
+            <div class="light-feat-text"><strong>Crypto prediction markets</strong> — Polymarket crypto questions analyzed alongside on-chain and news signals</div>
+          </div>
+          <div class="light-feat-row">
+            <div class="light-feat-dot"></div>
+            <div class="light-feat-text"><strong>Watchlist alerts</strong> — follow BTC, ETH, SOL and more for breaking news as it happens</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- What you get -->
+  <section class="features-section fade-in" id="features">
     <div class="section-label">What you get — across all tools</div>
     <div class="features-grid">
       <div class="feature-card fade-in">
@@ -330,65 +394,6 @@
         </div>
         <h4>No recommendations, ever</h4>
         <p>We give you the context, the reasoning, and the track record — across every tool on the platform. The decision is always yours. Informed, not directed.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Prediction Markets -->
-  <section class="split-section fade-in" id="prediction-markets">
-    <div class="split-left">
-      <div class="split-label">Prediction Markets</div>
-      <h2>Does the market know something the news doesn't?</h2>
-      <p>We pull live questions from Polymarket and run them through the same news-analysis pipeline that powers the daily feed. The result: a real-time signal showing whether current market odds align with — or contradict — what the news is actually saying.</p>
-      <p>If the crowd is pricing a 72% chance of a rate cut and our news analysis tells a different story, you'll see exactly that tension — and why it exists.</p>
-      <a class="btn-outline" href="/markets.html">Explore prediction markets →</a>
-    </div>
-    <div>
-      <div class="preview-card">
-        <div class="pm-tag">Live question · Polymarket</div>
-        <div class="pm-question">Will the Fed cut rates at the June 2026 FOMC meeting?</div>
-        <div class="pm-odds-row">
-          <div>
-            <div class="pm-odds">68%</div>
-            <div class="pm-odds-label">Market odds · Yes</div>
-          </div>
-          <div class="pm-vol">$2.4M volume</div>
-        </div>
-        <div class="pm-signal-row">
-          <span class="pm-signal-label">AI lean</span>
-          <span class="lean-badge lean-yes">Leans Yes</span>
-          <span class="signal-badge signal-aligns">News aligns</span>
-        </div>
-        <div class="pm-reasoning">Recent CPI data and Fed commentary support a pause-then-cut scenario. Labor market softening is accelerating into Q2, reducing pressure to hold.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Crypto Markets -->
-  <section class="cs-section fade-in" id="crypto-markets">
-    <div class="cs-inner">
-      <div>
-        <div class="cs-badge">In development</div>
-        <h2>The same rigor,<br>applied to digital assets</h2>
-        <p>Crypto coverage is on the way — on-chain signals, macro triggers, and news-event correlation for BTC, ETH, SOL, and beyond. Analyzed with the same source-weighted pipeline as the stock market feed.</p>
-      </div>
-      <div class="cs-features">
-        <div class="cs-feature">
-          <div class="cs-dot"></div>
-          <div class="cs-feature-text"><strong>News-to-price analysis</strong> — same pipeline as Stock Markets, tuned for crypto events and regulatory shifts</div>
-        </div>
-        <div class="cs-feature">
-          <div class="cs-dot"></div>
-          <div class="cs-feature-text"><strong>Macro correlation</strong> — track how rate decisions, dollar strength, and risk-on/risk-off flows move digital assets</div>
-        </div>
-        <div class="cs-feature">
-          <div class="cs-dot"></div>
-          <div class="cs-feature-text"><strong>Crypto prediction markets</strong> — Polymarket crypto questions analyzed alongside on-chain and news signals</div>
-        </div>
-        <div class="cs-feature">
-          <div class="cs-dot"></div>
-          <div class="cs-feature-text"><strong>Watchlist alerts</strong> — follow BTC, ETH, SOL and more for breaking news as it happens</div>
-        </div>
       </div>
     </div>
   </section>
