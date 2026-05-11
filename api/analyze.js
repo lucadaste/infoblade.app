@@ -275,33 +275,79 @@ export default async function handler(req, res) {
       const queries = categoryQueries[category] || categoryQueries['any'];
       const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato'];
 
-      // Fetch ALL RSS feeds in parallel — no cap
-      const rssUrls = queries.map(q =>
+      // Direct outlet RSS feeds (category-specific + base)
+      const BASE_DIRECT_FEEDS = [
+        { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
+        { url: 'https://feeds.reuters.com/reuters/topNews',      source: 'Reuters' },
+        { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', source: 'CNBC' },
+        { url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html', source: 'CNBC' },
+        { url: 'https://feeds.marketwatch.com/marketwatch/topstories/', source: 'MarketWatch' },
+        { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',         source: 'The Wall Street Journal' },
+        { url: 'https://www.economist.com/finance-and-economics/rss.xml', source: 'The Economist' },
+        { url: 'https://feeds.npr.org/1017/rss.xml',                     source: 'NPR' },
+      ];
+      const CATEGORY_DIRECT_FEEDS = {
+        technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }],
+        energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }],
+        healthcare:      [{ url: 'https://feeds.reuters.com/reuters/health',              source: 'Reuters' }],
+        crypto:          [{ url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',       source: 'CoinDesk' }],
+      };
+      const directFeeds = [...BASE_DIRECT_FEEDS, ...(CATEGORY_DIRECT_FEEDS[category] || [])];
+
+      // Google News RSS feeds
+      const googleUrls = queries.map(q =>
         `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`
       );
 
-      const rssResults = await Promise.allSettled(rssUrls.map(url => fetch(url)));
+      function fetchWithTimeout(url, timeoutMs) {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+      }
+
+      function parseRssItems(text, fallbackSource) {
+        const items = [];
+        const itemMatches = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+        for (const match of itemMatches) {
+          const item = match[1];
+          const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+          const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/);
+          const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+          if (titleMatch) {
+            const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+            const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : fallbackSource;
+            const pubDate = pubDateMatch ? pubDateMatch[1] : '';
+            if (title.length > 15) items.push({ title, source, date: pubDate });
+          }
+        }
+        return items;
+      }
+
+      const [googleResults, directResults] = await Promise.all([
+        Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
+        Promise.allSettled(directFeeds.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source }))))
+      ]);
+
       let rawItems = [];
 
-      for (const result of rssResults) {
+      for (const result of googleResults) {
         if (result.status === 'fulfilled') {
           try {
             const text = await result.value.text();
-            const itemMatches = [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)];
-            for (const match of itemMatches) {
-              const item = match[1];
-              const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
-              const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/);
-              const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+            for (const item of parseRssItems(text, 'Unknown')) {
+              rawItems.push({ ...item, grade: getSourceGrade(item.source) });
+            }
+          } catch(e) {}
+        }
+      }
 
-              if (titleMatch) {
-                const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
-                const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : 'Unknown';
-                const pubDate = pubDateMatch ? pubDateMatch[1] : '';
-                if (title.length > 15) {
-                  rawItems.push({ title, source, date: pubDate, grade: getSourceGrade(source) });
-                }
-              }
+      for (const result of directResults) {
+        if (result.status === 'fulfilled') {
+          try {
+            const { res, source } = result.value;
+            const text = await res.text();
+            for (const item of parseRssItems(text, source)) {
+              rawItems.push({ ...item, grade: getSourceGrade(item.source) });
             }
           } catch(e) {}
         }
@@ -333,7 +379,14 @@ export default async function handler(req, res) {
 
       const seen = new Set();
       const deduped = rawItems.filter(a => {
-        const key = a.title.substring(0, 60).toLowerCase().replace(/[^a-z0-9 ]/g, '');
+        const key = a.title.toLowerCase()
+          .replace(/[^a-z0-9 ]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .split(' ')
+          .filter(w => w.length > 2)
+          .slice(0, 8)
+          .join(' ');
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -355,8 +408,8 @@ STRICT RULES:
 3. If a topic covers a specific company name it in the title
 4. Do NOT create separate groups for variations of the same story
 5. Only groups with genuine market-moving significance
-6. Aim for 6-10 highly distinct specific groups
-7. Maximum 10 groups
+6. Aim for 10-15 highly distinct specific groups
+7. Maximum 15 groups
 8. Each index appears in exactly one group
 9. Ignore non-economic stories
 10. Include ALL relevant indices in each group — do not leave articles ungrouped if they belong to a topic
@@ -373,7 +426,7 @@ Respond ONLY with valid JSON, no markdown:
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
-          max_tokens: 4000,
+          max_tokens: 6000,
           messages: [{ role: 'user', content: groupPrompt }]
         })
       });
