@@ -37,8 +37,11 @@ function _parseTimeframeDays(str) {
 async function _fetchPrices(tickers) {
   if (!tickers || !tickers.length) return {};
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=regularMarketPrice`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
+    clearTimeout(timer);
     const data = await res.json();
     const prices = {};
     for (const q of data?.quoteResponse?.result || []) {
