@@ -60,6 +60,7 @@
     .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .pill { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up      { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
+    .pill-neutral { background: rgba(255,255,255,0.08); color: #ccc; border: 1px solid rgba(255,255,255,0.15); }
     .pill-down    { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-watched { background: rgba(200,255,0,0.3); color: var(--ink); border: 1px solid var(--accent); }
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -176,6 +177,14 @@
         <option value="3days">Last 3 days</option>
         <option value="7days">Last 7 days</option>
         <option value="any">Any / All time</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Source quality</div>
+      <select class="filter-select" id="filter-source-quality">
+        <option value="high">High factuality only</option>
+        <option value="medium" selected>Medium or higher</option>
+        <option value="all">All sources</option>
       </select>
     </div>
     <div class="filter-group">
@@ -438,6 +447,7 @@
 
       const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
+      const minGrade = document.getElementById('filter-source-quality').value;
       const impact = document.getElementById('filter-impact').value;
 
       document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
@@ -449,15 +459,12 @@
       status.textContent = 'Fetching and grouping news (this takes ~30 seconds)...';
 
       try {
-        const params = new URLSearchParams({ category, timeframe });
+        const params = new URLSearchParams({ category, timeframe, minGrade });
 
-        // Use a longer timeout — backend takes ~30s
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
-
+        const timeout = setTimeout(() => controller.abort(), 120000);
         const newsRes = await fetch(`/api/analyze?${params}`, { signal: controller.signal });
         clearTimeout(timeout);
-
         const newsData = await newsRes.json();
         const groups = newsData.groups || [];
 
@@ -479,6 +486,7 @@
           try {
             const analysis = await analyzeGroup(group, impact);
             analyzed.push({ group, analysis });
+            logPrediction(group, analysis, impact);
           } catch(err) {}
           await new Promise(r => setTimeout(r, 500));
         }
@@ -560,11 +568,34 @@
           topic: group.topic,
           headlines: group.headlines,
           sources: group.sources,
+          sourceGrades: group.sourceGrades,
+          minGrade: group.minGrade,
           impactTimeframe
         })
       });
       if (!res.ok) throw new Error('API request failed');
       return await res.json();
+    }
+
+    async function logPrediction(group, analysis, impactTimeframe) {
+      try {
+        await fetch('/api/predictions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: group.topic,
+            headlines: group.headlines,
+            sources: group.sources,
+            sourceGrades: group.sourceGrades,
+            minGrade: group.minGrade,
+            impactTimeframe: analysis.impact_timeframe || impactTimeframe,
+            analysis,
+            notes: 'Auto-saved prediction from dashboard'
+          })
+        });
+      } catch (err) {
+        console.warn('Prediction log failed', err);
+      }
     }
 
     loadWatchlist();
