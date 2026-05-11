@@ -121,16 +121,17 @@ Based ONLY on what the news reporting indicates, determine the likely outcome. W
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
 
-Write for a general audience — plain conversational English, no analyst jargon. Avoid phrases like "market dynamics", "sentiment", "correlates with", "indicative of". Write the way you'd explain it to a curious friend.
+Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend.
 
 Respond ONLY with valid JSON, no markdown:
 {
   "lean": "Yes" | "No" | "Uncertain",
   "lean_confidence": "High" | "Medium" | "Low",
-  "reasoning": "2-3 plain-English sentences explaining what the news says will likely happen — be direct about what you think and why",
+  "crowd_summary": "One sentence describing what the crowd's odds actually mean — use the question to name the specific outcome, always include the ${currentOdds !== undefined ? currentOdds + '%' : 'market'} figure, e.g. 'The crowd is 52% confident the Warriors will win the series' or 'Bettors are 68% sure the Strait of Hormuz reopens this month'",
+  "reasoning": "2-3 plain-English sentences on what the news specifically says — name teams, people, or events from the actual articles, say what was reported or confirmed, don't be vague or hedge everything",
   "key_sources": ["source1", "source2"],
   "signal": "Aligns with market" | "Contradicts market" | "Inconclusive",
-  "signal_detail": "One conversational sentence on whether the news agrees or disagrees with the crowd's ${currentOdds !== undefined ? currentOdds + '% lean' : 'current lean'} — e.g. 'The news strongly backs what the crowd is betting on' or 'The news tells a different story from what the crowd thinks'"
+  "signal_detail": "One conversational sentence on whether the news agrees or disagrees with the crowd — e.g. 'The news strongly backs what the crowd is betting on' or 'The news tells a different story from what the crowd thinks'"
 }`;
 
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -141,7 +142,7 @@ Respond ONLY with valid JSON, no markdown:
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens: 500,
         messages: [{ role: 'user', content: prompt }]
       }),

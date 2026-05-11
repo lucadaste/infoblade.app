@@ -245,7 +245,7 @@
         const block = document.createElement('div');
         block.className = 'analysis-block';
         block.innerHTML = `
-          <div class="public-lean">The public is leaning <strong>${market.yesPrice}%</strong> toward this happening</div>
+          <div class="public-lean">${data.crowd_summary || `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
           <div class="analysis-header">
             <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${data.lean} — ${data.lean_confidence} confidence</span>
             <span class="signal-badge ${signalBadgeClass(data.signal)}">${data.signal}</span>
