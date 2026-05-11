@@ -30,14 +30,7 @@ export default async function handler(req, res) {
     const filtered = (Array.isArray(events) ? events : []).filter(event => {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-      if (!targetTags.some(tag => eventTags.some(et => et.includes(tag)))) return false;
-      // skip markets outside the requested timeframe
-      const endDate = event.endDate || null;
-      if (endDate) {
-        const daysLeft = Math.ceil((new Date(endDate) - now) / 86400000);
-        if (daysLeft > daysCap || daysLeft < 0) return false;
-      }
-      return true;
+      return targetTags.some(tag => eventTags.some(et => et.includes(tag)));
     });
 
     const markets = filtered.map(event => {
@@ -48,6 +41,13 @@ export default async function handler(req, res) {
 
       if (!primary) return null;
 
+      // use primary market's endDate first — event.endDate is often null even when the market has one
+      const endDate = primary.endDate || event.endDate || null;
+      const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
+
+      // enforce timeframe cap now that we have the real endDate
+      if (daysLeft !== null && (daysLeft > daysCap || daysLeft < 0)) return null;
+
       let yesPrice = null;
       try {
         const prices = typeof primary.outcomePrices === 'string'
@@ -57,9 +57,6 @@ export default async function handler(req, res) {
       } catch (_) {}
 
       if (yesPrice === null || yesPrice < 1 || yesPrice > 99) return null;
-
-      const endDate = primary.endDate || event.endDate || null;
-      const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
