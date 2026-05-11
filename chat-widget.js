@@ -76,11 +76,11 @@
       width: min(390px, 33vw);
       height: 100vh;
       height: 100dvh;
-      background: #f5f2eb;
+      background: #111111;
       z-index: 9998;
       display: flex;
       flex-direction: column;
-      box-shadow: -4px 0 24px rgba(0,0,0,0.1);
+      box-shadow: -4px 0 24px rgba(0,0,0,0.4);
       transform: translateX(calc(100% + 36px));
       transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -100,6 +100,7 @@
       display: flex;
       align-items: center;
       flex-shrink: 0;
+      border-bottom: 1px solid #222;
     }
     .ii-ph-title {
       font-family: 'Syne', 'Arial Black', sans-serif;
@@ -127,6 +128,9 @@
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
     }
+    .ii-msgs::-webkit-scrollbar { width: 4px; }
+    .ii-msgs::-webkit-scrollbar-track { background: transparent; }
+    .ii-msgs::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
     .ii-m {
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
@@ -137,25 +141,26 @@
     }
     .ii-m-user {
       align-self: flex-end;
-      background: #0a0a0a;
-      color: white;
+      background: #c8ff00;
+      color: #0a0a0a;
       padding: 8px 12px;
       border-radius: 12px 12px 3px 12px;
+      font-weight: 500;
     }
     .ii-m-ai {
       align-self: flex-start;
-      background: white;
-      color: #0a0a0a;
+      background: #1e1e1e;
+      color: #e8e8e8;
       padding: 9px 13px;
       border-radius: 12px 12px 12px 3px;
-      border: 1px solid #e0ddd6;
+      border: 1px solid #2a2a2a;
     }
     .ii-m-thinking {
       align-self: flex-start;
       display: flex;
       align-items: center;
       gap: 7px;
-      color: #9b9b9b;
+      color: #555;
       font-size: 12px;
       font-style: italic;
       font-family: 'DM Sans', sans-serif;
@@ -164,7 +169,7 @@
     .ii-dots span {
       display: inline-block;
       width: 4px; height: 4px;
-      background: #aaa;
+      background: #444;
       border-radius: 50%;
       animation: ii-bop 1.1s ease-in-out infinite;
     }
@@ -183,19 +188,19 @@
       margin-top: 2px;
     }
     .ii-sq {
-      background: white;
-      border: 1px solid #e0ddd6;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
       border-radius: 8px;
       padding: 8px 11px;
       font-family: 'DM Sans', sans-serif;
       font-size: 12px;
-      color: #0a0a0a;
+      color: #c0c0c0;
       cursor: pointer;
       text-align: left;
       line-height: 1.4;
-      transition: background .15s, border-color .15s;
+      transition: background .15s, border-color .15s, color .15s;
     }
-    .ii-sq:hover { background: #eceae3; border-color: #b8a870; }
+    .ii-sq:hover { background: #242424; border-color: #c8ff00; color: white; }
 
     /* Input row */
     .ii-input-row {
@@ -203,30 +208,30 @@
       gap: 8px;
       padding: 10px 12px;
       padding-bottom: max(10px, env(safe-area-inset-bottom));
-      border-top: 1px solid #e0ddd6;
-      background: white;
+      border-top: 1px solid #1e1e1e;
+      background: #0a0a0a;
       flex-shrink: 0;
     }
     #ii-inp {
       flex: 1;
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
-      border: 1px solid #e0ddd6;
+      border: 1px solid #2a2a2a;
       border-radius: 6px;
       padding: 8px 11px;
-      background: #f5f2eb;
-      color: #0a0a0a;
+      background: #1a1a1a;
+      color: #e8e8e8;
       resize: none;
       outline: none;
       line-height: 1.45;
       max-height: 90px;
       overflow-y: auto;
     }
-    #ii-inp::placeholder { color: #a0a0a0; }
-    #ii-inp:focus { border-color: #0a0a0a; }
+    #ii-inp::placeholder { color: #444; }
+    #ii-inp:focus { border-color: #444; }
     #ii-send {
-      background: #0a0a0a;
-      color: white;
+      background: #c8ff00;
+      color: #0a0a0a;
       border: none;
       border-radius: 6px;
       padding: 0 13px;
@@ -248,20 +253,20 @@
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
     <div id="ii-ai-label">AI</div>
-    <button id="ii-ai-toggle" aria-label="Open AI Assistant">&#8249;</button>
+    <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
   `;
   document.body.appendChild(bar);
 
   const panel = document.createElement('div');
   panel.id = 'ii-ai-panel';
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'AI Assistant');
+  panel.setAttribute('aria-label', 'AI Informant');
   panel.innerHTML = `
     <div class="ii-ph">
-      <div class="ii-ph-title"><em>II</em> AI Assistant</div>
+      <div class="ii-ph-title"><em>II</em> AI Informant</div>
     </div>
     <div class="ii-msgs" id="ii-msgs">
-      <div class="ii-m ii-m-ai">Hi! I'm the InvestmentInformatics AI. Ask me about any stock, sector, or market theme — or how to use the site.</div>
+      <div class="ii-m ii-m-ai">I'm the AI Informant. Ask me about any stock, sector, or market theme — or how this site works.</div>
       <div class="ii-starters" id="ii-starters"></div>
     </div>
     <div class="ii-input-row">
@@ -295,7 +300,7 @@
     panel.classList.toggle('ii-open', open);
     // ‹ when closed (click to expand left), › when open (click to collapse right)
     toggle.innerHTML = open ? '&#8250;' : '&#8249;';
-    toggle.setAttribute('aria-label', open ? 'Close AI Assistant' : 'Open AI Assistant');
+    toggle.setAttribute('aria-label', open ? 'Close AI Informant' : 'Open AI Informant');
   }
 
   toggle.addEventListener('click', () => setOpen(!open));
