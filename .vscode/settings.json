@@ -1,0 +1,6 @@
+{
+  "files.autoSave": "onFocusChange",
+  "git.autofetch": true,
+  "git.autofetchPeriod": 30,
+  "files.hotExit": "off"
+}
