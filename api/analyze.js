@@ -182,12 +182,12 @@ export default async function handler(req, res) {
       const queries = categoryQueries[category] || categoryQueries['any'];
       const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato'];
 
+      // Fetch ALL RSS feeds in parallel — no cap
       const rssUrls = queries.map(q =>
         `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`
       );
 
       const rssResults = await Promise.allSettled(rssUrls.map(url => fetch(url)));
-
       let rawItems = [];
 
       for (const result of rssResults) {
@@ -214,6 +214,7 @@ export default async function handler(req, res) {
         }
       }
 
+      // Timeframe filter
       if (timeframe && timeframe !== 'any') {
         rawItems = rawItems.filter(a => {
           if (!a.date) return true;
@@ -227,6 +228,7 @@ export default async function handler(req, res) {
         });
       }
 
+      // Filter Indian content
       rawItems = rawItems.filter(a => {
         const t = a.title.toLowerCase();
         return !indianKeywords.some(k => t.includes(k));
@@ -248,26 +250,26 @@ export default async function handler(req, res) {
         return res.status(200).json({ groups: [] });
       }
 
-      const limited = deduped.slice(0, 80);
-
-      const groupPrompt = `You are a senior financial news editor at The Economist. Here are ${limited.length} headlines. Group them into distinct specific market events.
+      // Group ALL articles — no limit
+      const groupPrompt = `You are a senior financial news editor at The Economist. Here are ${deduped.length} headlines. Group them into distinct specific market events.
 
 Headlines:
-${limited.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
-1. Merge ALL headlines about the same specific event into ONE group
-2. Topics must be SPECIFIC events, not general trends. Bad: "Mortgage Rate Trends". Good: "30-Year Mortgage Rates Hit 7.2% as Fed Signals Delay"
+1. Merge ALL headlines about the same specific event into ONE group — be aggressive about merging
+2. Topics must be SPECIFIC events not general trends
 3. If a topic covers a specific company name it in the title
 4. Do NOT create separate groups for variations of the same story
-5. Only include groups with genuine market-moving significance
+5. Only groups with genuine market-moving significance
 6. Aim for 6-10 highly distinct specific groups
 7. Maximum 10 groups
 8. Each index appears in exactly one group
 9. Ignore non-economic stories
+10. Include ALL relevant indices in each group — do not leave articles ungrouped if they belong to a topic
 
-Respond ONLY with valid JSON, no other text, no markdown backticks:
-{"groups":[{"topic":"Specific descriptive title","indices":[1,3,5]}]}`;
+Respond ONLY with valid JSON, no markdown:
+{"groups":[{"topic":"Specific descriptive title","indices":[1,3,5,7,12,18,24,31]}]}`;
 
       const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -278,7 +280,7 @@ Respond ONLY with valid JSON, no other text, no markdown backticks:
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-5',
-          max_tokens: 2000,
+          max_tokens: 4000,
           messages: [{ role: 'user', content: groupPrompt }]
         })
       });
@@ -290,7 +292,7 @@ Respond ONLY with valid JSON, no other text, no markdown backticks:
       const grouped = JSON.parse(groupRaw);
 
       const groups = grouped.groups.map(g => {
-        const groupArticles = g.indices.map(i => limited[i - 1]).filter(Boolean);
+        const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         const sourceGrades = {};
         uniqueSources.forEach(source => {
@@ -307,7 +309,38 @@ Respond ONLY with valid JSON, no other text, no markdown backticks:
         };
       });
 
-      return res.status(200).json({ groups });
+      // Sort by relevance
+      const sortPrompt = `Rank these market topics by how likely they are to actually move US stock prices today, from most to least impactful.
+
+Topics:
+${groups.map((g, i) => `${i + 1}. ${g.topic} (${g.totalSources} sources)`).join('\n')}
+
+Respond ONLY with valid JSON, no markdown:
+{"ranked":[2,1,4,3,5]}`;
+
+      try {
+        const sortRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_KEY,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-5',
+            max_tokens: 200,
+            messages: [{ role: 'user', content: sortPrompt }]
+          })
+        });
+
+        const sortData = await sortRes.json();
+        const sortRaw = sortData.content[0].text.replace(/```json|```/g, '').trim();
+        const sorted = JSON.parse(sortRaw);
+        const rankedGroups = sorted.ranked.map(i => groups[i - 1]).filter(Boolean);
+        return res.status(200).json({ groups: rankedGroups });
+      } catch(e) {
+        return res.status(200).json({ groups });
+      }
 
     } catch (err) {
       return res.status(500).json({ error: err.message });
@@ -359,14 +392,15 @@ Only use ${thresholdText} for this analysis. Do not incorporate details from sou
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
 
 CRITICAL RULES:
-- Beneficiaries and losers must ONLY reference stocks, ETFs, or bonds traded on US exchanges (NYSE, NASDAQ, CBOE)
-- No foreign-listed stocks (no .NS, .TO, .L, .DE, .HK suffixes)
-- Foreign companies that trade as ADRs in the US may be included using their US ADR ticker
+- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
+- No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
+- Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only
+- Confidence must start with exactly "High", "Medium", or "Low" followed by a dash and reason
 
-Respond ONLY with valid JSON, no markdown, no extra text:
+Respond ONLY with valid JSON, no markdown:
 {
-  "why_it_matters": "2-3 sentences on the specific economic significance with concrete numbers where possible",
+  "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
   "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
   "sectors": {
     "positive": ["US sector 1", "US sector 2"],
@@ -381,7 +415,7 @@ Respond ONLY with valid JSON, no markdown, no extra text:
     "explanation": "Why these specific US-listed stocks or ETFs are hurt by this specific event",
     "tickers": ["TICK4", "TICK5"]
   },
-  "confidence": "High/Medium/Low — specific reason tied to this event"
+  "confidence": "High — specific reason OR Medium — specific reason OR Low — specific reason"
 }`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {

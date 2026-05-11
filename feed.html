@@ -12,7 +12,6 @@
     :root { --ink: #0a0a0a; --paper: #f5f2eb; --accent: #c8ff00; --muted: #6b6b6b; --border: #e0ddd6; --card: #ffffff; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
 
-    /* NAV */
     nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
     .nav-logo span { background: var(--accent); padding: 1px 6px; }
@@ -25,14 +24,12 @@
     .nav-panel-btn:hover { background: var(--border); }
     .nav-panel-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
-    /* HERO */
     .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
-    /* FILTERS */
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
@@ -44,14 +41,10 @@
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
     .status-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
 
-    /* MAIN LAYOUT */
     .main-layout { display: flex; align-items: flex-start; }
-
-    /* FEED */
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
     .feed-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
 
-    /* EVENT CARDS */
     .event-card { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 36px 40px; margin-bottom: 20px; animation: fadeUp 0.4s ease both; position: relative; transition: transform 0.2s; border: 2px solid transparent; }
     .event-card:hover { transform: translateY(-2px); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -79,7 +72,6 @@
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
 
-    /* SIDE PANELS */
     .side-panel { width: 300px; flex-shrink: 0; position: sticky; top: 73px; max-height: calc(100vh - 73px); overflow-y: auto; border-left: 1px solid var(--border); background: var(--card); display: none; flex-direction: column; }
     .side-panel.open { display: flex; }
     .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
@@ -88,7 +80,6 @@
     .panel-close:hover { color: var(--ink); }
     .panel-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
 
-    /* WATCHLIST */
     .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .sector-checkboxes { display: flex; flex-direction: column; gap: 8px; }
     .sector-checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
@@ -101,8 +92,6 @@
     .ticker-input::placeholder { text-transform: none; color: #aaa; }
     .btn-add-ticker { background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
     .btn-add-ticker:hover { opacity: 0.8; }
-
-    /* AUTOCOMPLETE */
     .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
     .autocomplete-dropdown.open { display: block; }
     .autocomplete-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f0ede6; transition: background 0.15s; }
@@ -110,21 +99,18 @@
     .autocomplete-item:hover { background: var(--paper); }
     .autocomplete-ticker { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
     .autocomplete-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
     .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .ticker-tag { display: flex; align-items: center; gap: 4px; background: var(--ink); color: var(--paper); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
     .ticker-tag button { background: none; border: none; color: #888; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; }
     .ticker-tag button:hover { color: var(--paper); }
     .watchlist-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
 
-    /* CHAT PANEL */
     .chat-coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px 20px; text-align: center; gap: 12px; }
     .chat-coming-soon .icon { font-size: 32px; }
     .chat-coming-soon h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; }
     .chat-coming-soon p { font-size: 13px; color: var(--muted); line-height: 1.6; }
     .coming-soon-badge { background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 1px; }
 
-    /* FOOTER */
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
     .footer-logo span { background: var(--accent); padding: 1px 5px; }
@@ -267,7 +253,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <footer>
@@ -290,7 +275,6 @@
       'any': "Latest analysis"
     };
 
-    // Popular tickers for autocomplete
     const TICKERS = [
       {s:'AAPL',n:'Apple Inc.'},{s:'MSFT',n:'Microsoft Corp.'},{s:'GOOGL',n:'Alphabet Inc.'},
       {s:'AMZN',n:'Amazon.com Inc.'},{s:'NVDA',n:'NVIDIA Corp.'},{s:'META',n:'Meta Platforms'},
@@ -306,7 +290,7 @@
       {s:'TLT',n:'iShares 20yr Treasury'},{s:'VIX',n:'CBOE Volatility Index'},
       {s:'DAL',n:'Delta Air Lines'},{s:'UAL',n:'United Airlines'},{s:'AAL',n:'American Airlines'},
       {s:'UPS',n:'United Parcel Service'},{s:'FDX',n:'FedEx Corp.'},
-      {s:'PFE',n:'Pfizer Inc.'},{s:'MRNA',n:'Moderna Inc.'},{s:'JNJ',n:'Johnson & Johnson'},
+      {s:'PFE',n:'Pfizer Inc.'},{s:'MRNA',n:'Moderna Inc.'},
       {s:'AMD',n:'Advanced Micro Devices'},{s:'INTC',n:'Intel Corp.'},{s:'QCOM',n:'Qualcomm'},
       {s:'AMAT',n:'Applied Materials'},{s:'LRCX',n:'Lam Research'},
       {s:'CVS',n:'CVS Health'},{s:'UNH',n:'UnitedHealth Group'},
@@ -322,17 +306,14 @@
     let watchlist = { sectors: [], tickers: [] };
     let activePanel = null;
 
-    // PANEL TOGGLE
     function togglePanel(panelName) {
       const panel = document.getElementById(`panel-${panelName}`);
       const btn = document.getElementById(`${panelName}-btn`);
-
       if (activePanel === panelName) {
         panel.classList.remove('open');
         btn.classList.remove('active');
         activePanel = null;
       } else {
-        // Close any open panel first
         if (activePanel) {
           document.getElementById(`panel-${activePanel}`).classList.remove('open');
           document.getElementById(`${activePanel}-btn`).classList.remove('active');
@@ -343,52 +324,28 @@
       }
     }
 
-    // AUTOCOMPLETE
     function handleTickerInput(e) {
       const val = e.target.value.toUpperCase().trim();
       const dropdown = document.getElementById('autocomplete');
       selectedAutocompleteIndex = -1;
-
       if (val.length < 1) { dropdown.classList.remove('open'); return; }
-
-      const matches = TICKERS.filter(t =>
-        t.s.startsWith(val) || t.n.toUpperCase().includes(val)
-      ).slice(0, 7);
-
+      const matches = TICKERS.filter(t => t.s.startsWith(val) || t.n.toUpperCase().includes(val)).slice(0, 7);
       if (matches.length === 0) { dropdown.classList.remove('open'); return; }
-
       dropdown.innerHTML = matches.map((t, i) => `
         <div class="autocomplete-item" onmousedown="selectTicker('${t.s}')" data-index="${i}">
           <span class="autocomplete-ticker">${t.s}</span>
           <span class="autocomplete-name">${t.n}</span>
-        </div>
-      `).join('');
+        </div>`).join('');
       dropdown.classList.add('open');
     }
 
     function handleTickerKeydown(e) {
       const dropdown = document.getElementById('autocomplete');
       const items = dropdown.querySelectorAll('.autocomplete-item');
-
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1);
-        items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : '');
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, -1);
-        items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : '');
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (selectedAutocompleteIndex >= 0 && items[selectedAutocompleteIndex]) {
-          const ticker = items[selectedAutocompleteIndex].querySelector('.autocomplete-ticker').textContent;
-          selectTicker(ticker);
-        } else {
-          addTickerFromInput();
-        }
-      } else if (e.key === 'Escape') {
-        dropdown.classList.remove('open');
-      }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1); items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : ''); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, -1); items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : ''); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (selectedAutocompleteIndex >= 0 && items[selectedAutocompleteIndex]) { selectTicker(items[selectedAutocompleteIndex].querySelector('.autocomplete-ticker').textContent); } else { addTickerFromInput(); } }
+      else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
     }
 
     function selectTicker(ticker) {
@@ -408,14 +365,12 @@
       selectTicker(ticker);
     }
 
-    // Close autocomplete on outside click
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.ticker-input-wrapper')) {
         document.getElementById('autocomplete').classList.remove('open');
       }
     });
 
-    // WATCHLIST
     function loadWatchlist() {
       try {
         const saved = localStorage.getItem('ii_watchlist');
@@ -459,22 +414,22 @@
       renderTickers();
     }
 
-    // WATCHLIST MATCH CHECK
     function checkWatchlistMatch(analysis) {
       if (watchlist.sectors.length === 0 && watchlist.tickers.length === 0) return { match: false, matchedTickers: [] };
-
       const allSectors = [...(analysis.sectors?.positive || []), ...(analysis.sectors?.negative || [])].map(s => s.toLowerCase());
       const allTickers = [...(analysis.winners?.tickers || []), ...(analysis.losers?.tickers || [])];
-
-      const sectorMatch = watchlist.sectors.some(ws =>
-        allSectors.some(s => s.includes(ws.replace(/-/g, ' ')))
-      );
+      const sectorMatch = watchlist.sectors.some(ws => allSectors.some(s => s.includes(ws.replace(/-/g, ' '))));
       const matchedTickers = watchlist.tickers.filter(t => allTickers.includes(t));
-
       return { match: sectorMatch || matchedTickers.length > 0, matchedTickers };
     }
 
-    // MAIN FEED
+    const getConfScore = (conf) => {
+      const c = (conf || '').toLowerCase();
+      if (c.includes('high')) return 0;
+      if (c.includes('medium')) return 1;
+      return 2;
+    };
+
     async function loadFeed() {
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
@@ -491,11 +446,18 @@
       btn.disabled = true;
       feed.innerHTML = '';
       label.style.display = 'none';
-      status.textContent = 'Fetching news...';
+      status.textContent = 'Fetching and grouping news (this takes ~30 seconds)...';
 
       try {
         const params = new URLSearchParams({ category, timeframe });
-        const newsRes = await fetch(`/api/analyze?${params}`);
+
+        // Use a longer timeout — backend takes ~30s
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+        const newsRes = await fetch(`/api/analyze?${params}`, { signal: controller.signal });
+        clearTimeout(timeout);
+
         const newsData = await newsRes.json();
         const groups = newsData.groups || [];
 
@@ -507,72 +469,84 @@
         }
 
         label.style.display = 'block';
-        status.textContent = `Found ${groups.length} topics. Analyzing...`;
+        status.textContent = `Found ${groups.length} topics. Analyzing implications...`;
 
+        // Analyze all groups first
+        const analyzed = [];
         for (let i = 0; i < groups.length; i++) {
           const group = groups[i];
-          status.textContent = `Analyzing topic ${i + 1} of ${groups.length}...`;
-
+          status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
           try {
             const analysis = await analyzeGroup(group, impact);
-            const { match, matchedTickers } = checkWatchlistMatch(analysis);
-            const confClass = analysis.confidence.toLowerCase().startsWith('high') ? 'confidence-high' : analysis.confidence.toLowerCase().startsWith('medium') ? 'confidence-medium' : 'confidence-low';
-            const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
-
-            const card = document.createElement('div');
-            card.className = 'event-card' + (match ? ' watchlist-match' : '');
-            card.style.animationDelay = `${i * 0.08}s`;
-            card.innerHTML = `
-              ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
-              <div class="event-topic">${group.topic}</div>
-              <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
-              <div class="chain-row">
-                <div class="chain-label">Why it matters</div>
-                <div class="chain-content">${analysis.why_it_matters}</div>
-              </div>
-              <div class="chain-row">
-                <div class="chain-label">Impact window</div>
-                <div class="chain-content"><span class="impact-badge">${analysis.impact_timeframe || impact}</span></div>
-              </div>
-              <div class="chain-row">
-                <div class="chain-label">Sectors in play</div>
-                <div class="chain-content">
-                  <div class="sectors">
-                    ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
-                    ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
-                  </div>
-                </div>
-              </div>
-              <div class="chain-row">
-                <div class="chain-label">Beneficiaries</div>
-                <div class="chain-content">
-                  ${analysis.winners.explanation}
-                  <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
-                </div>
-              </div>
-              <div class="chain-row">
-                <div class="chain-label">Likely losers</div>
-                <div class="chain-content">
-                  ${analysis.losers.explanation}
-                  <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
-                </div>
-              </div>
-              <div class="chain-row">
-                <div class="chain-label">Confidence</div>
-                <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
-              </div>
-            `;
-            feed.appendChild(card);
-
-          } catch (err) { /* skip */ }
-
-          await new Promise(r => setTimeout(r, 1000));
+            analyzed.push({ group, analysis });
+          } catch(err) {}
+          await new Promise(r => setTimeout(r, 500));
         }
 
-        status.textContent = `${groups.length} topics analyzed`;
+        // Sort by confidence
+        analyzed.sort((a, b) => getConfScore(a.analysis.confidence) - getConfScore(b.analysis.confidence));
+
+        // Display sorted cards
+        for (let i = 0; i < analyzed.length; i++) {
+          const { group, analysis } = analyzed[i];
+          const { match, matchedTickers } = checkWatchlistMatch(analysis);
+          const confClass = getConfScore(analysis.confidence) === 0 ? 'confidence-high' : getConfScore(analysis.confidence) === 1 ? 'confidence-medium' : 'confidence-low';
+          const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
+
+          const card = document.createElement('div');
+          card.className = 'event-card' + (match ? ' watchlist-match' : '');
+          card.style.animationDelay = `${i * 0.08}s`;
+          card.innerHTML = `
+            ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
+            <div class="event-topic">${group.topic}</div>
+            <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
+            <div class="chain-row">
+              <div class="chain-label">Why it matters</div>
+              <div class="chain-content">${analysis.why_it_matters}</div>
+            </div>
+            <div class="chain-row">
+              <div class="chain-label">Impact window</div>
+              <div class="chain-content"><span class="impact-badge">${analysis.impact_timeframe || impact}</span></div>
+            </div>
+            <div class="chain-row">
+              <div class="chain-label">Sectors in play</div>
+              <div class="chain-content">
+                <div class="sectors">
+                  ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
+                  ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+                </div>
+              </div>
+            </div>
+            <div class="chain-row">
+              <div class="chain-label">Beneficiaries</div>
+              <div class="chain-content">
+                ${analysis.winners.explanation}
+                <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+              </div>
+            </div>
+            <div class="chain-row">
+              <div class="chain-label">Likely losers</div>
+              <div class="chain-content">
+                ${analysis.losers.explanation}
+                <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+              </div>
+            </div>
+            <div class="chain-row">
+              <div class="chain-label">Confidence</div>
+              <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
+            </div>
+          `;
+          feed.appendChild(card);
+        }
+
+        status.textContent = `${analyzed.length} topics analyzed`;
 
       } catch (err) {
-        status.textContent = 'Error: ' + err.message;
+        if (err.name === 'AbortError') {
+          status.textContent = 'Request timed out — try again';
+        } else {
+          status.textContent = 'Error: ' + err.message;
+        }
       }
 
       btn.disabled = false;
