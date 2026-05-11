@@ -24,11 +24,15 @@
     .nav-panel-btn:hover { background: var(--border); }
     .nav-panel-btn.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
-    .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
-    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    .hero { padding: 36px 48px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); }
-    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
-    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 560px; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(24px, 3.5vw, 42px); letter-spacing: -1.5px; margin-bottom: 8px; line-height: 1.1; }
+    .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 480px; }
+    .hero-stats { display: flex; gap: 28px; flex-shrink: 0; padding-bottom: 4px; }
+    .hero-stat { text-align: right; }
+    .hero-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+    .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
@@ -87,6 +91,17 @@
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
+
+    .pre-load { padding: 52px 0 40px; display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
+    .pre-load-text h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+    .pre-load-text p { font-size: 14px; color: var(--muted); line-height: 1.65; max-width: 380px; }
+    .quick-cats-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .quick-cats { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 560px; }
+    .quick-cat { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 9px 20px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .quick-cat:hover { border-color: var(--ink); color: var(--ink); background: var(--paper); }
+    .quick-cat.featured { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .quick-cat.featured:hover { opacity: 0.85; }
+    .pre-load-note { font-size: 12px; color: var(--muted); opacity: 0.7; }
 
     .side-panel { width: 300px; flex-shrink: 0; position: sticky; top: 73px; max-height: calc(100vh - 73px); overflow-y: auto; border-left: 1px solid var(--border); background: var(--card); display: none; flex-direction: column; }
     .side-panel.open { display: flex; }
@@ -166,9 +181,25 @@
   </nav>
 
   <div class="hero">
-    <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
-    <h1 id="page-title">Today's market-moving events</h1>
-    <p class="hero-sub">Real news synthesized across sources — economic implications, affected sectors, and specific stocks laid out clearly.</p>
+    <div class="hero-left">
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
+      <h1 id="page-title">Today's market-moving events</h1>
+      <p class="hero-sub">Real news synthesized across sources — economic implications, affected sectors, and specific stocks laid out clearly.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">500+</div>
+        <div class="hero-stat-lbl">Sources scanned</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">10</div>
+        <div class="hero-stat-lbl">Categories</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">Daily</div>
+        <div class="hero-stat-lbl">Updated</div>
+      </div>
+    </div>
   </div>
 
   <div class="filters">
@@ -222,6 +253,28 @@
       <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
       <div id="feed"></div>
       <div class="feed-pending" id="feed-pending"><span></span><span></span><span></span></div>
+
+      <div class="pre-load" id="pre-load">
+        <div class="pre-load-text">
+          <h3>Select filters above, then load the feed</h3>
+          <p>The AI scans hundreds of sources, groups related headlines, and traces the full economic chain for each event.</p>
+        </div>
+        <div>
+          <div class="quick-cats-label">Or quick-load a category</div>
+          <div class="quick-cats">
+            <button class="quick-cat featured" onclick="quickLoad('any')">All categories</button>
+            <button class="quick-cat" onclick="quickLoad('macro')">Macro & Fed</button>
+            <button class="quick-cat" onclick="quickLoad('energy')">Energy & Oil</button>
+            <button class="quick-cat" onclick="quickLoad('technology')">Technology & AI</button>
+            <button class="quick-cat" onclick="quickLoad('financials')">Financials</button>
+            <button class="quick-cat" onclick="quickLoad('defense')">Defense & Geopolitics</button>
+            <button class="quick-cat" onclick="quickLoad('healthcare')">Healthcare & Pharma</button>
+            <button class="quick-cat" onclick="quickLoad('precious-metals')">Precious Metals</button>
+            <button class="quick-cat" onclick="quickLoad('consumer')">Consumer & Retail</button>
+          </div>
+        </div>
+        <div class="pre-load-note">Analysis takes ~30–60 seconds</div>
+      </div>
     </div>
 
     <!-- WATCHLIST PANEL -->
@@ -328,6 +381,11 @@
     let selectedAutocompleteIndex = -1;
     let watchlist = { sectors: [], tickers: [] };
     let activePanel = null;
+
+    function quickLoad(category) {
+      document.getElementById('filter-category').value = category;
+      loadFeed();
+    }
 
     const getConfScore = (conf) => {
       const c = (conf || '').toLowerCase();
@@ -523,6 +581,7 @@
       btn.disabled = true;
       feed.innerHTML = '';
       label.style.display = 'none';
+      document.getElementById('pre-load').style.display = 'none';
       loader.classList.add('active');
       feedPending.classList.add('active');
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
