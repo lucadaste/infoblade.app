@@ -40,6 +40,15 @@
     .btn-load:hover { opacity: 0.85; }
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
     .status-text { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    .loader { display: none; align-items: flex-end; gap: 3px; height: 18px; }
+    .loader.active { display: flex; }
+    .loader span { display: block; width: 3px; border-radius: 2px; background: var(--ink); animation: eq 1s ease-in-out infinite; }
+    .loader span:nth-child(1) { animation-delay: 0s;    height: 6px; }
+    .loader span:nth-child(2) { animation-delay: 0.15s; height: 10px; }
+    .loader span:nth-child(3) { animation-delay: 0.3s;  height: 14px; }
+    .loader span:nth-child(4) { animation-delay: 0.45s; height: 10px; }
+    .loader span:nth-child(5) { animation-delay: 0.6s;  height: 6px; }
+    @keyframes eq { 0%,100% { transform: scaleY(0.4); opacity: 0.4; } 50% { transform: scaleY(1); opacity: 1; } }
 
     .main-layout { display: flex; align-items: flex-start; }
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
@@ -194,6 +203,7 @@
     </div>
     <div class="filter-actions">
       <button class="btn-load" onclick="loadFeed()" id="btn">Load feed →</button>
+      <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
       <span class="status-text" id="status"></span>
     </div>
   </div>
@@ -490,6 +500,7 @@
       const status = document.getElementById('status');
       const feed   = document.getElementById('feed');
       const label  = document.getElementById('feed-label');
+      const loader = document.getElementById('loader');
 
       const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
@@ -501,6 +512,7 @@
       btn.disabled = true;
       feed.innerHTML = '';
       label.style.display = 'none';
+      loader.classList.add('active');
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
 
       try {
@@ -549,9 +561,11 @@
         cards.sort((a, b) => parseInt(a.dataset.confScore) - parseInt(b.dataset.confScore));
         cards.forEach(card => feed.appendChild(card));
 
+        loader.classList.remove('active');
         status.textContent = `${cards.length} topics analyzed — sorted by confidence`;
 
       } catch (err) {
+        loader.classList.remove('active');
         if (err.name === 'AbortError') {
           status.textContent = 'Request timed out — try again';
         } else {
