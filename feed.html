@@ -455,23 +455,23 @@
           <div class="chain-label">Sectors in play</div>
           <div class="chain-content">
             <div class="sectors">
-              ${analysis.sectors.positive.map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
-              ${analysis.sectors.negative.map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+              ${(analysis.sectors?.positive || []).map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
+              ${(analysis.sectors?.negative || []).map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
             </div>
           </div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Beneficiaries</div>
           <div class="chain-content">
-            ${analysis.winners.explanation}
-            <div class="tickers">${analysis.winners.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            ${analysis.winners?.explanation || ''}
+            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
           </div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Likely losers</div>
           <div class="chain-content">
-            ${analysis.losers.explanation}
-            <div class="tickers">${analysis.losers.tickers.map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            ${analysis.losers?.explanation || ''}
+            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
           </div>
         </div>
         <div class="chain-row">
@@ -529,8 +529,15 @@
             const analysis = await analyzeGroup(group, impact);
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
-          } catch(err) {}
-          await new Promise(r => setTimeout(r, 500));
+          } catch(err) {
+            console.error('Topic failed:', group.topic, err.message);
+            const errCard = document.createElement('div');
+            errCard.className = 'event-card';
+            errCard.dataset.confScore = 3;
+            errCard.innerHTML = `<div class="event-topic" style="color:#ff7070">${group.topic}</div><div style="color:#666;font-size:13px;margin-top:8px">Failed: ${err.message}</div>`;
+            feed.appendChild(errCard);
+          }
+          await new Promise(r => setTimeout(r, 300));
         }
 
         // Re-sort by confidence when all done
@@ -563,7 +570,10 @@
           impactTimeframe
         })
       });
-      if (!res.ok) throw new Error('API request failed');
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`${res.status} — ${body.slice(0, 150)}`);
+      }
       return await res.json();
     }
 
