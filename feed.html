@@ -85,8 +85,8 @@
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.08); color: #a0cc00; border: 1px solid rgba(200,255,0,0.15); }
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
-    .confidence-high   { color: #4ade80; font-size: 14px; }
-    .confidence-medium { color: #fbbf24; font-size: 14px; }
+    .conf-stars { font-size: 16px; letter-spacing: 1px; }
+    .conf-label { font-size: 13px; color: var(--muted); }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
@@ -387,11 +387,14 @@
     }
 
     const getConfScore = (conf) => {
-      const c = (conf || '').toLowerCase();
-      if (c.includes('high')) return 0;
-      if (c.includes('medium')) return 1;
-      return 2;
+      const n = parseInt(conf);
+      return isNaN(n) ? 3 : Math.max(1, Math.min(5, n));
     };
+
+    function renderStars(score) {
+      const color = score >= 4 ? '#4ade80' : score === 3 ? '#fbbf24' : '#ff7070';
+      return `<span class="conf-stars" style="color:${color}">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span><span class="conf-label"> ${score}/5</span>`;
+    }
 
     function togglePanel(panelName) {
       const panel = document.getElementById(`panel-${panelName}`);
@@ -513,7 +516,6 @@
     function buildCard(group, analysis, impact) {
       const { match, matchedTickers } = checkWatchlistMatch(analysis);
       const confScore = getConfScore(analysis.confidence);
-      const confClass = confScore === 0 ? 'confidence-high' : confScore === 1 ? 'confidence-medium' : 'confidence-low';
       const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
 
       const card = document.createElement('div');
@@ -556,7 +558,7 @@
         </div>
         <div class="chain-row">
           <div class="chain-label">Confidence</div>
-          <div class="chain-content"><span class="${confClass}">${analysis.confidence}</span></div>
+          <div class="chain-content">${renderStars(confScore)}</div>
         </div>
       `;
       return card;
@@ -612,17 +614,12 @@
           status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
           try {
             const analysis = await analyzeGroup(group, impact);
-            if ((analysis.confidence || '').toLowerCase().startsWith('low')) continue;
+            if (getConfScore(analysis.confidence) < 3) continue;
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
             if (i < groups.length - 1) feedPending.classList.add('active');
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
-            const errCard = document.createElement('div');
-            errCard.className = 'event-card';
-            errCard.dataset.confScore = 3;
-            errCard.innerHTML = `<div class="event-topic" style="color:#ff7070">${group.topic}</div><div style="color:#666;font-size:13px;margin-top:8px">Failed: ${err.message}</div>`;
-            feed.appendChild(errCard);
           }
           await new Promise(r => setTimeout(r, 300));
         }
@@ -630,7 +627,7 @@
         // Re-sort by confidence when all done
         status.textContent = 'Sorting by confidence...';
         const cards = [...feed.querySelectorAll('.event-card')];
-        cards.sort((a, b) => parseInt(a.dataset.confScore) - parseInt(b.dataset.confScore));
+        cards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
         cards.forEach(card => feed.appendChild(card));
 
         loader.classList.remove('active');
@@ -651,21 +648,28 @@
     }
 
     async function analyzeGroup(group, impactTimeframe) {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          topic: group.topic,
-          headlines: group.headlines,
-          sources: group.sources,
-          impactTimeframe
-        })
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => '');
-        throw new Error(`${res.status} — ${body.slice(0, 150)}`);
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 50000);
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: group.topic,
+            headlines: group.headlines,
+            sources: group.sources,
+            impactTimeframe
+          }),
+          signal: ctrl.signal
+        });
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`${res.status} — ${body.slice(0, 150)}`);
+        }
+        return await res.json();
+      } finally {
+        clearTimeout(t);
       }
-      return await res.json();
     }
 
     loadWatchlist();

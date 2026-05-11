@@ -549,7 +549,7 @@ CRITICAL RULES:
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only
-- Confidence must start with exactly "High" or "Medium" followed by a dash and reason — never output "Low"
+- Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason. 5 = very high confidence, 3 = moderate, 1 = very low. Almost always output 3, 4, or 5. Only output 1 or 2 for genuinely poor signal.
 
 Respond ONLY with valid JSON, no markdown:
 {
@@ -568,7 +568,7 @@ Respond ONLY with valid JSON, no markdown:
     "explanation": "Why these specific US-listed stocks or ETFs are hurt by this specific event",
     "tickers": ["TICK4", "TICK5"]
   },
-  "confidence": "High — specific reason OR Medium — specific reason"
+  "confidence": "4 — specific reason (number 1-5 followed by dash and reason)"
 }`;
 
       const response = await fetch('https://api.anthropic.com/v1/messages', {
