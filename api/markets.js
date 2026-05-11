@@ -15,8 +15,9 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { category = 'sports' } = req.query;
+  const { category = 'sports', maxDays = '365' } = req.query;
   const targetTags = CATEGORY_TAGS[category] || CATEGORY_TAGS.sports;
+  const daysCap = Math.min(Math.max(parseInt(maxDays) || 365, 1), 365);
 
   try {
     const polyRes = await fetch(
@@ -30,11 +31,11 @@ export default async function handler(req, res) {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
       if (!targetTags.some(tag => eventTags.some(et => et.includes(tag)))) return false;
-      // skip markets resolving more than 1 year out
+      // skip markets outside the requested timeframe
       const endDate = event.endDate || null;
       if (endDate) {
         const daysLeft = Math.ceil((new Date(endDate) - now) / 86400000);
-        if (daysLeft > 365) return false;
+        if (daysLeft > daysCap || daysLeft < 0) return false;
       }
       return true;
     });

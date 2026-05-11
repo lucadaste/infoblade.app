@@ -31,6 +31,12 @@
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
+    .timeframe-bar { display: flex; gap: 8px; align-items: center; padding: 12px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 122px; z-index: 89; overflow-x: auto; }
+    .timeframe-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); white-space: nowrap; margin-right: 4px; }
+    .tf-chip { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .tf-chip:hover { border-color: var(--ink); color: var(--ink); }
+    .tf-chip.active { background: var(--accent); color: var(--ink); border-color: var(--accent); font-weight: 600; }
+
     .market-status { padding: 12px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 44px; display: flex; align-items: center; gap: 10px; }
     .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -97,6 +103,7 @@
       .nav-links { display: none; }
       .hero { padding: 40px 24px 24px; }
       .category-bar { padding: 16px 24px; top: 57px; }
+      .timeframe-bar { padding: 10px 24px; top: 110px; }
       .market-status { padding: 10px 24px; }
       .polymarket-note { padding: 10px 24px; }
       .market-grid { padding: 20px 24px 60px; }
@@ -131,6 +138,14 @@
     <button class="cat-chip" data-cat="celebrity" onclick="selectCategory('celebrity', this)">Celebrity</button>
   </div>
 
+  <div class="timeframe-bar">
+    <span class="timeframe-label">Closes in</span>
+    <button class="tf-chip" data-days="7" onclick="selectTimeframe(7, this)">7 days</button>
+    <button class="tf-chip" data-days="30" onclick="selectTimeframe(30, this)">30 days</button>
+    <button class="tf-chip" data-days="90" onclick="selectTimeframe(90, this)">3 months</button>
+    <button class="tf-chip active" data-days="365" onclick="selectTimeframe(365, this)">1 year</button>
+  </div>
+
   <div class="market-status" id="market-status"></div>
 
   <div class="polymarket-note">
@@ -151,6 +166,7 @@
 
   <script>
     let currentCategory = null;
+    let currentMaxDays = 365;
 
     function setStatus(msg, loading = false) {
       const el = document.getElementById('market-status');
@@ -255,19 +271,13 @@
       return card;
     }
 
-    async function selectCategory(cat, chipEl) {
-      if (currentCategory === cat) return;
-      currentCategory = cat;
-
-      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
-      chipEl.classList.add('active');
-
+    async function loadMarkets(cat, maxDays) {
       const grid = document.getElementById('market-grid');
       grid.innerHTML = '';
       setStatus(`Loading ${cat} markets...`, true);
 
       try {
-        const res = await fetch(`/api/markets?category=${cat}`);
+        const res = await fetch(`/api/markets?category=${cat}&maxDays=${maxDays}`);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
@@ -277,8 +287,8 @@
           setStatus('');
           grid.innerHTML = `
             <div class="empty-state">
-              <h3>No active markets found</h3>
-              <p>No open prediction markets in this category right now. Try another category or check back later.</p>
+              <h3>No markets in this timeframe</h3>
+              <p>No open ${cat} markets closing within ${maxDays} days. Try a longer timeframe or a different category.</p>
             </div>`;
           return;
         }
@@ -293,6 +303,20 @@
             <p>${err.message}</p>
           </div>`;
       }
+    }
+
+    function selectCategory(cat, chipEl) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+      loadMarkets(cat, currentMaxDays);
+    }
+
+    function selectTimeframe(days, chipEl) {
+      currentMaxDays = days;
+      document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
+      chipEl.classList.add('active');
+      if (currentCategory) loadMarkets(currentCategory, days);
     }
 
     // Auto-load sports on page open
