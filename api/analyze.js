@@ -384,7 +384,7 @@ Respond ONLY with valid JSON, no markdown:
   }
 
   if (req.method === 'POST') {
-    const { topic, headlines, sources, sourceGrades, minGrade, impactTimeframe } = req.body;
+    const { topic, headlines, sources, sourceGrades = {}, minGrade = 'medium', impactTimeframe } = req.body;
 
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
