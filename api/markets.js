@@ -20,13 +20,17 @@ export default async function handler(req, res) {
   const daysCap = Math.min(Math.max(parseInt(maxDays) || 365, 1), 365);
 
   try {
+    const now = new Date();
+    const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
+    const endDateMin = now.toISOString();
+
+    const polyUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
+
     const polyRes = await fetch(
-      'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false',
+      polyUrl,
       { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
     );
     const events = await polyRes.json();
-
-    const now = new Date();
     const filtered = (Array.isArray(events) ? events : []).filter(event => {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
