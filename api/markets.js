@@ -20,18 +20,26 @@ export default async function handler(req, res) {
 
   try {
     const polyRes = await fetch(
-      'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=100&order=volume24hr&ascending=false',
+      'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false',
       { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
     );
     const events = await polyRes.json();
 
+    const now = new Date();
     const filtered = (Array.isArray(events) ? events : []).filter(event => {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-      return targetTags.some(tag => eventTags.some(et => et.includes(tag)));
+      if (!targetTags.some(tag => eventTags.some(et => et.includes(tag)))) return false;
+      // skip markets resolving more than 1 year out
+      const endDate = event.endDate || null;
+      if (endDate) {
+        const daysLeft = Math.ceil((new Date(endDate) - now) / 86400000);
+        if (daysLeft > 365) return false;
+      }
+      return true;
     });
 
-    const markets = filtered.slice(0, 5).map(event => {
+    const markets = filtered.map(event => {
       const ms = event.markets || [];
       const primary = ms.length === 1
         ? ms[0]
@@ -50,7 +58,7 @@ export default async function handler(req, res) {
       if (yesPrice === null || yesPrice < 1 || yesPrice > 99) return null;
 
       const endDate = primary.endDate || event.endDate || null;
-      const daysLeft = endDate ? Math.ceil((new Date(endDate) - new Date()) / 86400000) : null;
+      const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
@@ -66,7 +74,7 @@ export default async function handler(req, res) {
         totalMarkets: ms.length,
         category
       };
-    }).filter(Boolean);
+    }).filter(Boolean).slice(0, 5);
 
     return res.status(200).json({ markets, category });
   } catch (err) {
