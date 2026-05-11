@@ -73,15 +73,15 @@ export default async function handler(req, res) {
       if (title.length > 10) items.push({ title, source, grade: getSourceGrade(source) });
     }
 
-    if (items.length === 0) {
+    if (items.length < 5) {
       return res.status(200).json({
         lean: 'Uncertain',
         lean_confidence: 'Low',
-        reasoning: 'No relevant news found for this question. The market price is the best available signal.',
+        reasoning: `Only ${items.length} article${items.length === 1 ? '' : 's'} found — not enough coverage to form a reliable lean. The market price is the best available signal.`,
         key_sources: [],
         signal: 'Inconclusive',
-        signal_detail: 'Insufficient news coverage to compare against the market odds.',
-        articlesFound: 0,
+        signal_detail: 'Insufficient news coverage (minimum 5 articles required) to compare against the market odds.',
+        articlesFound: items.length,
         searchQuery
       });
     }
