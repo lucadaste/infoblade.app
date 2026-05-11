@@ -72,6 +72,14 @@
     .feature-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; }
     .feature-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
     .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
+    .modules-section { padding: 0 48px 88px; }
+    .modules-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .module-card { background: var(--ink); color: #f0ede6; border-radius: 10px; padding: 32px; text-decoration: none; display: flex; flex-direction: column; transition: transform 0.2s, opacity 0.2s; border: 2px solid transparent; }
+    .module-card:hover { transform: translateY(-3px); opacity: 0.9; }
+    .module-tag { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    .module-card h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 12px; line-height: 1.2; }
+    .module-card p { font-size: 14px; color: #888; line-height: 1.75; flex: 1; }
+    .module-link { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 24px; letter-spacing: 0.5px; }
     .waitlist-section { padding: 88px 48px; background: var(--ink); color: #f0ede6; text-align: center; }
     .waitlist-section .section-label { color: var(--accent); margin-bottom: 24px; }
     .waitlist-section h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; margin-bottom: 16px; line-height: 1.1; }
@@ -99,6 +107,7 @@
       .steps { grid-template-columns: 1fr; gap: 2px; }
       .step:first-child { border-radius: 10px 10px 0 0; } .step:last-child { border-radius: 0 0 10px 10px; }
       .features-grid { grid-template-columns: 1fr; } .example-card { padding: 32px 24px; }
+      .modules-section { padding: 0 24px 64px; } .modules-grid { grid-template-columns: 1fr; }
       .chain-row { flex-direction: column; gap: 8px; } .chain-label { min-width: unset; }
       .waitlist-section { padding: 64px 24px; } .disclaimer { padding: 28px 24px; } footer { padding: 24px; }
     }
@@ -258,6 +267,34 @@
         <h4>No recommendations, ever</h4>
         <p>We never tell you what to buy or sell. InvestmentInformatics.AI gives you the context and the reasoning — the decision is always yours. Informed, not directed.</p>
       </div>
+    </div>
+  </section>
+
+  <section class="modules-section" id="tools">
+    <div class="section-label">More tools</div>
+    <div class="modules-grid">
+
+      <a class="module-card fade-in" href="/feed.html">
+        <div class="module-tag">Daily Feed</div>
+        <h4>Market-moving events, explained</h4>
+        <p>Every day, our AI reads hundreds of news sources, groups them into distinct market events, and traces the full economic chain — from headline to sector to specific stocks. Filtered by category, timeframe, and source quality.</p>
+        <div class="module-link">Open daily feed →</div>
+      </a>
+
+      <a class="module-card fade-in" href="/predictions.html">
+        <div class="module-tag">Prediction Tracker</div>
+        <h4>Did the AI get it right?</h4>
+        <p>Every analysis we generate becomes a logged prediction — with the exact tickers called, the impact timeframe, and the confidence level. Track how our calls age over time and which sources consistently lead to accurate outcomes.</p>
+        <div class="module-link">View prediction history →</div>
+      </a>
+
+      <a class="module-card fade-in" href="/crypto.html">
+        <div class="module-tag">Crypto Markets</div>
+        <h4>On-chain signals meet macro context</h4>
+        <p>Dedicated crypto analysis that goes beyond price — connecting macro triggers, regulatory shifts, and institutional flows to specific tokens. BTC, ETH, and the broader digital asset landscape, analyzed the same way we cover equities.</p>
+        <div class="module-link">Explore crypto feed →</div>
+      </a>
+
     </div>
   </section>
 
