@@ -43,12 +43,13 @@
       transform: rotate(180deg);
       font-family: 'Syne', 'Arial Black', sans-serif;
       font-weight: 800;
-      font-size: 9px;
-      letter-spacing: 2px;
+      font-size: 8px;
+      letter-spacing: 1.8px;
       color: #c8ff00;
       text-transform: uppercase;
       user-select: none;
       pointer-events: none;
+      text-align: center;
     }
     #ii-ai-toggle {
       background: none;
@@ -252,7 +253,7 @@
   const bar = document.createElement('div');
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
-    <div id="ii-ai-label">AI</div>
+    <div id="ii-ai-label">Live Chat</div>
     <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
   `;
   document.body.appendChild(bar);
