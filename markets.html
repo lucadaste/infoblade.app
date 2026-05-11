@@ -79,6 +79,8 @@
     .signal-contradicts { background: rgba(200,125,0,0.12); color: #c87d00; border: 1px solid rgba(200,125,0,0.25); font-weight: 700; }
     .signal-inconclusive { background: var(--border); color: var(--muted); border: 1px solid transparent; }
 
+    .public-lean { font-size: 13px; color: var(--muted); padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 6px; }
+    .public-lean strong { color: var(--ink); font-weight: 700; }
     .analysis-reasoning { font-size: 13px; color: #444; line-height: 1.65; }
     .analysis-signal-detail { font-size: 12px; color: var(--muted); font-style: italic; }
     .analysis-sources { font-size: 12px; color: var(--muted); }
@@ -243,13 +245,14 @@
         const block = document.createElement('div');
         block.className = 'analysis-block';
         block.innerHTML = `
+          <div class="public-lean">The public is leaning <strong>${market.yesPrice}%</strong> toward this happening</div>
           <div class="analysis-header">
-            <span class="lean-badge ${leanBadgeClass(data.lean)}">News leans ${data.lean} — ${data.lean_confidence} confidence</span>
+            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${data.lean} — ${data.lean_confidence} confidence</span>
             <span class="signal-badge ${signalBadgeClass(data.signal)}">${data.signal}</span>
           </div>
           <div class="analysis-reasoning">${data.reasoning}</div>
           ${data.signal_detail ? `<div class="analysis-signal-detail">${data.signal_detail}</div>` : ''}
-          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Key sources:</strong> ${data.key_sources.join(' · ')}</div>` : ''}
+          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Sources:</strong> ${data.key_sources.join(' · ')}</div>` : ''}
           ${data.articlesFound !== undefined ? `<div class="analysis-sources">${data.articlesFound} articles analyzed</div>` : ''}
         `;
         cardEl.appendChild(block);

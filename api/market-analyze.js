@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       ? `Current market odds: ${currentOdds}% chance of YES`
       : 'Market odds: not provided';
 
-    const prompt = `You are a research analyst evaluating a prediction market question using news sources.
+    const prompt = `You are helping everyday users understand a prediction market question using recent news.
 
 Market question: "${question}"
 ${oddsContext}
@@ -121,14 +121,16 @@ Based ONLY on what the news reporting indicates, determine the likely outcome. W
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
 
+Write for a general audience — plain conversational English, no analyst jargon. Avoid phrases like "market dynamics", "sentiment", "correlates with", "indicative of". Write the way you'd explain it to a curious friend.
+
 Respond ONLY with valid JSON, no markdown:
 {
   "lean": "Yes" | "No" | "Uncertain",
   "lean_confidence": "High" | "Medium" | "Low",
-  "reasoning": "2-3 sentences on what the sources specifically indicate",
+  "reasoning": "2-3 plain-English sentences explaining what the news says will likely happen — be direct about what you think and why",
   "key_sources": ["source1", "source2"],
   "signal": "Aligns with market" | "Contradicts market" | "Inconclusive",
-  "signal_detail": "One sentence comparing the news lean to the ${currentOdds !== undefined ? currentOdds + '% market odds' : 'current market price'}"
+  "signal_detail": "One conversational sentence on whether the news agrees or disagrees with the crowd's ${currentOdds !== undefined ? currentOdds + '% lean' : 'current lean'} — e.g. 'The news strongly backs what the crowd is betting on' or 'The news tells a different story from what the crowd thinks'"
 }`;
 
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
