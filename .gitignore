@@ -142,3 +142,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 test.html
+
+# Runtime prediction data (grows at runtime, not for version control)
+data/*.json

@@ -1,3 +1,30 @@
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const _dir = path.dirname(fileURLToPath(import.meta.url));
+const _reputationPath = path.resolve(_dir, '../data/source-reputation.json');
+const _predictionPath = path.resolve(_dir, '../data/prediction-log.json');
+
+async function _readReputation() {
+  try {
+    return JSON.parse(await fs.readFile(_reputationPath, 'utf-8') || '{}');
+  } catch (e) {
+    if (e.code === 'ENOENT') return {};
+    throw e;
+  }
+}
+
+async function _savePrediction(record) {
+  try {
+    let entries = [];
+    try { entries = JSON.parse(await fs.readFile(_predictionPath, 'utf-8') || '[]'); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+    entries.push(record);
+    await fs.mkdir(path.dirname(_predictionPath), { recursive: true });
+    await fs.writeFile(_predictionPath, JSON.stringify(entries, null, 2), 'utf-8');
+  } catch (_) {}
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -5,9 +32,138 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  const sourceQualityMap = {
+    'Reuters': 'High',
+    'Associated Press': 'High',
+    'Bloomberg': 'High',
+    'Financial Times': 'High',
+    'The Wall Street Journal': 'High',
+    'The Economist': 'High',
+    'BBC': 'High',
+    'NPR': 'High',
+    'CNBC': 'High',
+    'Wall Street Journal': 'High',
+    'Financial Times': 'High',
+    'AP': 'High',
+    'Politico': 'Medium',
+    'Business Insider': 'Medium',
+    'MarketWatch': 'Medium',
+    'Yahoo Finance': 'Medium',
+    'CNN': 'Medium',
+    'The Guardian': 'Medium',
+    'NBC News': 'Medium',
+    'CBS News': 'Medium',
+    'Fox Business': 'Medium',
+    'Forbes': 'Medium',
+    'Quartz': 'Medium',
+    'Axios': 'Medium',
+    'Bloomberg Opinion': 'Medium',
+    'Fox News': 'Low',
+    'Breitbart': 'Low',
+    'ZeroHedge': 'Low',
+    'Daily Mail': 'Low',
+    'New York Post': 'Low',
+    'The Daily Caller': 'Low',
+    'Infowars': 'Low',
+    'The Blaze': 'Low'
+  };
+
+  const gradeScores = { high: 3, medium: 2, low: 1, unknown: 0 };
+
+  function normalizeSourceName(source) {
+    return source
+      .replace(/\s*\(.*?\)/g, '')
+      .replace(/[“”‘’]/g, '')
+      .replace(/\b(news|tv|online|magazine|channel)\b/gi, '')
+      .replace(/[^a-zA-Z0-9 ]/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function getSourceGrade(source) {
+    const normalized = normalizeSourceName(source);
+    for (const sourceKey of Object.keys(sourceQualityMap)) {
+      if (normalized.includes(sourceKey.toLowerCase())) return sourceQualityMap[sourceKey];
+    }
+    return 'Unknown';
+  }
+
+  const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
+
+  function getEffectiveWeight(source, grade, reputation) {
+    const base = gradeWeights[grade] ?? 0.2;
+    const stats = reputation[source];
+    if (!stats || stats.attempts < 30) return base;
+    const accuracy = stats.correct / stats.attempts;
+    const ramp = Math.min((stats.attempts - 30) / 30, 1.0);
+    const multiplier = Math.max(0.5, Math.min(1.5, 0.4 + accuracy));
+    return base * (1.0 + (multiplier - 1.0) * ramp);
+  }
+
+  const STOPWORDS = new Set([
+    'the','and','for','with','that','this','from','after','over','under','into','between','about','before',
+    'are','was','were','will','have','has','had','not','but','when','where','which','their','they','them','its','also',
+    'more','than','same','new','market','industry','companies','company','stock','stocks','price','prices',
+    'rise','fall','up','down','higher','lower','gain','gains','loss','losses','on','in','of','to','a','an','as','is'
+  ]);
+
+  function tokenizeHeadline(text) {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3 && !STOPWORDS.has(word));
+  }
+
+  function weightedTokenCounts(items, reputation = {}) {
+    const counts = {};
+    items.forEach(({ headline, grade, source }) => {
+      const weight = getEffectiveWeight(source || '', grade, reputation);
+      const tokens = tokenizeHeadline(headline);
+      const seen = new Set(tokens);
+      seen.forEach(token => {
+        counts[token] = (counts[token] || 0) + weight;
+      });
+    });
+    return counts;
+  }
+
+  function topTokens(counts, limit = 5) {
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([token]) => token);
+  }
+
+  function buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation = {} }) {
+    const minScore = gradeScores[minGrade] ?? gradeScores.medium;
+    const records = sources.map((source, idx) => ({
+      source,
+      headline: headlines[idx] || '',
+      grade: sourceGrades?.[source] || getSourceGrade(source)
+    }));
+
+    const passing = records.filter(r => gradeScores[r.grade.toLowerCase()] >= minScore);
+    const high = passing.filter(r => r.grade === 'High');
+    const medium = passing.filter(r => r.grade === 'Medium');
+
+    const overall = topTokens(weightedTokenCounts(passing, reputation));
+    const highTop = topTokens(weightedTokenCounts(high, reputation));
+    const mediumTop = topTokens(weightedTokenCounts(medium, reputation));
+
+    const pieces = [];
+    if (highTop.length) pieces.push(`High-grade sources focus on ${highTop.join(', ')}`);
+    if (mediumTop.length) pieces.push(`Medium-grade sources add emphasis on ${mediumTop.join(', ')}`);
+    if (overall.length) pieces.push(`Weighted consensus among passing sources highlights ${overall.join(', ')}`);
+
+    return pieces.length ? pieces.join('. ') + '.' : 'No strong consensus found among passing sources.';
+  }
+
   if (req.method === 'GET') {
     try {
-      const { category, timeframe } = req.query;
+      const { category, timeframe, minGrade } = req.query;
+      const selectedGrade = minGrade || 'medium';
+      const threshold = gradeScores[selectedGrade] ?? 2;
 
       const categoryQueries = {
         'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war', 'crypto bitcoin'],
@@ -50,7 +206,7 @@ export default async function handler(req, res) {
                 const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : 'Unknown';
                 const pubDate = pubDateMatch ? pubDateMatch[1] : '';
                 if (title.length > 15) {
-                  rawItems.push({ title, source, date: pubDate });
+                  rawItems.push({ title, source, date: pubDate, grade: getSourceGrade(source) });
                 }
               }
             }
@@ -75,6 +231,10 @@ export default async function handler(req, res) {
         const t = a.title.toLowerCase();
         return !indianKeywords.some(k => t.includes(k));
       });
+
+      if (selectedGrade !== 'all') {
+        rawItems = rawItems.filter(a => gradeScores[a.grade.toLowerCase()] >= threshold);
+      }
 
       const seen = new Set();
       const deduped = rawItems.filter(a => {
@@ -132,9 +292,15 @@ Respond ONLY with valid JSON, no other text, no markdown backticks:
       const groups = grouped.groups.map(g => {
         const groupArticles = g.indices.map(i => limited[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
+        const sourceGrades = {};
+        uniqueSources.forEach(source => {
+          sourceGrades[source] = getSourceGrade(source);
+        });
         return {
           topic: g.topic,
           sources: uniqueSources,
+          sourceGrades,
+          minGrade: selectedGrade,
           totalSources: groupArticles.length,
           headlines: groupArticles.map(a => a.title),
           dates: groupArticles.map(a => a.date)
@@ -149,17 +315,46 @@ Respond ONLY with valid JSON, no other text, no markdown backticks:
   }
 
   if (req.method === 'POST') {
-    const { topic, headlines, sources, impactTimeframe } = req.body;
+    const { topic, headlines, sources, sourceGrades, minGrade, impactTimeframe } = req.body;
 
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
     try {
+      const reputation = await _readReputation();
+      const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
+      const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
+
+      const reputationLines = (sources || [])
+        .filter(s => reputation[s] && reputation[s].attempts >= 30)
+        .map(s => {
+          const { attempts, correct } = reputation[s];
+          const pct = (correct / attempts * 100).toFixed(0);
+          const w = getEffectiveWeight(s, sourceGrades?.[s] || 'Unknown', reputation).toFixed(2);
+          return `- ${s}: ${pct}% accurate over ${attempts} predictions → effective weight ${w}`;
+        });
+      const reputationSection = reputationLines.length
+        ? `\nHistorical accuracy (reputation-adjusted weights):\n${reputationLines.join('\n')}\n`
+        : '';
+
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
 
 Topic: "${topic}"
 
 Headlines from ${sources.length} sources:
 ${headlines.map(h => `- ${h}`).join('\n')}
+
+Sources and factuality grades:
+${sources.map(name => `- ${name}: ${sourceGrades?.[name] || 'Unknown'}`).join('\n')}
+
+Use weighted source consensus to shape the prediction:
+- High-grade sources carry weight 1.0
+- Medium-grade sources carry weight 0.7
+- Low-grade sources carry weight 0.4
+Only include sources that meet the selected factuality threshold for the final prediction.
+${reputationSection}
+Consensus summary: ${consensus}
+
+Only use ${thresholdText} for this analysis. Do not incorporate details from sources below the selected factuality threshold.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
 
@@ -209,7 +404,20 @@ Respond ONLY with valid JSON, no markdown, no extra text:
       const raw = data.content[0].text.replace(/```json|```/g, '').trim();
       const analysis = JSON.parse(raw);
 
-      return res.status(200).json(analysis);
+      const predictionId = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+      await _savePrediction({
+        id: predictionId,
+        createdAt: new Date().toISOString(),
+        topic, headlines, sources, sourceGrades,
+        minGrade: minGrade || 'medium',
+        impactTimeframe: impactTimeframe || null,
+        analysis,
+        actualOutcome: null,
+        correct: null,
+        notes: null
+      });
+
+      return res.status(200).json({ ...analysis, predictionId });
 
     } catch (err) {
       return res.status(500).json({ error: err.message });
