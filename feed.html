@@ -48,6 +48,11 @@
     .event-card { background: var(--ink); color: #f0ede6; border-radius: 12px; padding: 36px 40px; margin-bottom: 20px; animation: fadeUp 0.4s ease both; position: relative; transition: transform 0.2s; border: 2px solid transparent; }
     .event-card:hover { transform: translateY(-2px); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .card-loading-body { padding: 20px 0 4px; display: flex; flex-direction: column; gap: 10px; }
+    .card-loading-line { height: 13px; background: rgba(255,255,255,0.09); border-radius: 4px; animation: pulse 1.6s ease-in-out infinite; }
+    .card-loading-line.w60 { width: 60%; }
+    .card-loading-line.w80 { width: 80%; }
+    @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.7; } }
     .event-card.watchlist-match { border-color: var(--accent); }
     .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
     .event-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
@@ -477,23 +482,29 @@
         }
 
         label.style.display = 'block';
-        status.textContent = `Found ${groups.length} topics. Analyzing all simultaneously...`;
+        status.textContent = `Found ${groups.length} topics — loading analysis...`;
 
-        // Fire all analyses in parallel — each card appears as soon as its own Claude call finishes
+        // Step 1: show all topic titles immediately as loading placeholders
+        const loadingCards = groups.map(group => {
+          const card = buildLoadingCard(group);
+          feed.appendChild(card);
+          return { group, card };
+        });
+
+        // Step 2: analyze one at a time, fill each card as it finishes
         const analyzed = [];
-        await Promise.all(groups.map(async (group) => {
+        for (const { group, card } of loadingCards) {
+          status.textContent = `Analyzing: "${group.topic.substring(0, 50)}..."`;
           try {
             const analysis = await analyzeGroup(group, impact);
             logPrediction(group, analysis, impact);
             const { match, matchedTickers } = checkWatchlistMatch(analysis);
-            const card = buildCard(group, analysis, matchedTickers, match, impact);
-            feed.appendChild(card);
+            fillCard(card, group, analysis, matchedTickers, match, impact);
             analyzed.push({ analysis, card });
-            status.textContent = `${analyzed.length} of ${groups.length} topics ready...`;
           } catch(err) {}
-        }));
+        }
 
-        // Reorder existing DOM nodes by confidence — no re-render needed
+        // Step 3: reorder by confidence — moves existing DOM nodes, no re-render
         analyzed.sort((a, b) => getConfScore(a.analysis.confidence) - getConfScore(b.analysis.confidence));
         analyzed.forEach(({ card }) => feed.appendChild(card));
 
@@ -557,6 +568,29 @@
         </div>
       `;
       return card;
+    }
+
+    function buildLoadingCard(group) {
+      const sourceLine = group.sources.slice(0, 3).join(' · ') + (group.totalSources > 3 ? ` · +${group.totalSources - 3} more` : '');
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = `
+        <div class="event-topic">${group.topic}</div>
+        <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
+        <div class="card-loading-body">
+          <div class="card-loading-line w80"></div>
+          <div class="card-loading-line w60"></div>
+          <div class="card-loading-line"></div>
+          <div class="card-loading-line w80"></div>
+        </div>
+      `;
+      return card;
+    }
+
+    function fillCard(card, group, analysis, matchedTickers, match, impact) {
+      const filled = buildCard(group, analysis, matchedTickers, match, impact);
+      card.className = filled.className;
+      card.innerHTML = filled.innerHTML;
     }
 
     async function analyzeGroup(group, impactTimeframe) {
