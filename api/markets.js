@@ -60,7 +60,7 @@ export default async function handler(req, res) {
         yesPrice = Math.round(parseFloat(prices[0]) * 100);
       } catch (_) {}
 
-      if (yesPrice === null || yesPrice < 1 || yesPrice > 99) return null;
+      if (yesPrice === null || yesPrice < 20 || yesPrice > 80) return null;
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         totalMarkets: ms.length,
         category
       };
-    }).filter(Boolean).slice(0, 5);
+    }).filter(Boolean).slice(0, 10);
 
     return res.status(200).json({ markets, category });
   } catch (err) {

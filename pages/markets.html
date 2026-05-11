@@ -117,10 +117,10 @@
     <a class="nav-logo" href="/"><span>Investment</span>Informatics.AI</a>
     <ul class="nav-links">
       <li><a href="/">Home</a></li>
-      <li><a href="/feed.html">Stock Markets</a></li>
-      <li><a href="/markets.html" class="active">Prediction Markets</a></li>
-      <li><a href="/crypto.html">Crypto Markets</a></li>
-      <li><a href="/predictions.html">Accuracy History</a></li>
+      <li><a href="/pages/feed.html">Stock Markets</a></li>
+      <li><a href="/pages/markets.html" class="active">Prediction Markets</a></li>
+      <li><a href="/pages/crypto.html">Crypto Markets</a></li>
+      <li><a href="/pages/predictions.html">Accuracy History</a></li>
     </ul>
   </nav>
 
@@ -178,8 +178,13 @@
       const bar = document.getElementById('timeframe-bar');
       bar.innerHTML = '<span class="timeframe-label">Closes in</span>' +
         config.options.map(o =>
-          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}" onclick="selectTimeframe(${o.days}, this)">${o.label}</button>`
+          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}">${o.label}</button>`
         ).join('');
+      bar.querySelectorAll('.tf-chip').forEach(btn => {
+        btn.addEventListener('click', function () {
+          selectTimeframe(parseInt(this.dataset.days), this);
+        });
+      });
     }
 
     function setStatus(msg, loading = false) {
@@ -302,12 +307,12 @@
           grid.innerHTML = `
             <div class="empty-state">
               <h3>No markets in this timeframe</h3>
-              <p>No open ${cat} markets closing within ${maxDays} days. Try a longer timeframe or a different category.</p>
+              <p>No toss-up ${cat} markets (20–80% odds) closing within ${maxDays} days. Try a longer timeframe or a different category.</p>
             </div>`;
           return;
         }
 
-        setStatus(`${markets.length} open markets — click "Analyze news →" on any card`);
+        setStatus(`${markets.length} toss-up markets (20–80% odds) — click "Analyze news →" on any card`);
         markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
       } catch (err) {
         setStatus('');
