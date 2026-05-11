@@ -34,6 +34,63 @@ function _parseTimeframeDays(str) {
   return 30;
 }
 
+const _PM_STOPWORDS = new Set([
+  'will','does','when','what','this','that','with','from','have','been','would','could','should',
+  'which','their','there','about','after','before','during','between','against','into','over',
+  'under','than','more','most','least','just','still','also','ever','even','only','much','many'
+]);
+
+async function _fetchRelevantMarkets(topic) {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const url = 'https://gamma-api.polymarket.com/events?active=true&closed=false&limit=200&order=volume24hr&ascending=false';
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
+    clearTimeout(timer);
+    const events = await res.json();
+
+    const topicWords = topic.toLowerCase()
+      .replace(/[^a-z0-9 ]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !_PM_STOPWORDS.has(w));
+
+    const relevant = [];
+    for (const event of Array.isArray(events) ? events : []) {
+      if (!event.active || event.closed || event.archived) continue;
+      const title = (event.title || '').toLowerCase();
+      const matchCount = topicWords.filter(w => title.includes(w)).length;
+      if (matchCount < 2) continue;
+
+      const ms = event.markets || [];
+      const primary = ms.length === 1
+        ? ms[0]
+        : [...ms].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
+      if (!primary) continue;
+
+      let yesPrice = null;
+      try {
+        const prices = typeof primary.outcomePrices === 'string'
+          ? JSON.parse(primary.outcomePrices) : primary.outcomePrices;
+        yesPrice = Math.round(parseFloat(prices[0]) * 100);
+      } catch (_) { continue; }
+      if (yesPrice === null || yesPrice < 1 || yesPrice > 99) continue;
+
+      relevant.push({
+        question: primary.question || event.title,
+        yesPrice,
+        volume24h: Math.round(parseFloat(event.volume24hr || 0)),
+        matchCount
+      });
+    }
+
+    return relevant
+      .sort((a, b) => b.matchCount - a.matchCount || b.volume24h - a.volume24h)
+      .slice(0, 4);
+  } catch (_) {
+    return [];
+  }
+}
+
 async function _fetchPrices(tickers) {
   if (!tickers || !tickers.length) return {};
   try {
@@ -389,7 +446,10 @@ Respond ONLY with valid JSON, no markdown:
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
     try {
-      const reputation = await _readReputation();
+      const [reputation, relevantMarkets] = await Promise.all([
+        _readReputation(),
+        _fetchRelevantMarkets(topic)
+      ]);
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
       const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
 
@@ -403,6 +463,10 @@ Respond ONLY with valid JSON, no markdown:
         });
       const reputationSection = reputationLines.length
         ? `\nHistorical accuracy (reputation-adjusted weights):\n${reputationLines.join('\n')}\n`
+        : '';
+
+      const marketsSection = relevantMarkets.length
+        ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence and assess whether the market has already priced in the event.\n`
         : '';
 
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
@@ -422,7 +486,7 @@ Use weighted source consensus to shape the prediction:
 Only include sources that meet the selected factuality threshold for the final prediction.
 ${reputationSection}
 Consensus summary: ${consensus}
-
+${marketsSection}
 Only use ${thresholdText} for this analysis. Do not incorporate details from sources below the selected factuality threshold.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
