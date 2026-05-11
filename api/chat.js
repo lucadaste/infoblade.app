@@ -33,7 +33,7 @@ RULES:
 - You are NOT a licensed financial advisor. Never give direct "buy" or "sell" commands. Help users think, not just act.
 - When live headlines are provided, lead with what you actually see in the news before adding broader context.
 - Be conversational but analytical — like a sharp research desk, not a disclaimer machine.
-- Use markdown formatting (bold, bullet points) — the chat renders it properly.`;
+- Use markdown formatting: **bold** for key terms, bullet points for lists, numbered lists for steps. NEVER use # or ## headings — this is a chat interface, not a document. Use **bold** instead of headings to label sections.`;
 
 // Fetch live headlines for a given query from Google News RSS
 async function fetchLiveHeadlines(query) {

@@ -307,16 +307,52 @@
   toggle.addEventListener('click', () => setOpen(!open));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
 
-  function mdToHtml(text) {
-    return text
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g,'<em>$1</em>')
-      .replace(/^[-•] (.+)$/gm,'<li>$1</li>')
-      .replace(/(<li>.*<\/li>)/s, '<ul style="padding-left:16px;margin:6px 0">$1</ul>')
-      .replace(/\n\n/g,'</p><p style="margin-top:8px">')
-      .replace(/\n/g,'<br>')
-      .replace(/^(.)/,'<p>$1').replace(/(.)$/,'$1</p>');
+  function mdToHtml(raw) {
+    const lines = raw.split('\n');
+    const out = [];
+    let inUl = false, inOl = false;
+
+    function closeList() {
+      if (inUl) { out.push('</ul>'); inUl = false; }
+      if (inOl) { out.push('</ol>'); inOl = false; }
+    }
+
+    function inline(s) {
+      return s
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\*((?!\*)[^*\n]+)\*/g,'<em>$1</em>');
+    }
+
+    for (const raw of lines) {
+      const t = raw.trimEnd();
+      if (/^### /.test(t)) {
+        closeList();
+        out.push(`<p style="font-weight:700;font-size:13px;margin:10px 0 2px">${inline(t.slice(4))}</p>`);
+      } else if (/^## /.test(t)) {
+        closeList();
+        out.push(`<p style="font-weight:700;font-size:13.5px;margin:12px 0 2px">${inline(t.slice(3))}</p>`);
+      } else if (/^# /.test(t)) {
+        closeList();
+        out.push(`<p style="font-weight:700;font-size:14px;margin:14px 0 4px">${inline(t.slice(2))}</p>`);
+      } else if (/^[-*•] /.test(t)) {
+        if (inOl) { out.push('</ol>'); inOl = false; }
+        if (!inUl) { out.push('<ul style="padding-left:18px;margin:4px 0;display:flex;flex-direction:column;gap:3px">'); inUl = true; }
+        out.push(`<li>${inline(t.replace(/^[-*•] /,''))}</li>`);
+      } else if (/^\d+\. /.test(t)) {
+        if (inUl) { out.push('</ul>'); inUl = false; }
+        if (!inOl) { out.push('<ol style="padding-left:18px;margin:4px 0;display:flex;flex-direction:column;gap:3px">'); inOl = true; }
+        out.push(`<li>${inline(t.replace(/^\d+\. /,''))}</li>`);
+      } else if (t.trim() === '') {
+        closeList();
+        out.push('<div style="height:5px"></div>');
+      } else {
+        closeList();
+        out.push(`<p style="margin:0">${inline(t)}</p>`);
+      }
+    }
+    closeList();
+    return `<div style="display:flex;flex-direction:column;gap:4px">${out.join('')}</div>`;
   }
 
   function addMsg(role, text) {
