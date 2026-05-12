@@ -24,7 +24,7 @@
     /* Floating tab on right edge */
     #ii-ai-bar {
       position: fixed;
-      top: 28%;
+      top: 16%;
       right: 0;
       width: 40px;
       background: #e8e8e8;
@@ -303,7 +303,9 @@
   function setOpen(v) {
     open = v;
     panel.classList.toggle('ii-open', open);
-    // ‹ when closed (click to expand left), › when open (click to collapse right)
+    const panelW = Math.min(390, window.innerWidth * 0.33);
+    document.body.style.transition = 'margin-right 0.32s cubic-bezier(0.4,0,0.2,1)';
+    document.body.style.marginRight = open ? panelW + 'px' : '';
     toggle.innerHTML = open ? '&#8250;' : '&#8249;';
     toggle.setAttribute('aria-label', open ? 'Close AI Informant' : 'Open AI Informant');
   }
