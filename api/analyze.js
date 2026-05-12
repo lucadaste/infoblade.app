@@ -554,10 +554,11 @@ CRITICAL RULES:
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only
 - Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.
+- For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish signals vs weighted bearish signals from credible (High + Medium grade) sources and commit to whichever side has more weight. Only use "uncertain" if the weighted totals are within 15% of each other — meaning genuine deadlock, not just disagreement. Do NOT default to "uncertain" to avoid making a call.
 
 Respond ONLY with valid JSON, no markdown:
 {
-  "direction": "bullish" or "bearish" or "uncertain" — net directional impact of this news on the primary asset or sector being analyzed,
+  "direction": "bullish" or "bearish" or "uncertain" — commit to the direction supported by the highest total weighted evidence from credible sources. Uncertain only if credible signals are within 15% of a tie.,
   "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
   "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
   "crowd_summary": "1 sentence: what specific outcome the public is leaning toward and why, based on prediction market odds",
