@@ -29,24 +29,36 @@
       width: 36px;
       height: 100vh;
       height: 100dvh;
-      background: #e8e8e8;
+      background: #ececec;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 14px;
       box-shadow: -2px 0 8px rgba(0,0,0,0.08);
-      border-left: 1px solid #d8d8d8;
+      border-left: 1px solid #d4d4d4;
+    }
+    .ii-bar-tick {
+      width: 14px;
+      height: 1px;
+      background: #bbb;
+      border-radius: 1px;
+    }
+    .ii-bar-tick-sm {
+      width: 8px;
+      height: 1px;
+      background: #ccc;
+      border-radius: 1px;
     }
     #ii-ai-label {
       writing-mode: vertical-rl;
       transform: rotate(180deg);
       font-family: 'DM Sans', sans-serif;
-      font-weight: 500;
-      font-size: 9px;
-      letter-spacing: 1.4px;
-      color: #555;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 2px;
+      color: #333;
       text-transform: uppercase;
       user-select: none;
       pointer-events: none;
@@ -55,11 +67,11 @@
     #ii-ai-toggle {
       background: none;
       border: none;
-      color: #666;
-      font-size: 22px;
+      color: #777;
+      font-size: 20px;
       line-height: 1;
       cursor: pointer;
-      padding: 6px 0;
+      padding: 4px 0;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -254,8 +266,14 @@
   const bar = document.createElement('div');
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
+    <div class="ii-bar-tick-sm"></div>
+    <div class="ii-bar-tick"></div>
+    <div class="ii-bar-tick-sm"></div>
     <div id="ii-ai-label">Live Chat</div>
     <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
+    <div class="ii-bar-tick-sm"></div>
+    <div class="ii-bar-tick"></div>
+    <div class="ii-bar-tick-sm"></div>
   `;
   document.body.appendChild(bar);
 
