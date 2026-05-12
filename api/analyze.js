@@ -154,6 +154,18 @@ function _setCors(res) {
   res.setHeader('Vary', 'Origin');
 }
 
+// ── Crypto Fear & Greed index ─────────────────────────────────────────────────
+async function _fetchCryptoFearGreed() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 3000);
+    const res = await fetch('https://api.alternative.me/fng/?limit=1', { signal: ctrl.signal });
+    clearTimeout(t);
+    const d = (await res.json())?.data?.[0];
+    return d ? { value: parseInt(d.value), label: d.value_classification } : null;
+  } catch (_) { return null; }
+}
+
 export default async function handler(req, res) {
   _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -168,7 +180,9 @@ export default async function handler(req, res) {
     'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
     'Axios': 'Medium', 'Bloomberg Opinion': 'Medium', 'Fox News': 'Low',
     'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
-    'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low'
+    'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
+    'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
+    'Cointelegraph': 'Low', 'Forkast': 'Medium', 'CoinPost': 'Medium'
   };
   const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
   const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
@@ -266,7 +280,7 @@ export default async function handler(req, res) {
         'financials':      ['federal reserve bank earnings', 'interest rates JPMorgan Goldman', 'treasury yields credit', 'banking sector financial', 'lending mortgage rates'],
         'precious-metals': ['gold price silver', 'precious metals mining', 'gold ETF bullion', 'copper platinum commodity', 'gold market'],
         'real-estate':     ['housing market mortgage rates', 'real estate home prices', 'REIT property market', 'construction housing starts', 'mortgage lending'],
-        'crypto':          ['bitcoin ethereum crypto', 'cryptocurrency market blockchain', 'coinbase crypto regulation', 'digital assets defi', 'bitcoin price'],
+        'crypto':          ['bitcoin price rally crash', 'ethereum ETH market', 'SEC crypto lawsuit enforcement', 'MiCA Europe crypto regulation', 'Japan Korea Asia crypto policy', 'bitcoin ETF blackrock fidelity institutional', 'DeFi protocol hack exploit vulnerability', 'stablecoin USDT USDC depeg', 'binance coinbase crypto exchange', 'solana XRP altcoin', 'crypto whale liquidation funding rate', 'bitcoin mining hash rate difficulty'],
         'consumer':        ['retail sales consumer spending', 'walmart amazon target earnings', 'consumer confidence retail', 'e-commerce spending', 'consumer prices inflation'],
         'healthcare':      ['pharma FDA drug approval', 'healthcare biotech earnings', 'drug pricing pharma stocks', 'clinical trial biotech FDA', 'health insurance UnitedHealth Humana', 'Pfizer Moderna Merck Johnson', 'hospital Medicare Medicaid policy', 'cancer treatment biotech pipeline'],
         'defense':         ['defense stocks military spending', 'lockheed boeing raytheon', 'NATO defense budget', 'weapons contracts pentagon', 'geopolitical defense']
@@ -292,10 +306,22 @@ export default async function handler(req, res) {
           { url: 'https://feeds.reuters.com/reuters/health',                              source: 'Reuters' },
           { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',                  source: 'CNBC' },
         ],
-        crypto:          [{ url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',       source: 'CoinDesk' }],
+        crypto:          [
+          { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',        source: 'CoinDesk' },
+          { url: 'https://www.theblock.co/rss.xml',                        source: 'The Block' },
+          { url: 'https://decrypt.co/feed',                                source: 'Decrypt' },
+          { url: 'https://cointelegraph.com/rss',                          source: 'Cointelegraph' },
+          { url: 'https://forkast.news/feed/',                             source: 'Forkast' },
+        ],
       };
       const directFeeds = [...BASE_DIRECT_FEEDS, ...(CATEGORY_DIRECT_FEEDS[category] || [])];
       const googleUrls = queries.map(q => `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`);
+      if (category === 'crypto') {
+        ['bitcoin crypto regulation', 'ethereum crypto market', 'crypto exchange hack'].forEach(q => {
+          googleUrls.push(`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-GB&gl=GB&ceid=GB:en`);
+          googleUrls.push(`https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-SG&gl=SG&ceid=SG:en`);
+        });
+      }
 
       function fetchWithTimeout(url, timeoutMs) {
         const ctrl = new AbortController();
@@ -319,9 +345,10 @@ export default async function handler(req, res) {
         return items;
       }
 
-      const [googleResults, directResults] = await Promise.all([
+      const [googleResults, directResults, fearGreed] = await Promise.all([
         Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
-        Promise.allSettled(directFeeds.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source }))))
+        Promise.allSettled(directFeeds.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source })))),
+        category === 'crypto' ? _fetchCryptoFearGreed() : Promise.resolve(null)
       ]);
 
       let rawItems = [];
@@ -346,7 +373,7 @@ export default async function handler(req, res) {
           return true;
         });
       }
-      rawItems = rawItems.filter(a => !indianKeywords.some(k => a.title.toLowerCase().includes(k)));
+      if (category !== 'crypto') rawItems = rawItems.filter(a => !indianKeywords.some(k => a.title.toLowerCase().includes(k)));
       if (selectedGrade !== 'all') rawItems = rawItems.filter(a => gradeScores[a.grade.toLowerCase()] >= threshold);
 
       const seen = new Set();
@@ -368,7 +395,27 @@ export default async function handler(req, res) {
       };
       const categoryLabel = categoryLabels[category] || 'financial markets';
 
-      const groupPrompt = `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group them into distinct specific market events RELEVANT TO ${categoryLabel.toUpperCase()}.
+      const groupPrompt = category === 'crypto'
+        ? `You are a senior crypto markets analyst covering global cryptocurrency and blockchain markets. Here are ${deduped.length} headlines from global sources. Group them into distinct specific crypto market events.
+${fearGreed ? `\nCrypto Fear & Greed Index right now: ${fearGreed.value}/100 — ${fearGreed.label}. Use this to contextualise sentiment-driven events.\n` : ''}
+Headlines:
+${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+
+STRICT RULES:
+1. Cover ALL global crypto events — regulatory (any jurisdiction: US SEC, EU MiCA, Asia), protocol, exchange, institutional, macro impact on crypto
+2. Merge ALL headlines about the same specific event into ONE group — be aggressive about merging
+3. Topics must be SPECIFIC: name the coin, protocol, regulator, or exchange
+4. Group by event, not by asset — "SEC sues Binance" is one group, not a Binance group and an SEC group
+5. Do NOT create separate groups for variations of the same story
+6. Include hacks, exploits, delistings, regulatory actions from any country
+7. Aim for 10-15 highly distinct specific groups
+8. Maximum 15 groups
+9. Each index appears in exactly one group
+10. Include ALL relevant indices in each group — do not leave articles ungrouped if they belong to a topic
+
+Respond ONLY with valid JSON, no markdown:
+{"groups":[{"topic":"Specific descriptive title","indices":[1,3,5,7,12,18,24,31]}]}`
+        : `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group them into distinct specific market events RELEVANT TO ${categoryLabel.toUpperCase()}.
 
 Headlines:
 ${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
@@ -405,7 +452,15 @@ Respond ONLY with valid JSON, no markdown:
         return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: groupArticles.length, headlines: groupArticles.map(a => a.title), dates: groupArticles.map(a => a.date) };
       });
 
-      const sortPrompt = `Rank these market topics by how likely they are to actually move US stock prices today, from most to least impactful.
+      const sortPrompt = category === 'crypto'
+        ? `Rank these crypto market events by how likely they are to move total crypto market prices in the next 24 hours.${fearGreed ? ` Current sentiment: Fear & Greed ${fearGreed.value}/100 (${fearGreed.label}).` : ''}
+
+Topics:
+${groups.map((g, i) => `${i + 1}. ${g.topic} (${g.totalSources} sources)`).join('\n')}
+
+Respond ONLY with valid JSON, no markdown:
+{"ranked":[2,1,4,3,5]}`
+        : `Rank these market topics by how likely they are to actually move US stock prices today, from most to least impactful.
 
 Topics:
 ${groups.map((g, i) => `${i + 1}. ${g.topic} (${g.totalSources} sources)`).join('\n')}
