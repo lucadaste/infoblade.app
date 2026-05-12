@@ -21,36 +21,27 @@
   // ── Styles ────────────────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
-    /* Always-visible right strip */
+    /* Floating tab on right edge */
     #ii-ai-bar {
       position: fixed;
-      top: 0;
+      top: 28%;
       right: 0;
-      width: 36px;
-      height: 100vh;
-      height: 100dvh;
-      background: #ececec;
+      width: 40px;
+      background: #e8e8e8;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 14px;
-      box-shadow: -2px 0 8px rgba(0,0,0,0.08);
-      border-left: 1px solid #d4d4d4;
+      padding: 14px 0 10px;
+      gap: 10px;
+      border-radius: 10px 0 0 10px;
+      border: 1px solid #d0d0d0;
+      border-right: none;
+      box-shadow: -3px 2px 12px rgba(0,0,0,0.12);
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    .ii-bar-tick {
-      width: 14px;
-      height: 1px;
-      background: #bbb;
-      border-radius: 1px;
-    }
-    .ii-bar-tick-sm {
-      width: 8px;
-      height: 1px;
-      background: #ccc;
-      border-radius: 1px;
-    }
+    #ii-ai-bar:hover { background: #ddd; }
     #ii-ai-label {
       writing-mode: vertical-rl;
       transform: rotate(180deg);
@@ -68,25 +59,25 @@
       background: none;
       border: none;
       color: #777;
-      font-size: 20px;
+      font-size: 18px;
       line-height: 1;
       cursor: pointer;
-      padding: 4px 0;
+      padding: 2px 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
+      width: 40px;
       transition: color 0.15s;
       font-family: 'DM Sans', sans-serif;
       font-weight: 300;
     }
     #ii-ai-toggle:hover { color: #111; }
 
-    /* Sliding panel to the left of the bar */
+    /* Sliding panel */
     #ii-ai-panel {
       position: fixed;
       top: 0;
-      right: 36px;
+      right: 0;
       width: min(390px, 33vw);
       height: 100vh;
       height: 100dvh;
@@ -94,8 +85,8 @@
       z-index: 9998;
       display: flex;
       flex-direction: column;
-      box-shadow: -4px 0 24px rgba(0,0,0,0.1);
-      transform: translateX(calc(100% + 36px));
+      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+      transform: translateX(100%);
       transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
     }
     #ii-ai-panel.ii-open {
@@ -103,7 +94,7 @@
     }
     @media (max-width: 640px) {
       #ii-ai-panel {
-        width: calc(100vw - 36px);
+        width: 92vw;
       }
     }
 
@@ -266,14 +257,8 @@
   const bar = document.createElement('div');
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
-    <div class="ii-bar-tick-sm"></div>
-    <div class="ii-bar-tick"></div>
-    <div class="ii-bar-tick-sm"></div>
     <div id="ii-ai-label">Live Chat</div>
     <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
-    <div class="ii-bar-tick-sm"></div>
-    <div class="ii-bar-tick"></div>
-    <div class="ii-bar-tick-sm"></div>
   `;
   document.body.appendChild(bar);
 
@@ -323,7 +308,8 @@
     toggle.setAttribute('aria-label', open ? 'Close AI Informant' : 'Open AI Informant');
   }
 
-  toggle.addEventListener('click', () => setOpen(!open));
+  bar.addEventListener('click', e => { if (!open) setOpen(true); });
+  toggle.addEventListener('click', e => { e.stopPropagation(); setOpen(!open); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
 
   function mdToHtml(raw) {
