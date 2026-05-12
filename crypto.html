@@ -262,10 +262,10 @@
     ];
 
     const TIMEFRAMES = {
-      '24h': { context: 'over the next 24 hours' },
-      '1w':  { context: 'over the next 1–7 days' },
-      '1m':  { context: 'over the next 30 days' },
-      '3m':  { context: 'over the next 3 months' },
+      '24h': { context: 'over the next 24 hours',  apiParam: 'today',  label: 'news from the last 24 hours' },
+      '1w':  { context: 'over the next 1–7 days',  apiParam: '7days',  label: 'news from the last 7 days'   },
+      '1m':  { context: 'over the next 30 days',   apiParam: 'any',    label: 'recent crypto news'           },
+      '3m':  { context: 'over the next 3 months',  apiParam: 'any',    label: 'recent crypto news'           },
     };
 
     let priceCache = {};
@@ -396,13 +396,33 @@
       currentTimeframe = tf;
       document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
       el.classList.add('active');
-      if (selectedCoin && currentGroups !== null) {
+      if (selectedCoin) {
         const content = document.getElementById('ap-content');
         content.classList.add('collapsing');
         setTimeout(() => {
           content.classList.remove('collapsing');
-          renderGroupsAndAnalyze(selectedCoin, currentGroups);
+          fetchNewsAndAnalyze(selectedCoin);
         }, 160);
+      }
+    }
+
+    async function fetchNewsAndAnalyze(coin) {
+      currentGroups = null;
+      const mySession = ++renderSession;
+      const tf = TIMEFRAMES[currentTimeframe];
+      const content = document.getElementById('ap-content');
+      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching ${tf.label}…</div>`;
+
+      try {
+        const res = await fetch(`/api/analyze?category=crypto&timeframe=${tf.apiParam}`);
+        if (renderSession !== mySession) return;
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        currentGroups = (data.groups || []).filter(g => coinMatchesGroup(coin, g));
+        renderGroupsAndAnalyze(coin, currentGroups);
+      } catch (err) {
+        if (renderSession !== mySession) return;
+        content.innerHTML = `<div class="ap-error">Failed to load news: ${esc(err.message)}</div>`;
       }
     }
 
@@ -419,24 +439,9 @@
       const tfBar = document.getElementById('tf-bar');
       tfBar.style.display = 'flex';
       document.querySelectorAll('.tf-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
-
-      const content = document.getElementById('ap-content');
-      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching global crypto news…</div>`;
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      const mySession = ++renderSession;
-
-      try {
-        const res = await fetch('/api/analyze?category=crypto');
-        if (renderSession !== mySession) return;
-        const data = await res.json();
-        if (data.error) throw new Error(data.error);
-        currentGroups = (data.groups || []).filter(g => coinMatchesGroup(coin, g));
-        renderGroupsAndAnalyze(coin, currentGroups);
-      } catch (err) {
-        if (renderSession !== mySession) return;
-        content.innerHTML = `<div class="ap-error">Failed to load news: ${esc(err.message)}</div>`;
-      }
+      await fetchNewsAndAnalyze(coin);
     }
 
     function renderGroupsAndAnalyze(coin, groups) {
