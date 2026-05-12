@@ -24,7 +24,7 @@
     /* Floating tab on right edge */
     #ii-ai-bar {
       position: fixed;
-      top: 16%;
+      top: 8%;
       right: 0;
       width: 40px;
       background: #e8e8e8;
@@ -257,6 +257,12 @@
   const bar = document.createElement('div');
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:0.7">
+      <path d="M10 2C5.58 2 2 5.13 2 9c0 1.9.8 3.63 2.1 4.9L3 18l4.5-1.4C8.6 17.2 9.28 17.4 10 17.4c4.42 0 8-3.13 8-7s-3.58-7.4-8-7.4z" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>
+      <circle cx="7" cy="9" r="1" fill="#333"/>
+      <circle cx="10" cy="9" r="1" fill="#333"/>
+      <circle cx="13" cy="9" r="1" fill="#333"/>
+    </svg>
     <div id="ii-ai-label">Live Chat</div>
     <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
   `;
