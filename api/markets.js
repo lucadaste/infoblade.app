@@ -6,7 +6,7 @@ const CATEGORY_TAGS = {
   politics:      ['politics', 'elections', 'government', 'congress', 'supreme-court', 'trump'],
   finance:       ['finance', 'economics', 'bitcoin', 'ethereum', 'crypto', 'business', 'markets'],
   entertainment: ['entertainment', 'movies', 'tv', 'awards', 'oscars', 'grammys', 'music', 'celebrity', 'pop-culture', 'culture'],
-  tech:          ['tech', 'big-tech', 'technology', 'ai', 'artificial-intelligence', 'crypto', 'bitcoin', 'ethereum']
+  tech:          ['tech', 'big-tech', 'ai', 'artificial-intelligence', 'spacex', 'ipo', 'deepseek']
 };
 
 const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_TAGS));
