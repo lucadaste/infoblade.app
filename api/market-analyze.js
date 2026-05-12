@@ -1,10 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const _dir = path.dirname(fileURLToPath(import.meta.url));
-const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
 
 const SOURCE_QUALITY = {
   // Wire / Financial
@@ -85,9 +79,14 @@ function buildSearchQuery(question) {
     .join(' ');
 }
 
-async function readReputation() {
-  try { return JSON.parse(await fs.readFile(reputationPath, 'utf-8') || '{}'); }
-  catch (e) { return {}; }
+async function readReputation(supabase) {
+  if (!supabase) return {};
+  try {
+    const { data: rows } = await supabase.from('source_reputation').select('*');
+    const rep = {};
+    for (const row of rows || []) rep[row.source] = { attempts: row.attempts, correct: row.correct };
+    return rep;
+  } catch (_) { return {}; }
 }
 
 export default async function handler(req, res) {
@@ -110,7 +109,7 @@ export default async function handler(req, res) {
     ? Math.round(rawOdds)
     : undefined;
 
-  const [searchQuery, reputation] = [buildSearchQuery(question), await readReputation()];
+  const [searchQuery, reputation] = [buildSearchQuery(question), await readReputation(supabase)];
 
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=en-US&gl=US&ceid=US:en`;
@@ -204,6 +203,24 @@ Respond ONLY with valid JSON, no markdown:
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     const analysis = JSON.parse(raw);
+
+    if (supabase) {
+      supabase.from('predictions').insert({
+        id: `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        created_at: new Date().toISOString(),
+        type: 'prediction-markets',
+        topic: question,
+        sources: items.map(i => i.source),
+        lean: analysis.lean || null,
+        lean_confidence: analysis.lean_confidence || null,
+        market_odds_at_time: currentOdds ?? null,
+        market_slug: req.body?.slug || null,
+        signal: analysis.signal || null,
+        analysis,
+        correct: null,
+        notes: null
+      }).then(() => {}).catch(e => console.error('[market-analyze] save error:', e.message));
+    }
 
     return res.status(200).json({ ...analysis, articlesFound: items.length, searchQuery });
   } catch (err) {
