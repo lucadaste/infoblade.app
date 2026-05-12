@@ -45,7 +45,7 @@
       font-weight: 800;
       font-size: 8px;
       letter-spacing: 1.8px;
-      color: #c8ff00;
+      color: #00e676;
       text-transform: uppercase;
       user-select: none;
       pointer-events: none;
@@ -67,7 +67,7 @@
       font-family: 'DM Sans', sans-serif;
       font-weight: 300;
     }
-    #ii-ai-toggle:hover { color: #c8ff00; }
+    #ii-ai-toggle:hover { color: #00e676; }
 
     /* Sliding panel to the left of the bar */
     #ii-ai-panel {
@@ -111,7 +111,7 @@
       letter-spacing: -0.2px;
     }
     .ii-ph-title em {
-      background: #c8ff00;
+      background: #00e676;
       color: #0a0a0a;
       font-style: normal;
       padding: 1px 5px;
@@ -142,7 +142,7 @@
     }
     .ii-m-user {
       align-self: flex-end;
-      background: #c8ff00;
+      background: #00e676;
       color: #0a0a0a;
       padding: 8px 12px;
       border-radius: 12px 12px 3px 12px;
@@ -201,7 +201,7 @@
       line-height: 1.4;
       transition: background .15s, border-color .15s, color .15s;
     }
-    .ii-sq:hover { background: #242424; border-color: #c8ff00; color: white; }
+    .ii-sq:hover { background: #242424; border-color: #00e676; color: white; }
 
     /* Input row */
     .ii-input-row {
@@ -231,7 +231,7 @@
     #ii-inp::placeholder { color: #444; }
     #ii-inp:focus { border-color: #444; }
     #ii-send {
-      background: #c8ff00;
+      background: #00e676;
       color: #0a0a0a;
       border: none;
       border-radius: 6px;

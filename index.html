@@ -11,7 +11,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --ink: #e8e6e0; --paper: #111111; --accent: #c8ff00;
+      --ink: #e8e6e0; --paper: #111111; --accent: #00e676;
       --muted: #888888; --card: #1c1c1c; --border: #272727;
     }
     html { scroll-behavior: smooth; }
@@ -63,7 +63,7 @@
     .chain-content { font-size: 15px; color: #bbb; line-height: 1.7; flex: 1; }
     .chain-tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .ticker-pill { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 4px; letter-spacing: 0.5px; }
-    .pill-up { background: rgba(200,255,0,0.12); color: var(--accent); border: 1px solid rgba(200,255,0,0.25); }
+    .pill-up { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pill-down { background: rgba(255,80,80,0.1); color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-neutral { background: rgba(255,255,255,0.06); color: #888; border: 1px solid rgba(255,255,255,0.1); }
     .features-section { padding: 0 48px 88px; }
@@ -76,22 +76,22 @@
     .platform-header { padding: 80px 48px 48px; border-top: 1px solid var(--border); }
     .platform-header h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(24px, 3.5vw, 38px); letter-spacing: -1.2px; line-height: 1.1; margin-top: 16px; margin-bottom: 12px; }
     .platform-header p { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.75; font-weight: 300; }
-    .waitlist-section { padding: 88px 48px; background: #0a0a0a; color: #e8e6e0; text-align: center; }
+    .waitlist-section { padding: 72px 48px 56px; background: #0a0a0a; color: #e8e6e0; text-align: center; }
     .waitlist-section .section-label { color: var(--accent); margin-bottom: 24px; }
     .waitlist-section h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; margin-bottom: 16px; line-height: 1.1; }
-    .waitlist-section h2 em { font-style: normal; background: var(--accent); color: var(--ink); padding: 0 8px; }
+    .waitlist-section h2 em { font-style: normal; background: var(--accent); color: #111111; padding: 0 8px; }
     .waitlist-section p { font-size: 16px; color: #777; margin-bottom: 40px; font-weight: 300; }
     .waitlist-form { display: flex; gap: 12px; max-width: 460px; margin: 0 auto; flex-wrap: wrap; justify-content: center; }
     .waitlist-form input { flex: 1; min-width: 220px; padding: 14px 18px; border-radius: 4px; border: 1px solid #2a2a2a; background: #1a1a1a; color: #f0ede6; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
     .waitlist-form input::placeholder { color: #555; }
     .waitlist-form input:focus { border-color: var(--accent); }
-    .waitlist-form button { background: var(--accent); color: var(--ink); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 14px 28px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
+    .waitlist-form button { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 14px 28px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .waitlist-form button:hover { opacity: 0.88; }
     .waitlist-note { margin-top: 16px; font-size: 12px; color: #444; }
     .disclaimer { padding: 36px 48px; border-top: 1px solid #1e1e1e; font-size: 12px; color: #555; line-height: 1.8; max-width: 780px; background: #0a0a0a; }
     footer { padding: 28px 48px; border-top: 1px solid #1e1e1e; background: #0a0a0a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--paper); }
-    .footer-logo span { background: var(--accent); color: var(--ink); padding: 1px 5px; }
+    .footer-logo span { background: var(--accent); color: #111111; padding: 1px 5px; }
     footer p { font-size: 13px; color: #444; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
@@ -139,7 +139,7 @@
     /* Crypto coming soon */
     .cs-section { padding: 88px 48px; border-top: 1px solid var(--border); }
     .cs-inner { background: #0a0a0a; border-radius: 14px; padding: 56px 52px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
-    .cs-badge { display: inline-block; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; background: rgba(200,255,0,0.15); color: var(--accent); border: 1px solid rgba(200,255,0,0.3); padding: 4px 14px; border-radius: 4px; margin-bottom: 20px; }
+    .cs-badge { display: inline-block; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); padding: 4px 14px; border-radius: 4px; margin-bottom: 20px; }
     .cs-inner h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(22px, 3vw, 32px); letter-spacing: -1px; color: #f0ede6; line-height: 1.15; margin-bottom: 16px; }
     .cs-inner p { font-size: 15px; color: #888; line-height: 1.8; }
     .cs-features { display: flex; flex-direction: column; gap: 12px; }
