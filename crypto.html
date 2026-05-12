@@ -81,6 +81,10 @@
     .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+    .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+    .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
+    .overall-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; padding: 4px 0; }
     .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
     .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
     .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
@@ -446,8 +450,20 @@
         return;
       }
 
+      // Overall prediction card — loads async, shows first
+      const overallCard = document.createElement('div');
+      overallCard.className = 'overall-card';
+      overallCard.id = 'overall-card';
+      overallCard.innerHTML = `
+        <div class="overall-label">Overall Prediction for ${esc(coin.name)}</div>
+        <div class="overall-loading" id="overall-loading"><div class="spinner spinner-inv"></div> Synthesizing all news…</div>
+        <div id="overall-result"></div>
+      `;
+      content.appendChild(overallCard);
+
       const lbl = document.createElement('div');
       lbl.className = 'ap-section-label';
+      lbl.style.marginTop = '8px';
       lbl.textContent = `${groups.length} news event${groups.length !== 1 ? 's' : ''} affecting ${coin.name}`;
       content.appendChild(lbl);
 
@@ -464,6 +480,48 @@
         content.appendChild(card);
         autoAnalyzeGroup(group, coin, idx, mySession);
       });
+
+      fetchOverallPrediction(coin, groups, mySession);
+    }
+
+    async function fetchOverallPrediction(coin, groups, mySession) {
+      const tf = TIMEFRAMES[currentTimeframe];
+      const allHeadlines = groups.flatMap(g => (g.headlines || []).slice(0, 3)).slice(0, 20);
+      const allSources   = [...new Set(groups.flatMap(g => g.sources || []))].slice(0, 15);
+      const mergedGrades = Object.assign({}, ...groups.map(g => g.sourceGrades || {}));
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            topic: `Overall ${coin.name} (${coin.symbol}) market outlook ${tf.context} based on all current news`,
+            headlines: allHeadlines,
+            sources: allSources,
+            sourceGrades: mergedGrades,
+            minGrade: 'medium'
+          })
+        });
+        if (renderSession !== mySession) return;
+        const d = await res.json();
+        if (d.error) throw new Error(d.error);
+        const loadingEl = document.getElementById('overall-loading');
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById('overall-result');
+        if (!resultEl) return;
+        const dir = (d.direction || '').toLowerCase();
+        const dirBadge = dir === 'bullish'
+          ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
+          : dir === 'bearish'
+          ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
+          : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+        resultEl.innerHTML = `${dirBadge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
+      } catch (err) {
+        if (renderSession !== mySession) return;
+        const loadingEl = document.getElementById('overall-loading');
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById('overall-result');
+        if (resultEl) resultEl.innerHTML = `<div class="ap-error">Could not load overall prediction.</div>`;
+      }
     }
 
     async function autoAnalyzeGroup(group, coin, idx, mySession) {
