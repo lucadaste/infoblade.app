@@ -42,14 +42,14 @@
     .ticker-item { display: inline-flex; align-items: center; gap: 12px; }
     .ticker-sep { opacity: 0.35; }
     @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-    .section { padding: 88px 48px; }
+    .section { padding: 88px 48px; border-top: 1px solid var(--border); }
     .section-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 52px; }
     .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
     .step { background: var(--card); padding: 40px 36px; border: 1px solid var(--border); transition: transform 0.2s; }
     .step:first-child { border-radius: 10px 0 0 10px; }
     .step:last-child { border-radius: 0 10px 10px 0; }
     .step:hover { transform: translateY(-3px); }
-    .step-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 52px; color: var(--border); line-height: 1; margin-bottom: 24px; }
+    .step-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 52px; color: transparent; -webkit-text-stroke: 1.5px var(--accent); line-height: 1; margin-bottom: 24px; }
     .step h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px; margin-bottom: 12px; }
     .step p { font-size: 14px; color: var(--muted); line-height: 1.75; }
     .example-section { padding: 0 48px 88px; }
@@ -66,7 +66,7 @@
     .pill-up { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pill-down { background: rgba(255,80,80,0.1); color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-neutral { background: rgba(255,255,255,0.06); color: #888; border: 1px solid rgba(255,255,255,0.1); }
-    .features-section { padding: 0 48px 88px; }
+    .features-section { padding: 88px 48px; border-top: 1px solid var(--border); }
     .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 32px; transition: border-color 0.2s, transform 0.2s; }
     .feature-card:hover { border-color: #444444; transform: translateY(-2px); }
