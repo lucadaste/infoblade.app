@@ -29,15 +29,15 @@
       width: 36px;
       height: 100vh;
       height: 100dvh;
-      background: #ffffff;
+      background: #e8e8e8;
       z-index: 9999;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-      border-left: 1px solid #e5e5e5;
+      box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+      border-left: 1px solid #d8d8d8;
     }
     #ii-ai-label {
       writing-mode: vertical-rl;
@@ -46,7 +46,7 @@
       font-weight: 500;
       font-size: 9px;
       letter-spacing: 1.4px;
-      color: #00e676;
+      color: #555;
       text-transform: uppercase;
       user-select: none;
       pointer-events: none;
@@ -55,7 +55,7 @@
     #ii-ai-toggle {
       background: none;
       border: none;
-      color: #888;
+      color: #666;
       font-size: 22px;
       line-height: 1;
       cursor: pointer;
@@ -78,7 +78,7 @@
       width: min(390px, 33vw);
       height: 100vh;
       height: 100dvh;
-      background: #f7f7f7;
+      background: #f0f0f0;
       z-index: 9998;
       display: flex;
       flex-direction: column;
