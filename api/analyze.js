@@ -438,7 +438,7 @@ Respond ONLY with valid JSON, no markdown:
       const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 6000, messages: [{ role: 'user', content: groupPrompt }] })
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: groupPrompt }] })
       });
       const groupData = await groupRes.json();
       if (groupData.error) return res.status(500).json({ error: groupData.error.message });
@@ -452,34 +452,9 @@ Respond ONLY with valid JSON, no markdown:
         return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: groupArticles.length, headlines: groupArticles.map(a => a.title), dates: groupArticles.map(a => a.date) };
       });
 
-      const sortPrompt = category === 'crypto'
-        ? `Rank these crypto market events by how likely they are to move total crypto market prices in the next 24 hours.${fearGreed ? ` Current sentiment: Fear & Greed ${fearGreed.value}/100 (${fearGreed.label}).` : ''}
-
-Topics:
-${groups.map((g, i) => `${i + 1}. ${g.topic} (${g.totalSources} sources)`).join('\n')}
-
-Respond ONLY with valid JSON, no markdown:
-{"ranked":[2,1,4,3,5]}`
-        : `Rank these market topics by how likely they are to actually move US stock prices today, from most to least impactful.
-
-Topics:
-${groups.map((g, i) => `${i + 1}. ${g.topic} (${g.totalSources} sources)`).join('\n')}
-
-Respond ONLY with valid JSON, no markdown:
-{"ranked":[2,1,4,3,5]}`;
-
-      try {
-        const sortRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 200, messages: [{ role: 'user', content: sortPrompt }] })
-        });
-        const sortData = await sortRes.json();
-        const sorted = JSON.parse(sortData.content[0].text.replace(/```json|```/g, '').trim());
-        return res.status(200).json({ groups: sorted.ranked.map(i => groups[i - 1]).filter(Boolean) });
-      } catch (_) {
-        return res.status(200).json({ groups });
-      }
+      // Sort by source count as a fast proxy for impact (eliminates second LLM round-trip)
+      const sorted = [...groups].sort((a, b) => b.totalSources - a.totalSources);
+      return res.status(200).json({ groups: sorted });
 
     } catch (err) {
       console.error('[analyze GET]', err.message);
@@ -571,7 +546,7 @@ Respond ONLY with valid JSON, no markdown:
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
       });
 
       const data = await response.json();
