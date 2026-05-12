@@ -81,10 +81,10 @@
     .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
-    .tf-sep { width: 1px; height: 14px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
-    .tf-accuracy { font-size: 11px; color: var(--muted); }
-    .tf-accuracy.warn { color: #c87d00; }
-    .tf-accuracy.caution { color: var(--neg); }
+    .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
+    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
+    .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
+    .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
 
     .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
     .ap-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 32px 0; }
@@ -201,8 +201,6 @@
       <button class="tf-btn" onclick="setTimeframe('1w',this)">1 Week</button>
       <button class="tf-btn" onclick="setTimeframe('1m',this)">1 Month</button>
       <button class="tf-btn" onclick="setTimeframe('3m',this)">3 Months</button>
-      <div class="tf-sep"></div>
-      <span class="tf-accuracy" id="tf-accuracy">Most accurate</span>
     </div>
     <div class="ap-content" id="ap-content"></div>
   </div>
@@ -254,10 +252,10 @@
     ];
 
     const TIMEFRAMES = {
-      '24h': { context: 'over the next 24 hours',  accuracy: 'Most accurate',                              accClass: '' },
-      '1w':  { context: 'over the next 1–7 days',  accuracy: 'High confidence',                            accClass: '' },
-      '1m':  { context: 'over the next 30 days',   accuracy: 'Moderate confidence — accuracy drops over time', accClass: 'warn' },
-      '3m':  { context: 'over the next 3 months',  accuracy: 'Lower confidence — long-range outlook only', accClass: 'caution' },
+      '24h': { context: 'over the next 24 hours' },
+      '1w':  { context: 'over the next 1–7 days' },
+      '1m':  { context: 'over the next 30 days' },
+      '3m':  { context: 'over the next 3 months' },
     };
 
     let priceCache = {};
@@ -388,10 +386,6 @@
       currentTimeframe = tf;
       document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
       el.classList.add('active');
-      const info = TIMEFRAMES[tf];
-      const accEl = document.getElementById('tf-accuracy');
-      accEl.textContent = info.accuracy;
-      accEl.className = 'tf-accuracy' + (info.accClass ? ' ' + info.accClass : '');
       if (selectedCoin && currentGroups !== null) {
         renderGroupsAndAnalyze(selectedCoin, currentGroups);
       }
@@ -410,9 +404,6 @@
       const tfBar = document.getElementById('tf-bar');
       tfBar.style.display = 'flex';
       document.querySelectorAll('.tf-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
-      const accEl = document.getElementById('tf-accuracy');
-      accEl.textContent = 'Most accurate';
-      accEl.className = 'tf-accuracy';
 
       const content = document.getElementById('ap-content');
       content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching global crypto news…</div>`;
@@ -550,17 +541,20 @@
       const hasEquities = winners.length || losers.length;
       el.innerHTML = `
         <div class="ar-block">
-          ${d.why_it_matters  ? `<div class="ar-row"><strong>Why it matters</strong>${esc(d.why_it_matters)}</div>`   : ''}
-          ${d.impact_timeframe? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
-          ${d.crowd_summary   ? `<div class="ar-row"><strong>Crowd signal</strong>${esc(d.crowd_summary)}</div>`       : ''}
-          ${hasEquities ? `
-            <div class="ar-tickers">
-              ${winners.length ? `<span class="ticker-label">Benefits:</span>${winners.map(t=>`<span class="pill pill-up">${esc(t)}</span>`).join('')}` : ''}
-              ${losers.length  ? `<span class="ticker-label" style="margin-left:${winners.length?'10px':'0'}">Hurts:</span>${losers.map(t=>`<span class="pill pill-down">${esc(t)}</span>`).join('')}` : ''}
-            </div>
-            <div class="ar-equity-note">Tickers shown are US-listed equities affected by this news (e.g. COIN, MSTR, RIOT)</div>
-          ` : ''}
-          ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(d.confidence)}</div>` : ''}
+          ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
+          <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
+          <div class="ar-details">
+            ${d.impact_timeframe? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
+            ${d.crowd_summary   ? `<div class="ar-row"><strong>Crowd signal</strong>${esc(d.crowd_summary)}</div>`          : ''}
+            ${hasEquities ? `
+              <div class="ar-tickers">
+                ${winners.length ? `<span class="ticker-label">Benefits:</span>${winners.map(t=>`<span class="pill pill-up">${esc(t)}</span>`).join('')}` : ''}
+                ${losers.length  ? `<span class="ticker-label" style="margin-left:${winners.length?'10px':'0'}">Hurts:</span>${losers.map(t=>`<span class="pill pill-down">${esc(t)}</span>`).join('')}` : ''}
+              </div>
+              <div class="ar-equity-note">Tickers shown are US-listed equities affected by this news (e.g. COIN, MSTR, RIOT)</div>
+            ` : ''}
+            ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(d.confidence)}</div>` : ''}
+          </div>
         </div>`;
     }
 

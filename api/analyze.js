@@ -491,11 +491,13 @@ Respond ONLY with valid JSON, no markdown:
   if (req.method === 'POST') {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
 
-    let supabase;
-    try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+    let supabase = null;
+    try { supabase = _getSupabase(); } catch (_) { /* Supabase not configured — skip rate limiting and persistence */ }
 
-    const allowed = await _checkRateLimit(supabase, ip, 20);
-    if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+    if (supabase) {
+      const allowed = await _checkRateLimit(supabase, ip, 20);
+      if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+    }
 
     const {
       topic: rawTopic,
@@ -583,7 +585,7 @@ Respond ONLY with valid JSON, no markdown:
       const timeframeDays   = _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe);
       const validationDate  = new Date(Date.now() + timeframeDays * 86400000).toISOString();
 
-      await _savePrediction(supabase, {
+      if (supabase) await _savePrediction(supabase, {
         id: predictionId,
         created_at:        new Date().toISOString(),
         topic,
