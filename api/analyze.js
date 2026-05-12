@@ -195,6 +195,32 @@ async function _fetchPrices(tickers) {
   return prices;
 }
 
+// ── Reddit sentiment ──────────────────────────────────────────────────────────
+async function _fetchRedditSentiment(topic, isCrypto) {
+  try {
+    const query = topic.replace(/[^\w\s]/g, ' ').trim().split(/\s+/).slice(0, 5).join(' ');
+    const sub = isCrypto
+      ? 'CryptoCurrency+Bitcoin+ethereum+CryptoMarkets'
+      : 'wallstreetbets+investing+stocks+options';
+    const url = `https://www.reddit.com/r/${sub}/search.rss?q=${encodeURIComponent(query)}&sort=relevance&t=week&limit=10&restrict_sr=true`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: ctrl.signal });
+    clearTimeout(t);
+    const text = await res.text();
+    const posts = [];
+    for (const match of [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 8)) {
+      const item = match[1];
+      const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+      if (titleMatch) {
+        const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+        if (title.length > 10) posts.push(title);
+      }
+    }
+    return posts;
+  } catch (_) { return []; }
+}
+
 // ── Supabase prediction persistence ──────────────────────────────────────────
 async function _savePrediction(supabase, record) {
   const { error } = await supabase.from('predictions').insert(record);
@@ -238,7 +264,10 @@ export default async function handler(req, res) {
     'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
     'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
     'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
-    'Cointelegraph': 'Low', 'Forkast': 'Medium', 'CoinPost': 'Medium'
+    'Cointelegraph': 'Low', 'Forkast': 'Medium', 'CoinPost': 'Medium',
+    'Reddit r/wallstreetbets': 'Low', 'Reddit r/investing': 'Low', 'Reddit r/stocks': 'Low',
+    'Reddit r/options': 'Low', 'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
+    'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low'
   };
   const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
   const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
@@ -355,12 +384,30 @@ export default async function handler(req, res) {
         { url: 'https://www.economist.com/finance-and-economics/rss.xml',             source: 'The Economist' },
         { url: 'https://feeds.npr.org/1017/rss.xml',                                  source: 'NPR' },
       ];
+      const REDDIT_STOCK_FEEDS = [
+        { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
+        { url: 'https://www.reddit.com/r/investing/new.rss?limit=25',      source: 'Reddit r/investing' },
+        { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25',         source: 'Reddit r/stocks' },
+      ];
+      const REDDIT_CRYPTO_FEEDS = [
+        { url: 'https://www.reddit.com/r/CryptoCurrency/new.rss?limit=25', source: 'Reddit r/CryptoCurrency' },
+        { url: 'https://www.reddit.com/r/Bitcoin/new.rss?limit=25',        source: 'Reddit r/Bitcoin' },
+        { url: 'https://www.reddit.com/r/ethereum/new.rss?limit=25',       source: 'Reddit r/ethereum' },
+      ];
       const CATEGORY_DIRECT_FEEDS = {
-        technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }],
-        energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }],
+        any:             [...REDDIT_STOCK_FEEDS],
+        macro:           [...REDDIT_STOCK_FEEDS],
+        technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }, ...REDDIT_STOCK_FEEDS],
+        energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }, ...REDDIT_STOCK_FEEDS],
+        financials:      [...REDDIT_STOCK_FEEDS],
+        'precious-metals': [...REDDIT_STOCK_FEEDS],
+        'real-estate':   [...REDDIT_STOCK_FEEDS],
+        consumer:        [...REDDIT_STOCK_FEEDS],
+        defense:         [...REDDIT_STOCK_FEEDS],
         healthcare:      [
-          { url: 'https://feeds.reuters.com/reuters/health',                              source: 'Reuters' },
-          { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',                  source: 'CNBC' },
+          { url: 'https://feeds.reuters.com/reuters/health',               source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',   source: 'CNBC' },
+          ...REDDIT_STOCK_FEEDS,
         ],
         crypto:          [
           { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',        source: 'CoinDesk' },
@@ -368,6 +415,7 @@ export default async function handler(req, res) {
           { url: 'https://decrypt.co/feed',                                source: 'Decrypt' },
           { url: 'https://cointelegraph.com/rss',                          source: 'Cointelegraph' },
           { url: 'https://forkast.news/feed/',                             source: 'Forkast' },
+          ...REDDIT_CRYPTO_FEEDS,
         ],
       };
       const directFeeds = [...BASE_DIRECT_FEEDS, ...(CATEGORY_DIRECT_FEEDS[category] || [])];
@@ -549,9 +597,11 @@ Respond ONLY with valid JSON, no markdown:
 
     try {
       const candidateTickers = _extractTickerCandidates(headlines);
-      const [relevantMarkets, technicalSnapshot] = await Promise.all([
+      const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
+      const [relevantMarkets, technicalSnapshot, redditPosts] = await Promise.all([
         _fetchRelevantMarkets(topic),
-        _fetchTickerSnapshot(candidateTickers)
+        _fetchTickerSnapshot(candidateTickers),
+        _fetchRedditSentiment(topic, isCryptoTopic)
       ]);
 
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
@@ -562,6 +612,10 @@ Respond ONLY with valid JSON, no markdown:
         : '';
 
       const technicalSection = _buildTechnicalSection(technicalSnapshot);
+
+      const redditSection = redditPosts.length
+        ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
+        : '';
 
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
 
@@ -580,7 +634,7 @@ Use weighted source consensus to shape the prediction:
 Only include sources that meet the selected factuality threshold for the final prediction.
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}
+${marketsSection}${technicalSection}${redditSection}
 Only use ${thresholdText} for this analysis.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.

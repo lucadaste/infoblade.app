@@ -78,9 +78,16 @@ export default async function handler(req, res) {
     }
   } catch (_) { /* fail open if rate limit table unavailable */ }
 
-  // Secret check — after rate limit so brute-force is gated first
-  const secret = req.query.secret || req.headers['x-validate-secret'];
-  if (process.env.VALIDATE_SECRET && secret !== process.env.VALIDATE_SECRET) {
+  // Auth: accept Vercel cron header OR manual secret param/header
+  const cronSecret  = process.env.CRON_SECRET;
+  const manualSecret = process.env.VALIDATE_SECRET;
+  const authHeader  = req.headers['authorization'];
+  const manualToken = req.query.secret || req.headers['x-validate-secret'];
+
+  const isCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`;
+  const isManual = manualSecret && manualToken === manualSecret;
+
+  if ((cronSecret || manualSecret) && !isCron && !isManual) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -138,7 +145,43 @@ export default async function handler(req, res) {
       results.push({ id: p.id, topic: p.topic, correct, scores });
     }
 
-    return res.status(200).json({ validated: validatedCount, results });
+    // ── Update source_reputation ─────────────────────────────────────────────
+    // Tally how each source performed across all validated predictions
+    const repDelta = {}; // source -> { attempts, correct }
+    for (const result of results) {
+      const pred = ready.find(p => p.id === result.id);
+      if (!pred?.sources?.length) continue;
+      for (const source of pred.sources) {
+        if (!repDelta[source]) repDelta[source] = { attempts: 0, correct: 0 };
+        repDelta[source].attempts++;
+        if (result.correct) repDelta[source].correct++;
+      }
+    }
+
+    const affectedSources = Object.keys(repDelta);
+    if (affectedSources.length > 0) {
+      const { data: existing } = await supabase
+        .from('source_reputation')
+        .select('source, attempts, correct')
+        .in('source', affectedSources);
+
+      const existingMap = {};
+      for (const row of existing || []) existingMap[row.source] = row;
+
+      const upsertRows = affectedSources.map(source => ({
+        source,
+        attempts: (existingMap[source]?.attempts || 0) + repDelta[source].attempts,
+        correct:  (existingMap[source]?.correct  || 0) + repDelta[source].correct
+      }));
+
+      const { error: repErr } = await supabase
+        .from('source_reputation')
+        .upsert(upsertRows, { onConflict: 'source' });
+
+      if (repErr) console.error('[validate] reputation update error:', repErr.message);
+    }
+
+    return res.status(200).json({ validated: validatedCount, reputationUpdated: affectedSources.length, results });
 
   } catch (err) {
     console.error('[validate]', err.message);

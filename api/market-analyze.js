@@ -21,7 +21,9 @@ const SOURCE_QUALITY = {
   // Low
   'Fox News': 'Low', 'Breitbart': 'Low', 'Daily Mail': 'Low',
   'New York Post': 'Low', 'US Weekly': 'Low', 'In Touch': 'Low',
-  'National Enquirer': 'Low', 'OK Magazine': 'Low'
+  'National Enquirer': 'Low', 'OK Magazine': 'Low',
+  // Social / Reddit
+  'Reddit': 'Low'
 };
 
 function _setCors(res) {
@@ -113,11 +115,15 @@ export default async function handler(req, res) {
 
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=en-US&gl=US&ceid=US:en`;
-    const rssRes = await fetch(rssUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(8000)
-    });
+    const redditUrl = `https://www.reddit.com/search.rss?q=${encodeURIComponent(searchQuery)}&sort=relevance&t=week&limit=10`;
+
+    const [rssRes, redditRes] = await Promise.all([
+      fetch(rssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }),
+      fetch(redditUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }).catch(() => null)
+    ]);
+
     const rssText = await rssRes.text();
+    const redditText = redditRes ? await redditRes.text().catch(() => '') : '';
 
     const items = [];
     const matches = [...rssText.matchAll(/<item>([\s\S]*?)<\/item>/g)];
@@ -138,14 +144,26 @@ export default async function handler(req, res) {
       }
     }
 
-    if (items.length < 5) {
+    const redditPosts = [];
+    if (redditText) {
+      for (const match of [...redditText.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 8)) {
+        const item = match[1];
+        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+        if (titleMatch) {
+          const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+          if (title.length > 10) redditPosts.push(title);
+        }
+      }
+    }
+
+    if (items.length < 3 && redditPosts.length === 0) {
       return res.status(200).json({
         lean: 'Uncertain',
         lean_confidence: 'Low',
         reasoning: `Only ${items.length} article${items.length === 1 ? '' : 's'} found — not enough coverage to form a reliable lean. The market price is the best available signal.`,
         key_sources: [],
         signal: 'Inconclusive',
-        signal_detail: 'Insufficient news coverage (minimum 5 articles required) to compare against the market odds.',
+        signal_detail: 'Insufficient news coverage to compare against the market odds.',
         articlesFound: items.length,
         searchQuery
       });
@@ -155,15 +173,19 @@ export default async function handler(req, res) {
       ? `Current market odds: ${currentOdds}% chance of YES`
       : 'Market odds: not provided';
 
-    const prompt = `You are helping everyday users understand a prediction market question using recent news.
+    const redditSection = redditPosts.length
+      ? `\nPublic sentiment on Reddit (${redditPosts.length} posts):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis is what regular people are actively discussing — factor it in as a crowd sentiment signal, especially for questions driven by public opinion.\n`
+      : '';
+
+    const prompt = `You are helping everyday users understand a prediction market question using recent news and public sentiment.
 
 Market question: "${question}"
 ${oddsContext}
 
 Recent news (${items.length} articles):
 ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}]`).join('\n')}
-
-Based ONLY on what the news reporting indicates, determine the likely outcome. Weight High-grade sources more heavily. Where empirical accuracy is shown, prioritize that over the static grade. Be direct — if sources clearly point one way, say so.
+${redditSection}
+Weight news sources by grade (High > Medium > Low). Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
 

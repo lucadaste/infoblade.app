@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI — Stock Markets</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-HEEV7Y9WQZ');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -452,6 +459,7 @@
         watchlist.tickers.push(ticker);
         localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
         renderTickers();
+        if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker });
       }
     }
 
@@ -668,6 +676,7 @@
 
         label.style.display = 'block';
         status.textContent = `Found ${groups.length} topics. Analyzing...`;
+        if (typeof gtag !== 'undefined') gtag('event', 'feed_loaded', { category, group_count: groups.length, timeframe });
 
         // Analyze and display progressively
         for (let i = 0; i < groups.length; i++) {
@@ -678,6 +687,7 @@
             if (getConfScore(analysis.confidence) < 3) continue;
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
+            if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
             if (i < groups.length - 1) feedPending.classList.add('active');
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
