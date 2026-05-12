@@ -545,10 +545,10 @@
       const hasEquities = winners.length || losers.length;
       const dir = (d.direction || '').toLowerCase();
       const dirBadge = dir === 'bullish'
-        ? `<span class="dir-badge dir-bullish">↑ Bullish</span>`
+        ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
         : dir === 'bearish'
-        ? `<span class="dir-badge dir-bearish">↓ Bearish</span>`
-        : `<span class="dir-badge dir-uncertain">~ Uncertain</span>`;
+        ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
+        : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
       el.innerHTML = `
         <div class="ar-block">
           ${dirBadge}
