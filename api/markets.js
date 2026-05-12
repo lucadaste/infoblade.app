@@ -5,8 +5,8 @@ const CATEGORY_TAGS = {
   sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
   politics:      ['politics', 'elections', 'government', 'congress', 'supreme-court', 'trump'],
   finance:       ['finance', 'economics', 'bitcoin', 'ethereum', 'crypto', 'business', 'markets'],
-  entertainment: ['entertainment', 'movies', 'tv', 'awards', 'oscars', 'grammys', 'music'],
-  celebrity:     ['celebrity', 'pop-culture', 'culture']
+  entertainment: ['entertainment', 'movies', 'tv', 'awards', 'oscars', 'grammys', 'music', 'celebrity', 'pop-culture', 'culture'],
+  health:        ['health', 'wellness', 'fitness', 'mental-health', 'medicine', 'healthcare', 'nutrition', 'lifestyle']
 };
 
 const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_TAGS));
