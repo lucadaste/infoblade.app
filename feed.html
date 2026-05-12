@@ -87,6 +87,15 @@
     .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(0,230,118,0.08); color: #a0cc00; border: 1px solid rgba(0,230,118,0.15); }
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
+    .tech-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+    .tech-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .tech-sym { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; color: var(--ink); min-width: 44px; }
+    .tech-price { font-size: 12px; color: #bbb; }
+    .tech-stat { font-size: 11px; padding: 2px 7px; border-radius: 3px; }
+    .tech-stat-up   { background: rgba(0,230,118,0.1); color: #00e676; }
+    .tech-stat-down { background: rgba(255,80,80,0.1); color: #ff7070; }
+    .tech-stat-neu  { background: rgba(255,255,255,0.05); color: #666; }
+    .tech-rating { font-size: 11px; color: #888; }
     .conf-stars { font-size: 16px; letter-spacing: 1px; }
     .conf-label { font-size: 13px; color: var(--muted); }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
@@ -511,6 +520,56 @@
       return { match: sectorMatch || matchedTickers.length > 0, matchedTickers };
     }
 
+    function renderTechnicalSnapshot(analysis) {
+      const snap = analysis.technicalSnapshot;
+      if (!snap || typeof snap !== 'object') return '';
+      const entries = Object.entries(snap);
+      if (entries.length === 0) return '';
+
+      const rows = entries.map(([ticker, d]) => {
+        if (!d) return '';
+        const price = d.price != null ? `<span class="tech-price">$${d.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>` : '';
+
+        const stats = [];
+        if (d.changePct != null) {
+          const cls = d.changePct >= 0 ? 'tech-stat-up' : 'tech-stat-down';
+          const sign = d.changePct >= 0 ? '+' : '';
+          stats.push(`<span class="tech-stat ${cls}">${sign}${d.changePct.toFixed(2)}%</span>`);
+        }
+        if (d.vs50dma != null) {
+          const cls = d.vs50dma >= 0 ? 'tech-stat-up' : 'tech-stat-down';
+          const sign = d.vs50dma >= 0 ? '+' : '';
+          stats.push(`<span class="tech-stat ${cls}">${sign}${d.vs50dma.toFixed(1)}% vs 50d</span>`);
+        }
+        if (d.vs200dma != null) {
+          const cls = d.vs200dma >= 0 ? 'tech-stat-up' : 'tech-stat-down';
+          const sign = d.vs200dma >= 0 ? '+' : '';
+          stats.push(`<span class="tech-stat ${cls}">${sign}${d.vs200dma.toFixed(1)}% vs 200d</span>`);
+        }
+        if (d.analystRating) {
+          stats.push(`<span class="tech-stat tech-stat-neu">${esc(d.analystRating.replace(/_/g, ' '))}</span>`);
+        }
+        if (d.upsidePct != null && d.targetPrice != null) {
+          const cls = d.upsidePct >= 0 ? 'tech-stat-up' : 'tech-stat-down';
+          const sign = d.upsidePct >= 0 ? '+' : '';
+          stats.push(`<span class="tech-stat ${cls}">target $${d.targetPrice.toFixed(0)} (${sign}${d.upsidePct.toFixed(1)}%)</span>`);
+        }
+        if (d.forwardPE != null) {
+          stats.push(`<span class="tech-stat tech-stat-neu">fwd P/E ${d.forwardPE.toFixed(1)}x</span>`);
+        }
+
+        if (stats.length === 0 && !price) return '';
+        return `<div class="tech-row"><span class="tech-sym">${esc(ticker)}</span>${price}${stats.join('')}</div>`;
+      }).filter(Boolean);
+
+      if (rows.length === 0) return '';
+      return `
+        <div class="chain-row">
+          <div class="chain-label">Technicals</div>
+          <div class="chain-content"><div class="tech-grid">${rows.join('')}</div></div>
+        </div>`;
+    }
+
     function buildCard(group, analysis, impact) {
       const { match, matchedTickers } = checkWatchlistMatch(analysis);
       const confScore = getConfScore(analysis.confidence);
@@ -554,6 +613,7 @@
             <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${esc(t)}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
           </div>
         </div>
+        ${renderTechnicalSnapshot(analysis)}
         <div class="chain-row">
           <div class="chain-label">Confidence</div>
           <div class="chain-content">${renderStars(confScore)}</div>

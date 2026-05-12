@@ -122,21 +122,77 @@ async function _fetchRelevantMarkets(topic) {
 }
 
 // ── Yahoo Finance prices ──────────────────────────────────────────────────────
-async function _fetchPrices(tickers) {
+function _extractTickerCandidates(headlines) {
+  const combined = headlines.join(' ');
+  const matches = [
+    ...combined.matchAll(/\$([A-Z]{1,5})\b/g),
+    ...combined.matchAll(/\(([A-Z]{2,5})\)/g)
+  ];
+  return [...new Set(matches.map(m => m[1]))].slice(0, 12);
+}
+
+async function _fetchTickerSnapshot(tickers) {
   if (!tickers || !tickers.length) return {};
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3000);
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=regularMarketPrice`;
+    const timer = setTimeout(() => controller.abort(), 3500);
+    const fields = [
+      'regularMarketPrice','regularMarketChangePercent',
+      'fiftyDayAverage','twoHundredDayAverage',
+      'fiftyTwoWeekHigh','fiftyTwoWeekLow',
+      'recommendationKey','targetMeanPrice',
+      'trailingPE','forwardPE','marketCap'
+    ].join(',');
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=${fields}`;
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
     clearTimeout(timer);
     const data = await res.json();
-    const prices = {};
+    const snapshot = {};
     for (const q of data?.quoteResponse?.result || []) {
-      if (q.regularMarketPrice) prices[q.symbol] = q.regularMarketPrice;
+      if (!q.regularMarketPrice) continue;
+      const price = q.regularMarketPrice;
+      const vs50  = q.fiftyDayAverage    ? +((price / q.fiftyDayAverage    - 1) * 100).toFixed(1) : null;
+      const vs200 = q.twoHundredDayAverage ? +((price / q.twoHundredDayAverage - 1) * 100).toFixed(1) : null;
+      const upside = q.targetMeanPrice   ? +((q.targetMeanPrice / price - 1) * 100).toFixed(1) : null;
+      snapshot[q.symbol] = {
+        price,
+        changePct:  q.regularMarketChangePercent ? +q.regularMarketChangePercent.toFixed(2) : null,
+        vs50dma:    vs50,
+        vs200dma:   vs200,
+        week52High: q.fiftyTwoWeekHigh  || null,
+        week52Low:  q.fiftyTwoWeekLow   || null,
+        analystRating: q.recommendationKey || null,
+        targetPrice:   q.targetMeanPrice   ? +q.targetMeanPrice.toFixed(2) : null,
+        upsidePct:     upside,
+        trailingPE:    q.trailingPE  ? +q.trailingPE.toFixed(1)  : null,
+        forwardPE:     q.forwardPE   ? +q.forwardPE.toFixed(1)   : null,
+      };
     }
-    return prices;
+    return snapshot;
   } catch (_) { return {}; }
+}
+
+function _buildTechnicalSection(snapshot) {
+  const lines = Object.entries(snapshot).map(([sym, d]) => {
+    const parts = [`$${sym}: $${d.price}`];
+    if (d.changePct !== null) parts.push(`${d.changePct > 0 ? '+' : ''}${d.changePct}% today`);
+    if (d.vs50dma  !== null) parts.push(`${d.vs50dma  > 0 ? '+' : ''}${d.vs50dma}% vs 50-day MA`);
+    if (d.vs200dma !== null) parts.push(`${d.vs200dma > 0 ? '+' : ''}${d.vs200dma}% vs 200-day MA`);
+    if (d.analystRating) parts.push(`analyst consensus: ${d.analystRating.replace(/_/g, ' ')}`);
+    if (d.targetPrice && d.upsidePct !== null) parts.push(`target $${d.targetPrice} (${d.upsidePct > 0 ? '+' : ''}${d.upsidePct}% upside)`);
+    if (d.forwardPE) parts.push(`fwd P/E: ${d.forwardPE}x`);
+    return `- ${parts.join(', ')}`;
+  });
+  return lines.length
+    ? `\nLIVE TECHNICAL SNAPSHOT (Yahoo Finance):\n${lines.join('\n')}\nUse this to calibrate: if a stock is already near analyst targets, upside is limited; if it's below key MAs, technical headwinds exist regardless of positive news.\n`
+    : '';
+}
+
+async function _fetchPrices(tickers) {
+  const snapshot = await _fetchTickerSnapshot(tickers);
+  const prices = {};
+  for (const [sym, d] of Object.entries(snapshot)) prices[sym] = d.price;
+  return prices;
 }
 
 // ── Supabase prediction persistence ──────────────────────────────────────────
@@ -492,7 +548,11 @@ Respond ONLY with valid JSON, no markdown:
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
     try {
-      const [relevantMarkets] = await Promise.all([_fetchRelevantMarkets(topic)]);
+      const candidateTickers = _extractTickerCandidates(headlines);
+      const [relevantMarkets, technicalSnapshot] = await Promise.all([
+        _fetchRelevantMarkets(topic),
+        _fetchTickerSnapshot(candidateTickers)
+      ]);
 
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
       const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation: {} });
@@ -500,6 +560,8 @@ Respond ONLY with valid JSON, no markdown:
       const marketsSection = relevantMarkets.length
         ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence.\n`
         : '';
+
+      const technicalSection = _buildTechnicalSection(technicalSnapshot);
 
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
 
@@ -518,7 +580,7 @@ Use weighted source consensus to shape the prediction:
 Only include sources that meet the selected factuality threshold for the final prediction.
 
 Consensus summary: ${consensus}
-${marketsSection}
+${marketsSection}${technicalSection}
 Only use ${thresholdText} for this analysis.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
@@ -558,28 +620,32 @@ Respond ONLY with valid JSON, no markdown:
       const winnerTickers   = analysis.winners?.tickers || [];
       const loserTickers    = analysis.losers?.tickers  || [];
       const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
-      const baselinePrices  = await _fetchPrices(allTickers);
-      const timeframeDays   = _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe);
-      const validationDate  = new Date(Date.now() + timeframeDays * 86400000).toISOString();
 
-      if (supabase) await _savePrediction(supabase, {
-        id: predictionId,
-        created_at:        new Date().toISOString(),
-        topic,
-        sources,
-        source_grades:     sourceGrades,
-        min_grade:         minGrade,
-        impact_timeframe:  impactTimeframe || null,
-        analysis,
-        winner_tickers:    winnerTickers,
-        loser_tickers:     loserTickers,
-        baseline_prices:   baselinePrices,
-        validation_date:   validationDate,
-        correct:           null,
-        notes:             null
-      });
+      // Fetch snapshot for any tickers Claude identified that weren't pre-fetched
+      const missingTickers  = allTickers.filter(t => !technicalSnapshot[t]);
+      const [extraSnapshot] = await Promise.all([
+        missingTickers.length ? _fetchTickerSnapshot(missingTickers) : Promise.resolve({}),
+        supabase ? _savePrediction(supabase, {
+          id: predictionId,
+          created_at:        new Date().toISOString(),
+          topic,
+          sources,
+          source_grades:     sourceGrades,
+          min_grade:         minGrade,
+          impact_timeframe:  impactTimeframe || null,
+          analysis,
+          winner_tickers:    winnerTickers,
+          loser_tickers:     loserTickers,
+          baseline_prices:   Object.fromEntries(allTickers.map(t => [t, technicalSnapshot[t]?.price]).filter(([,v]) => v)),
+          validation_date:   new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
+          correct:           null,
+          notes:             null
+        }) : Promise.resolve()
+      ]);
 
-      return res.status(200).json({ ...analysis, predictionId });
+      const fullSnapshot = { ...technicalSnapshot, ...extraSnapshot };
+
+      return res.status(200).json({ ...analysis, predictionId, technicalSnapshot: fullSnapshot });
 
     } catch (err) {
       console.error('[analyze POST]', err.message);
