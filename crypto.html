@@ -28,7 +28,12 @@
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
     .fg-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .fg-label-row { display: flex; align-items: center; gap: 5px; }
     .fg-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .fg-hint { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); color: var(--muted); font-size: 9px; font-weight: 700; cursor: default; font-family: 'DM Sans', sans-serif; line-height: 1; flex-shrink: 0; }
+    .fg-hint:hover { border-color: var(--muted); }
+    .fg-hint-popup { display: none; position: absolute; top: 20px; right: 0; width: 220px; background: #1e1e1e; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--ink); line-height: 1.55; font-weight: 400; z-index: 200; text-align: left; text-transform: none; letter-spacing: 0; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .fg-hint:hover .fg-hint-popup { display: block; }
     .fg-number { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -1.5px; line-height: 1; }
     .fg-class { font-size: 12px; font-weight: 600; margin-top: 2px; }
     .fg-track { width: 100px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; }
@@ -140,7 +145,12 @@
       <p class="hero-sub">Browse Robinhood &amp; Coinbase assets with live prices. Select any coin to pull global news analysis.</p>
     </div>
     <div class="fg-widget" id="fg-widget" style="display:none">
-      <div class="fg-label">Fear &amp; Greed</div>
+      <div class="fg-label-row">
+        <div class="fg-label">Fear &amp; Greed</div>
+        <div class="fg-hint">?
+          <div class="fg-hint-popup">A score from 0–100 measuring overall crypto market sentiment. <strong style="color:var(--neg)">0–25 = Extreme Fear</strong> (panic selling), <strong style="color:#c87d00">26–49 = Fear</strong>, <strong style="color:#c87d00">50–74 = Greed</strong>, <strong style="color:var(--pos)">75–100 = Extreme Greed</strong> (euphoric buying). Extreme fear can signal a buying opportunity; extreme greed may mean a correction is near.</div>
+        </div>
+      </div>
       <div class="fg-number" id="fg-number">—</div>
       <div class="fg-class" id="fg-class"></div>
       <div class="fg-track"><div class="fg-fill" id="fg-fill" style="width:0%"></div></div>
