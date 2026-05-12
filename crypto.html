@@ -81,7 +81,9 @@
     .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
-    .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    @keyframes collapseOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-8px); } }
+    .ap-content.collapsing { animation: collapseOut 0.15s ease forwards; pointer-events: none; }
+    .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
     .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
     .overall-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; padding: 4px 0; }
@@ -100,7 +102,7 @@
     .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .ap-empty { font-size: 14px; color: var(--muted); padding: 0; display: flex; flex-direction: column; gap: 16px; }
 
-    .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .group-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
     .group-meta { font-size: 12px; color: var(--muted); }
 
@@ -395,7 +397,12 @@
       document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
       el.classList.add('active');
       if (selectedCoin && currentGroups !== null) {
-        renderGroupsAndAnalyze(selectedCoin, currentGroups);
+        const content = document.getElementById('ap-content');
+        content.classList.add('collapsing');
+        setTimeout(() => {
+          content.classList.remove('collapsing');
+          renderGroupsAndAnalyze(selectedCoin, currentGroups);
+        }, 160);
       }
     }
 
@@ -471,6 +478,7 @@
         const card = document.createElement('div');
         card.className = 'group-card';
         card.id = `group-card-${idx}`;
+        card.style.animationDelay = `${idx * 60}ms`;
         card.innerHTML = `
           <div class="group-topic">${esc(group.topic)}</div>
           <div class="group-meta">${group.totalSources || group.sources?.length || 0} sources · ${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
