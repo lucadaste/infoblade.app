@@ -75,18 +75,29 @@
     .ap-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
     .ap-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
     .ap-close:hover { color: var(--ink); }
+
+    .tf-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 48px; border-bottom: 1px solid var(--border); background: #0e0e0e; }
+    .tf-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; margin-right: 4px; }
+    .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
+    .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+    .tf-sep { width: 1px; height: 14px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+    .tf-accuracy { font-size: 11px; color: var(--muted); }
+    .tf-accuracy.warn { color: #c87d00; }
+    .tf-accuracy.caution { color: var(--neg); }
+
     .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
     .ap-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 32px 0; }
+    .group-loading { padding: 12px 0; }
     .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-    .ap-empty { font-size: 14px; color: var(--muted); padding: 24px 0; display: flex; flex-direction: column; gap: 16px; }
+    .ap-empty { font-size: 14px; color: var(--muted); padding: 0; display: flex; flex-direction: column; gap: 16px; }
 
     .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
     .group-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
     .group-meta { font-size: 12px; color: var(--muted); }
 
-    .btn-analyze { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.2s; align-self: flex-start; letter-spacing: 0.2px; display: inline-flex; align-items: center; gap: 8px; }
-    .btn-analyze:hover { opacity: 0.85; }
-    .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-reanalyze { background: none; border: none; color: var(--muted); font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 4px 0 0; text-decoration: underline; transition: color 0.15s; align-self: flex-start; }
+    .btn-reanalyze:hover { color: var(--ink); }
 
     .deep-result { display: flex; flex-direction: column; gap: 10px; }
     .ar-block { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.3s ease both; }
@@ -119,6 +130,7 @@
       .toolbar { padding: 12px 24px; top: 57px; }
       .coin-section { padding: 20px 24px 32px; }
       .ap-header { padding: 16px 24px; }
+      .tf-bar { padding: 10px 24px; }
       .ap-content { padding: 16px 24px 40px; }
       footer { padding: 24px; }
     }
@@ -183,6 +195,15 @@
       <div class="ap-title" id="ap-title">News Analysis</div>
       <button class="ap-close" onclick="closePanel()">×</button>
     </div>
+    <div class="tf-bar" id="tf-bar" style="display:none">
+      <span class="tf-label">Timeframe</span>
+      <button class="tf-btn active" onclick="setTimeframe('24h',this)">24H</button>
+      <button class="tf-btn" onclick="setTimeframe('1w',this)">1 Week</button>
+      <button class="tf-btn" onclick="setTimeframe('1m',this)">1 Month</button>
+      <button class="tf-btn" onclick="setTimeframe('3m',this)">3 Months</button>
+      <div class="tf-sep"></div>
+      <span class="tf-accuracy" id="tf-accuracy">Most accurate</span>
+    </div>
     <div class="ap-content" id="ap-content"></div>
   </div>
 
@@ -232,9 +253,19 @@
       { id:'the-sandbox',           symbol:'SAND', name:'The Sandbox',      cat:'gaming' },
     ];
 
+    const TIMEFRAMES = {
+      '24h': { context: 'over the next 24 hours',  accuracy: 'Most accurate',                              accClass: '' },
+      '1w':  { context: 'over the next 1–7 days',  accuracy: 'High confidence',                            accClass: '' },
+      '1m':  { context: 'over the next 30 days',   accuracy: 'Moderate confidence — accuracy drops over time', accClass: 'warn' },
+      '3m':  { context: 'over the next 3 months',  accuracy: 'Lower confidence — long-range outlook only', accClass: 'caution' },
+    };
+
     let priceCache = {};
     let selectedCoin = null;
     let currentFilter = 'all';
+    let currentTimeframe = '24h';
+    let currentGroups = null;
+    let renderSession = 0;
 
     function formatPrice(p) {
       if (p == null) return '—';
@@ -346,118 +377,171 @@
 
     function closePanel() {
       selectedCoin = null;
+      currentGroups = null;
+      renderSession++;
       document.getElementById('analysis-panel').style.display = 'none';
+      document.getElementById('tf-bar').style.display = 'none';
       renderGrid();
+    }
+
+    function setTimeframe(tf, el) {
+      currentTimeframe = tf;
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      const info = TIMEFRAMES[tf];
+      const accEl = document.getElementById('tf-accuracy');
+      accEl.textContent = info.accuracy;
+      accEl.className = 'tf-accuracy' + (info.accClass ? ' ' + info.accClass : '');
+      if (selectedCoin && currentGroups !== null) {
+        renderGroupsAndAnalyze(selectedCoin, currentGroups);
+      }
     }
 
     async function selectCoin(coin) {
       selectedCoin = coin;
+      currentGroups = null;
+      currentTimeframe = '24h';
       renderGrid();
 
       const panel = document.getElementById('analysis-panel');
       panel.style.display = 'block';
       document.getElementById('ap-title').textContent = `${coin.name} (${coin.symbol}) — News Analysis`;
+
+      const tfBar = document.getElementById('tf-bar');
+      tfBar.style.display = 'flex';
+      document.querySelectorAll('.tf-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+      const accEl = document.getElementById('tf-accuracy');
+      accEl.textContent = 'Most accurate';
+      accEl.className = 'tf-accuracy';
+
       const content = document.getElementById('ap-content');
-      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching global crypto news for ${esc(coin.name)}…</div>`;
+      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching global crypto news…</div>`;
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      const mySession = ++renderSession;
 
       try {
         const res = await fetch('/api/analyze?category=crypto');
+        if (renderSession !== mySession) return;
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-
-        const matches = (data.groups || []).filter(g => coinMatchesGroup(coin, g));
-        content.innerHTML = '';
-
-        if (!matches.length) {
-          const safeJson = JSON.stringify(coin).replace(/"/g, '&quot;');
-          content.innerHTML = `
-            <div class="ap-empty">
-              <div>No specific news events found for ${esc(coin.name)} right now.</div>
-              <button class="btn-analyze" onclick="runGeneralAnalysis(${safeJson}, this)">
-                Run general ${esc(coin.symbol)} analysis →
-              </button>
-              <div class="deep-result" id="general-result"></div>
-            </div>`;
-          return;
-        }
-
-        const lbl = document.createElement('div');
-        lbl.className = 'ap-section-label';
-        lbl.textContent = `${matches.length} news event${matches.length !== 1 ? 's' : ''} affecting ${coin.name}`;
-        content.appendChild(lbl);
-
-        matches.forEach((group) => {
-          const el = document.createElement('div');
-          el.className = 'group-card';
-          const safeGroup = JSON.stringify(group).replace(/"/g, '&quot;');
-          el.innerHTML = `
-            <div class="group-topic">${esc(group.topic)}</div>
-            <div class="group-meta">${group.totalSources || group.sources?.length || 0} sources · ${(group.sources || []).slice(0, 3).map(esc).join(' · ')}</div>
-            <button class="btn-analyze" onclick="deepAnalyze(this, ${safeGroup}, '${esc(coin.name)}', '${esc(coin.symbol)}')">Deep Analysis →</button>
-            <div class="deep-result"></div>
-          `;
-          content.appendChild(el);
-        });
-
+        currentGroups = (data.groups || []).filter(g => coinMatchesGroup(coin, g));
+        renderGroupsAndAnalyze(coin, currentGroups);
       } catch (err) {
+        if (renderSession !== mySession) return;
         content.innerHTML = `<div class="ap-error">Failed to load news: ${esc(err.message)}</div>`;
       }
     }
 
-    async function deepAnalyze(btn, group, coinName, coinSymbol) {
-      btn.disabled = true;
-      btn.innerHTML = `<div class="spinner"></div> Analyzing…`;
-      const resultEl = btn.nextElementSibling;
-      resultEl.innerHTML = '';
+    function renderGroupsAndAnalyze(coin, groups) {
+      const mySession = ++renderSession;
+      const content = document.getElementById('ap-content');
+      content.innerHTML = '';
 
+      if (!groups.length) {
+        const emptyEl = document.createElement('div');
+        emptyEl.className = 'ap-empty';
+        emptyEl.innerHTML = `
+          <div>No specific news events matched for ${esc(coin.name)} right now — running general market analysis…</div>
+          <div class="ap-loading group-loading" id="general-loading"><div class="spinner spinner-inv"></div> Analyzing…</div>
+          <div class="deep-result" id="general-result"></div>
+        `;
+        content.appendChild(emptyEl);
+        runGeneralAnalysis(coin, mySession);
+        return;
+      }
+
+      const lbl = document.createElement('div');
+      lbl.className = 'ap-section-label';
+      lbl.textContent = `${groups.length} news event${groups.length !== 1 ? 's' : ''} affecting ${coin.name}`;
+      content.appendChild(lbl);
+
+      groups.forEach((group, idx) => {
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        card.id = `group-card-${idx}`;
+        card.innerHTML = `
+          <div class="group-topic">${esc(group.topic)}</div>
+          <div class="group-meta">${group.totalSources || group.sources?.length || 0} sources · ${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
+          <div class="ap-loading group-loading" id="loading-${idx}"><div class="spinner spinner-inv"></div> Analyzing impact…</div>
+          <div class="deep-result" id="result-${idx}"></div>
+        `;
+        content.appendChild(card);
+        autoAnalyzeGroup(group, coin, idx, mySession);
+      });
+    }
+
+    async function autoAnalyzeGroup(group, coin, idx, mySession) {
+      const tf = TIMEFRAMES[currentTimeframe];
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            topic: `${group.topic} — impact on ${coinName} (${coinSymbol})`,
+            topic: `${group.topic} — impact on ${coin.name} (${coin.symbol}) ${tf.context}`,
             headlines: group.headlines || [],
             sources: group.sources || [],
             sourceGrades: group.sourceGrades || {},
             minGrade: 'medium'
           })
         });
+        if (renderSession !== mySession) return;
         const d = await res.json();
         if (d.error) throw new Error(d.error);
+        const loadingEl = document.getElementById(`loading-${idx}`);
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById(`result-${idx}`);
+        if (!resultEl) return;
         renderResult(resultEl, d);
-        btn.innerHTML = 'Re-analyze →';
+        const reBtn = document.createElement('button');
+        reBtn.className = 'btn-reanalyze';
+        reBtn.textContent = 'Re-analyze';
+        reBtn.onclick = () => {
+          reBtn.remove();
+          const loadDiv = document.createElement('div');
+          loadDiv.className = 'ap-loading group-loading';
+          loadDiv.id = `loading-${idx}`;
+          loadDiv.innerHTML = '<div class="spinner spinner-inv"></div> Re-analyzing…';
+          resultEl.innerHTML = '';
+          resultEl.parentNode.insertBefore(loadDiv, resultEl);
+          autoAnalyzeGroup(group, coin, idx, ++renderSession);
+        };
+        resultEl.appendChild(reBtn);
       } catch (err) {
-        resultEl.innerHTML = `<div class="ap-error">Analysis failed: ${esc(err.message)}</div>`;
-        btn.innerHTML = 'Retry →';
+        if (renderSession !== mySession) return;
+        const loadingEl = document.getElementById(`loading-${idx}`);
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById(`result-${idx}`);
+        if (resultEl) resultEl.innerHTML = `<div class="ap-error">Analysis failed: ${esc(err.message)}</div>`;
       }
-      btn.disabled = false;
     }
 
-    async function runGeneralAnalysis(coin, btn) {
-      btn.disabled = true;
-      btn.innerHTML = `<div class="spinner"></div> Analyzing…`;
-      const resultEl = document.getElementById('general-result');
-      resultEl.innerHTML = '';
-
+    async function runGeneralAnalysis(coin, mySession) {
+      const tf = TIMEFRAMES[currentTimeframe];
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook`,
+            topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
             headlines: [], sources: [], sourceGrades: {}, minGrade: 'all'
           })
         });
+        if (renderSession !== mySession) return;
         const d = await res.json();
         if (d.error) throw new Error(d.error);
+        const loadingEl = document.getElementById('general-loading');
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById('general-result');
+        if (!resultEl) return;
         renderResult(resultEl, d);
-        btn.innerHTML = 'Re-analyze →';
       } catch (err) {
-        resultEl.innerHTML = `<div class="ap-error">Analysis failed: ${esc(err.message)}</div>`;
-        btn.innerHTML = 'Retry →';
+        if (renderSession !== mySession) return;
+        const loadingEl = document.getElementById('general-loading');
+        if (loadingEl) loadingEl.remove();
+        const resultEl = document.getElementById('general-result');
+        if (resultEl) resultEl.innerHTML = `<div class="ap-error">Analysis failed: ${esc(err.message)}</div>`;
       }
-      btn.disabled = false;
     }
 
     function renderResult(el, d) {
@@ -467,7 +551,7 @@
       el.innerHTML = `
         <div class="ar-block">
           ${d.why_it_matters  ? `<div class="ar-row"><strong>Why it matters</strong>${esc(d.why_it_matters)}</div>`   : ''}
-          ${d.impact_timeframe? `<div class="ar-row"><strong>Timeframe</strong>${esc(d.impact_timeframe)}</div>`       : ''}
+          ${d.impact_timeframe? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
           ${d.crowd_summary   ? `<div class="ar-row"><strong>Crowd signal</strong>${esc(d.crowd_summary)}</div>`       : ''}
           ${hasEquities ? `
             <div class="ar-tickers">
