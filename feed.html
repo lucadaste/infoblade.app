@@ -173,7 +173,7 @@
       <li><a href="/feed.html" class="active">Stock Markets</a></li>
       <li><a href="/markets.html">Prediction Markets</a></li>
       <li><a href="/crypto.html">Crypto Markets</a></li>
-      <li><a href="/predictions.html">Accuracy History</a></li>
+      <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
     <div class="nav-buttons">
       <button class="nav-panel-btn" id="watchlist-btn" onclick="togglePanel('watchlist')">☆ Watchlist</button>
@@ -325,6 +325,10 @@
   </footer>
 
   <script>
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     const titleMap = {
       'today': "Today's market-moving events",
       '3days': "Market-moving events — last 3 days",
@@ -517,37 +521,37 @@
       card.dataset.confScore = confScore;
       card.innerHTML = `
         ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
-        <div class="event-topic">${group.topic}</div>
-        <div class="event-sources">Reported by: <span>${sourceLine}</span></div>
+        <div class="event-topic">${esc(group.topic)}</div>
+        <div class="event-sources">Reported by: <span>${esc(sourceLine)}</span></div>
         <div class="chain-row">
           <div class="chain-label">Why it matters</div>
-          <div class="chain-content">${analysis.why_it_matters}</div>
+          <div class="chain-content">${esc(analysis.why_it_matters)}</div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Impact window</div>
-          <div class="chain-content"><span class="impact-badge">${analysis.impact_timeframe || impact}</span></div>
+          <div class="chain-content"><span class="impact-badge">${esc(analysis.impact_timeframe || impact)}</span></div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Sectors in play</div>
           <div class="chain-content">
             <div class="sectors">
-              ${(analysis.sectors?.positive || []).map(s => `<span class="sector-up">▲ ${s}</span>`).join('')}
-              ${(analysis.sectors?.negative || []).map(s => `<span class="sector-down">▼ ${s}</span>`).join('')}
+              ${(analysis.sectors?.positive || []).map(s => `<span class="sector-up">▲ ${esc(s)}</span>`).join('')}
+              ${(analysis.sectors?.negative || []).map(s => `<span class="sector-down">▼ ${esc(s)}</span>`).join('')}
             </div>
           </div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Beneficiaries</div>
           <div class="chain-content">
-            ${analysis.winners?.explanation || ''}
-            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            ${esc(analysis.winners?.explanation || '')}
+            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${esc(t)}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
           </div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Likely losers</div>
           <div class="chain-content">
-            ${analysis.losers?.explanation || ''}
-            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${t}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            ${esc(analysis.losers?.explanation || '')}
+            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${esc(t)}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
           </div>
         </div>
         <div class="chain-row">

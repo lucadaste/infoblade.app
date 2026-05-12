@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InvestmentInformatics.AI — Track Record</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --red: #ff5252; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+    nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
+    .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
+    .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a.active { color: var(--ink); font-weight: 500; }
+    @media (max-width: 700px) { nav { padding: 16px 20px; } .nav-links { gap: 18px; margin-left: 20px; } }
+
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; margin-bottom: 10px; }
+    .hero h1 em { font-style: normal; background: var(--accent); color: #111; padding: 1px 8px; }
+    .hero-sub { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.7; font-weight: 300; }
+    @media (max-width: 700px) { .hero { padding: 28px 20px 24px; } }
+
+    .main { padding: 40px 48px; max-width: 1200px; }
+    @media (max-width: 700px) { .main { padding: 24px 20px; } }
+
+    /* Summary stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 40px; }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 28px 24px; }
+    .stat-card:first-child { border-radius: 10px 0 0 10px; }
+    .stat-card:last-child  { border-radius: 0 10px 10px 0; }
+    .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .stat-value { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 40px; letter-spacing: -2px; line-height: 1; }
+    .stat-value.green { color: var(--accent); }
+    .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* Two-column layout */
+    .cols { display: grid; grid-template-columns: 1fr 360px; gap: 32px; }
+    @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+
+    /* Section header */
+    .section-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 18px; letter-spacing: -0.3px; }
+
+    /* Accuracy chart */
+    .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; }
+    .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
+    .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .chart-bar-outer { width: 100%; background: var(--border); border-radius: 3px 3px 0 0; position: relative; display: flex; align-items: flex-end; }
+    .chart-bar-inner { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; transition: height 0.4s ease; }
+    .chart-bar-inner.dim { background: #2a5c3a; }
+    .chart-month { font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; }
+    .chart-pct { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); }
+    .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
+
+    /* Recent predictions list */
+    .pred-list { display: flex; flex-direction: column; gap: 10px; }
+    .pred-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+    .pred-topic { font-size: 14px; font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
+    .pred-meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; }
+    .pred-tickers { display: flex; flex-wrap: wrap; gap: 4px; }
+    .pred-ticker { font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+    .pred-ticker.win  { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
+    .pred-ticker.lose { background: rgba(255,82,82,0.10); color: var(--red); border: 1px solid rgba(255,82,82,0.2); }
+    .pred-badge { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .pred-badge.correct   { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); }
+    .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+    .pred-badge.pending   { background: rgba(136,136,136,0.12); color: var(--muted); border: 1px solid var(--border); }
+
+    /* Top tickers sidebar */
+    .ticker-table { display: flex; flex-direction: column; gap: 8px; }
+    .ticker-row { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+    .ticker-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
+    .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
+    .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
+    .ticker-pct { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
+    .ticker-count { font-size: 11px; color: var(--muted); min-width: 32px; text-align: right; }
+
+    /* Loading skeleton */
+    .skeleton { background: var(--border); border-radius: 4px; animation: shimmer 1.4s ease infinite; }
+    @keyframes shimmer { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+
+    .no-data { color: var(--muted); font-size: 14px; padding: 32px 0; text-align: center; }
+    .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
+
+    .disclaimer { font-size: 12px; color: var(--muted); margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="index.html"><span>II</span> InvestmentInformatics</a>
+  <ul class="nav-links">
+    <li><a href="feed.html">Stock Markets</a></li>
+    <li><a href="markets.html">Prediction Markets</a></li>
+    <li><a href="crypto.html">Crypto</a></li>
+    <li><a href="accuracy.html" class="active">Track Record</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Live accuracy history</div>
+  <h1>Our <em>Track Record</em></h1>
+  <p class="hero-sub">Every market prediction this platform makes is logged at the moment it's generated, then automatically validated against real price data when the timeframe expires. No retroactive edits. No cherry-picking.</p>
+</div>
+
+<div class="main">
+  <!-- Stats -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Correct Calls</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">validated predictions</div></div>
+    <div class="stat-card"><div class="stat-label">Total Validated</div><div class="stat-value skeleton" id="stat-total" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">predictions resolved</div></div>
+    <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">still in timeframe</div></div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <!-- Accuracy over time -->
+      <div class="chart-wrap">
+        <div class="section-title">Accuracy Over Time</div>
+        <div id="chart-area"><div class="chart-empty">Loading…</div></div>
+      </div>
+
+      <!-- Recent predictions -->
+      <div class="section-title">Recent Predictions</div>
+      <div id="pred-list" class="pred-list">
+        <div class="no-data">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Sidebar: top tickers -->
+    <div>
+      <div class="section-title">Top Tickers by Win Rate</div>
+      <div id="ticker-table" class="ticker-table">
+        <div class="no-data">Loading…</div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-top:14px;">Min. 3 predictions to appear.</p>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    Predictions are generated algorithmically based on live news headlines and are not financial advice.
+    Accuracy is measured by whether winner/loser tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
+    A prediction is correct if ≥ 60% of its tickers moved as predicted.
+    Historical accuracy does not guarantee future performance.
+  </p>
+</div>
+
+<script>
+(async function () {
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmt(n) { return n == null ? '—' : n; }
+
+  function renderStats(s) {
+    const acc = document.getElementById('stat-accuracy');
+    acc.classList.remove('skeleton');
+    acc.style.height = acc.style.width = 'auto';
+    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '—';
+
+    const correct = document.getElementById('stat-correct');
+    correct.classList.remove('skeleton');
+    correct.style.height = correct.style.width = 'auto';
+    correct.textContent = fmt(s.correct);
+
+    const total = document.getElementById('stat-total');
+    total.classList.remove('skeleton');
+    total.style.height = total.style.width = 'auto';
+    total.textContent = fmt(s.total);
+
+    const pending = document.getElementById('stat-pending');
+    pending.classList.remove('skeleton');
+    pending.style.height = pending.style.width = 'auto';
+    pending.textContent = fmt(s.pending);
+
+    const sub = document.getElementById('stat-sub-accuracy');
+    sub.textContent = s.total > 0 ? `${s.correct} of ${s.total} predictions` : 'No validated predictions yet';
+  }
+
+  function renderChart(timeline) {
+    const area = document.getElementById('chart-area');
+    if (!timeline || !timeline.length) {
+      area.innerHTML = '<div class="chart-empty">No validated predictions yet — check back once timeframes expire.</div>';
+      return;
+    }
+    const maxPct = 100;
+    area.innerHTML = `
+      <div class="chart-bars">
+        ${timeline.map(t => {
+          const barH = Math.max(4, Math.round(t.accuracy / maxPct * 100));
+          const cls  = t.accuracy >= 60 ? '' : 'dim';
+          const label = t.month; // "YYYY-MM"
+          return `
+            <div class="chart-col" title="${t.month}: ${t.accuracy}% (${t.correct}/${t.total})">
+              <div class="chart-pct">${t.accuracy}%</div>
+              <div class="chart-bar-outer" style="height:${barH}px">
+                <div class="chart-bar-inner ${cls}" style="height:100%"></div>
+              </div>
+              <div class="chart-month">${label.slice(5)}</div>
+            </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:right">${timeline.reduce((a,t)=>a+t.total,0)} validated predictions across ${timeline.length} month${timeline.length===1?'':'s'}</div>
+    `;
+  }
+
+  function renderPredictions(recent) {
+    const el = document.getElementById('pred-list');
+    if (!recent || !recent.length) {
+      el.innerHTML = '<div class="no-data">No predictions logged yet. Run an analysis on the Stock Markets page to start building history.</div>';
+      return;
+    }
+    el.innerHTML = recent.map(p => {
+      const badgeClass = p.correct === true ? 'correct' : p.correct === false ? 'incorrect' : 'pending';
+      const badgeText  = p.correct === true ? '✓ Correct' : p.correct === false ? '✗ Incorrect' : 'Pending';
+      const date = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const wins  = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">${t}</span>`).join('');
+      const loses = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">${t}</span>`).join('');
+      const validDate = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const tf = p.impactTimeframe ? `<span>${p.impactTimeframe}</span>` : '';
+      const conf = p.confidence ? `<span>★ ${p.confidence.split('—')[0].trim()}</span>` : '';
+      return `
+        <div class="pred-card">
+          <div>
+            <div class="pred-topic">${p.topic}</div>
+            <div class="pred-tickers">${wins}${loses}</div>
+            <div class="pred-meta" style="margin-top:8px">
+              <span>${date}</span>
+              ${validDate ? `<span>→ ${validDate}</span>` : ''}
+              ${tf}${conf}
+            </div>
+          </div>
+          <div><span class="pred-badge ${badgeClass}">${badgeText}</span></div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderTickers(topTickers) {
+    const el = document.getElementById('ticker-table');
+    if (!topTickers || !topTickers.length) {
+      el.innerHTML = '<div class="no-data">Need ≥ 3 predictions per ticker.</div>';
+      return;
+    }
+    el.innerHTML = topTickers.map(t => `
+      <div class="ticker-row">
+        <div class="ticker-sym">${t.ticker}</div>
+        <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%"></div></div>
+        <div class="ticker-pct">${t.winRate}%</div>
+        <div class="ticker-count">${t.total}x</div>
+      </div>`).join('');
+  }
+
+  try {
+    const res  = await fetch('/api/predictions');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    renderStats(data.summary);
+    renderChart(data.timeline);
+    renderPredictions(data.recent);
+    renderTickers(data.topTickers);
+  } catch (err) {
+    ['stat-accuracy','stat-correct','stat-total','stat-pending'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('skeleton');
+      el.textContent = '—';
+    });
+    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc(err.message)}</div>`;
+    document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc(err.message)}</div>`;
+    document.getElementById('ticker-table').innerHTML = '';
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,30 +1,28 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
-const _dir = path.dirname(fileURLToPath(import.meta.url));
-const predictionPath = path.resolve(_dir, '../data/prediction-log.json');
-const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
-
-async function readJSON(filePath, fallback) {
-  try {
-    return JSON.parse(await fs.readFile(filePath, 'utf-8') || JSON.stringify(fallback));
-  } catch (e) {
-    if (e.code === 'ENOENT') return fallback;
-    throw e;
-  }
+function _getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
+  return createClient(url, key);
 }
 
-async function writeJSON(filePath, data) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+function _setCors(res) {
+  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
-async function fetchCurrentPrices(tickers) {
+async function _fetchCurrentPrices(tickers) {
   if (!tickers.length) return {};
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=regularMarketPrice`;
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
+    clearTimeout(timer);
     const data = await res.json();
     const prices = {};
     for (const q of data?.quoteResponse?.result || []) {
@@ -34,119 +32,116 @@ async function fetchCurrentPrices(tickers) {
   } catch (_) { return {}; }
 }
 
-// A ticker direction is "correct" if it moved at least 0.5% the predicted way.
-// Returns { correct, incorrect, neutral } counts.
-function scoreDirections(winnerTickers, loserTickers, baseline, current) {
+// A ticker direction is correct if it moved >= 0.5% the predicted way.
+function _scoreDirections(winnerTickers, loserTickers, baseline, current) {
   let correct = 0, incorrect = 0, neutral = 0;
-
   for (const t of winnerTickers) {
     if (!baseline[t] || !current[t]) continue;
-    const change = (current[t] - baseline[t]) / baseline[t];
-    if (change > 0.005) correct++;
-    else if (change < -0.005) incorrect++;
+    const chg = (current[t] - baseline[t]) / baseline[t];
+    if (chg > 0.005) correct++;
+    else if (chg < -0.005) incorrect++;
     else neutral++;
   }
-
   for (const t of loserTickers) {
     if (!baseline[t] || !current[t]) continue;
-    const change = (current[t] - baseline[t]) / baseline[t];
-    if (change < -0.005) correct++;
-    else if (change > 0.005) incorrect++;
+    const chg = (current[t] - baseline[t]) / baseline[t];
+    if (chg < -0.005) correct++;
+    else if (chg > 0.005) incorrect++;
     else neutral++;
   }
-
   return { correct, incorrect, neutral };
 }
 
-function applyOutcomeToReputation(reputation, sources, correct) {
-  const updated = { ...reputation };
-  for (const source of sources) {
-    if (!updated[source]) updated[source] = { attempts: 0, correct: 0 };
-    updated[source] = {
-      attempts: updated[source].attempts + 1,
-      correct: updated[source].correct + (correct ? 1 : 0)
-    };
-  }
-  return updated;
-}
-
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+
+  let supabase;
+  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+
+  // 5 attempts per 15 minutes on this protected endpoint
   try {
-    const entries = await readJSON(predictionPath, []);
+    const rlKey = `${ip}:validate`;
+    const now = new Date();
+    const windowStart = new Date(now - 900000); // 15 min
+    const { data: rlData } = await supabase.from('rate_limits').select('count, window_start').eq('key', rlKey).maybeSingle();
+    if (rlData && new Date(rlData.window_start) >= windowStart && rlData.count >= 5) {
+      return res.status(429).json({ error: 'Too many requests — try again in 15 minutes.' });
+    }
+    if (!rlData || new Date(rlData.window_start) < windowStart) {
+      await supabase.from('rate_limits').upsert({ key: rlKey, count: 1, window_start: now.toISOString() });
+    } else {
+      await supabase.from('rate_limits').update({ count: rlData.count + 1 }).eq('key', rlKey);
+    }
+  } catch (_) { /* fail open if rate limit table unavailable */ }
+
+  // Secret check — after rate limit so brute-force is gated first
+  const secret = req.query.secret || req.headers['x-validate-secret'];
+  if (process.env.VALIDATE_SECRET && secret !== process.env.VALIDATE_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
     const now = new Date();
 
-    // Only process predictions that are unlabeled and past their validation date
-    const pending = entries.filter(e =>
-      e.correct === null &&
-      e.validationDate &&
-      new Date(e.validationDate) <= now &&
-      (e.winnerTickers?.length || e.loserTickers?.length) &&
-      e.baselinePrices &&
-      Object.keys(e.baselinePrices).length > 0
+    // Fetch predictions past their validation date with no outcome yet
+    const { data: pending, error: fetchErr } = await supabase
+      .from('predictions')
+      .select('id, topic, sources, winner_tickers, loser_tickers, baseline_prices, validation_date')
+      .is('correct', null)
+      .lte('validation_date', now.toISOString())
+      .not('baseline_prices', 'is', null);
+
+    if (fetchErr) throw fetchErr;
+
+    const ready = (pending || []).filter(p =>
+      (p.winner_tickers?.length || p.loser_tickers?.length) &&
+      p.baseline_prices &&
+      Object.keys(p.baseline_prices).length > 0
     );
 
-    if (!pending.length) {
-      return res.status(200).json({ validated: 0, message: 'No predictions ready for validation' });
-    }
+    if (!ready.length) return res.status(200).json({ validated: 0, message: 'No predictions ready for validation' });
 
-    // Collect all unique tickers across pending predictions
-    const allTickers = [...new Set(
-      pending.flatMap(e => [...(e.winnerTickers || []), ...(e.loserTickers || [])])
-    )];
+    // Fetch current prices for all relevant tickers at once
+    const allTickers = [...new Set(ready.flatMap(p => [...(p.winner_tickers || []), ...(p.loser_tickers || [])]))];
+    const currentPrices = await _fetchCurrentPrices(allTickers);
 
-    const currentPrices = await fetchCurrentPrices(allTickers);
-    let reputation = await readJSON(reputationPath, {});
-
-    let validated = 0;
+    let validatedCount = 0;
     const results = [];
 
-    for (const entry of pending) {
-      const scores = scoreDirections(
-        entry.winnerTickers || [],
-        entry.loserTickers || [],
-        entry.baselinePrices,
-        currentPrices
-      );
-
+    for (const p of ready) {
+      const scores = _scoreDirections(p.winner_tickers || [], p.loser_tickers || [], p.baseline_prices, currentPrices);
       const total = scores.correct + scores.incorrect;
-      if (total === 0) continue; // no priceable tickers, skip
+      if (total === 0) continue;
 
       const correct = scores.correct / total >= 0.6;
+      const relevantPrices = Object.fromEntries(
+        Object.entries(currentPrices).filter(([t]) => allTickers.includes(t) && (p.winner_tickers || []).concat(p.loser_tickers || []).includes(t))
+      );
 
-      // Write outcome back into the entry in place
-      const idx = entries.findIndex(e => e.id === entry.id);
-      if (idx === -1) continue;
+      const { error: updateErr } = await supabase
+        .from('predictions')
+        .update({
+          correct,
+          validated_at: now.toISOString(),
+          actual_prices: relevantPrices,
+          notes: { scores, method: 'auto' }
+        })
+        .eq('id', p.id);
 
-      entries[idx].correct = correct;
-      entries[idx].validationMethod = 'auto';
-      entries[idx].actualOutcome = {
-        scores,
-        currentPrices: Object.fromEntries(
-          Object.entries(currentPrices).filter(([t]) =>
-            (entry.winnerTickers || []).includes(t) || (entry.loserTickers || []).includes(t)
-          )
-        ),
-        validatedAt: now.toISOString()
-      };
+      if (updateErr) { console.error('Update error for', p.id, updateErr.message); continue; }
 
-      reputation = applyOutcomeToReputation(reputation, entry.sources || [], correct);
-      validated++;
-      results.push({ id: entry.id, topic: entry.topic, correct, scores });
+      validatedCount++;
+      results.push({ id: p.id, topic: p.topic, correct, scores });
     }
 
-    await writeJSON(predictionPath, entries);
-    await writeJSON(reputationPath, reputation);
-
-    return res.status(200).json({ validated, results });
+    return res.status(200).json({ validated: validatedCount, results });
 
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[validate]', err.message);
+    return res.status(500).json({ error: 'Validation run failed' });
   }
 }

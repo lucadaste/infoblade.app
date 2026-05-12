@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 // Tags are intentionally exclusive — no tag appears in more than one category
 const CATEGORY_TAGS = {
   sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
@@ -7,18 +9,56 @@ const CATEGORY_TAGS = {
   celebrity:     ['celebrity', 'pop-culture', 'culture']
 };
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_TAGS));
+
+function _setCors(res) {
+  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
+}
 
+function _getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+async function _checkRateLimit(supabase, ip) {
+  if (!supabase) return true;
+  const now = new Date();
+  const windowStart = new Date(now - 60000);
+  const key = `${ip}:markets`;
+  try {
+    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
+    if (!data || new Date(data.window_start) < windowStart) {
+      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
+      return true;
+    }
+    if (data.count >= 30) return false;
+    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
+    return true;
+  } catch (_) { return true; }
+}
+
+export default async function handler(req, res) {
+  _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { category = 'sports', maxDays = '365', minDays = '0' } = req.query;
-  const targetTags = CATEGORY_TAGS[category] || CATEGORY_TAGS.sports;
-  const daysCap = Math.min(Math.max(parseInt(maxDays) || 365, 1), 365);
-  const daysMin = Math.max(parseInt(minDays) || 0, 0);
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const supabase = _getSupabase();
+  const allowed = await _checkRateLimit(supabase, ip);
+  if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+
+  const rawCategory = req.query.category;
+  const category = VALID_CATEGORIES.has(rawCategory) ? rawCategory : 'sports';
+  const daysCap = Math.min(Math.max(parseInt(req.query.maxDays) || 365, 1), 365);
+  const daysMin = Math.min(Math.max(parseInt(req.query.minDays) || 0, 0), daysCap);
+
+  const targetTags = CATEGORY_TAGS[category];
 
   try {
     const now = new Date();
@@ -46,11 +86,9 @@ export default async function handler(req, res) {
 
       if (!primary) return null;
 
-      // use primary market's endDate first — event.endDate is often null even when the market has one
       const endDate = primary.endDate || event.endDate || null;
       const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
 
-      // enforce timeframe window now that we have the real endDate
       if (daysLeft !== null && (daysLeft > daysCap || daysLeft < daysMin)) return null;
 
       let yesPrice = null;
@@ -68,8 +106,8 @@ export default async function handler(req, res) {
       return {
         id: event.id,
         slug: event.slug,
-        title: event.title,
-        question: primary.question || event.title,
+        title: String(event.title || '').slice(0, 300),
+        question: String(primary.question || event.title || '').slice(0, 300),
         yesPrice,
         volume24h,
         volumeTotal,
@@ -81,6 +119,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ markets, category });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[markets]', err.message);
+    return res.status(500).json({ error: 'Failed to load markets' });
   }
 }

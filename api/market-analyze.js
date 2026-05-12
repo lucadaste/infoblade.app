@@ -1,14 +1,10 @@
+import { createClient } from '@supabase/supabase-js';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const _dir = path.dirname(fileURLToPath(import.meta.url));
 const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
-
-async function readReputation() {
-  try { return JSON.parse(await fs.readFile(reputationPath, 'utf-8') || '{}'); }
-  catch (e) { if (e.code === 'ENOENT') return {}; throw e; }
-}
 
 const SOURCE_QUALITY = {
   // Wire / Financial
@@ -34,6 +30,43 @@ const SOURCE_QUALITY = {
   'National Enquirer': 'Low', 'OK Magazine': 'Low'
 };
 
+function _setCors(res) {
+  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
+}
+
+function _getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+async function _checkRateLimit(supabase, ip) {
+  if (!supabase) return true;
+  const now = new Date();
+  const windowStart = new Date(now - 60000);
+  const key = `${ip}:market-analyze`;
+  try {
+    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
+    if (!data || new Date(data.window_start) < windowStart) {
+      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
+      return true;
+    }
+    if (data.count >= 20) return false;
+    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
+    return true;
+  } catch (_) { return true; }
+}
+
+function _sanitize(str, maxLen = 300) {
+  if (typeof str !== 'string') return '';
+  return str.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, maxLen);
+}
+
 function getSourceGrade(source) {
   const norm = source.toLowerCase();
   for (const key of Object.keys(SOURCE_QUALITY)) {
@@ -52,16 +85,30 @@ function buildSearchQuery(question) {
     .join(' ');
 }
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+async function readReputation() {
+  try { return JSON.parse(await fs.readFile(reputationPath, 'utf-8') || '{}'); }
+  catch (e) { return {}; }
+}
 
+export default async function handler(req, res) {
+  _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { question, currentOdds } = req.body;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const supabase = _getSupabase();
+  const allowed = await _checkRateLimit(supabase, ip);
+  if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+
+  const rawQuestion = req.body?.question;
+  const rawOdds = req.body?.currentOdds;
+
+  const question = _sanitize(rawQuestion, 300);
   if (!question) return res.status(400).json({ error: 'No question provided' });
+
+  const currentOdds = (typeof rawOdds === 'number' && rawOdds >= 0 && rawOdds <= 100)
+    ? Math.round(rawOdds)
+    : undefined;
 
   const [searchQuery, reputation] = [buildSearchQuery(question), await readReputation()];
 
@@ -150,13 +197,17 @@ Respond ONLY with valid JSON, no markdown:
     });
 
     const data = await apiRes.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    if (data.error) {
+      console.error('[market-analyze] Anthropic error:', data.error.message);
+      return res.status(500).json({ error: 'Analysis failed' });
+    }
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     const analysis = JSON.parse(raw);
 
     return res.status(200).json({ ...analysis, articlesFound: items.length, searchQuery });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[market-analyze]', err.message);
+    return res.status(500).json({ error: 'Analysis failed' });
   }
 }

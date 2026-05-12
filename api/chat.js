@@ -1,3 +1,29 @@
+import { createClient } from '@supabase/supabase-js';
+
+function _getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+async function _checkRateLimit(supabase, ip) {
+  if (!supabase) return true;
+  const now = new Date();
+  const windowStart = new Date(now - 60000);
+  const key = `${ip}:chat`;
+  try {
+    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
+    if (!data || new Date(data.window_start) < windowStart) {
+      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
+      return true;
+    }
+    if (data.count >= 30) return false;
+    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
+    return true;
+  } catch (_) { return true; }
+}
+
 const PAGE_DESCRIPTIONS = {
   'stock-markets': 'The user is on the Stock Markets page, which analyzes US market-moving news events. It groups headlines by topic, rates predicted market impact, identifies winning/losing US-listed stocks and ETFs, and assigns a 1-5 star confidence rating.',
   'prediction-markets': 'The user is on the Prediction Markets page, which shows live Polymarket odds for financial and economic events. It only shows markets with 20–80% YES odds (the genuine uncertainty zone). Volume figures indicate how much real money is behind each market.',
@@ -81,12 +107,19 @@ function isMarketQuestion(text) {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const supabase = _getSupabase();
+  const allowed = await _checkRateLimit(supabase, ip);
+  if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const { messages, pageContext } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -110,7 +143,7 @@ export default async function handler(req, res) {
 
   const trimmed = messages.slice(-12).map(m => ({
     role: m.role === 'user' ? 'user' : 'assistant',
-    content: String(m.content).slice(0, 2000)
+    content: String(m.content).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, 2000)
   }));
 
   try {
@@ -136,6 +169,7 @@ export default async function handler(req, res) {
     const reply = data.content?.[0]?.text || '';
     return res.status(200).json({ reply });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[chat]', err.message);
+    return res.status(500).json({ error: 'Chat request failed' });
   }
 }

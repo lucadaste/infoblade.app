@@ -1,128 +1,102 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
-const _dir = path.dirname(fileURLToPath(import.meta.url));
-const storePath = path.resolve(_dir, '../data/prediction-log.json');
-const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
-
-async function readStore() {
-  try {
-    const file = await fs.readFile(storePath, 'utf-8');
-    return JSON.parse(file || '[]');
-  } catch (err) {
-    if (err.code === 'ENOENT') return [];
-    throw err;
-  }
+function _getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
+  return createClient(url, key);
 }
 
-async function writeStore(entries) {
-  await fs.mkdir(path.dirname(storePath), { recursive: true });
-  await fs.writeFile(storePath, JSON.stringify(entries, null, 2), 'utf-8');
-}
-
-async function readReputation() {
-  try {
-    return JSON.parse(await fs.readFile(reputationPath, 'utf-8') || '{}');
-  } catch (err) {
-    if (err.code === 'ENOENT') return {};
-    throw err;
-  }
-}
-
-async function writeReputation(data) {
-  await fs.mkdir(path.dirname(reputationPath), { recursive: true });
-  await fs.writeFile(reputationPath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-function applyOutcomeToReputation(reputation, sources, correct) {
-  const updated = { ...reputation };
-  for (const source of sources) {
-    if (!updated[source]) updated[source] = { attempts: 0, correct: 0 };
-    updated[source] = {
-      attempts: updated[source].attempts + 1,
-      correct: updated[source].correct + (correct ? 1 : 0)
-    };
-  }
-  return updated;
-}
-
-function buildRecord(body) {
-  return {
-    id: `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-    createdAt: new Date().toISOString(),
-    type: body.type || null,
-    topic: body.topic || null,
-    headlines: body.headlines || [],
-    sources: body.sources || [],
-    sourceGrades: body.sourceGrades || {},
-    minGrade: body.minGrade || 'medium',
-    impactTimeframe: body.impactTimeframe || null,
-    analysis: body.analysis || null,
-    // prediction-market specific
-    lean: body.lean || null,
-    lean_confidence: body.lean_confidence || null,
-    marketOddsAtTime: body.marketOddsAtTime ?? null,
-    marketSlug: body.marketSlug || null,
-    signal: body.signal || null,
-    daysLeft: body.daysLeft ?? null,
-    resolvedOutcome: body.resolvedOutcome || null,
-    actualOutcome: body.actualOutcome || null,
-    correct: typeof body.correct === 'boolean' ? body.correct : null,
-    notes: body.notes || null
-  };
+function _setCors(res) {
+  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+  _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  let supabase;
+  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
 
   try {
-    if (req.method === 'GET') {
-      const entries = await readStore();
-      if (req.query?.withReputation === '1') {
-        const reputation = await readReputation();
-        return res.status(200).json({ entries, reputation });
+    // Validated predictions
+    const { data: validated, error: vErr } = await supabase
+      .from('predictions')
+      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices')
+      .not('correct', 'is', null)
+      .order('created_at', { ascending: false });
+    if (vErr) throw vErr;
+
+    // Count of pending predictions
+    const { count: pending, error: pErr } = await supabase
+      .from('predictions')
+      .select('id', { count: 'exact', head: true })
+      .is('correct', null);
+    if (pErr) throw pErr;
+
+    const total    = validated?.length ?? 0;
+    const correct  = validated?.filter(p => p.correct === true).length ?? 0;
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : null;
+
+    // Most recent 20 predictions (any state)
+    const { data: recent, error: rErr } = await supabase
+      .from('predictions')
+      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (rErr) throw rErr;
+
+    // Accuracy by month
+    const byMonth = {};
+    for (const p of validated ?? []) {
+      const month = p.created_at.slice(0, 7); // "YYYY-MM"
+      if (!byMonth[month]) byMonth[month] = { total: 0, correct: 0 };
+      byMonth[month].total++;
+      if (p.correct) byMonth[month].correct++;
+    }
+    const timeline = Object.entries(byMonth)
+      .map(([month, s]) => ({ month, total: s.total, correct: s.correct, accuracy: Math.round(s.correct / s.total * 100) }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    // Top tickers by win rate (min 3 appearances)
+    const tickerStats = {};
+    for (const p of validated ?? []) {
+      for (const t of p.winner_tickers || []) {
+        if (!tickerStats[t]) tickerStats[t] = { wins: 0, total: 0 };
+        tickerStats[t].total++;
+        if (p.correct) tickerStats[t].wins++;
       }
-      return res.status(200).json({ entries });
     }
+    const topTickers = Object.entries(tickerStats)
+      .filter(([, s]) => s.total >= 3)
+      .map(([ticker, s]) => ({ ticker, winRate: Math.round(s.wins / s.total * 100), total: s.total }))
+      .sort((a, b) => b.winRate - a.winRate)
+      .slice(0, 10);
 
-    if (req.method === 'POST') {
-      const body = req.body;
-      const record = buildRecord(body);
-      const entries = await readStore();
-      entries.push(record);
-      await writeStore(entries);
-      return res.status(201).json({ record });
-    }
+    return res.status(200).json({
+      summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0 },
+      timeline,
+      topTickers,
+      recent: (recent ?? []).map(p => ({
+        id: p.id,
+        topic: p.topic,
+        createdAt: p.created_at,
+        validationDate: p.validation_date,
+        winnerTickers: p.winner_tickers,
+        loserTickers: p.loser_tickers,
+        correct: p.correct,
+        confidence: p.analysis?.confidence || null,
+        impactTimeframe: p.analysis?.impact_timeframe || null,
+      }))
+    });
 
-    if (req.method === 'PATCH') {
-      const { id, actualOutcome, correct, notes } = req.body;
-      if (!id) return res.status(400).json({ error: 'Missing record id' });
-      const entries = await readStore();
-      const index = entries.findIndex(entry => entry.id === id);
-      if (index === -1) return res.status(404).json({ error: 'Record not found' });
-
-      const wasAlreadyLabeled = typeof entries[index].correct === 'boolean';
-      if (actualOutcome !== undefined) entries[index].actualOutcome = actualOutcome;
-      if (correct !== undefined) entries[index].correct = correct;
-      if (notes !== undefined) entries[index].notes = notes;
-      await writeStore(entries);
-
-      if (typeof correct === 'boolean' && !wasAlreadyLabeled) {
-        const reputation = await readReputation();
-        const sources = entries[index].sources || [];
-        await writeReputation(applyOutcomeToReputation(reputation, sources, correct));
-      }
-
-      return res.status(200).json({ record: entries[index] });
-    }
-
-    return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    console.error('[predictions]', err.message);
+    return res.status(500).json({ error: 'Failed to load predictions' });
   }
 }

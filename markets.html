@@ -123,7 +123,7 @@
       <li><a href="/feed.html">Stock Markets</a></li>
       <li><a href="/markets.html" class="active">Prediction Markets</a></li>
       <li><a href="/crypto.html">Crypto Markets</a></li>
-      <li><a href="/predictions.html">Accuracy History</a></li>
+      <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
   </nav>
 
@@ -164,6 +164,10 @@
   </footer>
 
   <script>
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     const CATEGORY_TIMEFRAMES = {
       sports:        { options: [{days:1,min:0,label:'1 day'},{days:7,min:3,label:'1 week'},{days:30,min:11,label:'1 month'},{days:90,min:34,label:'3 months'},{days:180,min:68,label:'6 months'}], default: 30 },
       politics:      { options: [{days:7,min:3,label:'7 days'},{days:30,min:11,label:'30 days'},{days:90,min:34,label:'3 months'},{days:365,min:137,label:'1 year'}], default: 365 },
@@ -246,15 +250,15 @@
         const block = document.createElement('div');
         block.className = 'analysis-block';
         block.innerHTML = `
-          <div class="public-lean">${data.crowd_summary || `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
+          <div class="public-lean">${data.crowd_summary ? esc(data.crowd_summary) : `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
           <div class="analysis-header">
-            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${data.lean} — ${data.lean_confidence} confidence</span>
-            <span class="signal-badge ${signalBadgeClass(data.signal)}">${data.signal}</span>
+            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)} — ${esc(data.lean_confidence)} confidence</span>
+            <span class="signal-badge ${signalBadgeClass(data.signal)}">${esc(data.signal)}</span>
           </div>
-          <div class="analysis-reasoning">${data.reasoning}</div>
-          ${data.signal_detail ? `<div class="analysis-signal-detail">${data.signal_detail}</div>` : ''}
-          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Sources:</strong> ${data.key_sources.join(' · ')}</div>` : ''}
-          ${data.articlesFound !== undefined ? `<div class="analysis-sources">${data.articlesFound} articles analyzed</div>` : ''}
+          <div class="analysis-reasoning">${esc(data.reasoning)}</div>
+          ${data.signal_detail ? `<div class="analysis-signal-detail">${esc(data.signal_detail)}</div>` : ''}
+          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Sources:</strong> ${data.key_sources.map(esc).join(' · ')}</div>` : ''}
+          ${data.articlesFound !== undefined ? `<div class="analysis-sources">${esc(String(data.articlesFound))} articles analyzed</div>` : ''}
         `;
         cardEl.appendChild(block);
         btn.innerHTML = 'Re-analyze';
@@ -281,7 +285,7 @@
       } catch (err) {
         const block = document.createElement('div');
         block.className = 'analysis-block';
-        block.innerHTML = `<div class="analysis-error">Analysis failed: ${err.message}</div>`;
+        block.innerHTML = `<div class="analysis-error">Analysis failed: ${esc(err.message)}</div>`;
         cardEl.appendChild(block);
         btn.innerHTML = 'Retry';
       }
@@ -301,7 +305,7 @@
 
       card.innerHTML = `
         <div class="market-card-top">
-          <div class="market-question">${market.question}</div>
+          <div class="market-question">${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
             <div class="odds-label">YES odds</div>
@@ -347,7 +351,7 @@
         grid.innerHTML = `
           <div class="empty-state">
             <h3>Could not load markets</h3>
-            <p>${err.message}</p>
+            <p>${esc(err.message)}</p>
           </div>`;
       }
     }
