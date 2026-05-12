@@ -35,7 +35,7 @@
       padding: 14px 0 10px;
       gap: 10px;
       border-radius: 10px 0 0 10px;
-      border: 1px solid #d0d0d0;
+      border: 1.5px solid #00e676;
       border-right: none;
       box-shadow: -3px 2px 12px rgba(0,0,0,0.12);
       cursor: pointer;
@@ -257,11 +257,8 @@
   const bar = document.createElement('div');
   bar.id = 'ii-ai-bar';
   bar.innerHTML = `
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;opacity:0.7">
-      <path d="M10 2C5.58 2 2 5.13 2 9c0 1.9.8 3.63 2.1 4.9L3 18l4.5-1.4C8.6 17.2 9.28 17.4 10 17.4c4.42 0 8-3.13 8-7s-3.58-7.4-8-7.4z" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>
-      <circle cx="7" cy="9" r="1" fill="#333"/>
-      <circle cx="10" cy="9" r="1" fill="#333"/>
-      <circle cx="13" cy="9" r="1" fill="#333"/>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div id="ii-ai-label">Live Chat</div>
     <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
