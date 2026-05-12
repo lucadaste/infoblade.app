@@ -268,7 +268,7 @@ export default async function handler(req, res) {
         'real-estate':     ['housing market mortgage rates', 'real estate home prices', 'REIT property market', 'construction housing starts', 'mortgage lending'],
         'crypto':          ['bitcoin ethereum crypto', 'cryptocurrency market blockchain', 'coinbase crypto regulation', 'digital assets defi', 'bitcoin price'],
         'consumer':        ['retail sales consumer spending', 'walmart amazon target earnings', 'consumer confidence retail', 'e-commerce spending', 'consumer prices inflation'],
-        'healthcare':      ['pharma FDA drug approval', 'healthcare biotech earnings', 'medicare drug prices', 'clinical trial biotech', 'health insurance pharma'],
+        'healthcare':      ['pharma FDA drug approval', 'healthcare biotech earnings', 'drug pricing pharma stocks', 'clinical trial biotech FDA', 'health insurance UnitedHealth Humana', 'Pfizer Moderna Merck Johnson', 'hospital Medicare Medicaid policy', 'cancer treatment biotech pipeline'],
         'defense':         ['defense stocks military spending', 'lockheed boeing raytheon', 'NATO defense budget', 'weapons contracts pentagon', 'geopolitical defense']
       };
 
@@ -289,7 +289,10 @@ export default async function handler(req, res) {
       const CATEGORY_DIRECT_FEEDS = {
         technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }],
         energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }],
-        healthcare:      [{ url: 'https://feeds.reuters.com/reuters/health',              source: 'Reuters' }],
+        healthcare:      [
+          { url: 'https://feeds.reuters.com/reuters/health',                              source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',                  source: 'CNBC' },
+        ],
         crypto:          [{ url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',       source: 'CoinDesk' }],
       };
       const directFeeds = [...BASE_DIRECT_FEEDS, ...(CATEGORY_DIRECT_FEEDS[category] || [])];
@@ -396,22 +399,31 @@ export default async function handler(req, res) {
         return res.status(200).json({ groups: [] });
       }
 
+      const categoryLabels = {
+        'any': 'general financial markets', 'macro': 'macroeconomics and monetary policy',
+        'technology': 'technology sector', 'energy': 'energy sector', 'financials': 'financial sector',
+        'precious-metals': 'precious metals and commodities', 'real-estate': 'real estate and housing',
+        'crypto': 'cryptocurrency and blockchain', 'consumer': 'consumer spending and retail',
+        'healthcare': 'healthcare, pharmaceutical, and biotech sectors', 'defense': 'defense and aerospace sector'
+      };
+      const categoryLabel = categoryLabels[category] || 'financial markets';
+
       // Group ALL articles — no limit
-      const groupPrompt = `You are a senior financial news editor at The Economist. Here are ${deduped.length} headlines. Group them into distinct specific market events.
+      const groupPrompt = `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group them into distinct specific market events RELEVANT TO ${categoryLabel.toUpperCase()}.
 
 Headlines:
 ${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
-1. Merge ALL headlines about the same specific event into ONE group — be aggressive about merging
-2. Topics must be SPECIFIC events not general trends
-3. If a topic covers a specific company name it in the title
-4. Do NOT create separate groups for variations of the same story
-5. Only groups with genuine market-moving significance
-6. Aim for 10-15 highly distinct specific groups
-7. Maximum 15 groups
-8. Each index appears in exactly one group
-9. Ignore non-economic stories
+1. ONLY create groups about ${categoryLabel} — skip headlines unrelated to this sector
+2. Merge ALL headlines about the same specific event into ONE group — be aggressive about merging
+3. Topics must be SPECIFIC events not general trends
+4. If a topic covers a specific company name it in the title
+5. Do NOT create separate groups for variations of the same story
+6. Only groups with genuine market-moving significance
+7. Aim for 10-15 highly distinct specific groups
+8. Maximum 15 groups
+9. Each index appears in exactly one group
 10. Include ALL relevant indices in each group — do not leave articles ungrouped if they belong to a topic
 
 Respond ONLY with valid JSON, no markdown:
