@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     const filtered = (Array.isArray(events) ? events : []).filter(event => {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-      return targetTags.some(tag => eventTags.some(et => et.includes(tag)));
+      return targetTags.some(tag => eventTags.includes(tag));
     });
 
     const markets = filtered.map(event => {
