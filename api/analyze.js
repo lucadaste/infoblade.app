@@ -557,6 +557,7 @@ CRITICAL RULES:
 
 Respond ONLY with valid JSON, no markdown:
 {
+  "direction": "bullish" or "bearish" or "uncertain" — net directional impact of this news on the primary asset or sector being analyzed,
   "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
   "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
   "crowd_summary": "1 sentence: what specific outcome the public is leaning toward and why, based on prediction market odds",

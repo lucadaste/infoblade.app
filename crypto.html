@@ -81,6 +81,10 @@
     .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
+    .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
+    .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
     .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
     .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
     .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
@@ -539,8 +543,15 @@
       const winners = d.winners?.tickers || [];
       const losers  = d.losers?.tickers  || [];
       const hasEquities = winners.length || losers.length;
+      const dir = (d.direction || '').toLowerCase();
+      const dirBadge = dir === 'bullish'
+        ? `<span class="dir-badge dir-bullish">↑ Bullish</span>`
+        : dir === 'bearish'
+        ? `<span class="dir-badge dir-bearish">↓ Bearish</span>`
+        : `<span class="dir-badge dir-uncertain">~ Uncertain</span>`;
       el.innerHTML = `
         <div class="ar-block">
+          ${dirBadge}
           ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
           <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
           <div class="ar-details">
