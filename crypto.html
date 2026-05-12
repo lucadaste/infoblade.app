@@ -262,10 +262,10 @@
     ];
 
     const TIMEFRAMES = {
-      '24h': { context: 'over the next 24 hours',  apiParam: 'today',  label: 'news from the last 24 hours' },
-      '1w':  { context: 'over the next 1–7 days',  apiParam: '7days',  label: 'news from the last 7 days'   },
-      '1m':  { context: 'over the next 30 days',   apiParam: 'any',    label: 'recent crypto news'           },
-      '3m':  { context: 'over the next 3 months',  apiParam: 'any',    label: 'recent crypto news'           },
+      '24h': { context: 'over the next 24 hours',  apiParam: 'today'  },
+      '1w':  { context: 'over the next 1–7 days',  apiParam: '7days'  },
+      '1m':  { context: 'over the next 30 days',   apiParam: 'any'    },
+      '3m':  { context: 'over the next 3 months',  apiParam: 'any'    },
     };
 
     let priceCache = {};
@@ -411,7 +411,7 @@
       const mySession = ++renderSession;
       const tf = TIMEFRAMES[currentTimeframe];
       const content = document.getElementById('ap-content');
-      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching ${tf.label}…</div>`;
+      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching news…</div>`;
 
       try {
         const res = await fetch(`/api/analyze?category=crypto&timeframe=${tf.apiParam}`);
