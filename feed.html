@@ -164,13 +164,14 @@
     .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
     footer p { font-size: 13px; color: var(--muted); }
 
+    @media (max-width: 1300px) {
+      .filter-actions { margin-left: 0; flex-basis: 100%; }
+    }
     @media (max-width: 768px) {
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
       .hero { padding: 40px 24px 24px; }
       .filters { padding: 20px 24px; gap: 16px; }
-      .filter-actions { margin-left: 0; width: 100%; }
-      .btn-load { width: 100%; text-align: center; }
       .feed-container { padding: 32px 24px 60px; }
       .event-card { padding: 24px; }
       .chain-row { flex-direction: column; gap: 6px; }
