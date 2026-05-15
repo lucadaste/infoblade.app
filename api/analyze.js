@@ -378,6 +378,7 @@ export default async function handler(req, res) {
         );
 
         const BASE_DIRECT_FEEDS = [
+          { url: `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`, source: 'Yahoo Finance' },
           { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
           { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', source: 'CNBC' },
           { url: 'https://feeds.marketwatch.com/marketwatch/topstories/', source: 'MarketWatch' },
@@ -435,8 +436,10 @@ export default async function handler(req, res) {
           return matchWords.some(w => t.includes(w));
         });
 
+        let expandedTimeframe = false;
+        const relevantItems = rawItems;
         if (timeframe && timeframe !== 'any') {
-          rawItems = rawItems.filter(a => {
+          const filtered = relevantItems.filter(a => {
             if (!a.date) return true;
             const days = (new Date() - new Date(a.date)) / 86400000;
             if (timeframe === 'today' && days > 2) return false;
@@ -444,6 +447,12 @@ export default async function handler(req, res) {
             if (timeframe === '7days' && days > 7) return false;
             return true;
           });
+          if (filtered.length < 3) {
+            expandedTimeframe = true;
+            rawItems = relevantItems.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+          } else {
+            rawItems = filtered;
+          }
         }
 
         const seen = new Set();
@@ -454,7 +463,7 @@ export default async function handler(req, res) {
           return true;
         });
 
-        if (deduped.length === 0) return res.status(200).json({ groups: [] });
+        if (deduped.length === 0) return res.status(200).json({ groups: [], expandedTimeframe });
 
         const groupPrompt = `You are a senior equity analyst. Here are ${deduped.length} headlines related to ${ticker} (${fullName}). Group them into distinct specific events or themes that directly affect ${ticker}'s business outlook, financial performance, or stock market expectations.
 
@@ -491,7 +500,7 @@ Respond ONLY with valid JSON, no markdown:
         });
 
         const sorted = [...groups].sort((a, b) => b.totalSources - a.totalSources);
-        return res.status(200).json({ groups: sorted });
+        return res.status(200).json({ groups: sorted, expandedTimeframe });
       }
 
       const categoryQueries = {

@@ -443,7 +443,7 @@
       const matches = TICKERS.filter(t => t.s.startsWith(val) || t.n.toUpperCase().includes(val)).slice(0, 8);
       if (matches.length === 0) { dropdown.classList.remove('open'); return; }
       dropdown.innerHTML = matches.map((t, i) =>
-        `<div class="stock-auto-item" onmousedown="selectStock('${esc(t.s)}','${esc(t.n).replace(/'/g,'\\'')}')" data-index="${i}">
+        `<div class="stock-auto-item" data-sym="${esc(t.s)}" data-name="${esc(t.n)}" data-index="${i}">
            <span class="stock-auto-sym">${esc(t.s)}</span>
            <span class="stock-auto-name">${esc(t.n)}</span>
          </div>`).join('');
@@ -485,6 +485,14 @@
     document.addEventListener('click', e => {
       if (!e.target.closest('.stock-search-wrap')) {
         document.getElementById('stock-autocomplete').classList.remove('open');
+      }
+    });
+
+    document.getElementById('stock-autocomplete').addEventListener('mousedown', e => {
+      const item = e.target.closest('.stock-auto-item');
+      if (item) {
+        e.preventDefault();
+        selectStock(item.dataset.sym, item.dataset.name);
       }
     });
 
@@ -773,6 +781,7 @@
 
         const newsData = await newsRes.json();
         const groups = newsData.groups || [];
+        const expandedTimeframe = newsData.expandedTimeframe || false;
 
         if (groups.length === 0) {
           status.textContent = '';
@@ -810,7 +819,8 @@
 
         loader.classList.remove('active');
         feedPending.classList.remove('active');
-        status.textContent = `${cards.length} topics analyzed — sorted by confidence`;
+        const expandedMsg = expandedTimeframe ? ' · No news in selected timeframe — showing most recent available' : '';
+        status.textContent = `${cards.length} topics analyzed — sorted by confidence${expandedMsg}`;
 
       } catch (err) {
         loader.classList.remove('active');
