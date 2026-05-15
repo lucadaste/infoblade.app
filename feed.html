@@ -52,9 +52,11 @@
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
     .filter-select:focus { outline: none; border-color: var(--ink); }
     .mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
-    .mode-tab { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 14px; background: transparent; color: var(--muted); border: none; border-right: 1px solid var(--border); cursor: pointer; transition: background 0.12s, color 0.12s; white-space: nowrap; }
-    .mode-tab:last-child { border-right: none; }
+    .mode-tab { flex: 1; text-align: center; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 18px; background: transparent; color: var(--muted); border: none; cursor: pointer; transition: background 0.12s, color 0.12s; white-space: nowrap; }
+    .mode-tab:first-child { border-right: 1px solid var(--border); }
     .mode-tab.active { background: var(--ink); color: #111111; }
+    .mode-tab.active + .mode-tab { border-left: none; }
+    .mode-tab:first-child.active { border-right-color: var(--ink); }
     .mode-tab:hover:not(.active) { background: var(--border); color: var(--ink); }
     .stock-search-wrap { position: relative; }
     .stock-search-input { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; outline: none; width: 100%; min-width: 180px; transition: border-color 0.2s; }
@@ -392,7 +394,8 @@
       'any': "Latest analysis"
     };
 
-    const TICKERS = [
+    // Seed list for immediate autocomplete before API loads
+    let TICKERS = [
       {s:'AAPL',n:'Apple Inc.'},{s:'MSFT',n:'Microsoft Corp.'},{s:'GOOGL',n:'Alphabet Inc.'},
       {s:'AMZN',n:'Amazon.com Inc.'},{s:'NVDA',n:'NVIDIA Corp.'},{s:'META',n:'Meta Platforms'},
       {s:'TSLA',n:'Tesla Inc.'},{s:'BRK.B',n:'Berkshire Hathaway'},{s:'JPM',n:'JPMorgan Chase'},
@@ -402,22 +405,33 @@
       {s:'GLD',n:'SPDR Gold ETF'},{s:'SLV',n:'iShares Silver ETF'},{s:'GDX',n:'VanEck Gold Miners'},
       {s:'BAC',n:'Bank of America'},{s:'GS',n:'Goldman Sachs'},{s:'MS',n:'Morgan Stanley'},
       {s:'KRE',n:'Regional Banking ETF'},{s:'VNQ',n:'Vanguard Real Estate ETF'},
-      {s:'BTC',n:'Bitcoin'},{s:'ETH',n:'Ethereum'},{s:'COIN',n:'Coinbase Global'},
       {s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
-      {s:'TLT',n:'iShares 20yr Treasury'},{s:'VIX',n:'CBOE Volatility Index'},
+      {s:'TLT',n:'iShares 20yr Treasury'},{s:'COIN',n:'Coinbase Global'},
       {s:'DAL',n:'Delta Air Lines'},{s:'UAL',n:'United Airlines'},{s:'AAL',n:'American Airlines'},
       {s:'UPS',n:'United Parcel Service'},{s:'FDX',n:'FedEx Corp.'},
-      {s:'PFE',n:'Pfizer Inc.'},{s:'MRNA',n:'Moderna Inc.'},
-      {s:'AMD',n:'Advanced Micro Devices'},{s:'INTC',n:'Intel Corp.'},{s:'QCOM',n:'Qualcomm'},
-      {s:'AMAT',n:'Applied Materials'},{s:'LRCX',n:'Lam Research'},
+      {s:'PFE',n:'Pfizer Inc.'},{s:'MRNA',n:'Moderna Inc.'},{s:'AMD',n:'Advanced Micro Devices'},
+      {s:'INTC',n:'Intel Corp.'},{s:'QCOM',n:'Qualcomm'},{s:'AMAT',n:'Applied Materials'},
       {s:'CVS',n:'CVS Health'},{s:'UNH',n:'UnitedHealth Group'},
       {s:'DIS',n:'Walt Disney Co.'},{s:'NFLX',n:'Netflix Inc.'},
       {s:'KO',n:'Coca-Cola Co.'},{s:'PEP',n:'PepsiCo Inc.'},{s:'MCD',n:"McDonald's Corp."},
-      {s:'NKE',n:'Nike Inc.'},{s:'SBUX',n:'Starbucks Corp.'},
-      {s:'DHI',n:'D.R. Horton'},{s:'LEN',n:'Lennar Corp.'},{s:'PLD',n:'Prologis'},
-      {s:'COP',n:'ConocoPhillips'},{s:'SLB',n:'Schlumberger'},{s:'HAL',n:'Halliburton'},
-      {s:'MOS',n:'Mosaic Co.'},{s:'ADM',n:'Archer-Daniels-Midland'},{s:'BG',n:'Bunge Ltd.'}
+      {s:'NKE',n:'Nike Inc.'},{s:'SBUX',n:'Starbucks Corp.'},{s:'COP',n:'ConocoPhillips'},
+      {s:'SLB',n:'Schlumberger'},{s:'HAL',n:'Halliburton'},{s:'ADM',n:'Archer-Daniels-Midland'},
     ];
+
+    // Load full ticker list from SEC EDGAR (~12k US-listed stocks), cached in sessionStorage
+    (async function loadTickers() {
+      try {
+        const cached = sessionStorage.getItem('ii_tickers_v2');
+        if (cached) { TICKERS = JSON.parse(cached); return; }
+        const r = await fetch('/api/tickers');
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.tickers?.length > 100) {
+          TICKERS = d.tickers;
+          sessionStorage.setItem('ii_tickers_v2', JSON.stringify(TICKERS));
+        }
+      } catch (_) {}
+    })();
 
     let selectedAutocompleteIndex = -1;
     let watchlist = { sectors: [], tickers: [] };
