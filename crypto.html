@@ -134,9 +134,13 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
-    .nav-chat-btn { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.2px; padding: 8px 18px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s; white-space: nowrap; }
-    .nav-chat-btn:hover { opacity: 0.85; }
-    .nav-chat-btn.active { background: #e8e6e0; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
+    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
+    .nav-chat-btn:hover::after { background: #1a1a1a; }
+    .nav-chat-btn.active::after { background: #181818; }
+    .nav-chat-btn.active { color: #00e676; }
+    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
     .coin-card { position: relative; }
     .coin-card.watchlist-match { border-color: var(--accent); }

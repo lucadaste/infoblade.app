@@ -27,9 +27,13 @@
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
     .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
-    .nav-chat-btn { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.2px; padding: 8px 18px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s; white-space: nowrap; }
-    .nav-chat-btn:hover { opacity: 0.85; }
-    .nav-chat-btn.active { background: #e8e6e0; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
+    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
+    .nav-chat-btn:hover::after { background: #1a1a1a; }
+    .nav-chat-btn.active::after { background: #181818; }
+    .nav-chat-btn.active { color: #00e676; }
+    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
     .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
@@ -124,8 +128,14 @@
     .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
     .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
     .ws-inner { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
-    .ws-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -0.2px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-    .ws-title span { color: var(--accent); margin-right: 4px; }
+    .ws-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -0.2px; padding-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .ws-title-text { display: flex; align-items: center; gap: 5px; }
+    .ws-title-text span { color: var(--accent); }
+    .ws-toggle { background: none; border: none; cursor: pointer; color: #555; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 3px; transition: color 0.15s, transform 0.25s ease; flex-shrink: 0; }
+    .ws-toggle:hover { color: var(--ink); }
+    .ws-toggle.wc { transform: rotate(180deg); }
+    .ws-body { display: flex; flex-direction: column; gap: 20px; overflow: hidden; max-height: 1400px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
+    .ws-body.wc { max-height: 0; opacity: 0; }
 
     .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .sector-checkboxes { display: flex; flex-direction: column; gap: 8px; }
@@ -294,33 +304,38 @@
     <!-- WATCHLIST SIDEBAR -->
     <aside class="watchlist-sidebar">
       <div class="ws-inner">
-        <div class="ws-title"><span>★</span> Watchlist</div>
-        <div>
-          <div class="watchlist-section-title">Sectors</div>
-          <div class="sector-checkboxes">
-            <label class="sector-checkbox-item"><input type="checkbox" value="macro" onchange="saveWatchlist()"><label>Macro & Fed Policy</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="energy" onchange="saveWatchlist()"><label>Energy & Oil</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="technology" onchange="saveWatchlist()"><label>Technology & AI</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="financials" onchange="saveWatchlist()"><label>Financials & Banking</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="precious-metals" onchange="saveWatchlist()"><label>Precious Metals</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="real-estate" onchange="saveWatchlist()"><label>Real Estate</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="crypto" onchange="saveWatchlist()"><label>Crypto & Digital Assets</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="consumer" onchange="saveWatchlist()"><label>Consumer & Retail</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="healthcare" onchange="saveWatchlist()"><label>Healthcare & Pharma</label></label>
-            <label class="sector-checkbox-item"><input type="checkbox" value="defense" onchange="saveWatchlist()"><label>Defense & Geopolitics</label></label>
-          </div>
+        <div class="ws-title">
+          <div class="ws-title-text"><span>★</span> Watchlist</div>
+          <button class="ws-toggle" id="ws-toggle" onclick="toggleWatchlistSidebar()" title="Minimize">▲</button>
         </div>
-        <div>
-          <div class="watchlist-section-title">Tickers</div>
-          <div class="ticker-input-wrapper">
-            <div class="ticker-input-row">
-              <input class="ticker-input" id="ticker-input" type="text" placeholder="Search ticker (e.g. AAPL)" onkeyup="handleTickerInput(event)" onkeydown="handleTickerKeydown(event)" autocomplete="off" />
-              <button class="btn-add-ticker" onclick="addTickerFromInput()">Add</button>
+        <div class="ws-body" id="ws-body">
+          <div>
+            <div class="watchlist-section-title">Sectors</div>
+            <div class="sector-checkboxes">
+              <label class="sector-checkbox-item"><input type="checkbox" value="macro" onchange="saveWatchlist()"><label>Macro & Fed Policy</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="energy" onchange="saveWatchlist()"><label>Energy & Oil</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="technology" onchange="saveWatchlist()"><label>Technology & AI</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="financials" onchange="saveWatchlist()"><label>Financials & Banking</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="precious-metals" onchange="saveWatchlist()"><label>Precious Metals</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="real-estate" onchange="saveWatchlist()"><label>Real Estate</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="crypto" onchange="saveWatchlist()"><label>Crypto & Digital Assets</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="consumer" onchange="saveWatchlist()"><label>Consumer & Retail</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="healthcare" onchange="saveWatchlist()"><label>Healthcare & Pharma</label></label>
+              <label class="sector-checkbox-item"><input type="checkbox" value="defense" onchange="saveWatchlist()"><label>Defense & Geopolitics</label></label>
             </div>
-            <div class="autocomplete-dropdown" id="autocomplete"></div>
           </div>
-          <div class="ticker-list" id="ticker-list"></div>
-          <div class="watchlist-empty" id="ticker-empty">No tickers added yet</div>
+          <div>
+            <div class="watchlist-section-title">Tickers</div>
+            <div class="ticker-input-wrapper">
+              <div class="ticker-input-row">
+                <input class="ticker-input" id="ticker-input" type="text" placeholder="Search ticker (e.g. AAPL)" onkeyup="handleTickerInput(event)" onkeydown="handleTickerKeydown(event)" autocomplete="off" />
+                <button class="btn-add-ticker" onclick="addTickerFromInput()">Add</button>
+              </div>
+              <div class="autocomplete-dropdown" id="autocomplete"></div>
+            </div>
+            <div class="ticker-list" id="ticker-list"></div>
+            <div class="watchlist-empty" id="ticker-empty">No tickers added yet</div>
+          </div>
         </div>
       </div>
     </aside>
@@ -448,12 +463,25 @@
       }
     });
 
+    function toggleWatchlistSidebar() {
+      const body = document.getElementById('ws-body');
+      const btn = document.getElementById('ws-toggle');
+      const collapsed = body.classList.toggle('wc');
+      btn.classList.toggle('wc', collapsed);
+      localStorage.setItem('ii_ws_collapsed', collapsed ? '1' : '0');
+    }
+
     function loadWatchlist() {
       try {
         const saved = localStorage.getItem('ii_watchlist');
         if (saved) watchlist = JSON.parse(saved);
       } catch(e) {}
       renderWatchlist();
+      if (localStorage.getItem('ii_ws_collapsed') === '1') {
+        const body = document.getElementById('ws-body');
+        const btn = document.getElementById('ws-toggle');
+        if (body) { body.classList.add('wc'); btn.classList.add('wc'); }
+      }
     }
 
     function saveWatchlist() {
