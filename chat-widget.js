@@ -1,5 +1,5 @@
 (function () {
-  if (document.getElementById('ii-ai-bar')) return;
+  if (document.getElementById('ii-ai-panel')) return;
 
   const PAGE_CONTEXTS = {
     'feed.html':        'stock-markets',
@@ -21,108 +21,74 @@
   // ── Styles ────────────────────────────────────────────────────────────────
   const style = document.createElement('style');
   style.textContent = `
-    /* Floating tab on right edge */
-    #ii-ai-bar {
-      position: fixed;
-      top: 8%;
-      right: 0;
-      width: 40px;
-      background: #e8e8e8;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 14px 0 10px;
-      gap: 10px;
-      border-radius: 10px 0 0 10px;
-      border: 1.5px solid #00e676;
-      border-right: none;
-      box-shadow: -3px 2px 12px rgba(0,0,0,0.12);
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-    #ii-ai-bar:hover { background: #ddd; }
-    #ii-ai-label {
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 700;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: #333;
-      text-transform: uppercase;
-      user-select: none;
-      pointer-events: none;
-      text-align: center;
-    }
-    #ii-ai-toggle {
-      background: none;
-      border: none;
-      color: #777;
-      font-size: 18px;
-      line-height: 1;
-      cursor: pointer;
-      padding: 2px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      transition: color 0.15s;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 300;
-    }
-    #ii-ai-toggle:hover { color: #111; }
-
-    /* Sliding panel */
     #ii-ai-panel {
       position: fixed;
-      top: 0;
-      right: 0;
-      width: min(390px, 33vw);
-      height: 100vh;
-      height: 100dvh;
-      background: #f0f0f0;
+      top: 65px;
+      right: 48px;
+      width: min(360px, calc(100vw - 32px));
+      max-height: min(540px, calc(100vh - 80px));
+      background: #141414;
       z-index: 9998;
       display: flex;
       flex-direction: column;
-      box-shadow: -4px 0 24px rgba(0,0,0,0.12);
-      transform: translateX(100%);
-      transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 10px;
+      border: 1px solid #282828;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+      transform-origin: top right;
+      pointer-events: none;
+      transition: opacity 0.18s cubic-bezier(0.4,0,0.2,1), transform 0.18s cubic-bezier(0.4,0,0.2,1);
     }
     #ii-ai-panel.ii-open {
-      transform: translateX(0);
-    }
-    @media (max-width: 640px) {
-      #ii-ai-panel {
-        width: 92vw;
-      }
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
     }
 
-    /* Panel header */
     .ii-ph {
-      background: #ffffff;
-      padding: 15px 16px;
+      background: #1c1c1c;
+      padding: 13px 16px;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       flex-shrink: 0;
-      border-bottom: 1px solid #ebebeb;
+      border-bottom: 1px solid #282828;
+      border-radius: 10px 10px 0 0;
     }
     .ii-ph-title {
       font-family: 'DM Sans', sans-serif;
       font-weight: 600;
       font-size: 13px;
-      color: #111;
+      color: #e8e6e0;
       letter-spacing: -0.2px;
     }
     .ii-ph-title em {
       background: #00e676;
       color: #111111;
       font-style: normal;
-      padding: 1px 5px;
+      padding: 1px 6px;
       margin-right: 5px;
+      border-radius: 2px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.5px;
     }
+    .ii-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      line-height: 1;
+      color: #555;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+    .ii-close:hover { color: #e8e6e0; }
 
-    /* Messages */
     .ii-msgs {
       flex: 1;
       overflow-y: auto;
@@ -132,10 +98,12 @@
       gap: 10px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
+      min-height: 0;
     }
-    .ii-msgs::-webkit-scrollbar { width: 4px; }
+    .ii-msgs::-webkit-scrollbar { width: 3px; }
     .ii-msgs::-webkit-scrollbar-track { background: transparent; }
-    .ii-msgs::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+    .ii-msgs::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
     .ii-m {
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
@@ -154,18 +122,19 @@
     }
     .ii-m-ai {
       align-self: flex-start;
-      background: #ffffff;
-      color: #222;
+      background: #0d0d0d;
+      color: #c8c6c0;
       padding: 9px 13px;
       border-radius: 12px 12px 12px 3px;
-      border: 1px solid #e5e5e5;
+      border: 1px solid #282828;
     }
+    .ii-m-ai strong { color: #e8e6e0; }
     .ii-m-thinking {
       align-self: flex-start;
       display: flex;
       align-items: center;
       gap: 7px;
-      color: #aaa;
+      color: #555;
       font-size: 12px;
       font-style: italic;
       font-family: 'DM Sans', sans-serif;
@@ -174,18 +143,17 @@
     .ii-dots span {
       display: inline-block;
       width: 4px; height: 4px;
-      background: #bbb;
+      background: #00e676;
       border-radius: 50%;
       animation: ii-bop 1.1s ease-in-out infinite;
     }
     .ii-dots span:nth-child(2) { animation-delay: 0.18s; }
     .ii-dots span:nth-child(3) { animation-delay: 0.36s; }
     @keyframes ii-bop {
-      0%,80%,100% { transform: translateY(0); opacity:.35; }
+      0%,80%,100% { transform: translateY(0); opacity:.3; }
       40% { transform: translateY(-4px); opacity:1; }
     }
 
-    /* Starters */
     .ii-starters {
       display: flex;
       flex-direction: column;
@@ -193,78 +161,71 @@
       margin-top: 2px;
     }
     .ii-sq {
-      background: #ffffff;
-      border: 1px solid #e5e5e5;
+      background: #1a1a1a;
+      border: 1px solid #282828;
       border-radius: 8px;
       padding: 8px 11px;
       font-family: 'DM Sans', sans-serif;
       font-size: 12px;
-      color: #555;
+      color: #666;
       cursor: pointer;
       text-align: left;
       line-height: 1.4;
       transition: background .15s, border-color .15s, color .15s;
     }
-    .ii-sq:hover { background: #f0fff8; border-color: #00e676; color: #111; }
+    .ii-sq:hover { background: #0d1f14; border-color: #00e676; color: #e8e6e0; }
 
-    /* Input row */
     .ii-input-row {
       display: flex;
       gap: 8px;
       padding: 10px 12px;
       padding-bottom: max(10px, env(safe-area-inset-bottom));
-      border-top: 1px solid #ebebeb;
-      background: #ffffff;
+      border-top: 1px solid #282828;
+      background: #1c1c1c;
       flex-shrink: 0;
+      border-radius: 0 0 10px 10px;
     }
     #ii-inp {
       flex: 1;
       font-family: 'DM Sans', sans-serif;
       font-size: 13px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid #282828;
       border-radius: 6px;
       padding: 8px 11px;
-      background: #f5f5f5;
-      color: #222;
+      background: #0a0a0a;
+      color: #e8e6e0;
       resize: none;
       outline: none;
       line-height: 1.45;
-      max-height: 90px;
+      max-height: 80px;
       overflow-y: auto;
     }
-    #ii-inp::placeholder { color: #aaa; }
-    #ii-inp:focus { border-color: #bbb; background: #fff; }
+    #ii-inp::placeholder { color: #444; }
+    #ii-inp:focus { border-color: #383838; background: #111; }
     #ii-send {
       background: #00e676;
       color: #111111;
       border: none;
       border-radius: 6px;
-      padding: 0 13px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
+      padding: 0 14px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
       font-size: 12px;
-      letter-spacing: .2px;
+      letter-spacing: .3px;
       cursor: pointer;
       flex-shrink: 0;
       transition: opacity .15s;
     }
     #ii-send:hover { opacity: .8; }
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
+
+    @media (max-width: 768px) {
+      #ii-ai-panel { top: 60px; right: 16px; }
+    }
   `;
   document.head.appendChild(style);
 
   // ── DOM ───────────────────────────────────────────────────────────────────
-  const bar = document.createElement('div');
-  bar.id = 'ii-ai-bar';
-  bar.innerHTML = `
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div id="ii-ai-label">Live Chat</div>
-    <button id="ii-ai-toggle" aria-label="Open AI Informant">&#8249;</button>
-  `;
-  document.body.appendChild(bar);
-
   const panel = document.createElement('div');
   panel.id = 'ii-ai-panel';
   panel.setAttribute('role', 'dialog');
@@ -272,6 +233,7 @@
   panel.innerHTML = `
     <div class="ii-ph">
       <div class="ii-ph-title"><em>II</em> AI Informant</div>
+      <button class="ii-close" id="ii-close-btn" aria-label="Close chat">×</button>
     </div>
     <div class="ii-msgs" id="ii-msgs">
       <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for — drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
@@ -295,7 +257,6 @@
   });
 
   // ── Logic ─────────────────────────────────────────────────────────────────
-  const toggle  = document.getElementById('ii-ai-toggle');
   const msgsEl  = document.getElementById('ii-msgs');
   const inp     = document.getElementById('ii-inp');
   const sendBtn = document.getElementById('ii-send');
@@ -306,16 +267,23 @@
   function setOpen(v) {
     open = v;
     panel.classList.toggle('ii-open', open);
-    const panelW = Math.min(390, window.innerWidth * 0.33);
-    document.body.style.transition = 'margin-right 0.32s cubic-bezier(0.4,0,0.2,1)';
-    document.body.style.marginRight = open ? panelW + 'px' : '';
-    toggle.innerHTML = open ? '&#8250;' : '&#8249;';
-    toggle.setAttribute('aria-label', open ? 'Close AI Informant' : 'Open AI Informant');
+    const navBtn = document.getElementById('ii-chat-btn');
+    if (navBtn) navBtn.classList.toggle('active', open);
   }
 
-  bar.addEventListener('click', e => { if (!open) setOpen(true); });
-  toggle.addEventListener('click', e => { e.stopPropagation(); setOpen(!open); });
+  document.getElementById('ii-close-btn').addEventListener('click', () => setOpen(false));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
+
+  // Close when clicking outside the panel and trigger button
+  document.addEventListener('click', e => {
+    if (!open) return;
+    const navBtn = document.getElementById('ii-chat-btn');
+    if (!panel.contains(e.target) && (!navBtn || !navBtn.contains(e.target))) {
+      setOpen(false);
+    }
+  });
+
+  window.iiToggleChat = () => setOpen(!open);
 
   function mdToHtml(raw) {
     const lines = raw.split('\n');
@@ -338,13 +306,13 @@
       const t = raw.trimEnd();
       if (/^### /.test(t)) {
         closeList();
-        out.push(`<p style="font-weight:700;font-size:13px;margin:10px 0 2px">${inline(t.slice(4))}</p>`);
+        out.push(`<p style="font-weight:700;font-size:13px;margin:10px 0 2px;color:#e8e6e0">${inline(t.slice(4))}</p>`);
       } else if (/^## /.test(t)) {
         closeList();
-        out.push(`<p style="font-weight:700;font-size:13.5px;margin:12px 0 2px">${inline(t.slice(3))}</p>`);
+        out.push(`<p style="font-weight:700;font-size:13.5px;margin:12px 0 2px;color:#e8e6e0">${inline(t.slice(3))}</p>`);
       } else if (/^# /.test(t)) {
         closeList();
-        out.push(`<p style="font-weight:700;font-size:14px;margin:14px 0 4px">${inline(t.slice(2))}</p>`);
+        out.push(`<p style="font-weight:700;font-size:14px;margin:14px 0 4px;color:#e8e6e0">${inline(t.slice(2))}</p>`);
       } else if (/^[-*•] /.test(t)) {
         if (inOl) { out.push('</ol>'); inOl = false; }
         if (!inUl) { out.push('<ul style="padding-left:18px;margin:4px 0;display:flex;flex-direction:column;gap:3px">'); inUl = true; }
@@ -429,6 +397,6 @@
   });
   inp.addEventListener('input', () => {
     inp.style.height = 'auto';
-    inp.style.height = Math.min(inp.scrollHeight, 90) + 'px';
+    inp.style.height = Math.min(inp.scrollHeight, 80) + 'px';
   });
 })();

@@ -134,21 +134,19 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
-    .nav-panel-btn { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 2px 14px; line-height: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
-    .nav-panel-btn:hover { background: var(--border); }
-    .nav-panel-btn.active { background: #e8e6e0; color: #111111; border-color: #e8e6e0; }
+    .nav-chat-btn { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.2px; padding: 8px 18px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.2s; white-space: nowrap; }
+    .nav-chat-btn:hover { opacity: 0.85; }
+    .nav-chat-btn.active { background: #e8e6e0; }
 
     .coin-card { position: relative; }
     .coin-card.watchlist-match { border-color: var(--accent); }
     .watchlist-badge { position: absolute; top: -10px; right: 10px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
 
-    .side-panel { width: 300px; position: fixed; top: 0; right: -320px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 300; display: flex; flex-direction: column; transition: right 0.25s ease; box-shadow: -4px 0 24px rgba(0,0,0,0.4); overflow-y: auto; }
-    .side-panel.open { right: 0; }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .panel-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
-    .panel-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; }
-    .panel-close:hover { color: var(--ink); }
-    .panel-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+    .cw-inline { border-bottom: 1px solid var(--border); padding: 16px 48px; background: var(--paper); }
+    .cw-inline-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .cw-inline-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
+    .cw-inline-title span { color: var(--accent); }
+    .cw-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .ticker-input-wrapper { position: relative; }
     .ticker-input-row { display: flex; gap: 8px; }
@@ -181,6 +179,7 @@
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
       .hero { padding: 32px 24px 24px; }
+      .cw-inline { padding: 14px 24px; }
       .toolbar { padding: 12px 24px; top: 57px; }
       .coin-section { padding: 20px 24px 32px; }
       .ap-header { padding: 16px 24px; }
@@ -203,33 +202,9 @@
       <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
     <div class="nav-buttons">
-      <button class="nav-panel-btn" id="watchlist-btn" onclick="togglePanel('watchlist')">☆ Watchlist</button>
+      <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
     </div>
   </nav>
-
-  <div class="side-panel" id="panel-watchlist">
-    <div class="panel-header">
-      <h3>☆ Crypto Watchlist</h3>
-      <button class="panel-close" onclick="togglePanel('watchlist')">×</button>
-    </div>
-    <div class="panel-body">
-      <div>
-        <div class="watchlist-section-title">Add coins</div>
-        <div class="ticker-input-wrapper">
-          <div class="ticker-input-row">
-            <input class="ticker-input" id="crypto-input" type="text" placeholder="Search coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" />
-            <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
-          </div>
-          <div class="cw-dropdown" id="cw-dropdown"></div>
-        </div>
-      </div>
-      <div>
-        <div class="watchlist-section-title">Watching</div>
-        <div class="ticker-list" id="crypto-watchlist-list"></div>
-        <div class="watchlist-empty" id="crypto-watchlist-empty">No coins added yet</div>
-      </div>
-    </div>
-  </div>
 
   <div class="hero">
     <div>
@@ -247,6 +222,24 @@
       <div class="fg-number" id="fg-number">—</div>
       <div class="fg-class" id="fg-class"></div>
       <div class="fg-track"><div class="fg-fill" id="fg-fill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- INLINE CRYPTO WATCHLIST -->
+  <div class="cw-inline">
+    <div class="cw-inline-header">
+      <div class="cw-inline-title"><span>★</span> Watchlist</div>
+      <div class="ticker-input-wrapper" style="position:relative; flex:1; max-width:260px;">
+        <div class="ticker-input-row">
+          <input class="ticker-input" id="crypto-input" type="text" placeholder="Add coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" style="background:var(--card);color:var(--ink);" />
+          <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
+        </div>
+        <div class="cw-dropdown" id="cw-dropdown"></div>
+      </div>
+    </div>
+    <div class="cw-chips-row">
+      <div class="ticker-list" id="crypto-watchlist-list"></div>
+      <div class="watchlist-empty" id="crypto-watchlist-empty" style="font-size:12px;color:#444;padding:0;">No coins added yet — search above to start tracking</div>
     </div>
   </div>
 
@@ -719,26 +712,7 @@
 
     // Crypto watchlist
     let cryptoWatchlist = [];
-    let activePanel = null;
     let cwAutocompleteIndex = -1;
-
-    function togglePanel(name) {
-      const panel = document.getElementById('panel-' + name);
-      const btn = document.getElementById(name + '-btn');
-      if (activePanel === name) {
-        panel.classList.remove('open');
-        btn.classList.remove('active');
-        activePanel = null;
-      } else {
-        if (activePanel) {
-          document.getElementById('panel-' + activePanel).classList.remove('open');
-          document.getElementById(activePanel + '-btn').classList.remove('active');
-        }
-        panel.classList.add('open');
-        btn.classList.add('active');
-        activePanel = name;
-      }
-    }
 
     function loadCryptoWatchlist() {
       try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) cryptoWatchlist = JSON.parse(s); } catch(e) {}
