@@ -19,14 +19,22 @@
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --red: #ff5252; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
 
-    nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
     .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
     .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
-    @media (max-width: 700px) { nav { padding: 16px 20px; } .nav-links { gap: 18px; margin-left: 20px; } }
+    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
+    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
+    .nav-chat-btn:hover::after { background: #1a1a1a; }
+    .nav-chat-btn.active { color: #00e676; }
+    .nav-chat-btn.active::after { background: #181818; }
+    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    @media (max-width: 768px) { nav { padding: 16px 24px; } .nav-links { display: none; } }
     @media (max-width: 768px) { .hero { padding: 32px 24px 24px; } }
 
     .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
@@ -113,6 +121,9 @@
     <li><a href="/crypto.html">Crypto Markets</a></li>
     <li><a href="/accuracy.html" class="active">Accuracy History</a></li>
   </ul>
+  <div class="nav-buttons">
+    <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
+  </div>
 </nav>
 
 <div class="hero">
@@ -288,5 +299,6 @@
   }
 })();
 </script>
+<script src="/chat-widget.js"></script>
 </body>
 </html>

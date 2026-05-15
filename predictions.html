@@ -26,6 +26,14 @@
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
+    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
+    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
+    .nav-chat-btn:hover::after { background: #1a1a1a; }
+    .nav-chat-btn.active { color: #00e676; }
+    .nav-chat-btn.active::after { background: #181818; }
+    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
     .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
@@ -157,6 +165,9 @@
       <li><a href="/crypto.html">Crypto Markets</a></li>
       <li><a href="/accuracy.html" class="active">Accuracy History</a></li>
     </ul>
+    <div class="nav-buttons">
+      <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
+    </div>
   </nav>
 
   <div class="hero">
