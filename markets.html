@@ -27,12 +27,12 @@
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
 
-    .hero { padding: 48px 48px 32px; border-bottom: 1px solid var(--border); }
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
-    .hero-sub { font-size: 16px; color: var(--muted); font-weight: 300; max-width: 600px; }
+    .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
     .category-bar { display: flex; gap: 10px; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 61px; z-index: 90; overflow-x: auto; }
     .cat-chip { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
@@ -111,7 +111,7 @@
     @media (max-width: 768px) {
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
-      .hero { padding: 40px 24px 24px; }
+      .hero { padding: 32px 24px 24px; }
       .category-bar { padding: 16px 24px; top: 57px; }
       .timeframe-bar { padding: 10px 24px; top: 110px; }
       .market-status { padding: 10px 24px; }

@@ -27,11 +27,11 @@
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
 
-    .hero { padding: 40px 48px 28px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
-    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 8px; line-height: 1.1; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
     .fg-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
@@ -133,6 +133,43 @@
     .spinner-inv { border-top-color: var(--ink); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
+    .nav-panel-btn { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 2px 14px; line-height: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
+    .nav-panel-btn:hover { background: var(--border); }
+    .nav-panel-btn.active { background: #e8e6e0; color: #111111; border-color: #e8e6e0; }
+
+    .coin-card { position: relative; }
+    .coin-card.watchlist-match { border-color: var(--accent); }
+    .watchlist-badge { position: absolute; top: -10px; right: 10px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    .side-panel { width: 300px; position: fixed; top: 0; right: -320px; height: 100vh; background: var(--card); border-left: 1px solid var(--border); z-index: 300; display: flex; flex-direction: column; transition: right 0.25s ease; box-shadow: -4px 0 24px rgba(0,0,0,0.4); overflow-y: auto; }
+    .side-panel.open { right: 0; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .panel-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; }
+    .panel-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; }
+    .panel-close:hover { color: var(--ink); }
+    .panel-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+    .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .ticker-input-wrapper { position: relative; }
+    .ticker-input-row { display: flex; gap: 8px; }
+    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--paper); color: var(--ink); outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
+    .ticker-input:focus { border-color: var(--ink); }
+    .ticker-input::placeholder { text-transform: none; color: #aaa; }
+    .btn-add-ticker { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
+    .btn-add-ticker:hover { opacity: 0.8; }
+    .cw-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e1e1e; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
+    .cw-dropdown.open { display: block; }
+    .cw-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .cw-item:last-child { border-bottom: none; }
+    .cw-item:hover { background: #2a2a2a; }
+    .cw-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
+    .cw-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .ticker-tag { display: flex; align-items: center; gap: 4px; background: #2a2a2a; color: var(--ink); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
+    .ticker-tag button { background: none; border: none; color: #888; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; }
+    .ticker-tag button:hover { color: var(--ink); }
+    .watchlist-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
+
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
     .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
@@ -143,7 +180,7 @@
     @media (max-width: 768px) {
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
-      .hero { padding: 32px 24px 20px; }
+      .hero { padding: 32px 24px 24px; }
       .toolbar { padding: 12px 24px; top: 57px; }
       .coin-section { padding: 20px 24px 32px; }
       .ap-header { padding: 16px 24px; }
@@ -165,7 +202,34 @@
       <li><a href="/crypto.html" class="active">Crypto Markets</a></li>
       <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
+    <div class="nav-buttons">
+      <button class="nav-panel-btn" id="watchlist-btn" onclick="togglePanel('watchlist')">☆ Watchlist</button>
+    </div>
   </nav>
+
+  <div class="side-panel" id="panel-watchlist">
+    <div class="panel-header">
+      <h3>☆ Crypto Watchlist</h3>
+      <button class="panel-close" onclick="togglePanel('watchlist')">×</button>
+    </div>
+    <div class="panel-body">
+      <div>
+        <div class="watchlist-section-title">Add coins</div>
+        <div class="ticker-input-wrapper">
+          <div class="ticker-input-row">
+            <input class="ticker-input" id="crypto-input" type="text" placeholder="Search coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" />
+            <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
+          </div>
+          <div class="cw-dropdown" id="cw-dropdown"></div>
+        </div>
+      </div>
+      <div>
+        <div class="watchlist-section-title">Watching</div>
+        <div class="ticker-list" id="crypto-watchlist-list"></div>
+        <div class="watchlist-empty" id="crypto-watchlist-empty">No coins added yet</div>
+      </div>
+    </div>
+  </div>
 
   <div class="hero">
     <div>
@@ -317,8 +381,9 @@
         const p = priceCache[coin.id];
         const chg = p?.price_change_percentage_24h;
         const isSelected = selectedCoin?.id === coin.id;
+        const isWatchlisted = cryptoWatchlist.includes(coin.symbol);
         const card = document.createElement('div');
-        card.className = 'coin-card' + (isSelected ? ' selected' : '');
+        card.className = 'coin-card' + (isSelected ? ' selected' : '') + (isWatchlisted ? ' watchlist-match' : '');
         card.style.animationDelay = `${Math.min(i * 20, 280)}ms`;
 
         const logoHtml = p?.image
@@ -335,6 +400,7 @@
 
         const safeJson = JSON.stringify(coin).replace(/"/g, '&quot;');
         card.innerHTML = `
+          ${isWatchlisted ? '<div class="watchlist-badge">★ Watching</div>' : ''}
           <div class="coin-top">
             ${logoHtml}
             <div>
@@ -650,6 +716,108 @@
     renderGrid();
     loadFearGreed();
     loadPrices();
+
+    // Crypto watchlist
+    let cryptoWatchlist = [];
+    let activePanel = null;
+    let cwAutocompleteIndex = -1;
+
+    function togglePanel(name) {
+      const panel = document.getElementById('panel-' + name);
+      const btn = document.getElementById(name + '-btn');
+      if (activePanel === name) {
+        panel.classList.remove('open');
+        btn.classList.remove('active');
+        activePanel = null;
+      } else {
+        if (activePanel) {
+          document.getElementById('panel-' + activePanel).classList.remove('open');
+          document.getElementById(activePanel + '-btn').classList.remove('active');
+        }
+        panel.classList.add('open');
+        btn.classList.add('active');
+        activePanel = name;
+      }
+    }
+
+    function loadCryptoWatchlist() {
+      try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) cryptoWatchlist = JSON.parse(s); } catch(e) {}
+      renderCryptoWatchlist();
+    }
+
+    function saveCryptoWatchlist() {
+      localStorage.setItem('ii_crypto_watchlist', JSON.stringify(cryptoWatchlist));
+    }
+
+    function renderCryptoWatchlist() {
+      const list = document.getElementById('crypto-watchlist-list');
+      const empty = document.getElementById('crypto-watchlist-empty');
+      list.innerHTML = '';
+      if (!cryptoWatchlist.length) {
+        empty.style.display = 'block';
+      } else {
+        empty.style.display = 'none';
+        cryptoWatchlist.forEach(sym => {
+          const tag = document.createElement('div');
+          tag.className = 'ticker-tag';
+          tag.innerHTML = esc(sym) + ' <button onclick="removeCryptoFromWatchlist(\'' + esc(sym) + '\')">×</button>';
+          list.appendChild(tag);
+        });
+      }
+      renderGrid();
+    }
+
+    function handleCryptoInput(e) {
+      const val = e.target.value.toUpperCase().trim();
+      const dropdown = document.getElementById('cw-dropdown');
+      cwAutocompleteIndex = -1;
+      if (!val) { dropdown.classList.remove('open'); return; }
+      const matches = COINS.filter(c => c.symbol.startsWith(val) || c.name.toUpperCase().includes(val)).slice(0, 7);
+      if (!matches.length) { dropdown.classList.remove('open'); return; }
+      dropdown.innerHTML = matches.map((c, i) =>
+        `<div class="cw-item" onmousedown="addCryptoToWatchlist('${c.symbol}')" data-index="${i}">
+          <span class="cw-sym">${esc(c.symbol)}</span>
+          <span class="cw-name">${esc(c.name)}</span>
+        </div>`
+      ).join('');
+      dropdown.classList.add('open');
+    }
+
+    function handleCryptoKeydown(e) {
+      const dropdown = document.getElementById('cw-dropdown');
+      const items = dropdown.querySelectorAll('.cw-item');
+      if (e.key === 'ArrowDown') { e.preventDefault(); cwAutocompleteIndex = Math.min(cwAutocompleteIndex + 1, items.length - 1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#2a2a2a' : ''); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); cwAutocompleteIndex = Math.max(cwAutocompleteIndex - 1, -1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#2a2a2a' : ''); }
+      else if (e.key === 'Enter') { e.preventDefault(); if (cwAutocompleteIndex >= 0 && items[cwAutocompleteIndex]) { addCryptoToWatchlist(items[cwAutocompleteIndex].querySelector('.cw-sym').textContent); } else { addCryptoFromInput(); } }
+      else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
+    }
+
+    function addCryptoToWatchlist(sym) {
+      document.getElementById('crypto-input').value = '';
+      document.getElementById('cw-dropdown').classList.remove('open');
+      if (!cryptoWatchlist.includes(sym)) {
+        cryptoWatchlist.push(sym);
+        saveCryptoWatchlist();
+        renderCryptoWatchlist();
+      }
+    }
+
+    function addCryptoFromInput() {
+      const sym = document.getElementById('crypto-input').value.trim().toUpperCase();
+      if (sym) addCryptoToWatchlist(sym);
+    }
+
+    function removeCryptoFromWatchlist(sym) {
+      cryptoWatchlist = cryptoWatchlist.filter(s => s !== sym);
+      saveCryptoWatchlist();
+      renderCryptoWatchlist();
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.ticker-input-wrapper')) document.getElementById('cw-dropdown').classList.remove('open');
+    });
+
+    loadCryptoWatchlist();
   </script>
 
 </body>
