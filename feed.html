@@ -51,6 +51,22 @@
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
     .filter-select:focus { outline: none; border-color: var(--ink); }
+    .mode-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .mode-tab { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; padding: 6px 14px; background: transparent; color: var(--muted); border: none; border-right: 1px solid var(--border); cursor: pointer; transition: background 0.12s, color 0.12s; white-space: nowrap; }
+    .mode-tab:last-child { border-right: none; }
+    .mode-tab.active { background: var(--ink); color: #111111; }
+    .mode-tab:hover:not(.active) { background: var(--border); color: var(--ink); }
+    .stock-search-wrap { position: relative; }
+    .stock-search-input { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; outline: none; width: 100%; min-width: 180px; transition: border-color 0.2s; }
+    .stock-search-input:focus { border-color: var(--ink); }
+    .stock-search-input::placeholder { color: #555; text-transform: none; }
+    .stock-autocomplete { position: absolute; top: 100%; left: 0; right: 0; background: #1c1c1c; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; z-index: 200; max-height: 240px; overflow-y: auto; display: none; min-width: 220px; }
+    .stock-autocomplete.open { display: block; }
+    .stock-auto-item { padding: 9px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.12s; }
+    .stock-auto-item:last-child { border-bottom: none; }
+    .stock-auto-item:hover, .stock-auto-item.highlighted { background: #252525; }
+    .stock-auto-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 48px; }
+    .stock-auto-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
     .btn-load { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .btn-load:hover { opacity: 0.85; }
@@ -225,20 +241,31 @@
 
   <div class="filters">
     <div class="filter-group">
-      <div class="filter-label">Category</div>
-      <select class="filter-select" id="filter-category">
-        <option value="any" selected>Any / All categories</option>
-        <option value="macro">Macro & Fed Policy</option>
-        <option value="energy">Energy & Oil</option>
-        <option value="technology">Technology & AI</option>
-        <option value="financials">Financials & Banking</option>
-        <option value="precious-metals">Precious Metals</option>
-        <option value="real-estate">Real Estate</option>
-        <option value="crypto">Crypto & Digital Assets</option>
-        <option value="consumer">Consumer & Retail</option>
-        <option value="healthcare">Healthcare & Pharma</option>
-        <option value="defense">Defense & Geopolitics</option>
-      </select>
+      <div class="mode-toggle">
+        <button class="mode-tab active" id="tab-sector" onclick="setMode('sector')">Sector</button>
+        <button class="mode-tab" id="tab-stock" onclick="setMode('stock')">Stock</button>
+      </div>
+      <div id="sector-filter">
+        <select class="filter-select" id="filter-category">
+          <option value="any" selected>Any / All categories</option>
+          <option value="macro">Macro & Fed Policy</option>
+          <option value="energy">Energy & Oil</option>
+          <option value="technology">Technology & AI</option>
+          <option value="financials">Financials & Banking</option>
+          <option value="precious-metals">Precious Metals</option>
+          <option value="real-estate">Real Estate</option>
+          <option value="crypto">Crypto & Digital Assets</option>
+          <option value="consumer">Consumer & Retail</option>
+          <option value="healthcare">Healthcare & Pharma</option>
+          <option value="defense">Defense & Geopolitics</option>
+        </select>
+      </div>
+      <div id="stock-filter" style="display:none">
+        <div class="stock-search-wrap">
+          <input class="stock-search-input" id="stock-input" type="text" placeholder="Ticker or name (e.g. AAPL, Nvidia…)" onkeyup="handleStockInput(event)" onkeydown="handleStockKeydown(event)" autocomplete="off" />
+          <div class="stock-autocomplete" id="stock-autocomplete"></div>
+        </div>
+      </div>
     </div>
     <div class="filter-group">
       <div class="filter-label">News timeframe</div>
@@ -394,6 +421,72 @@
 
     let selectedAutocompleteIndex = -1;
     let watchlist = { sectors: [], tickers: [] };
+    let currentMode = 'sector';
+    let selectedStock = null;
+    let stockAutocompleteIndex = -1;
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById('tab-sector').classList.toggle('active', mode === 'sector');
+      document.getElementById('tab-stock').classList.toggle('active', mode === 'stock');
+      document.getElementById('sector-filter').style.display = mode === 'sector' ? '' : 'none';
+      document.getElementById('stock-filter').style.display = mode === 'stock' ? '' : 'none';
+      if (mode === 'stock') document.getElementById('stock-input').focus();
+    }
+
+    function handleStockInput(e) {
+      const val = e.target.value.toUpperCase().trim();
+      const dropdown = document.getElementById('stock-autocomplete');
+      stockAutocompleteIndex = -1;
+      selectedStock = null;
+      if (val.length < 1) { dropdown.classList.remove('open'); return; }
+      const matches = TICKERS.filter(t => t.s.startsWith(val) || t.n.toUpperCase().includes(val)).slice(0, 8);
+      if (matches.length === 0) { dropdown.classList.remove('open'); return; }
+      dropdown.innerHTML = matches.map((t, i) =>
+        `<div class="stock-auto-item" onmousedown="selectStock('${esc(t.s)}','${esc(t.n).replace(/'/g,'\\'')}')" data-index="${i}">
+           <span class="stock-auto-sym">${esc(t.s)}</span>
+           <span class="stock-auto-name">${esc(t.n)}</span>
+         </div>`).join('');
+      dropdown.classList.add('open');
+    }
+
+    function handleStockKeydown(e) {
+      const dropdown = document.getElementById('stock-autocomplete');
+      const items = dropdown.querySelectorAll('.stock-auto-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        stockAutocompleteIndex = Math.min(stockAutocompleteIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('highlighted', i === stockAutocompleteIndex));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        stockAutocompleteIndex = Math.max(stockAutocompleteIndex - 1, -1);
+        items.forEach((el, i) => el.classList.toggle('highlighted', i === stockAutocompleteIndex));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (stockAutocompleteIndex >= 0 && items[stockAutocompleteIndex]) {
+          const sym  = items[stockAutocompleteIndex].querySelector('.stock-auto-sym').textContent;
+          const name = items[stockAutocompleteIndex].querySelector('.stock-auto-name').textContent;
+          selectStock(sym, name);
+        } else {
+          const raw = document.getElementById('stock-input').value.trim().toUpperCase();
+          if (raw) { selectedStock = { s: raw, n: raw }; dropdown.classList.remove('open'); loadFeed(); }
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.remove('open');
+      }
+    }
+
+    function selectStock(sym, name) {
+      selectedStock = { s: sym, n: name };
+      document.getElementById('stock-input').value = sym + ' — ' + name;
+      document.getElementById('stock-autocomplete').classList.remove('open');
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.stock-search-wrap')) {
+        document.getElementById('stock-autocomplete').classList.remove('open');
+      }
+    });
 
     function handleImpactChange() {
       const custom = document.getElementById('filter-impact-custom');
@@ -401,6 +494,7 @@
     }
 
     function quickLoad(category) {
+      setMode('sector');
       document.getElementById('filter-category').value = category;
       loadFeed();
     }
@@ -638,15 +732,29 @@
       const loader = document.getElementById('loader');
       const feedPending = document.getElementById('feed-pending');
 
-      const category = document.getElementById('filter-category').value;
       const timeframe = document.getElementById('filter-timeframe').value;
       const rawImpact = document.getElementById('filter-impact').value;
       const impact = rawImpact === 'custom'
         ? (document.getElementById('filter-impact-custom').value.trim() || '1 month')
         : rawImpact;
 
-      document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
-      label.textContent = feedLabelMap[timeframe] || "Today's analysis";
+      let params;
+      if (currentMode === 'stock') {
+        const ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('—')[0].trim();
+        if (!ticker) {
+          status.textContent = 'Enter a stock or ETF ticker first.';
+          return;
+        }
+        const stockName = selectedStock?.n || ticker;
+        params = new URLSearchParams({ stock: ticker, stockName, timeframe });
+        document.getElementById('page-title').textContent = ticker + ' — ' + stockName;
+        label.textContent = ticker + ' analysis';
+      } else {
+        const category = document.getElementById('filter-category').value;
+        params = new URLSearchParams({ category, timeframe });
+        document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
+        label.textContent = feedLabelMap[timeframe] || "Today's analysis";
+      }
 
       btn.disabled = true;
       feed.innerHTML = '';
@@ -657,7 +765,6 @@
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
 
       try {
-        const params = new URLSearchParams({ category, timeframe });
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 120000);
 

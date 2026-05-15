@@ -353,9 +353,146 @@ export default async function handler(req, res) {
     } catch (_) { /* fail open if Supabase not configured */ }
 
     try {
-      const { category, timeframe, minGrade } = req.query;
+      const { category, timeframe, minGrade, stock, stockName } = req.query;
       const selectedGrade = minGrade || 'medium';
       const threshold = gradeScores[selectedGrade] ?? 2;
+
+      // ── Stock mode ──────────────────────────────────────────────────────────
+      if (stock) {
+        const ticker   = _sanitize(stock.toUpperCase(), 10);
+        const fullName = _sanitize(stockName || ticker, 100);
+        const shortName = fullName.replace(/\s*(Inc\.?|Corp\.?|Ltd\.?|PLC|Co\.?|Group|Holdings?)\s*$/i, '').trim();
+
+        const stockQueries = [
+          `${ticker} stock earnings results`,
+          `${shortName} company news analysis`,
+          `${ticker} analyst price target forecast`,
+          `${shortName} revenue guidance outlook`,
+          `${ticker} stock market performance`,
+          `${shortName} competition industry`,
+          `${ticker} options sentiment`,
+        ];
+
+        const googleUrls = stockQueries.map(q =>
+          `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`
+        );
+
+        const BASE_DIRECT_FEEDS = [
+          { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', source: 'CNBC' },
+          { url: 'https://feeds.marketwatch.com/marketwatch/topstories/', source: 'MarketWatch' },
+          { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'The Wall Street Journal' },
+          { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
+          { url: 'https://www.reddit.com/r/investing/new.rss?limit=25', source: 'Reddit r/investing' },
+          { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25', source: 'Reddit r/stocks' },
+        ];
+
+        function fetchWithTimeout(url, ms) {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), ms);
+          return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(t));
+        }
+        function parseRssItems(text, fallbackSource) {
+          const items = [];
+          for (const match of [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)]) {
+            const item = match[1];
+            const titleM  = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+            const sourceM = item.match(/<source[^>]*>(.*?)<\/source>/);
+            const dateM   = item.match(/<pubDate>(.*?)<\/pubDate>/);
+            if (titleM) {
+              const title  = titleM[1].replace(/<[^>]*>/g, '').trim();
+              const source = sourceM ? sourceM[1].replace(/<[^>]*>/g, '').trim() : fallbackSource;
+              if (title.length > 15) items.push({ title, source, date: dateM?.[1] || '' });
+            }
+          }
+          return items;
+        }
+
+        const [googleResults, directResults] = await Promise.all([
+          Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
+          Promise.allSettled(BASE_DIRECT_FEEDS.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source })))),
+        ]);
+
+        let rawItems = [];
+        for (const r of googleResults) {
+          if (r.status === 'fulfilled') {
+            try { for (const item of parseRssItems(await r.value.text(), 'Unknown')) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+          }
+        }
+        for (const r of directResults) {
+          if (r.status === 'fulfilled') {
+            try { const { res, source } = r.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+          }
+        }
+
+        // Filter to headlines mentioning the ticker or company name words
+        const matchWords = [
+          ticker.toLowerCase(),
+          ...shortName.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2),
+        ];
+        rawItems = rawItems.filter(a => {
+          const t = a.title.toLowerCase();
+          return matchWords.some(w => t.includes(w));
+        });
+
+        if (timeframe && timeframe !== 'any') {
+          rawItems = rawItems.filter(a => {
+            if (!a.date) return true;
+            const days = (new Date() - new Date(a.date)) / 86400000;
+            if (timeframe === 'today' && days > 2) return false;
+            if (timeframe === '3days' && days > 3) return false;
+            if (timeframe === '7days' && days > 7) return false;
+            return true;
+          });
+        }
+
+        const seen = new Set();
+        const deduped = rawItems.filter(a => {
+          const key = a.title.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().split(' ').filter(w => w.length > 2).slice(0, 8).join(' ');
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        if (deduped.length === 0) return res.status(200).json({ groups: [] });
+
+        const groupPrompt = `You are a senior equity analyst. Here are ${deduped.length} headlines related to ${ticker} (${fullName}). Group them into distinct specific events or themes that directly affect ${ticker}'s business outlook, financial performance, or stock market expectations.
+
+Headlines:
+${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+
+STRICT RULES:
+1. Only create groups directly relevant to ${ticker} — skip unrelated news
+2. Merge ALL headlines about the same specific event into ONE group
+3. Topics must be specific: name the exact catalyst, metric, or event
+4. Focus on: earnings, guidance, analyst calls, product news, regulatory issues, competitive dynamics, macro factors specific to ${ticker}
+5. Maximum 10 groups
+6. Each index appears in exactly one group
+7. Include ALL relevant indices — do not leave articles ungrouped if they belong to a topic
+
+Respond ONLY with valid JSON, no markdown:
+{"groups":[{"topic":"Specific descriptive title","indices":[1,3,5]}]}`;
+
+        const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, messages: [{ role: 'user', content: groupPrompt }] })
+        });
+        const groupData = await groupRes.json();
+        if (groupData.error) return res.status(500).json({ error: groupData.error.message });
+
+        const grouped = JSON.parse(groupData.content[0].text.replace(/```json|```/g, '').trim());
+        const groups = grouped.groups.map(g => {
+          const articles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+          const uniqueSources = [...new Set(articles.map(a => a.source))];
+          const sourceGrades = {};
+          uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
+          return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: articles.length, headlines: articles.map(a => a.title), dates: articles.map(a => a.date) };
+        });
+
+        const sorted = [...groups].sort((a, b) => b.totalSources - a.totalSources);
+        return res.status(200).json({ groups: sorted });
+      }
 
       const categoryQueries = {
         'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war', 'crypto bitcoin'],
