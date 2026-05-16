@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI — Stock Markets</title>
+  <title>InvestmentInformatics.AI | Stock Markets</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -223,7 +223,7 @@
     <div class="hero-left">
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
       <h1 id="page-title">Today's market-moving events</h1>
-      <p class="hero-sub">Real news synthesized across sources — economic implications, affected sectors, and specific stocks laid out clearly.</p>
+      <p class="hero-sub">Real news synthesized across sources: economic implications, affected sectors, and specific stocks laid out clearly.</p>
     </div>
     <div class="hero-stats">
       <div class="hero-stat">
@@ -326,7 +326,7 @@
             <button class="quick-cat" onclick="quickLoad('consumer')">Consumer & Retail</button>
           </div>
         </div>
-        <div class="pre-load-note">Analysis takes ~30–60 seconds</div>
+        <div class="pre-load-note">Analysis takes ~30-60 seconds</div>
       </div>
     </div>
 
@@ -382,15 +382,15 @@
 
     const titleMap = {
       'today': "Today's market-moving events",
-      '3days': "Market-moving events — last 3 days",
-      '7days': "Market-moving events — last 7 days",
+      '3days': "Market-moving events, last 3 days",
+      '7days': "Market-moving events, last 7 days",
       'any': "All market-moving events"
     };
 
     const feedLabelMap = {
       'today': "Today's analysis",
-      '3days': "Last 3 days — analysis",
-      '7days': "Last 7 days — analysis",
+      '3days': "Last 3 days analysis",
+      '7days': "Last 7 days analysis",
       'any': "Latest analysis"
     };
 
@@ -492,7 +492,7 @@
 
     function selectStock(sym, name) {
       selectedStock = { s: sym, n: name };
-      document.getElementById('stock-input').value = sym + ' — ' + name;
+      document.getElementById('stock-input').value = sym + ' | ' + name;
       document.getElementById('stock-autocomplete').classList.remove('open');
     }
 
@@ -762,14 +762,14 @@
 
       let params;
       if (currentMode === 'stock') {
-        const ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('—')[0].trim();
+        const ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('|')[0].trim();
         if (!ticker) {
           status.textContent = 'Enter a stock or ETF ticker first.';
           return;
         }
         const stockName = selectedStock?.n || ticker;
         params = new URLSearchParams({ stock: ticker, stockName, timeframe });
-        document.getElementById('page-title').textContent = ticker + ' — ' + stockName;
+        document.getElementById('page-title').textContent = ticker + ' | ' + stockName;
         label.textContent = ticker + ' analysis';
       } else {
         const category = document.getElementById('filter-category').value;
@@ -833,14 +833,14 @@
 
         loader.classList.remove('active');
         feedPending.classList.remove('active');
-        const expandedMsg = expandedTimeframe ? ' · No news in selected timeframe — showing most recent available' : '';
-        status.textContent = `${cards.length} topics analyzed — sorted by confidence${expandedMsg}`;
+        const expandedMsg = expandedTimeframe ? ' · No news in selected timeframe, showing most recent available' : '';
+        status.textContent = `${cards.length} topics analyzed, sorted by confidence${expandedMsg}`;
 
       } catch (err) {
         loader.classList.remove('active');
         feedPending.classList.remove('active');
         if (err.name === 'AbortError') {
-          status.textContent = 'Request timed out — try again';
+          status.textContent = 'Request timed out. Try again.';
         } else {
           status.textContent = 'Error: ' + err.message;
         }
@@ -866,7 +866,7 @@
         });
         if (!res.ok) {
           const body = await res.text().catch(() => '');
-          throw new Error(`${res.status} — ${body.slice(0, 150)}`);
+          throw new Error(`${res.status}: ${body.slice(0, 150)}`);
         }
         return await res.json();
       } finally {

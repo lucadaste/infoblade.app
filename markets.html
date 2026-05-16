@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI — Prediction Markets</title>
+  <title>InvestmentInformatics.AI | Prediction Markets</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -156,7 +156,7 @@
     <div class="hero-left">
       <div class="hero-tag"><span class="hero-tag-dot"></span> Powered by Polymarket</div>
       <h1>Prediction markets</h1>
-      <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing — then let the news tell you whether they're right.</p>
+      <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing, then let the news tell you whether they're right.</p>
     </div>
     <div class="hero-stats">
       <div class="hero-stat">
@@ -168,7 +168,7 @@
         <div class="hero-stat-lbl">Categories</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-val">20–80%</div>
+        <div class="hero-stat-val">20-80%</div>
         <div class="hero-stat-lbl">Toss-up odds only</div>
       </div>
     </div>
@@ -304,7 +304,7 @@
         block.innerHTML = `
           <div class="public-lean">${data.crowd_summary ? esc(data.crowd_summary) : `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
           <div class="analysis-header">
-            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)} — ${esc(data.lean_confidence)} confidence</span>
+            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)}, ${esc(data.lean_confidence)} confidence</span>
             <span class="signal-badge ${signalBadgeClass(data.signal)}">${esc(data.signal)}</span>
           </div>
           <div class="analysis-reasoning">${esc(data.reasoning)}</div>
@@ -399,12 +399,12 @@
           grid.innerHTML = `
             <div class="empty-state">
               <h3>No markets in this timeframe</h3>
-              <p>No toss-up ${cat} markets (20–80% odds) closing within ${maxDays} days. Try a longer timeframe or a different category.</p>
+              <p>No toss-up ${cat} markets (20-80% odds) closing within ${maxDays} days. Try a longer timeframe or a different category.</p>
             </div>`;
           return;
         }
 
-        setStatus(`${markets.length} toss-up markets (20–80% odds) — click "Analyze news →" on any card`);
+        setStatus(`${markets.length} toss-up markets (20-80% odds). Click "Analyze news" on any card.`);
         markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
       } catch (err) {
         setStatus('');

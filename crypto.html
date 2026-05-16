@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI — Crypto Markets</title>
+  <title>InvestmentInformatics.AI | Crypto Markets</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -54,7 +54,7 @@
     .fg-track { width: 100px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; }
     .fg-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
 
-    /* Filter bar — matches feed.html */
+    /* Filter bar - matches feed.html */
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
@@ -68,7 +68,7 @@
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
-    /* Main layout — matches feed.html */
+    /* Main layout - matches feed.html */
     .main-layout { display: flex; align-items: flex-start; }
     .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
 
@@ -155,7 +155,7 @@
     .spinner-inv { border-top-color: var(--ink); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Watchlist sidebar — matches feed.html */
+    /* Watchlist sidebar - matches feed.html */
     .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; }
     .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
     .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -238,10 +238,10 @@
       <div class="fg-label-row">
         <div class="fg-label">Fear &amp; Greed</div>
         <div class="fg-hint">?
-          <div class="fg-hint-popup">A score from 0–100 measuring overall crypto market sentiment. <strong style="color:var(--neg)">0–25 = Extreme Fear</strong> (panic selling), <strong style="color:#c87d00">26–49 = Fear</strong>, <strong style="color:#c87d00">50–74 = Greed</strong>, <strong style="color:var(--pos)">75–100 = Extreme Greed</strong> (euphoric buying). Extreme fear can signal a buying opportunity; extreme greed may mean a correction is near.</div>
+          <div class="fg-hint-popup">A score from 0-100 measuring overall crypto market sentiment. <strong style="color:var(--neg)">0-25 = Extreme Fear</strong> (panic selling), <strong style="color:#c87d00">26-49 = Fear</strong>, <strong style="color:#c87d00">50-74 = Greed</strong>, <strong style="color:var(--pos)">75-100 = Extreme Greed</strong> (euphoric buying). Extreme fear can signal a buying opportunity; extreme greed may mean a correction is near.</div>
         </div>
       </div>
-      <div class="fg-number" id="fg-number">—</div>
+      <div class="fg-number" id="fg-number">--</div>
       <div class="fg-class" id="fg-class"></div>
       <div class="fg-track"><div class="fg-fill" id="fg-fill" style="width:0%"></div></div>
     </div>
@@ -362,7 +362,7 @@
 
     const TIMEFRAMES = {
       '24h': { context: 'over the next 24 hours',  apiParam: 'today'  },
-      '1w':  { context: 'over the next 1–7 days',  apiParam: '7days'  },
+      '1w':  { context: 'over the next 1-7 days',  apiParam: '7days'  },
       '1m':  { context: 'over the next 30 days',   apiParam: 'any'    },
       '3m':  { context: 'over the next 3 months',  apiParam: 'any'    },
     };
@@ -375,7 +375,7 @@
     let renderSession = 0;
 
     function formatPrice(p) {
-      if (p == null) return '—';
+      if (p == null) return '--';
       if (p >= 1000)   return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 });
       if (p >= 1)      return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       if (p >= 0.01)   return '$' + p.toFixed(4);
@@ -535,7 +535,7 @@
 
       const panel = document.getElementById('analysis-panel');
       panel.style.display = 'block';
-      document.getElementById('ap-title').textContent = `${coin.name} (${coin.symbol}) — News Analysis`;
+      document.getElementById('ap-title').textContent = `${coin.name} (${coin.symbol}): News Analysis`;
 
       const tfBar = document.getElementById('tf-bar');
       tfBar.style.display = 'flex';
@@ -554,7 +554,7 @@
         const emptyEl = document.createElement('div');
         emptyEl.className = 'ap-empty';
         emptyEl.innerHTML = `
-          <div>No specific news events matched for ${esc(coin.name)} right now — running general market analysis…</div>
+          <div>No specific news events matched for ${esc(coin.name)} right now. Running general market analysis…</div>
           <div class="ap-loading group-loading" id="general-loading"><div class="spinner spinner-inv"></div> Analyzing…</div>
           <div class="deep-result" id="general-result"></div>
         `;
@@ -607,7 +607,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            topic: `Net price direction verdict for ${coin.name} (${coin.symbol}) ${tf.context} — weigh all credible news sources and commit to a directional call`,
+            topic: `Net price direction verdict for ${coin.name} (${coin.symbol}) ${tf.context}. Weigh all credible news sources and commit to a directional call.`,
             headlines: allHeadlines,
             sources: allSources,
             sourceGrades: mergedGrades,
@@ -644,7 +644,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            topic: `${group.topic} — impact on ${coin.name} (${coin.symbol}) ${tf.context}`,
+            topic: `${group.topic}: impact on ${coin.name} (${coin.symbol}) ${tf.context}`,
             headlines: group.headlines || [],
             sources: group.sources || [],
             sourceGrades: group.sourceGrades || {},

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI — Track Record</title>
+  <title>InvestmentInformatics.AI | Track Record</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -179,13 +179,13 @@
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-  function fmt(n) { return n == null ? '—' : n; }
+  function fmt(n) { return n == null ? '--' : n; }
 
   function renderStats(s) {
     const acc = document.getElementById('stat-accuracy');
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
-    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '—';
+    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
 
     const correct = document.getElementById('stat-correct');
     correct.classList.remove('skeleton');
@@ -209,7 +209,7 @@
   function renderChart(timeline) {
     const area = document.getElementById('chart-area');
     if (!timeline || !timeline.length) {
-      area.innerHTML = '<div class="chart-empty">No validated predictions yet — check back once timeframes expire.</div>';
+      area.innerHTML = '<div class="chart-empty">No validated predictions yet. Check back once timeframes expire.</div>';
       return;
     }
     const maxPct = 100;
@@ -291,7 +291,7 @@
     ['stat-accuracy','stat-correct','stat-total','stat-pending'].forEach(id => {
       const el = document.getElementById(id);
       el.classList.remove('skeleton');
-      el.textContent = '—';
+      el.textContent = '--';
     });
     document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc(err.message)}</div>`;
     document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc(err.message)}</div>`;

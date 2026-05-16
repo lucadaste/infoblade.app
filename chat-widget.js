@@ -236,7 +236,7 @@
       <button class="ii-close" id="ii-close-btn" aria-label="Close chat">×</button>
     </div>
     <div class="ii-msgs" id="ii-msgs">
-      <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for — drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
+      <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for. Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
       <div class="ii-starters" id="ii-starters"></div>
     </div>
     <div class="ii-input-row">
@@ -377,14 +377,14 @@
       });
       thinking.remove();
       const data = await res.json();
-      const reply = data.reply || data.error || 'Something went wrong — try again.';
+      const reply = data.reply || data.error || 'Something went wrong. Try again.';
       addMsg('assistant', reply);
       history.push({ role: 'assistant', content: reply });
     } catch (e) {
       thinking.remove();
       addMsg('assistant', e.name === 'TimeoutError'
-        ? 'The request timed out — please try again.'
-        : 'Connection error — please try again.');
+        ? 'The request timed out. Please try again.'
+        : 'Connection error. Please try again.');
     }
     busy = false;
     sendBtn.disabled = false;

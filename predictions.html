@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI — Accuracy History</title>
+  <title>InvestmentInformatics.AI | Accuracy History</title>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -173,7 +173,7 @@
   <div class="hero">
     <div class="hero-tag"><span class="hero-tag-dot"></span> Self-improving model</div>
     <h1>Accuracy history</h1>
-    <p class="hero-sub">Every analysis generates a prediction. This tracks whether they come true — and which sources are historically most accurate.</p>
+    <p class="hero-sub">Every analysis generates a prediction. This tracks whether they come true, and which sources are historically most accurate.</p>
   </div>
 
   <div class="tab-bar">
@@ -184,19 +184,19 @@
 
   <div class="stats-bar" id="stats-bar">
     <div class="stat-cell">
-      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-value" id="stat-total">--</div>
       <div class="stat-label">Total predictions</div>
     </div>
     <div class="stat-cell">
-      <div class="stat-value amber" id="stat-pending">—</div>
+      <div class="stat-value amber" id="stat-pending">--</div>
       <div class="stat-label" id="stat-pending-label">Awaiting validation</div>
     </div>
     <div class="stat-cell">
-      <div class="stat-value green" id="stat-accuracy">—</div>
+      <div class="stat-value green" id="stat-accuracy">--</div>
       <div class="stat-label" id="stat-accuracy-label">Accuracy rate</div>
     </div>
     <div class="stat-cell">
-      <div class="stat-value" id="stat-fourth">—</div>
+      <div class="stat-value" id="stat-fourth">--</div>
       <div class="stat-label" id="stat-fourth-label">Sources tracked</div>
     </div>
   </div>
@@ -318,7 +318,7 @@
 
       document.getElementById('stat-total').textContent = total || '0';
       document.getElementById('stat-pending').textContent = pending || '0';
-      document.getElementById('stat-accuracy').textContent = accuracy !== null ? `${accuracy}%` : '—';
+      document.getElementById('stat-accuracy').textContent = accuracy !== null ? `${accuracy}%` : '--';
 
       if (currentTab === 'prediction-market') {
         document.getElementById('stat-pending-label').textContent = 'Pending resolution';
@@ -375,7 +375,7 @@
 
     // ── Card builders ─────────────────────────────────────────────────
     function formatDate(iso) {
-      if (!iso) return '—';
+      if (!iso) return '--';
       return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
 
@@ -398,7 +398,7 @@
       const losers = entry.loserTickers || entry.analysis?.losers?.tickers || [];
       const sources = (entry.sources || []).slice(0, 4);
       const moreCount = (entry.sources || []).length - 4;
-      const conf = entry.analysis?.confidence || '—';
+      const conf = entry.analysis?.confidence || '--';
       const confClass = conf.toLowerCase().startsWith('high') ? 'conf-high' : conf.toLowerCase().startsWith('medium') ? 'conf-medium' : 'conf-low';
       let scoreDetail = '';
       if (entry.actualOutcome?.scores) {
@@ -441,7 +441,7 @@
             ${statusBadgeHTML(entry)}
           </div>
           <div class="lean-row">
-            <span class="lean-pill ${leanClass}">AI leans ${entry.lean || 'Uncertain'} — ${entry.lean_confidence || '?'} confidence</span>
+            <span class="lean-pill ${leanClass}">AI leans ${entry.lean || 'Uncertain'}, ${entry.lean_confidence || '?'} confidence</span>
             ${entry.signal ? `<span class="signal-pill ${signalClass}">${entry.signal}</span>` : ''}
           </div>
           <div class="pred-meta">
