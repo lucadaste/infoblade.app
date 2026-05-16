@@ -448,35 +448,31 @@
 
     async function loadPrices() {
       try {
-        const ids = COINS.map(c => c.id).join(',');
-        const res = await fetch(
-          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=100&sparkline=false&price_change_percentage=24h`
-        );
-        const data = await res.json();
-        if (!Array.isArray(data)) return;
-        data.forEach(d => { priceCache[d.id] = d; });
+        const res = await fetch('/api/crypto-prices');
+        const result = await res.json();
+        const prices = result.prices;
+        if (!Array.isArray(prices)) return;
+        prices.forEach(d => { priceCache[d.id] = d; });
         renderGrid();
+        if (result.fearGreed) renderFearGreed(result.fearGreed);
       } catch (_) {
         renderGrid();
       }
     }
 
-    async function loadFearGreed() {
-      try {
-        const res = await fetch('https://api.alternative.me/fng/?limit=1');
-        const d = (await res.json())?.data?.[0];
-        if (!d) return;
-        const v = parseInt(d.value);
-        const color = v >= 60 ? 'var(--pos)' : v <= 40 ? 'var(--neg)' : '#c87d00';
-        document.getElementById('fg-number').textContent = v;
-        document.getElementById('fg-number').style.color = color;
-        document.getElementById('fg-class').textContent = d.value_classification;
-        document.getElementById('fg-class').style.color = color;
-        document.getElementById('fg-fill').style.width = v + '%';
-        document.getElementById('fg-fill').style.background = color;
-        document.getElementById('fg-widget').style.display = 'flex';
-      } catch (_) {}
+    function renderFearGreed(d) {
+      const v = parseInt(d.value);
+      const color = v >= 60 ? 'var(--pos)' : v <= 40 ? 'var(--neg)' : '#c87d00';
+      document.getElementById('fg-number').textContent = v;
+      document.getElementById('fg-number').style.color = color;
+      document.getElementById('fg-class').textContent = d.value_classification;
+      document.getElementById('fg-class').style.color = color;
+      document.getElementById('fg-fill').style.width = v + '%';
+      document.getElementById('fg-fill').style.background = color;
+      document.getElementById('fg-widget').style.display = 'flex';
     }
+
+    async function loadFearGreed() { /* handled inside loadPrices */ }
 
     function coinMatchesGroup(coin, group) {
       const terms = [coin.name.toLowerCase(), coin.symbol.toLowerCase()];
