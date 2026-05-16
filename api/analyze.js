@@ -744,14 +744,23 @@ Respond ONLY with valid JSON, no markdown:
     try {
       const candidateTickers = _extractTickerCandidates(headlines);
       const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-      const [relevantMarkets, technicalSnapshot, redditPosts] = await Promise.all([
+      const [relevantMarkets, technicalSnapshot, redditPosts, reputation] = await Promise.all([
         _fetchRelevantMarkets(topic),
         _fetchTickerSnapshot(candidateTickers),
-        _fetchRedditSentiment(topic, isCryptoTopic)
+        _fetchRedditSentiment(topic, isCryptoTopic),
+        supabase
+          ? supabase.from('source_reputation').select('source, attempts, correct')
+              .then(({ data }) => {
+                const map = {};
+                for (const row of data || []) map[row.source] = { attempts: row.attempts, correct: row.correct };
+                return map;
+              })
+              .catch(() => ({}))
+          : Promise.resolve({})
       ]);
 
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
-      const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation: {} });
+      const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
 
       const marketsSection = relevantMarkets.length
         ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence.\n`
