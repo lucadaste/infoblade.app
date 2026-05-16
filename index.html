@@ -143,17 +143,24 @@
     .signal-aligns { background: rgba(42,158,79,0.08); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.15); }
     .pm-reasoning { font-size: 13px; color: var(--muted); line-height: 1.7; font-style: italic; }
 
-    /* Crypto coming soon */
-    .cs-section { padding: 88px 48px; border-top: 1px solid var(--border); }
-    .cs-inner { background: #0a0a0a; border-radius: 14px; padding: 56px 52px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
-    .cs-badge { display: inline-block; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); padding: 4px 14px; border-radius: 4px; margin-bottom: 20px; }
-    .cs-inner h2 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(22px, 3vw, 32px); letter-spacing: -1px; color: #f0ede6; line-height: 1.15; margin-bottom: 16px; }
-    .cs-inner p { font-size: 15px; color: #888; line-height: 1.8; }
-    .cs-features { display: flex; flex-direction: column; gap: 12px; }
-    .cs-feature { display: flex; align-items: flex-start; gap: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 16px 18px; }
-    .cs-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
-    .cs-feature-text { font-size: 14px; color: #888; line-height: 1.6; }
-    .cs-feature-text strong { color: #f0ede6; font-weight: 500; }
+    /* Crypto preview mock */
+    .cp-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .cp-header-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding-top: 2px; }
+    .cp-fg { text-align: right; }
+    .cp-fg-label { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 2px; }
+    .cp-fg-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -1px; color: #c87d00; line-height: 1; }
+    .cp-fg-cls { font-size: 11px; font-weight: 600; color: #c87d00; margin-top: 2px; }
+    .cp-fg-bar { width: 72px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; margin-left: auto; }
+    .cp-fg-fill { height: 100%; border-radius: 2px; background: #c87d00; }
+    .cp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cp-card { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .cp-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; }
+    .cp-sym { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; margin-top: 1px; }
+    .cp-price { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; letter-spacing: -0.5px; }
+    .cp-chg { font-size: 11px; font-weight: 600; }
+    .cp-pos { color: #2a9e4f; }
+    .cp-neg { color: #c84040; }
+    .cp-btn { border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 5px 0; border-radius: 5px; text-align: center; letter-spacing: 0.3px; }
 
     /* Accuracy history mock */
     .acc-stats { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
@@ -339,22 +346,39 @@
     </div>
     <div>
       <div class="preview-card">
-        <div class="light-feat">
-          <div class="light-feat-row">
-            <div class="light-feat-dot"></div>
-            <div class="light-feat-text"><strong>Live price grid</strong>: 32 assets with real-time price, 24h change, market cap, and volume</div>
+        <div class="cp-header">
+          <div class="cp-header-label">Live · 32 assets</div>
+          <div class="cp-fg">
+            <div class="cp-fg-label">Fear &amp; Greed</div>
+            <div class="cp-fg-val">72</div>
+            <div class="cp-fg-cls">Greed</div>
+            <div class="cp-fg-bar"><div class="cp-fg-fill" style="width:72%"></div></div>
           </div>
-          <div class="light-feat-row">
-            <div class="light-feat-dot"></div>
-            <div class="light-feat-text"><strong>Fear and Greed Index</strong>: live market sentiment score updated daily from multiple data sources</div>
+        </div>
+        <div class="cp-grid">
+          <div class="cp-card">
+            <div><div class="cp-name">Bitcoin</div><div class="cp-sym">BTC</div></div>
+            <div class="cp-price">$97,432</div>
+            <div class="cp-chg cp-pos">+3.84% 24h</div>
+            <div class="cp-btn">Analyze news</div>
           </div>
-          <div class="light-feat-row">
-            <div class="light-feat-dot"></div>
-            <div class="light-feat-text"><strong>AI news analysis</strong>: click any asset to run the same source-weighted analysis used on Stock Markets</div>
+          <div class="cp-card">
+            <div><div class="cp-name">Ethereum</div><div class="cp-sym">ETH</div></div>
+            <div class="cp-price">$3,218</div>
+            <div class="cp-chg cp-pos">+2.11% 24h</div>
+            <div class="cp-btn">Analyze news</div>
           </div>
-          <div class="light-feat-row">
-            <div class="light-feat-dot"></div>
-            <div class="light-feat-text"><strong>Personal watchlist</strong>: pin your holdings to the sidebar and track them across sessions</div>
+          <div class="cp-card">
+            <div><div class="cp-name">Solana</div><div class="cp-sym">SOL</div></div>
+            <div class="cp-price">$186.40</div>
+            <div class="cp-chg cp-neg">-1.23% 24h</div>
+            <div class="cp-btn">Analyze news</div>
+          </div>
+          <div class="cp-card">
+            <div><div class="cp-name">Dogecoin</div><div class="cp-sym">DOGE</div></div>
+            <div class="cp-price">$0.1847</div>
+            <div class="cp-chg cp-pos">+5.62% 24h</div>
+            <div class="cp-btn">Analyze news</div>
           </div>
         </div>
       </div>
