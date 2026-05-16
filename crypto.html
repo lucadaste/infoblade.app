@@ -373,6 +373,8 @@
     let currentTimeframe = '24h';
     let currentGroups = null;
     let renderSession = 0;
+    let cryptoWatchlist = [];
+    let cwAutocompleteIndex = -1;
 
     function formatPrice(p) {
       if (p == null) return '--';
@@ -750,9 +752,6 @@
     }
 
     // Crypto watchlist
-    let cryptoWatchlist = [];
-    let cwAutocompleteIndex = -1;
-
     function loadCryptoWatchlist() {
       try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) cryptoWatchlist = JSON.parse(s); } catch(e) {}
       renderCryptoWatchlist();
