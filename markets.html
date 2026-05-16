@@ -35,96 +35,103 @@
     .nav-chat-btn.active::after { background: #181818; }
     @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
+    .hero-stats { display: flex; gap: 28px; flex-shrink: 0; padding-bottom: 4px; }
+    .hero-stat { text-align: right; }
+    .hero-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+    .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
-    .category-bar { display: flex; gap: 10px; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 61px; z-index: 90; overflow-x: auto; }
-    .cat-chip { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
+    .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cat-chip { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
-
-    .timeframe-bar { display: flex; gap: 8px; align-items: center; padding: 12px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 122px; z-index: 89; overflow-x: auto; }
-    .timeframe-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); white-space: nowrap; margin-right: 4px; }
-    .tf-chip { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .tf-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tf-chip { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .tf-chip:hover { border-color: var(--ink); color: var(--ink); }
     .tf-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); font-weight: 600; }
 
-    .market-status { padding: 12px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 44px; display: flex; align-items: center; gap: 10px; }
+    .status-bar { padding: 14px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 45px; display: flex; align-items: center; gap: 10px; }
     .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .market-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 32px 48px 80px; }
+    .feed-container { padding: 48px 48px 80px; }
+    .feed-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
+    .polymarket-note { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
+    .polymarket-note a { color: var(--muted); }
 
-    .market-card { background: #1a1a1a; border: 1px solid var(--border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; transition: transform 0.15s, box-shadow 0.15s; animation: fadeUp 0.35s ease both; }
-    .market-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .market-grid { display: flex; flex-direction: column; gap: 20px; }
 
-    .market-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-    .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; flex: 1; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    .odds-block { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
-    .odds-number { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 32px; letter-spacing: -1px; line-height: 1; }
+    .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; }
+    .market-card:hover { transform: translateY(-2px); }
+
+    .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
+    .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
+    .odds-block { flex-shrink: 0; text-align: right; }
+    .odds-number { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 36px; letter-spacing: -1px; line-height: 1; }
     .odds-number.high { color: #2a9e4f; }
     .odds-number.medium { color: var(--ink); }
     .odds-number.low { color: #c84040; }
-    .odds-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); text-align: right; margin-top: 2px; }
+    .odds-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
 
-    .market-meta { display: flex; gap: 16px; flex-wrap: wrap; }
-    .meta-item { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; }
-    .meta-item strong { color: var(--ink); font-weight: 500; }
+    .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid #1e1e1e; }
+    .chain-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #555; min-width: 120px; padding-top: 3px; flex-shrink: 0; }
+    .chain-content { font-size: 14px; color: #bbb; line-height: 1.7; flex: 1; }
+    .impact-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); }
 
-    .btn-analyze { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; transition: opacity 0.2s; align-self: flex-start; letter-spacing: 0.2px; }
-    .btn-analyze:hover { opacity: 0.8; }
+    .btn-analyze { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.2px; }
+    .btn-analyze:hover { opacity: 0.85; }
     .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-analyze.loading { display: flex; align-items: center; gap: 8px; }
+    .btn-analyze.loading { display: inline-flex; align-items: center; gap: 8px; }
+    .btn-analyze .spinner { border-top-color: var(--paper); }
 
-    .analysis-block { border-top: 1px solid var(--border); padding-top: 16px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
-
+    .analysis-block { border-top: 1px solid #1e1e1e; padding-top: 18px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .analysis-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .lean-badge { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 6px; letter-spacing: 0.3px; }
+    .lean-badge { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.3px; }
     .lean-yes { background: rgba(42,158,79,0.12); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.25); }
     .lean-no { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
     .lean-uncertain { background: var(--border); color: var(--muted); border: 1px solid transparent; }
-
-    .signal-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.3px; }
+    .signal-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; letter-spacing: 0.3px; }
     .signal-aligns { background: rgba(42,158,79,0.08); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.15); }
     .signal-contradicts { background: rgba(200,125,0,0.12); color: #c87d00; border: 1px solid rgba(200,125,0,0.25); font-weight: 700; }
     .signal-inconclusive { background: var(--border); color: var(--muted); border: 1px solid transparent; }
-
-    .public-lean { font-size: 13px; color: #aaaaaa; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 6px; }
+    .public-lean { font-size: 13px; color: #aaa; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid #1e1e1e; }
     .public-lean strong { color: var(--ink); font-weight: 700; }
-    .analysis-reasoning { font-size: 13px; color: var(--ink); line-height: 1.65; }
-    .analysis-signal-detail { font-size: 12px; color: #aaaaaa; font-style: italic; }
-    .analysis-sources { font-size: 12px; color: #aaaaaa; }
+    .analysis-reasoning { font-size: 14px; color: #bbb; line-height: 1.7; }
+    .analysis-signal-detail { font-size: 12px; color: #888; font-style: italic; }
+    .analysis-sources { font-size: 12px; color: #888; }
     .analysis-sources strong { color: var(--ink); font-weight: 500; }
     .analysis-error { font-size: 13px; color: #c84040; }
 
-    .empty-state { grid-column: 1 / -1; text-align: center; padding: 80px 0; color: var(--muted); }
+    .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; max-width: 360px; margin: 0 auto; }
-
-    .polymarket-note { padding: 12px 48px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); }
-    .polymarket-note a { color: var(--muted); }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
     .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
     footer p { font-size: 13px; color: var(--muted); }
 
-    @media (max-width: 900px) { .market-grid { grid-template-columns: 1fr; } }
     @media (max-width: 768px) {
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
       .hero { padding: 32px 24px 24px; }
-      .category-bar { padding: 16px 24px; top: 57px; }
-      .timeframe-bar { padding: 10px 24px; top: 110px; }
-      .market-status { padding: 10px 24px; }
-      .polymarket-note { padding: 10px 24px; }
-      .market-grid { padding: 20px 24px 60px; }
+      .hero-stats { display: none; }
+      .filters { padding: 20px 24px; gap: 16px; }
+      .status-bar { padding: 10px 24px; }
+      .feed-container { padding: 28px 24px 60px; }
+      .market-card { padding: 24px; }
+      .chain-row { flex-direction: column; gap: 6px; }
+      .chain-label { min-width: unset; }
       footer { padding: 24px; }
     }
   </style>
@@ -146,33 +153,53 @@
   </nav>
 
   <div class="hero">
-    <div class="hero-tag"><span class="hero-tag-dot"></span> Powered by Polymarket</div>
-    <h1>Prediction markets</h1>
-    <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing — then let the news tell you whether they're right.</p>
+    <div class="hero-left">
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Powered by Polymarket</div>
+      <h1>Prediction markets</h1>
+      <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing — then let the news tell you whether they're right.</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-val">Live</div>
+        <div class="hero-stat-lbl">Polymarket data</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">5</div>
+        <div class="hero-stat-lbl">Categories</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-val">20–80%</div>
+        <div class="hero-stat-lbl">Toss-up odds only</div>
+      </div>
+    </div>
   </div>
 
-  <div class="category-bar">
-    <button class="cat-chip active" data-cat="sports" onclick="selectCategory('sports', this)">Sports</button>
-    <button class="cat-chip" data-cat="politics" onclick="selectCategory('politics', this)">Politics</button>
-    <button class="cat-chip" data-cat="finance" onclick="selectCategory('finance', this)">Finance</button>
-    <button class="cat-chip" data-cat="entertainment" onclick="selectCategory('entertainment', this)">Entertainment</button>
-    <button class="cat-chip" data-cat="tech" onclick="selectCategory('tech', this)">Tech</button>
+  <div class="filters">
+    <div class="filter-group">
+      <div class="filter-label">Category</div>
+      <div class="cat-chips">
+        <button class="cat-chip active" data-cat="sports" onclick="selectCategory('sports', this)">Sports</button>
+        <button class="cat-chip" data-cat="politics" onclick="selectCategory('politics', this)">Politics</button>
+        <button class="cat-chip" data-cat="finance" onclick="selectCategory('finance', this)">Finance</button>
+        <button class="cat-chip" data-cat="entertainment" onclick="selectCategory('entertainment', this)">Entertainment</button>
+        <button class="cat-chip" data-cat="tech" onclick="selectCategory('tech', this)">Tech</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">Closes in</div>
+      <div class="tf-chips" id="timeframe-bar"></div>
+    </div>
   </div>
 
-  <div class="timeframe-bar" id="timeframe-bar">
-    <span class="timeframe-label">Closes in</span>
-  </div>
+  <div class="status-bar" id="market-status"></div>
 
-  <div class="market-status" id="market-status"></div>
-
-  <div class="polymarket-note">
-    Market data via <a href="https://polymarket.com" target="_blank" rel="noopener">Polymarket</a>. Odds reflect crowd probability estimates, not financial advice.
-  </div>
-
-  <div class="market-grid" id="market-grid">
-    <div class="empty-state">
-      <h3>Select a category</h3>
-      <p>Pick a category above to load live prediction markets.</p>
+  <div class="feed-container">
+    <div class="polymarket-note">Market data via <a href="https://polymarket.com" target="_blank" rel="noopener">Polymarket</a>. Odds reflect crowd probability estimates, not financial advice.</div>
+    <div class="market-grid" id="market-grid">
+      <div class="empty-state">
+        <h3>Select a category</h3>
+        <p>Pick a category above to load live prediction markets.</p>
+      </div>
     </div>
   </div>
 
@@ -204,10 +231,9 @@
       currentMaxDays = defaultOpt.days;
       currentMinDays = defaultOpt.min;
       const bar = document.getElementById('timeframe-bar');
-      bar.innerHTML = '<span class="timeframe-label">Closes in</span>' +
-        config.options.map(o =>
-          `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}" data-min="${o.min}">${o.label}</button>`
-        ).join('');
+      bar.innerHTML = config.options.map(o =>
+        `<button class="tf-chip${o.days === config.default ? ' active' : ''}" data-days="${o.days}" data-min="${o.min}">${o.label}</button>`
+      ).join('');
       bar.querySelectorAll('.tf-chip').forEach(btn => {
         btn.addEventListener('click', function () {
           selectTimeframe(parseInt(this.dataset.days), parseInt(this.dataset.min), this);
@@ -250,7 +276,7 @@
       const btn = cardEl.querySelector('.btn-analyze');
       btn.disabled = true;
       btn.classList.add('loading');
-      btn.innerHTML = `<div class="spinner" style="border-top-color:var(--paper)"></div> Analyzing news...`;
+      btn.innerHTML = `<div class="spinner"></div> Analyzing news...`;
 
       try {
         const res = await fetch('/api/market-analyze', {
@@ -289,7 +315,6 @@
         cardEl.appendChild(block);
         btn.innerHTML = 'Re-analyze';
 
-        // Silently log the first clear lean as a tracked prediction
         if (isFirstAnalysis && (data.lean === 'Yes' || data.lean === 'No')) {
           fetch('/api/predictions', {
             method: 'POST',
@@ -330,19 +355,28 @@
         : 'No expiry set';
 
       card.innerHTML = `
-        <div class="market-card-top">
+        <div class="market-header">
           <div class="market-question">${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
             <div class="odds-label">YES odds</div>
           </div>
         </div>
-        <div class="market-meta">
-          <div class="meta-item">Vol: <strong>${formatVolume(market.volume24h)}/24h</strong></div>
-          <div class="meta-item"><strong>${closesText}</strong></div>
-          ${market.totalMarkets > 1 ? `<div class="meta-item">${market.totalMarkets} markets in event</div>` : ''}
+        <div class="chain-row">
+          <div class="chain-label">Volume</div>
+          <div class="chain-content">${formatVolume(market.volume24h)} / 24h</div>
         </div>
-        <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))">Analyze news →</button>
+        <div class="chain-row">
+          <div class="chain-label">Closes</div>
+          <div class="chain-content"><span class="impact-badge">${esc(closesText)}</span></div>
+        </div>
+        ${market.totalMarkets > 1 ? `<div class="chain-row"><div class="chain-label">Markets</div><div class="chain-content">${market.totalMarkets} related markets in this event</div></div>` : ''}
+        <div class="chain-row">
+          <div class="chain-label"></div>
+          <div class="chain-content">
+            <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))">Analyze news →</button>
+          </div>
+        </div>
       `;
 
       return card;
@@ -398,7 +432,6 @@
       if (currentCategory) loadMarkets(currentCategory, days, minDays);
     }
 
-    // Auto-load sports on page open
     selectCategory('sports', document.querySelector('[data-cat="sports"]'));
   </script>
   <script src="/chat-widget.js"></script>

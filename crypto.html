@@ -26,15 +26,23 @@
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--ink); font-weight: 500; }
+    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
+    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
+    .nav-chat-btn:hover::after { background: #1a1a1a; }
+    .nav-chat-btn.active::after { background: #181818; }
+    .nav-chat-btn.active { color: #00e676; }
+    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 20px; }
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
     .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
 
-    .fg-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .fg-widget { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; padding-bottom: 4px; }
     .fg-label-row { display: flex; align-items: center; gap: 5px; }
     .fg-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .fg-hint { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border); color: var(--muted); font-size: 9px; font-weight: 700; cursor: default; font-family: 'DM Sans', sans-serif; line-height: 1; flex-shrink: 0; }
@@ -46,22 +54,34 @@
     .fg-track { width: 100px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 6px; }
     .fg-fill { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
 
-    .toolbar { display: flex; align-items: center; gap: 12px; padding: 14px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 61px; z-index: 90; flex-wrap: wrap; }
-    .search-wrap { position: relative; flex-shrink: 0; }
-    .coin-search { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px 7px 32px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink); outline: none; width: 200px; transition: border-color 0.15s; }
-    .coin-search:focus { border-color: var(--accent); }
+    /* Filter bar — matches feed.html */
+    .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .search-wrap { position: relative; }
+    .coin-search { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px 8px 32px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); outline: none; width: 200px; transition: border-color 0.2s; }
+    .coin-search:focus { border-color: var(--ink); }
+    .coin-search::placeholder { color: #555; }
     .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
-    .cat-chips { display: flex; gap: 8px; overflow-x: auto; }
-    .cat-chip { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; letter-spacing: 0.2px; }
+    .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .cat-chip { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
-    .coin-section { padding: 28px 48px 40px; }
+    /* Main layout — matches feed.html */
+    .main-layout { display: flex; align-items: flex-start; }
+    .feed-container { flex: 1; padding: 48px 48px 80px; min-width: 0; }
+
+    /* Coin grid */
     .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .coin-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s; animation: fadeUp 0.3s ease both; }
-    .coin-card:hover { border-color: #3a3a3a; }
+
+    .coin-card { background: #0a0a0a; border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; }
+    .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
+    .coin-card.watchlist-match { border-color: rgba(0,230,118,0.4); }
+    .watchlist-badge { position: absolute; top: -10px; right: 10px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+
     .coin-top { display: flex; align-items: center; gap: 10px; }
     .coin-logo { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
     .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 9px; color: var(--muted); flex-shrink: 0; }
@@ -77,19 +97,27 @@
     .grid-empty { grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted); }
     .grid-empty h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
 
-    .analysis-panel { border-top: 2px solid var(--accent); background: #0e0e0e; display: none; }
+    /* Analysis panel */
+    .analysis-panel { border-top: 2px solid var(--accent); background: #0a0a0a; display: none; }
     .ap-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 48px 16px; border-bottom: 1px solid var(--border); }
     .ap-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
     .ap-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
     .ap-close:hover { color: var(--ink); }
 
-    .tf-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 48px; border-bottom: 1px solid var(--border); background: #0e0e0e; }
+    .tf-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 48px; border-bottom: 1px solid var(--border); background: #0a0a0a; }
     .tf-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; margin-right: 4px; }
     .tf-btn { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
     @keyframes collapseOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-8px); } }
     .ap-content.collapsing { animation: collapseOut 0.15s ease forwards; pointer-events: none; }
+
+    .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
+    .ap-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 32px 0; }
+    .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .ap-empty { font-size: 14px; color: var(--muted); padding: 0; display: flex; flex-direction: column; gap: 16px; }
+    .ap-error { font-size: 13px; color: var(--neg); padding: 8px 0; }
+
     .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
     .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
@@ -98,26 +126,21 @@
     .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
     .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
     .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
-    .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
-    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
-    .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
-    .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
-
-    .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
-    .ap-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; padding: 32px 0; }
-    .group-loading { padding: 12px 0; }
-    .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-    .ap-empty { font-size: 14px; color: var(--muted); padding: 0; display: flex; flex-direction: column; gap: 16px; }
 
     .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .group-topic { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
     .group-meta { font-size: 12px; color: var(--muted); }
+    .group-loading { padding: 12px 0; }
 
     .btn-reanalyze { background: none; border: none; color: var(--muted); font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; padding: 4px 0 0; text-decoration: underline; transition: color 0.15s; align-self: flex-start; }
     .btn-reanalyze:hover { color: var(--ink); }
 
     .deep-result { display: flex; flex-direction: column; gap: 10px; }
     .ar-block { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.3s ease both; }
+    .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
+    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
+    .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
+    .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
     .ar-row { font-size: 13px; line-height: 1.65; }
     .ar-row strong { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
     .ar-tickers { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -127,50 +150,45 @@
     .pill-down { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
     .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
     .ar-equity-note { font-size: 11px; color: var(--muted); font-style: italic; }
-    .ap-error { font-size: 13px; color: var(--neg); padding: 8px 0; }
 
     .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #111; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
     .spinner-inv { border-top-color: var(--ink); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
-    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
-    .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
-    .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
-    .nav-chat-btn:hover::after { background: #1a1a1a; }
-    .nav-chat-btn.active::after { background: #181818; }
-    .nav-chat-btn.active { color: #00e676; }
-    @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    /* Watchlist sidebar — matches feed.html */
+    .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; }
+    .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
+    .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    .ws-inner { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
+    .ws-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -0.2px; padding-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .ws-title-text { display: flex; align-items: center; gap: 5px; }
+    .ws-title-text span { color: var(--accent); }
+    .ws-toggle { background: none; border: none; cursor: pointer; color: #555; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 3px; transition: color 0.15s, transform 0.25s ease; flex-shrink: 0; }
+    .ws-toggle:hover { color: var(--ink); }
+    .ws-toggle.wc { transform: rotate(180deg); }
+    .ws-body { display: flex; flex-direction: column; gap: 16px; overflow: hidden; max-height: 1400px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
+    .ws-body.wc { max-height: 0; opacity: 0; }
 
-    .coin-card { position: relative; }
-    .coin-card.watchlist-match { border-color: var(--accent); }
-    .watchlist-badge { position: absolute; top: -10px; right: 10px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
-
-    .cw-inline { border-bottom: 1px solid var(--border); padding: 16px 48px; background: var(--paper); }
-    .cw-inline-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-    .cw-inline-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
-    .cw-inline-title span { color: var(--accent); }
-    .cw-chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
     .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .ticker-input-wrapper { position: relative; }
     .ticker-input-row { display: flex; gap: 8px; }
-    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--paper); color: var(--ink); outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
-    .ticker-input:focus { border-color: var(--ink); }
-    .ticker-input::placeholder { text-transform: none; color: #aaa; }
+    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: var(--ink); outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
+    .ticker-input:focus { border-color: #444; }
+    .ticker-input::placeholder { text-transform: none; color: #555; }
     .btn-add-ticker { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
     .btn-add-ticker:hover { opacity: 0.8; }
-    .cw-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1e1e1e; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
+    .cw-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1c1c1c; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
     .cw-dropdown.open { display: block; }
     .cw-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
     .cw-item:last-child { border-bottom: none; }
-    .cw-item:hover { background: #2a2a2a; }
+    .cw-item:hover { background: #252525; }
     .cw-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
     .cw-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .ticker-tag { display: flex; align-items: center; gap: 4px; background: #2a2a2a; color: var(--ink); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; }
-    .ticker-tag button { background: none; border: none; color: #888; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; }
+    .ticker-tag { display: flex; align-items: center; gap: 4px; background: #1e1e1e; color: var(--ink); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
+    .ticker-tag button { background: none; border: none; color: #555; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; transition: color 0.15s; }
     .ticker-tag button:hover { color: var(--ink); }
-    .watchlist-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
+    .watchlist-empty { font-size: 12px; color: #444; padding: 6px 0; }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
@@ -183,15 +201,15 @@
       nav { padding: 16px 24px; }
       .nav-links { display: none; }
       .hero { padding: 32px 24px 24px; }
-      .cw-inline { padding: 14px 24px; }
-      .toolbar { padding: 12px 24px; top: 57px; }
-      .coin-section { padding: 20px 24px 32px; }
+      .filters { padding: 20px 24px; gap: 16px; }
+      .feed-container { padding: 32px 24px 60px; }
+      .watchlist-sidebar { display: none; }
       .ap-header { padding: 16px 24px; }
       .tf-bar { padding: 10px 24px; }
       .ap-content { padding: 16px 24px 40px; }
       footer { padding: 24px; }
     }
-    @media (max-width: 480px) { .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .coin-search { width: 160px; } }
+    @media (max-width: 480px) { .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .coin-search { width: 140px; } }
   </style>
 </head>
 <body>
@@ -214,7 +232,7 @@
     <div>
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live prices</div>
       <h1>Crypto markets</h1>
-      <p class="hero-sub">Browse Robinhood &amp; Coinbase assets with live prices. Select any coin to pull global news analysis.</p>
+      <p class="hero-sub">Browse assets with live prices. Select any coin to pull global news analysis.</p>
     </div>
     <div class="fg-widget" id="fg-widget" style="display:none">
       <div class="fg-label-row">
@@ -229,43 +247,56 @@
     </div>
   </div>
 
-  <!-- INLINE CRYPTO WATCHLIST -->
-  <div class="cw-inline">
-    <div class="cw-inline-header">
-      <div class="cw-inline-title"><span>★</span> Watchlist</div>
-      <div class="ticker-input-wrapper" style="position:relative; flex:1; max-width:260px;">
-        <div class="ticker-input-row">
-          <input class="ticker-input" id="crypto-input" type="text" placeholder="Add coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" style="background:var(--card);color:var(--ink);" />
-          <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
-        </div>
-        <div class="cw-dropdown" id="cw-dropdown"></div>
+  <div class="filters">
+    <div class="filter-group">
+      <div class="filter-label">Search</div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input class="coin-search" id="coin-search" type="text" placeholder="Search coins…" oninput="renderGrid()" />
       </div>
     </div>
-    <div class="cw-chips-row">
-      <div class="ticker-list" id="crypto-watchlist-list"></div>
-      <div class="watchlist-empty" id="crypto-watchlist-empty" style="font-size:12px;color:#444;padding:0;">No coins added yet — search above to start tracking</div>
+    <div class="filter-group">
+      <div class="filter-label">Category</div>
+      <div class="cat-chips">
+        <button class="cat-chip active" onclick="setFilter('all',this)">All</button>
+        <button class="cat-chip" onclick="setFilter('layer1',this)">Layer 1</button>
+        <button class="cat-chip" onclick="setFilter('defi',this)">DeFi</button>
+        <button class="cat-chip" onclick="setFilter('layer2',this)">Layer 2</button>
+        <button class="cat-chip" onclick="setFilter('meme',this)">Meme</button>
+        <button class="cat-chip" onclick="setFilter('gaming',this)">Gaming</button>
+      </div>
     </div>
   </div>
 
-  <div class="toolbar">
-    <div class="search-wrap">
-      <span class="search-icon">⌕</span>
-      <input class="coin-search" id="coin-search" type="text" placeholder="Search coins…" oninput="renderGrid()" />
+  <div class="main-layout">
+    <div class="feed-container">
+      <div class="coin-grid" id="coin-grid">
+        <div class="grid-empty"><h3>Loading prices…</h3></div>
+      </div>
     </div>
-    <div class="cat-chips">
-      <button class="cat-chip active" onclick="setFilter('all',this)">All</button>
-      <button class="cat-chip" onclick="setFilter('layer1',this)">Layer 1</button>
-      <button class="cat-chip" onclick="setFilter('defi',this)">DeFi</button>
-      <button class="cat-chip" onclick="setFilter('layer2',this)">Layer 2</button>
-      <button class="cat-chip" onclick="setFilter('meme',this)">Meme</button>
-      <button class="cat-chip" onclick="setFilter('gaming',this)">Gaming</button>
-    </div>
-  </div>
 
-  <div class="coin-section">
-    <div class="coin-grid" id="coin-grid">
-      <div class="grid-empty"><h3>Loading prices…</h3></div>
-    </div>
+    <aside class="watchlist-sidebar">
+      <div class="ws-inner">
+        <div class="ws-title">
+          <div class="ws-title-text"><span>★</span> Watchlist</div>
+          <button class="ws-toggle" id="ws-toggle" onclick="toggleWatchlistSidebar()" title="Minimize">▲</button>
+        </div>
+        <div class="ws-body" id="ws-body">
+          <div>
+            <div class="watchlist-section-title">Coins</div>
+            <div class="ticker-input-wrapper">
+              <div class="ticker-input-row">
+                <input class="ticker-input" id="crypto-input" type="text" placeholder="Add coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" />
+                <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
+              </div>
+              <div class="cw-dropdown" id="cw-dropdown"></div>
+            </div>
+            <div class="ticker-list" id="crypto-watchlist-list"></div>
+            <div class="watchlist-empty" id="crypto-watchlist-empty">No coins added yet</div>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
 
   <div class="analysis-panel" id="analysis-panel">
@@ -532,7 +563,6 @@
         return;
       }
 
-      // Overall prediction card — loads async, shows first
       const overallCard = document.createElement('div');
       overallCard.className = 'overall-card';
       overallCard.id = 'overall-card';
@@ -714,6 +744,15 @@
     loadFearGreed();
     loadPrices();
 
+    // Watchlist sidebar toggle
+    function toggleWatchlistSidebar() {
+      const body = document.getElementById('ws-body');
+      const btn  = document.getElementById('ws-toggle');
+      const collapsed = body.classList.toggle('wc');
+      btn.classList.toggle('wc', collapsed);
+      localStorage.setItem('ii_crypto_ws_collapsed', collapsed ? '1' : '0');
+    }
+
     // Crypto watchlist
     let cryptoWatchlist = [];
     let cwAutocompleteIndex = -1;
@@ -721,6 +760,11 @@
     function loadCryptoWatchlist() {
       try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) cryptoWatchlist = JSON.parse(s); } catch(e) {}
       renderCryptoWatchlist();
+      if (localStorage.getItem('ii_crypto_ws_collapsed') === '1') {
+        const body = document.getElementById('ws-body');
+        const btn  = document.getElementById('ws-toggle');
+        if (body) { body.classList.add('wc'); btn.classList.add('wc'); }
+      }
     }
 
     function saveCryptoWatchlist() {
@@ -728,7 +772,7 @@
     }
 
     function renderCryptoWatchlist() {
-      const list = document.getElementById('crypto-watchlist-list');
+      const list  = document.getElementById('crypto-watchlist-list');
       const empty = document.getElementById('crypto-watchlist-empty');
       list.innerHTML = '';
       if (!cryptoWatchlist.length) {
@@ -764,8 +808,8 @@
     function handleCryptoKeydown(e) {
       const dropdown = document.getElementById('cw-dropdown');
       const items = dropdown.querySelectorAll('.cw-item');
-      if (e.key === 'ArrowDown') { e.preventDefault(); cwAutocompleteIndex = Math.min(cwAutocompleteIndex + 1, items.length - 1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#2a2a2a' : ''); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); cwAutocompleteIndex = Math.max(cwAutocompleteIndex - 1, -1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#2a2a2a' : ''); }
+      if (e.key === 'ArrowDown') { e.preventDefault(); cwAutocompleteIndex = Math.min(cwAutocompleteIndex + 1, items.length - 1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#252525' : ''); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); cwAutocompleteIndex = Math.max(cwAutocompleteIndex - 1, -1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#252525' : ''); }
       else if (e.key === 'Enter') { e.preventDefault(); if (cwAutocompleteIndex >= 0 && items[cwAutocompleteIndex]) { addCryptoToWatchlist(items[cwAutocompleteIndex].querySelector('.cw-sym').textContent); } else { addCryptoFromInput(); } }
       else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
     }
