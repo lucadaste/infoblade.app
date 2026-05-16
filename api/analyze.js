@@ -786,6 +786,7 @@ Only use ${thresholdText} for this analysis.
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
 
 CRITICAL RULES:
+- Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
 - Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker

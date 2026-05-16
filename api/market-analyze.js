@@ -189,7 +189,7 @@ Weight news sources by grade (High > Medium > Low). Use Reddit posts as a crowd 
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
 
-Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend.
+Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend. Do NOT use em dashes (—) anywhere in your response; use commas, colons, or periods instead.
 
 Respond ONLY with valid JSON, no markdown:
 {
