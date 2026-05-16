@@ -59,8 +59,16 @@
     .tf-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); font-weight: 600; }
 
     .status-bar { padding: 14px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 45px; display: flex; align-items: center; gap: 10px; }
-    .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--ink); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+
+    [data-tip] { position: relative; }
+    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    [data-tip]:hover::after { opacity: 1; visibility: visible; }
+    .skel-card { background: #0a0a0a; border-radius: 12px; padding: 36px 40px; border: 2px solid transparent; }
+    .skel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
+    .skel-title { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .skel-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid #1e1e1e; }
 
     .feed-container { padding: 48px 48px 80px; }
     .feed-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
@@ -91,8 +99,6 @@
     .btn-analyze { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.2px; }
     .btn-analyze:hover { opacity: 0.85; }
     .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-analyze.loading { display: inline-flex; align-items: center; gap: 8px; }
-    .btn-analyze .spinner { border-top-color: var(--paper); }
 
     .analysis-block { border-top: 1px solid #1e1e1e; padding-top: 18px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .analysis-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -241,11 +247,52 @@
       });
     }
 
-    function setStatus(msg, loading = false) {
-      const el = document.getElementById('market-status');
-      el.innerHTML = loading
-        ? `<div class="spinner"></div><span>${msg}</span>`
-        : `<span>${msg}</span>`;
+    function setStatus(msg) {
+      document.getElementById('market-status').innerHTML = msg ? `<span>${msg}</span>` : '';
+    }
+
+    function skeletonCards(n = 4) {
+      return Array.from({length: n}, () => `
+        <div class="skel-card">
+          <div class="skel-header">
+            <div class="skel-title">
+              <div class="skel" style="height:22px;width:85%"></div>
+              <div class="skel" style="height:22px;width:58%"></div>
+            </div>
+            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              <div class="skel" style="height:38px;width:64px"></div>
+              <div class="skel" style="height:10px;width:48px"></div>
+            </div>
+          </div>
+          <div class="skel-row">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
+            <div class="skel" style="flex:1;height:14px"></div>
+          </div>
+          <div class="skel-row">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
+            <div class="skel" style="height:22px;width:90px"></div>
+          </div>
+          <div class="skel-row">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
+            <div class="skel" style="height:36px;width:110px;border-radius:6px"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function skeletonAnalysis() {
+      return `
+        <div class="analysis-block" style="gap:10px">
+          <div class="skel" style="height:40px;border-radius:6px"></div>
+          <div style="display:flex;gap:8px">
+            <div class="skel" style="height:26px;width:200px;border-radius:4px"></div>
+            <div class="skel" style="height:26px;width:120px;border-radius:4px"></div>
+          </div>
+          <div class="skel" style="height:14px;width:100%"></div>
+          <div class="skel" style="height:14px;width:88%"></div>
+          <div class="skel" style="height:14px;width:70%"></div>
+        </div>
+      `;
     }
 
     function oddsClass(pct) {
@@ -274,9 +321,13 @@
 
     async function analyzeMarket(market, cardEl) {
       const btn = cardEl.querySelector('.btn-analyze');
+      const isFirstAnalysis = !cardEl.querySelector('.analysis-block');
       btn.disabled = true;
-      btn.classList.add('loading');
-      btn.innerHTML = `<div class="spinner"></div> Analyzing news...`;
+      btn.textContent = 'Analyzing…';
+
+      const prevBlock = cardEl.querySelector('.analysis-block');
+      if (prevBlock) prevBlock.remove();
+      cardEl.insertAdjacentHTML('beforeend', skeletonAnalysis());
 
       try {
         const res = await fetch('/api/market-analyze', {
@@ -295,9 +346,8 @@
           market_odds: market.yesPrice
         });
 
-        const isFirstAnalysis = !cardEl.querySelector('.analysis-block');
-        const existing = cardEl.querySelector('.analysis-block');
-        if (existing) existing.remove();
+        const skelBlock = cardEl.querySelector('.analysis-block');
+        if (skelBlock) skelBlock.remove();
 
         const block = document.createElement('div');
         block.className = 'analysis-block';
@@ -313,7 +363,7 @@
           ${data.articlesFound !== undefined ? `<div class="analysis-sources">${esc(String(data.articlesFound))} articles analyzed</div>` : ''}
         `;
         cardEl.appendChild(block);
-        btn.innerHTML = 'Re-analyze';
+        btn.textContent = 'Re-analyze';
 
         if (isFirstAnalysis && (data.lean === 'Yes' || data.lean === 'No')) {
           fetch('/api/predictions', {
@@ -334,15 +384,16 @@
           }).catch(() => {});
         }
       } catch (err) {
+        const skelBlock = cardEl.querySelector('.analysis-block');
+        if (skelBlock) skelBlock.remove();
         const block = document.createElement('div');
         block.className = 'analysis-block';
         block.innerHTML = `<div class="analysis-error">Analysis failed: ${esc(err.message)}</div>`;
         cardEl.appendChild(block);
-        btn.innerHTML = 'Retry';
+        btn.textContent = 'Retry';
       }
 
       btn.disabled = false;
-      btn.classList.remove('loading');
     }
 
     function buildCard(market, index) {
@@ -374,7 +425,7 @@
         <div class="chain-row">
           <div class="chain-label"></div>
           <div class="chain-content">
-            <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))">Analyze news →</button>
+            <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))" data-tip="AI reads recent headlines and predicts YES/NO vs. current crowd odds">Analyze news →</button>
           </div>
         </div>
       `;
@@ -382,10 +433,27 @@
       return card;
     }
 
+    const MARKETS_TTL = 5 * 60 * 1000;
+
     async function loadMarkets(cat, maxDays, minDays = 0) {
       const grid = document.getElementById('market-grid');
-      grid.innerHTML = '';
-      setStatus(`Loading ${cat} markets...`, true);
+      const cacheKey = `ii_markets_v1_${cat}_${maxDays}_${minDays}`;
+
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const { ts, markets } = JSON.parse(cached);
+          if (Date.now() - ts < MARKETS_TTL) {
+            grid.innerHTML = '';
+            markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
+            setStatus(`${markets.length} toss-up markets (20-80% odds). Click "Analyze news" on any card.`);
+            return;
+          }
+        }
+      } catch(e) {}
+
+      grid.innerHTML = skeletonCards(4);
+      setStatus(`Loading ${cat} markets…`);
 
       try {
         const res = await fetch(`/api/markets?category=${cat}&maxDays=${maxDays}&minDays=${minDays}`);
@@ -404,7 +472,9 @@
           return;
         }
 
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), markets })); } catch(e) {}
         setStatus(`${markets.length} toss-up markets (20-80% odds). Click "Analyze news" on any card.`);
+        grid.innerHTML = '';
         markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
       } catch (err) {
         setStatus('');

@@ -151,9 +151,12 @@
     .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
     .ar-equity-note { font-size: 11px; color: var(--muted); font-style: italic; }
 
-    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #111; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
-    .spinner-inv { border-top-color: var(--ink); }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+
+    [data-tip] { position: relative; }
+    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    [data-tip]:hover::after { opacity: 1; visibility: visible; }
 
     /* Watchlist sidebar - matches feed.html */
     .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; }
@@ -259,11 +262,11 @@
       <div class="filter-label">Category</div>
       <div class="cat-chips">
         <button class="cat-chip active" onclick="setFilter('all',this)">All</button>
-        <button class="cat-chip" onclick="setFilter('layer1',this)">Layer 1</button>
-        <button class="cat-chip" onclick="setFilter('defi',this)">DeFi</button>
-        <button class="cat-chip" onclick="setFilter('layer2',this)">Layer 2</button>
-        <button class="cat-chip" onclick="setFilter('meme',this)">Meme</button>
-        <button class="cat-chip" onclick="setFilter('gaming',this)">Gaming</button>
+        <button class="cat-chip" onclick="setFilter('layer1',this)" data-tip="Base blockchains: Bitcoin, Ethereum, Solana, Cardano">Layer 1</button>
+        <button class="cat-chip" onclick="setFilter('defi',this)" data-tip="Decentralized finance protocols: Uniswap, Aave, Maker">DeFi</button>
+        <button class="cat-chip" onclick="setFilter('layer2',this)" data-tip="Scaling solutions built on top of Layer 1: Optimism, Arbitrum, Polygon">Layer 2</button>
+        <button class="cat-chip" onclick="setFilter('meme',this)" data-tip="Community-driven meme coins: Dogecoin, Shiba Inu, Pepe">Meme</button>
+        <button class="cat-chip" onclick="setFilter('gaming',this)" data-tip="Blockchain gaming and metaverse tokens: MANA, SAND">Gaming</button>
       </div>
     </div>
   </div>
@@ -422,11 +425,11 @@
 
         const priceHtml = p
           ? `<div class="coin-price">${formatPrice(p.current_price)}</div>`
-          : `<div class="coin-price" style="color:var(--muted);font-size:13px">Loading…</div>`;
+          : `<div class="skel" style="height:21px;width:76px;margin-top:2px"></div>`;
 
         const changeHtml = chg != null
           ? `<div class="coin-change"><span class="${chg >= 0 ? 'pos' : 'neg'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% 24h</span></div>`
-          : `<div class="coin-change"></div>`;
+          : `<div class="skel" style="height:14px;width:58px"></div>`;
 
         const safeJson = JSON.stringify(coin).replace(/"/g, '&quot;');
         card.innerHTML = `
@@ -440,7 +443,7 @@
           </div>
           ${priceHtml}
           ${changeHtml}
-          <button class="btn-coin" onclick="selectCoin(${safeJson})">
+          <button class="btn-coin" onclick="selectCoin(${safeJson})" data-tip="Fetch live news and predict price direction">
             ${isSelected ? '★ Analyzing' : 'Analyze →'}
           </button>
         `;
@@ -448,7 +451,22 @@
       });
     }
 
+    const PRICES_TTL = 2 * 60 * 1000;
+
     async function loadPrices() {
+      try {
+        const cached = sessionStorage.getItem('ii_crypto_prices_v2');
+        if (cached) {
+          const { ts, prices, fearGreed } = JSON.parse(cached);
+          if (Date.now() - ts < PRICES_TTL) {
+            prices.forEach(d => { priceCache[d.id] = d; });
+            renderGrid();
+            if (fearGreed) renderFearGreed(fearGreed);
+            return;
+          }
+        }
+      } catch(e) {}
+
       try {
         const res = await fetch('/api/crypto-prices');
         const result = await res.json();
@@ -457,6 +475,7 @@
         prices.forEach(d => { priceCache[d.id] = d; });
         renderGrid();
         if (result.fearGreed) renderFearGreed(result.fearGreed);
+        try { sessionStorage.setItem('ii_crypto_prices_v2', JSON.stringify({ ts: Date.now(), prices, fearGreed: result.fearGreed || null })); } catch(e) {}
       } catch (_) {
         renderGrid();
       }
@@ -510,7 +529,13 @@
       const mySession = ++renderSession;
       const tf = TIMEFRAMES[currentTimeframe];
       const content = document.getElementById('ap-content');
-      content.innerHTML = `<div class="ap-loading"><div class="spinner spinner-inv"></div> Fetching news…</div>`;
+      content.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:14px;padding:8px 0">
+          <div class="skel" style="height:90px;border-radius:10px"></div>
+          <div class="skel" style="height:12px;width:180px"></div>
+          <div class="skel" style="height:90px;border-radius:10px"></div>
+          <div class="skel" style="height:90px;border-radius:10px"></div>
+        </div>`;
 
       try {
         const res = await fetch(`/api/analyze?category=crypto&timeframe=${tf.apiParam}`);
@@ -553,7 +578,11 @@
         emptyEl.className = 'ap-empty';
         emptyEl.innerHTML = `
           <div>No specific news events matched for ${esc(coin.name)} right now. Running general market analysis…</div>
-          <div class="ap-loading group-loading" id="general-loading"><div class="spinner spinner-inv"></div> Analyzing…</div>
+          <div class="ap-loading group-loading" id="general-loading" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
+            <div class="skel" style="height:26px;width:120px;border-radius:4px"></div>
+            <div class="skel" style="height:14px;width:100%"></div>
+            <div class="skel" style="height:14px;width:78%"></div>
+          </div>
           <div class="deep-result" id="general-result"></div>
         `;
         content.appendChild(emptyEl);
@@ -566,7 +595,11 @@
       overallCard.id = 'overall-card';
       overallCard.innerHTML = `
         <div class="overall-label">Overall Prediction for ${esc(coin.name)}</div>
-        <div class="overall-loading" id="overall-loading"><div class="spinner spinner-inv"></div> Synthesizing all news…</div>
+        <div class="overall-loading" id="overall-loading" style="display:flex;flex-direction:column;gap:8px;width:100%">
+          <div class="skel" style="height:14px;width:55%"></div>
+          <div class="skel" style="height:14px;width:80%"></div>
+          <div class="skel" style="height:14px;width:40%"></div>
+        </div>
         <div id="overall-result"></div>
       `;
       content.appendChild(overallCard);
@@ -585,7 +618,11 @@
         card.innerHTML = `
           <div class="group-topic">${esc(group.topic)}</div>
           <div class="group-meta">${group.totalSources || group.sources?.length || 0} sources · ${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
-          <div class="ap-loading group-loading" id="loading-${idx}"><div class="spinner spinner-inv"></div> Analyzing impact…</div>
+          <div class="ap-loading group-loading" id="loading-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
+            <div class="skel" style="height:26px;width:100px;border-radius:4px"></div>
+            <div class="skel" style="height:14px;width:100%"></div>
+            <div class="skel" style="height:14px;width:72%"></div>
+          </div>
           <div class="deep-result" id="result-${idx}"></div>
         `;
         content.appendChild(card);
@@ -665,7 +702,8 @@
           const loadDiv = document.createElement('div');
           loadDiv.className = 'ap-loading group-loading';
           loadDiv.id = `loading-${idx}`;
-          loadDiv.innerHTML = '<div class="spinner spinner-inv"></div> Re-analyzing…';
+          loadDiv.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:14px 0';
+          loadDiv.innerHTML = '<div class="skel" style="height:26px;width:100px;border-radius:4px"></div><div class="skel" style="height:14px;width:100%"></div><div class="skel" style="height:14px;width:72%"></div>';
           resultEl.innerHTML = '';
           resultEl.parentNode.insertBefore(loadDiv, resultEl);
           autoAnalyzeGroup(group, coin, idx, ++renderSession);
@@ -722,7 +760,7 @@
         <div class="ar-block">
           ${dirBadge}
           ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
-          <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
+          <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'" data-tip="Expand: timeframe, equity impact, and confidence details">Deep Analysis →</button>
           <div class="ar-details">
             ${d.impact_timeframe? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
             ${d.crowd_summary   ? `<div class="ar-row"><strong>Crowd signal</strong>${esc(d.crowd_summary)}</div>`          : ''}

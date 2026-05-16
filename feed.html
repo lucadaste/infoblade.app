@@ -142,6 +142,13 @@
     .quick-cat.featured:hover { opacity: 0.85; }
     .pre-load-note { font-size: 12px; color: var(--muted); opacity: 0.7; }
 
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+
+    [data-tip] { position: relative; }
+    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    [data-tip]:hover::after { opacity: 1; visibility: visible; }
+
     .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
     .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
     .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
@@ -244,8 +251,8 @@
   <div class="filters">
     <div class="filter-group">
       <div class="mode-toggle">
-        <button class="mode-tab active" id="tab-sector" onclick="setMode('sector')">Sector</button>
-        <button class="mode-tab" id="tab-stock" onclick="setMode('stock')">Stock</button>
+        <button class="mode-tab active" id="tab-sector" onclick="setMode('sector')" data-tip="Browse by industry (Macro, Energy, Tech…)">Sector</button>
+        <button class="mode-tab" id="tab-stock" onclick="setMode('stock')" data-tip="Focus on a specific stock or ETF">Stock</button>
       </div>
       <div id="sector-filter">
         <select class="filter-select" id="filter-category">
@@ -293,7 +300,7 @@
       <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
     </div>
     <div class="filter-actions">
-      <button class="btn-load" onclick="loadFeed()" id="btn">Load feed →</button>
+      <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact — takes ~30–60 sec">Load feed →</button>
       <div class="status-wrap">
         <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
         <span class="status-text" id="status"></span>
@@ -378,6 +385,42 @@
   <script>
     function esc(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function skeletonEventCards(n = 3) {
+      return Array.from({length: n}, (_, i) => `
+        <div class="skel-event-card" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${i * 80}ms">
+          <div class="skel" style="height:24px;width:72%"></div>
+          <div class="skel" style="height:12px;width:38%;margin-top:10px"></div>
+          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e;margin-top:16px">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
+            <div class="skel" style="flex:1;height:14px"></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
+            <div class="skel" style="height:22px;width:88px;border-radius:4px"></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
+            <div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">
+              <div class="skel" style="height:22px;width:68px;border-radius:4px"></div>
+              <div class="skel" style="height:22px;width:52px;border-radius:4px"></div>
+              <div class="skel" style="height:22px;width:76px;border-radius:4px"></div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
+            <div style="flex:1">
+              <div class="skel" style="height:14px;width:100%;margin-bottom:8px"></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <div class="skel" style="height:20px;width:44px;border-radius:4px"></div>
+                <div class="skel" style="height:20px;width:40px;border-radius:4px"></div>
+                <div class="skel" style="height:20px;width:52px;border-radius:4px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
     }
 
     const titleMap = {
@@ -528,7 +571,7 @@
 
     function renderStars(score) {
       const color = score >= 4 ? '#4ade80' : score === 3 ? '#fbbf24' : '#ff7070';
-      return `<span class="conf-stars" style="color:${color}">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span><span class="conf-label"> ${score}/5</span>`;
+      return `<span class="conf-stars" style="color:${color}" data-tip="How strongly the news signals a clear market impact (1 = weak signal, 5 = very clear direction)">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span><span class="conf-label"> ${score}/5</span>`;
     }
 
     function handleTickerInput(e) {
@@ -778,12 +821,35 @@
         label.textContent = feedLabelMap[timeframe] || "Today's analysis";
       }
 
+      // Check cache (10-min TTL)
+      const cacheKey = currentMode === 'stock'
+        ? `ii_feed_v1_stock_${selectedStock?.s || ''}_${timeframe}_${impact}`
+        : `ii_feed_v1_${document.getElementById('filter-category').value}_${timeframe}_${impact}`;
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const { ts, results } = JSON.parse(cached);
+          if (Date.now() - ts < 10 * 60 * 1000) {
+            btn.disabled = true;
+            feed.innerHTML = '';
+            label.style.display = 'block';
+            document.getElementById('pre-load').style.display = 'none';
+            results.forEach(({ group, analysis }) => feed.appendChild(buildCard(group, analysis, impact)));
+            const cachedCards = [...feed.querySelectorAll('.event-card')];
+            cachedCards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
+            cachedCards.forEach(c => feed.appendChild(c));
+            status.textContent = `${cachedCards.length} topics (cached · loaded instantly)`;
+            btn.disabled = false;
+            return;
+          }
+        }
+      } catch(e) {}
+
       btn.disabled = true;
-      feed.innerHTML = '';
+      feed.innerHTML = skeletonEventCards(3);
       label.style.display = 'none';
       document.getElementById('pre-load').style.display = 'none';
       loader.classList.add('active');
-      feedPending.classList.add('active');
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
 
       try {
@@ -809,12 +875,16 @@
         if (typeof gtag !== 'undefined') gtag('event', 'feed_loaded', { category, group_count: groups.length, timeframe });
 
         // Analyze and display progressively
+        const analyzedResults = [];
+        let skeletonCleared = false;
         for (let i = 0; i < groups.length; i++) {
           const group = groups[i];
           status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
           try {
             const analysis = await analyzeGroup(group, impact);
             if (getConfScore(analysis.confidence) < 3) continue;
+            analyzedResults.push({ group, analysis });
+            if (!skeletonCleared) { feed.innerHTML = ''; skeletonCleared = true; }
             const card = buildCard(group, analysis, impact);
             feed.appendChild(card);
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
@@ -823,6 +893,14 @@
             console.error('Topic failed:', group.topic, err.message);
           }
           await new Promise(r => setTimeout(r, 300));
+        }
+
+        // Clear any remaining skeleton cards (all events were low-confidence)
+        feed.querySelectorAll('.skel-event-card').forEach(s => s.remove());
+
+        // Save to cache
+        if (analyzedResults.length > 0) {
+          try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), results: analyzedResults })); } catch(e) {}
         }
 
         // Re-sort by confidence when all done
@@ -837,6 +915,7 @@
         status.textContent = `${cards.length} topics analyzed, sorted by confidence${expandedMsg}`;
 
       } catch (err) {
+        feed.querySelectorAll('.skel-event-card').forEach(s => s.remove());
         loader.classList.remove('active');
         feedPending.classList.remove('active');
         if (err.name === 'AbortError') {

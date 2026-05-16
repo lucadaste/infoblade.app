@@ -101,8 +101,8 @@
     .ticker-count { font-size: 11px; color: var(--muted); min-width: 32px; text-align: right; }
 
     /* Loading skeleton */
-    .skeleton { background: var(--border); border-radius: 4px; animation: shimmer 1.4s ease infinite; }
-    @keyframes shimmer { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
 
     .no-data { color: var(--muted); font-size: 14px; padding: 32px 0; text-align: center; }
     .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
