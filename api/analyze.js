@@ -821,11 +821,15 @@ Respond ONLY with valid JSON, no markdown:
       const loserTickers    = analysis.losers?.tickers  || [];
       const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
 
-      // Fetch snapshot for any tickers Claude identified that weren't pre-fetched
-      const missingTickers  = allTickers.filter(t => !technicalSnapshot[t]);
-      const [extraSnapshot] = await Promise.all([
-        missingTickers.length ? _fetchTickerSnapshot(missingTickers) : Promise.resolve({}),
-        supabase ? _savePrediction(supabase, {
+      // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
+      // Must resolve before saving so baseline_prices is complete — validate.js
+      // skips predictions with an empty baseline_prices object.
+      const missingTickers = allTickers.filter(t => !technicalSnapshot[t]);
+      const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
+      const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
+
+      if (supabase) {
+        await _savePrediction(supabase, {
           id: predictionId,
           created_at:        new Date().toISOString(),
           topic,
@@ -836,14 +840,12 @@ Respond ONLY with valid JSON, no markdown:
           analysis,
           winner_tickers:    winnerTickers,
           loser_tickers:     loserTickers,
-          baseline_prices:   Object.fromEntries(allTickers.map(t => [t, technicalSnapshot[t]?.price]).filter(([,v]) => v)),
+          baseline_prices:   Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
           validation_date:   new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
           correct:           null,
           notes:             null
-        }) : Promise.resolve()
-      ]);
-
-      const fullSnapshot = { ...technicalSnapshot, ...extraSnapshot };
+        });
+      }
 
       return res.status(200).json({ ...analysis, predictionId, technicalSnapshot: fullSnapshot });
 
