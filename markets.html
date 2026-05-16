@@ -127,12 +127,27 @@
     .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
     footer p { font-size: 13px; color: var(--muted); }
 
+    .nav-burger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px 6px; flex-shrink: 0; }
+    .nav-burger span { display: block; width: 22px; height: 2px; background: var(--ink); border-radius: 2px; transition: transform 0.25s, opacity 0.2s; }
+    .nav-burger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-burger.open span:nth-child(2) { opacity: 0; }
+    .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    @media (max-width: 900px) {
+      nav { padding: 14px 24px; position: relative; }
+      .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border-bottom: 1px solid var(--border); padding: 8px 0; gap: 0; margin-left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+      .nav-links.open { display: flex; }
+      .nav-links li { border-bottom: 1px solid var(--border); }
+      .nav-links li:last-child { border-bottom: none; }
+      .nav-links a { padding: 14px 24px; display: block; font-size: 15px; }
+      .nav-links a.active, .nav-links a:hover { color: var(--ink); }
+      .nav-burger { display: flex; }
+    }
     @media (max-width: 768px) {
-      nav { padding: 16px 24px; }
-      .nav-links { display: none; }
       .hero { padding: 32px 24px 24px; }
       .hero-stats { display: none; }
-      .filters { padding: 20px 24px; gap: 16px; }
+      .filters { padding: 16px 24px; gap: 12px; }
+      .filter-group { flex: 1 1 calc(50% - 6px); }
+      .filter-select { min-width: 0; width: 100%; }
       .status-bar { padding: 10px 24px; }
       .feed-container { padding: 28px 24px 60px; }
       .market-card { padding: 24px; }
@@ -156,7 +171,16 @@
     <div class="nav-buttons">
       <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
     </div>
+    <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
   </nav>
+  <script>
+  (function(){
+    var b=document.getElementById('nav-burger'),l=document.querySelector('.nav-links');
+    b.addEventListener('click',function(e){e.stopPropagation();var o=l.classList.toggle('open');b.classList.toggle('open',o);});
+    document.addEventListener('click',function(e){if(!l.contains(e.target)&&e.target!==b){l.classList.remove('open');b.classList.remove('open');}});
+    l.querySelectorAll('a').forEach(function(a){a.addEventListener('click',function(){l.classList.remove('open');b.classList.remove('open');});});
+  })();
+  </script>
 
   <div class="hero">
     <div class="hero-left">
