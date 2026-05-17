@@ -17,7 +17,7 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --pos: #2a9e4f; --neg: #c84040; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
@@ -205,7 +205,7 @@
     .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
     @media (max-width: 1100px) { .coin-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 900px) {
-      nav { padding: 14px 24px; position: relative; }
+      nav { padding: 14px 24px; }
       .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border-bottom: 1px solid var(--border); padding: 8px 0; gap: 0; margin-left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
       .nav-links.open { display: flex; }
       .nav-links li { border-bottom: 1px solid var(--border); }
