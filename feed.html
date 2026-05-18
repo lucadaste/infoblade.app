@@ -695,6 +695,8 @@
         ? (document.getElementById('filter-impact-custom').value.trim() || '1 month')
         : rawImpact;
 
+      const category = currentMode === 'stock' ? 'stock' : document.getElementById('filter-category').value;
+
       let params;
       if (currentMode === 'stock') {
         const ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('|')[0].trim();
@@ -707,7 +709,6 @@
         document.getElementById('page-title').textContent = ticker + ' | ' + stockName;
         label.textContent = ticker + ' analysis';
       } else {
-        const category = document.getElementById('filter-category').value;
         params = new URLSearchParams({ category, timeframe });
         document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
         label.textContent = feedLabelMap[timeframe] || "Today's analysis";
