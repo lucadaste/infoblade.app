@@ -158,40 +158,9 @@
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     [data-tip]:hover::after { opacity: 1; visibility: visible; }
 
-    /* Watchlist sidebar - matches feed.html */
-    .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; }
-    .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
-    .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-    .ws-inner { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
-    .ws-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -0.2px; padding-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .ws-title-text { display: flex; align-items: center; gap: 5px; }
-    .ws-title-text span { color: var(--accent); }
-    .ws-toggle { background: none; border: none; cursor: pointer; color: #555; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 3px; transition: color 0.15s, transform 0.25s ease; flex-shrink: 0; }
-    .ws-toggle:hover { color: var(--ink); }
-    .ws-toggle.wc { transform: rotate(180deg); }
-    .ws-body { display: flex; flex-direction: column; gap: 16px; overflow: hidden; max-height: 1400px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
-    .ws-body.wc { max-height: 0; opacity: 0; }
-
-    .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-    .ticker-input-wrapper { position: relative; }
-    .ticker-input-row { display: flex; gap: 8px; }
-    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: var(--ink); outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
-    .ticker-input:focus { border-color: #444; }
-    .ticker-input::placeholder { text-transform: none; color: #555; }
-    .btn-add-ticker { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
-    .btn-add-ticker:hover { opacity: 0.8; }
-    .cw-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1c1c1c; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
-    .cw-dropdown.open { display: block; }
-    .cw-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    .cw-item:last-child { border-bottom: none; }
-    .cw-item:hover { background: #252525; }
-    .cw-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
-    .cw-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .ticker-tag { display: flex; align-items: center; gap: 4px; background: #1e1e1e; color: var(--ink); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
-    .ticker-tag button { background: none; border: none; color: #555; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; transition: color 0.15s; }
-    .ticker-tag button:hover { color: var(--ink); }
-    .watchlist-empty { font-size: 12px; color: #444; padding: 6px 0; }
+    .btn-coin-watch { background: none; border: 1px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-size: 12px; padding: 5px 10px; transition: all 0.2s; width: 100%; margin-top: 4px; font-family: 'Syne', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
+    .btn-coin-watch:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-coin-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
@@ -223,7 +192,6 @@
       .filters { padding: 16px 24px; gap: 12px; }
       .coin-search { width: 100%; }
       .feed-container { padding: 24px 16px 60px; }
-      .watchlist-sidebar { display: none; }
       .ap-header { padding: 16px 24px; }
       .tf-bar { padding: 10px 24px; }
       .ap-content { padding: 16px 24px 40px; }
@@ -305,28 +273,6 @@
       </div>
     </div>
 
-    <aside class="watchlist-sidebar">
-      <div class="ws-inner">
-        <div class="ws-title">
-          <div class="ws-title-text"><span>★</span> Watchlist</div>
-          <button class="ws-toggle" id="ws-toggle" onclick="toggleWatchlistSidebar()" title="Minimize">▲</button>
-        </div>
-        <div class="ws-body" id="ws-body">
-          <div>
-            <div class="watchlist-section-title">Coins</div>
-            <div class="ticker-input-wrapper">
-              <div class="ticker-input-row">
-                <input class="ticker-input" id="crypto-input" type="text" placeholder="Add coin (e.g. BTC)" onkeyup="handleCryptoInput(event)" onkeydown="handleCryptoKeydown(event)" autocomplete="off" />
-                <button class="btn-add-ticker" onclick="addCryptoFromInput()">Add</button>
-              </div>
-              <div class="cw-dropdown" id="cw-dropdown"></div>
-            </div>
-            <div class="ticker-list" id="crypto-watchlist-list"></div>
-            <div class="watchlist-empty" id="crypto-watchlist-empty">No coins added yet</div>
-          </div>
-        </div>
-      </div>
-    </aside>
   </div>
 
   <div class="analysis-panel" id="analysis-panel">
@@ -404,7 +350,6 @@
     let currentGroups = null;
     let renderSession = 0;
     let cryptoWatchlist = [];
-    let cwAutocompleteIndex = -1;
 
     function formatPrice(p) {
       if (p == null) return '--';
@@ -472,6 +417,9 @@
           ${changeHtml}
           <button class="btn-coin" onclick="selectCoin(${safeJson})" data-tip="Fetch live news and predict price direction">
             ${isSelected ? '★ Analyzing' : 'Analyze →'}
+          </button>
+          <button class="btn-coin-watch ${isWatchlisted ? 'watching' : ''}" onclick="toggleCoinWatch('${esc(coin.symbol)}',this)">
+            ${isWatchlisted ? '★ Watching' : '☆ Watch'}
           </button>
         `;
         grid.appendChild(card);
@@ -807,97 +755,41 @@
     loadFearGreed();
     loadPrices();
 
-    // Watchlist sidebar toggle
-    function toggleWatchlistSidebar() {
-      const body = document.getElementById('ws-body');
-      const btn  = document.getElementById('ws-toggle');
-      const collapsed = body.classList.toggle('wc');
-      btn.classList.toggle('wc', collapsed);
-      localStorage.setItem('ii_crypto_ws_collapsed', collapsed ? '1' : '0');
-    }
+
 
     // Crypto watchlist
     function loadCryptoWatchlist() {
       try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) cryptoWatchlist = JSON.parse(s); } catch(e) {}
-      renderCryptoWatchlist();
-      if (localStorage.getItem('ii_crypto_ws_collapsed') === '1') {
-        const body = document.getElementById('ws-body');
-        const btn  = document.getElementById('ws-toggle');
-        if (body) { body.classList.add('wc'); btn.classList.add('wc'); }
-      }
     }
 
     function saveCryptoWatchlist() {
       localStorage.setItem('ii_crypto_watchlist', JSON.stringify(cryptoWatchlist));
     }
 
-    function renderCryptoWatchlist() {
-      const list  = document.getElementById('crypto-watchlist-list');
-      const empty = document.getElementById('crypto-watchlist-empty');
-      list.innerHTML = '';
-      if (!cryptoWatchlist.length) {
-        empty.style.display = 'block';
+    function toggleCoinWatch(sym, btn) {
+      if (cryptoWatchlist.includes(sym)) {
+        cryptoWatchlist = cryptoWatchlist.filter(s => s !== sym);
+        btn.textContent = '☆ Watch';
+        btn.classList.remove('watching');
+        const card = btn.closest('.coin-card');
+        card.classList.remove('watchlist-match');
+        const badge = card.querySelector('.watchlist-badge');
+        if (badge) badge.remove();
       } else {
-        empty.style.display = 'none';
-        cryptoWatchlist.forEach(sym => {
-          const tag = document.createElement('div');
-          tag.className = 'ticker-tag';
-          tag.innerHTML = esc(sym) + ' <button onclick="removeCryptoFromWatchlist(\'' + esc(sym) + '\')">×</button>';
-          list.appendChild(tag);
-        });
-      }
-      renderGrid();
-    }
-
-    function handleCryptoInput(e) {
-      const val = e.target.value.toUpperCase().trim();
-      const dropdown = document.getElementById('cw-dropdown');
-      cwAutocompleteIndex = -1;
-      if (!val) { dropdown.classList.remove('open'); return; }
-      const matches = COINS.filter(c => c.symbol.startsWith(val) || c.name.toUpperCase().includes(val)).slice(0, 7);
-      if (!matches.length) { dropdown.classList.remove('open'); return; }
-      dropdown.innerHTML = matches.map((c, i) =>
-        `<div class="cw-item" onmousedown="addCryptoToWatchlist('${c.symbol}')" data-index="${i}">
-          <span class="cw-sym">${esc(c.symbol)}</span>
-          <span class="cw-name">${esc(c.name)}</span>
-        </div>`
-      ).join('');
-      dropdown.classList.add('open');
-    }
-
-    function handleCryptoKeydown(e) {
-      const dropdown = document.getElementById('cw-dropdown');
-      const items = dropdown.querySelectorAll('.cw-item');
-      if (e.key === 'ArrowDown') { e.preventDefault(); cwAutocompleteIndex = Math.min(cwAutocompleteIndex + 1, items.length - 1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#252525' : ''); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); cwAutocompleteIndex = Math.max(cwAutocompleteIndex - 1, -1); items.forEach((el, i) => el.style.background = i === cwAutocompleteIndex ? '#252525' : ''); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (cwAutocompleteIndex >= 0 && items[cwAutocompleteIndex]) { addCryptoToWatchlist(items[cwAutocompleteIndex].querySelector('.cw-sym').textContent); } else { addCryptoFromInput(); } }
-      else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
-    }
-
-    function addCryptoToWatchlist(sym) {
-      document.getElementById('crypto-input').value = '';
-      document.getElementById('cw-dropdown').classList.remove('open');
-      if (!cryptoWatchlist.includes(sym)) {
         cryptoWatchlist.push(sym);
-        saveCryptoWatchlist();
-        renderCryptoWatchlist();
+        btn.textContent = '★ Watching';
+        btn.classList.add('watching');
+        const card = btn.closest('.coin-card');
+        card.classList.add('watchlist-match');
+        if (!card.querySelector('.watchlist-badge')) {
+          const badge = document.createElement('div');
+          badge.className = 'watchlist-badge';
+          badge.textContent = '★ Watching';
+          card.insertBefore(badge, card.firstChild);
+        }
       }
-    }
-
-    function addCryptoFromInput() {
-      const sym = document.getElementById('crypto-input').value.trim().toUpperCase();
-      if (sym) addCryptoToWatchlist(sym);
-    }
-
-    function removeCryptoFromWatchlist(sym) {
-      cryptoWatchlist = cryptoWatchlist.filter(s => s !== sym);
       saveCryptoWatchlist();
-      renderCryptoWatchlist();
     }
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.ticker-input-wrapper')) document.getElementById('cw-dropdown').classList.remove('open');
-    });
 
     loadCryptoWatchlist();
   </script>

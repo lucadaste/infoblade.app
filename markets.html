@@ -79,8 +79,13 @@
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; }
+    .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; position: relative; }
     .market-card:hover { transform: translateY(-2px); }
+    .market-card.watchlist-match { border-color: var(--accent); }
+    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .btn-watch { background: none; border: 1.5px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 16px; transition: all 0.2s; letter-spacing: 0.3px; }
+    .btn-watch:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
     .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
     .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
@@ -244,6 +249,44 @@
     function esc(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
+
+    // ── Markets watchlist ─────────────────────────────────────────
+    let marketsWatchlist = [];
+
+    function loadMarketsWatchlist() {
+      try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) marketsWatchlist = JSON.parse(s); } catch(e) {}
+    }
+
+    function saveMarketsWatchlist() {
+      localStorage.setItem('ii_markets_watchlist', JSON.stringify(marketsWatchlist));
+    }
+
+    function toggleMarketWatch(market, btn) {
+      const idx = marketsWatchlist.findIndex(m => m.slug === market.slug);
+      const card = btn.closest('.market-card');
+      if (idx >= 0) {
+        marketsWatchlist.splice(idx, 1);
+        btn.textContent = '☆ Watch';
+        btn.classList.remove('watching');
+        card.classList.remove('watchlist-match');
+        const badge = card.querySelector('.watchlist-badge');
+        if (badge) badge.remove();
+      } else {
+        marketsWatchlist.push({ question: market.question, slug: market.slug, yesPrice: market.yesPrice, savedAt: new Date().toISOString() });
+        btn.textContent = '★ Watching';
+        btn.classList.add('watching');
+        card.classList.add('watchlist-match');
+        if (!card.querySelector('.watchlist-badge')) {
+          const badge = document.createElement('div');
+          badge.className = 'watchlist-badge';
+          badge.textContent = '★ Watching';
+          card.insertBefore(badge, card.firstChild);
+        }
+      }
+      saveMarketsWatchlist();
+    }
+
+    loadMarketsWatchlist();
 
     const CATEGORY_TIMEFRAMES = {
       sports:        { options: [{days:1,min:0,label:'1 day'},{days:7,min:3,label:'1 week'},{days:30,min:11,label:'1 month'},{days:90,min:34,label:'3 months'},{days:180,min:68,label:'6 months'}], default: 30 },
@@ -431,7 +474,10 @@
         ? (market.daysLeft <= 0 ? 'Closing soon' : `Closes in ${market.daysLeft}d`)
         : 'No expiry set';
 
+      const isWatched = marketsWatchlist.some(m => m.slug === market.slug);
+      const safeMarket = JSON.stringify({ question: market.question, slug: market.slug, yesPrice: market.yesPrice }).replace(/"/g, '&quot;');
       card.innerHTML = `
+        ${isWatched ? '<div class="watchlist-badge">★ Watching</div>' : ''}
         <div class="market-header">
           <div class="market-question">${esc(market.question)}</div>
           <div class="odds-block">
@@ -450,8 +496,9 @@
         ${market.totalMarkets > 1 ? `<div class="chain-row"><div class="chain-label">Markets</div><div class="chain-content">${market.totalMarkets} related markets in this event</div></div>` : ''}
         <div class="chain-row">
           <div class="chain-label"></div>
-          <div class="chain-content">
+          <div class="chain-content" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
             <button class="btn-analyze" onclick="analyzeMarket(${JSON.stringify(market).replace(/"/g, '&quot;')}, this.closest('.market-card'))" data-tip="AI reads recent headlines and predicts YES/NO vs. current crowd odds">Analyze news →</button>
+            <button class="btn-watch ${isWatched ? 'watching' : ''}" onclick="toggleMarketWatch(${safeMarket}, this)">${isWatched ? '★ Watching' : '☆ Watch'}</button>
           </div>
         </div>
       `;

@@ -85,6 +85,17 @@
     /* Sector label map display */
     .sector-chip-label { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 2px; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
 
+    /* Market watchlist items */
+    .market-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; }
+    .market-item-body { flex: 1; min-width: 0; }
+    .market-item-question { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .market-item-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+    .market-item-odds { font-size: 12px; font-weight: 700; color: var(--accent); font-family: 'Syne', sans-serif; }
+    .market-item-date { font-size: 12px; color: var(--muted); }
+    .market-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 0 0 4px; transition: color 0.15s; flex-shrink: 0; margin-top: 2px; }
+    .market-item-remove:hover { color: #ff6060; }
+    .market-list { display: flex; flex-direction: column; gap: 10px; }
+
     /* Mobile */
     @media (max-width: 900px) {
       .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border-bottom: 1px solid var(--border); padding: 8px 0; gap: 0; margin-left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
@@ -156,11 +167,10 @@
 
   <!-- ── PREDICTION MARKETS TAB ────────────────────────────────── -->
   <div class="tab-panel" id="tab-prediction">
-    <div class="coming-soon-panel">
-      <div class="cs-badge">Coming soon</div>
-      <div class="cs-title">Prediction Markets watchlist</div>
-      <p class="cs-sub">Save specific Polymarket events and track how the odds move over time. We're working on it.</p>
-      <a class="empty-link" href="/markets.html">Browse Prediction Markets →</a>
+    <div id="prediction-content"></div>
+    <div class="panel-footer">
+      <span class="panel-footer-text">Watched markets are highlighted on the Prediction Markets page.</span>
+      <a class="panel-footer-link" href="/markets.html">Open Prediction Markets →</a>
     </div>
   </div>
 
@@ -291,9 +301,57 @@
       loadCrypto();
     }
 
+    // ── Prediction Markets watchlist ──────────────────────────────
+    function loadMarkets() {
+      let markets = [];
+      try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) markets = JSON.parse(s); } catch(e) {}
+
+      const el = document.getElementById('prediction-content');
+
+      if (!markets.length) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">◎</div>
+            <div class="empty-title">No markets watched yet</div>
+            <p class="empty-sub">On the Prediction Markets page, click ☆ Watch on any market card to save it here and track the odds.</p>
+            <a class="empty-link" href="/markets.html">Go to Prediction Markets →</a>
+          </div>`;
+        return;
+      }
+
+      let html = `<div class="wl-section">
+        <div class="wl-section-label">Markets <span>${markets.length} watching</span></div>
+        <div class="market-list">`;
+      markets.forEach(m => {
+        const dateStr = m.savedAt ? new Date(m.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+        const safeSlug = (m.slug || '').replace(/'/g, "\\'");
+        html += `<div class="market-item" id="market-item-${(m.slug||'').replace(/[^a-z0-9]/gi,'-')}">
+          <div class="market-item-body">
+            <div class="market-item-question">${m.question || ''}</div>
+            <div class="market-item-meta">
+              ${m.yesPrice != null ? `<span class="market-item-odds">${m.yesPrice}% YES</span>` : ''}
+              ${dateStr ? `<span class="market-item-date">Saved ${dateStr}</span>` : ''}
+            </div>
+          </div>
+          <button class="market-item-remove" onclick="removeMarket('${safeSlug}')" title="Remove">×</button>
+        </div>`;
+      });
+      html += `</div></div>`;
+      el.innerHTML = html;
+    }
+
+    function removeMarket(slug) {
+      let markets = [];
+      try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) markets = JSON.parse(s); } catch(e) {}
+      markets = markets.filter(m => m.slug !== slug);
+      localStorage.setItem('ii_markets_watchlist', JSON.stringify(markets));
+      loadMarkets();
+    }
+
     // ── Init ──────────────────────────────────────────────────────
     loadStocks();
     loadCrypto();
+    loadMarkets();
   </script>
 
 </body>

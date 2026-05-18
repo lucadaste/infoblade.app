@@ -149,44 +149,10 @@
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     [data-tip]:hover::after { opacity: 1; visibility: visible; }
 
-    .watchlist-sidebar { width: 268px; flex-shrink: 0; border-left: 1px solid var(--border); position: sticky; top: 61px; max-height: calc(100vh - 61px); overflow-y: auto; display: flex; flex-direction: column; gap: 0; }
-    .watchlist-sidebar::-webkit-scrollbar { width: 3px; }
-    .watchlist-sidebar::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
-    .ws-inner { padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 20px; }
-    .ws-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); letter-spacing: -0.2px; padding-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .ws-title-text { display: flex; align-items: center; gap: 5px; }
-    .ws-title-text span { color: var(--accent); }
-    .ws-toggle { background: none; border: none; cursor: pointer; color: #555; font-size: 13px; line-height: 1; padding: 2px 4px; border-radius: 3px; transition: color 0.15s, transform 0.25s ease; flex-shrink: 0; }
-    .ws-toggle:hover { color: var(--ink); }
-    .ws-toggle.wc { transform: rotate(180deg); }
-    .ws-body { display: flex; flex-direction: column; gap: 20px; overflow: hidden; max-height: 1400px; opacity: 1; transition: max-height 0.3s ease, opacity 0.25s ease; }
-    .ws-body.wc { max-height: 0; opacity: 0; }
-
-    .watchlist-section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-    .sector-checkboxes { display: flex; flex-direction: column; gap: 8px; }
-    .sector-checkbox-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-    .sector-checkbox-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
-    .sector-checkbox-item label { font-size: 13px; color: var(--muted); cursor: pointer; transition: color 0.15s; }
-    .sector-checkbox-item:has(input:checked) label { color: var(--ink); }
-    .ticker-input-wrapper { position: relative; }
-    .ticker-input-row { display: flex; gap: 8px; }
-    .ticker-input { flex: 1; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: var(--ink); outline: none; text-transform: uppercase; transition: border-color 0.2s; width: 100%; }
-    .ticker-input:focus { border-color: #444; }
-    .ticker-input::placeholder { text-transform: none; color: #555; }
-    .btn-add-ticker { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 8px 14px; border-radius: 4px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.2s; }
-    .btn-add-ticker:hover { opacity: 0.8; }
-    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: #1c1c1c; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 50; max-height: 200px; overflow-y: auto; display: none; }
-    .autocomplete-dropdown.open { display: block; }
-    .autocomplete-item { padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
-    .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: #252525; }
-    .autocomplete-ticker { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; color: var(--ink); min-width: 52px; }
-    .autocomplete-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ticker-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .ticker-tag { display: flex; align-items: center; gap: 4px; background: #1e1e1e; color: var(--ink); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
-    .ticker-tag button { background: none; border: none; color: #555; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; margin-left: 2px; transition: color 0.15s; }
-    .ticker-tag button:hover { color: var(--ink); }
-    .watchlist-empty { font-size: 12px; color: #444; padding: 6px 0; }
+    .pill { cursor: pointer; user-select: none; }
+    .pill:hover { opacity: 0.8; }
+    .pill-star { font-size: 10px; opacity: 0.5; margin-left: 3px; }
+    .pill.pill-watched .pill-star { opacity: 1; }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
@@ -365,44 +331,6 @@
       </div>
     </div>
 
-    <!-- WATCHLIST SIDEBAR -->
-    <aside class="watchlist-sidebar">
-      <div class="ws-inner">
-        <div class="ws-title">
-          <div class="ws-title-text"><span>★</span> Watchlist</div>
-          <button class="ws-toggle" id="ws-toggle" onclick="toggleWatchlistSidebar()" title="Minimize">▲</button>
-        </div>
-        <div class="ws-body" id="ws-body">
-          <div>
-            <div class="watchlist-section-title">Sectors</div>
-            <div class="sector-checkboxes">
-              <label class="sector-checkbox-item"><input type="checkbox" value="macro" onchange="saveWatchlist()"><label>Macro & Fed Policy</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="energy" onchange="saveWatchlist()"><label>Energy & Oil</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="technology" onchange="saveWatchlist()"><label>Technology & AI</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="financials" onchange="saveWatchlist()"><label>Financials & Banking</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="precious-metals" onchange="saveWatchlist()"><label>Precious Metals</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="real-estate" onchange="saveWatchlist()"><label>Real Estate</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="crypto" onchange="saveWatchlist()"><label>Crypto & Digital Assets</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="consumer" onchange="saveWatchlist()"><label>Consumer & Retail</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="healthcare" onchange="saveWatchlist()"><label>Healthcare & Pharma</label></label>
-              <label class="sector-checkbox-item"><input type="checkbox" value="defense" onchange="saveWatchlist()"><label>Defense & Geopolitics</label></label>
-            </div>
-          </div>
-          <div>
-            <div class="watchlist-section-title">Tickers</div>
-            <div class="ticker-input-wrapper">
-              <div class="ticker-input-row">
-                <input class="ticker-input" id="ticker-input" type="text" placeholder="Search ticker (e.g. AAPL)" onkeyup="handleTickerInput(event)" onkeydown="handleTickerKeydown(event)" autocomplete="off" />
-                <button class="btn-add-ticker" onclick="addTickerFromInput()">Add</button>
-              </div>
-              <div class="autocomplete-dropdown" id="autocomplete"></div>
-            </div>
-            <div class="ticker-list" id="ticker-list"></div>
-            <div class="watchlist-empty" id="ticker-empty">No tickers added yet</div>
-          </div>
-        </div>
-      </div>
-    </aside>
   </div>
 
   <footer>
@@ -504,7 +432,6 @@
       } catch (_) {}
     })();
 
-    let selectedAutocompleteIndex = -1;
     let watchlist = { sectors: [], tickers: [] };
     let currentMode = 'sector';
     let selectedStock = null;
@@ -602,117 +529,54 @@
       return `<span class="conf-stars" style="color:${color}" data-tip="How strongly the news signals a clear market impact (1 = weak signal, 5 = very clear direction)">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span><span class="conf-label"> ${score}/5</span>`;
     }
 
-    function handleTickerInput(e) {
-      const val = e.target.value.toUpperCase().trim();
-      const dropdown = document.getElementById('autocomplete');
-      selectedAutocompleteIndex = -1;
-      if (val.length < 1) { dropdown.classList.remove('open'); return; }
-      const matches = TICKERS.filter(t => t.s.startsWith(val) || t.n.toUpperCase().includes(val)).slice(0, 7);
-      if (matches.length === 0) { dropdown.classList.remove('open'); return; }
-      dropdown.innerHTML = matches.map((t, i) => `
-        <div class="autocomplete-item" onmousedown="selectTicker('${t.s}')" data-index="${i}">
-          <span class="autocomplete-ticker">${t.s}</span>
-          <span class="autocomplete-name">${t.n}</span>
-        </div>`).join('');
-      dropdown.classList.add('open');
-    }
-
-    function handleTickerKeydown(e) {
-      const dropdown = document.getElementById('autocomplete');
-      const items = dropdown.querySelectorAll('.autocomplete-item');
-      if (e.key === 'ArrowDown') { e.preventDefault(); selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1); items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : ''); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, -1); items.forEach((item, i) => item.style.background = i === selectedAutocompleteIndex ? 'var(--paper)' : ''); }
-      else if (e.key === 'Enter') { e.preventDefault(); if (selectedAutocompleteIndex >= 0 && items[selectedAutocompleteIndex]) { selectTicker(items[selectedAutocompleteIndex].querySelector('.autocomplete-ticker').textContent); } else { addTickerFromInput(); } }
-      else if (e.key === 'Escape') { dropdown.classList.remove('open'); }
-    }
-
-    function selectTicker(ticker) {
-      document.getElementById('ticker-input').value = '';
-      document.getElementById('autocomplete').classList.remove('open');
-      if (!watchlist.tickers.includes(ticker)) {
-        watchlist.tickers.push(ticker);
-        localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
-        renderTickers();
-        if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker });
-      }
-    }
-
-    function addTickerFromInput() {
-      const input = document.getElementById('ticker-input');
-      const ticker = input.value.trim().toUpperCase();
-      if (!ticker) return;
-      selectTicker(ticker);
-    }
-
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.ticker-input-wrapper')) {
-        document.getElementById('autocomplete').classList.remove('open');
-      }
-    });
-
-    function toggleWatchlistSidebar() {
-      const body = document.getElementById('ws-body');
-      const btn = document.getElementById('ws-toggle');
-      const collapsed = body.classList.toggle('wc');
-      btn.classList.toggle('wc', collapsed);
-      localStorage.setItem('ii_ws_collapsed', collapsed ? '1' : '0');
-    }
-
     function loadWatchlist() {
       try {
         const saved = localStorage.getItem('ii_watchlist');
         if (saved) watchlist = JSON.parse(saved);
       } catch(e) {}
-      renderWatchlist();
-      if (localStorage.getItem('ii_ws_collapsed') === '1') {
-        const body = document.getElementById('ws-body');
-        const btn = document.getElementById('ws-toggle');
-        if (body) { body.classList.add('wc'); btn.classList.add('wc'); }
-      }
-    }
-
-    function saveWatchlist() {
-      watchlist.sectors = [...document.querySelectorAll('.sector-checkboxes input:checked')].map(i => i.value);
-      localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
-    }
-
-    function renderWatchlist() {
-      document.querySelectorAll('.sector-checkboxes input').forEach(input => {
-        input.checked = watchlist.sectors.includes(input.value);
-      });
-      renderTickers();
-    }
-
-    function renderTickers() {
-      const list = document.getElementById('ticker-list');
-      const empty = document.getElementById('ticker-empty');
-      list.innerHTML = '';
-      if (watchlist.tickers.length === 0) {
-        empty.style.display = 'block';
-      } else {
-        empty.style.display = 'none';
-        watchlist.tickers.forEach(ticker => {
-          const tag = document.createElement('div');
-          tag.className = 'ticker-tag';
-          tag.innerHTML = `${ticker} <button onclick="removeTicker('${ticker}')">×</button>`;
-          list.appendChild(tag);
-        });
-      }
-    }
-
-    function removeTicker(ticker) {
-      watchlist.tickers = watchlist.tickers.filter(t => t !== ticker);
-      localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
-      renderTickers();
     }
 
     function checkWatchlistMatch(analysis) {
-      if (watchlist.sectors.length === 0 && watchlist.tickers.length === 0) return { match: false, matchedTickers: [] };
-      const allSectors = [...(analysis.sectors?.positive || []), ...(analysis.sectors?.negative || [])].map(s => s.toLowerCase());
+      if (watchlist.tickers.length === 0) return { match: false, matchedTickers: [] };
       const allTickers = [...(analysis.winners?.tickers || []), ...(analysis.losers?.tickers || [])];
-      const sectorMatch = watchlist.sectors.some(ws => allSectors.some(s => s.includes(ws.replace(/-/g, ' '))));
       const matchedTickers = watchlist.tickers.filter(t => allTickers.includes(t));
-      return { match: sectorMatch || matchedTickers.length > 0, matchedTickers };
+      return { match: matchedTickers.length > 0, matchedTickers };
+    }
+
+    function toggleTickerWatch(ticker) {
+      if (watchlist.tickers.includes(ticker)) {
+        watchlist.tickers = watchlist.tickers.filter(t => t !== ticker);
+      } else {
+        watchlist.tickers.push(ticker);
+        if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker });
+      }
+      localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+
+      // Update all pills with this ticker in-place
+      document.querySelectorAll(`.pill[data-ticker="${ticker}"]`).forEach(pill => {
+        const watching = watchlist.tickers.includes(ticker);
+        pill.classList.toggle('pill-watched', watching);
+        const isLoser = pill.classList.contains('pill-down');
+        if (!watching) pill.classList.toggle('pill-up', !isLoser);
+        pill.querySelector('.pill-star').textContent = watching ? '★' : '☆';
+        pill.title = watching ? 'Remove from watchlist' : 'Add to watchlist';
+      });
+
+      // Update card borders and badges
+      document.querySelectorAll('.event-card').forEach(card => {
+        const tickers = [...card.querySelectorAll('.pill[data-ticker]')].map(p => p.dataset.ticker);
+        const match = tickers.some(t => watchlist.tickers.includes(t));
+        card.classList.toggle('watchlist-match', match);
+        let badge = card.querySelector('.watchlist-badge');
+        if (match && !badge) {
+          badge = document.createElement('div');
+          badge.className = 'watchlist-badge';
+          badge.textContent = '★ In your watchlist';
+          card.insertBefore(badge, card.firstChild);
+        } else if (!match && badge) {
+          badge.remove();
+        }
+      });
     }
 
     function renderTechnicalSnapshot(analysis) {
@@ -798,14 +662,14 @@
           <div class="chain-label">Beneficiaries</div>
           <div class="chain-content">
             ${esc(analysis.winners?.explanation || '')}
-            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-up'}">${esc(t)}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${watchlist.tickers.includes(t) ? 'pill-watched' : 'pill-up'}" data-ticker="${esc(t)}" onclick="toggleTickerWatch('${esc(t)}')" title="${watchlist.tickers.includes(t) ? 'Remove from watchlist' : 'Add to watchlist'}">${esc(t)}<span class="pill-star">${watchlist.tickers.includes(t) ? '★' : '☆'}</span></span>`).join('')}</div>
           </div>
         </div>
         <div class="chain-row">
           <div class="chain-label">Likely losers</div>
           <div class="chain-content">
             ${esc(analysis.losers?.explanation || '')}
-            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${matchedTickers.includes(t) ? 'pill-watched' : 'pill-down'}">${esc(t)}${matchedTickers.includes(t) ? ' ★' : ''}</span>`).join('')}</div>
+            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${watchlist.tickers.includes(t) ? 'pill-watched' : 'pill-down'}" data-ticker="${esc(t)}" onclick="toggleTickerWatch('${esc(t)}')" title="${watchlist.tickers.includes(t) ? 'Remove from watchlist' : 'Add to watchlist'}">${esc(t)}<span class="pill-star">${watchlist.tickers.includes(t) ? '★' : '☆'}</span></span>`).join('')}</div>
           </div>
         </div>
         ${renderTechnicalSnapshot(analysis)}
