@@ -13,6 +13,7 @@ function _setCors(res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 }
 
 function _getSupabase() {
@@ -36,7 +37,7 @@ async function _checkRateLimit(supabase, ip) {
     if (data.count >= 10) return false;
     await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
     return true;
-  } catch (_) { return true; }
+  } catch (_) { return false; }
 }
 
 async function readJSON(filePath, fallback) {

@@ -58,17 +58,18 @@ function _parseTimeframeDays(str) {
   if (!str) return 30;
   const s = str.toLowerCase();
   if (s.includes('48 hour') || (s.includes('2') && s.includes('day'))) return 2;
+  const MAX_DAYS = 730;
   if (s.includes('week')) {
     const range = s.match(/(\d+)[^\d]+(\d+)\s*week/);
-    if (range) return Math.round((+range[1] + +range[2]) / 2) * 7;
+    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 7, MAX_DAYS);
     const single = s.match(/(\d+)\s*week/);
-    return single ? +single[1] * 7 : 14;
+    return Math.min(single ? +single[1] * 7 : 14, MAX_DAYS);
   }
   if (s.includes('month')) {
     const range = s.match(/(\d+)[^\d]+(\d+)\s*month/);
-    if (range) return Math.round((+range[1] + +range[2]) / 2) * 30;
+    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 30, MAX_DAYS);
     const single = s.match(/(\d+)\s*month/);
-    return single ? +single[1] * 30 : 30;
+    return Math.min(single ? +single[1] * 30 : 30, MAX_DAYS);
   }
   return 30;
 }
@@ -111,9 +112,10 @@ async function _fetchRelevantMarkets(topic) {
       try {
         const prices = typeof primary.outcomePrices === 'string'
           ? JSON.parse(primary.outcomePrices) : primary.outcomePrices;
+        if (!Array.isArray(prices) || prices.length === 0) continue;
         yesPrice = Math.round(parseFloat(prices[0]) * 100);
       } catch (_) { continue; }
-      if (yesPrice === null || yesPrice < 1 || yesPrice > 99) continue;
+      if (yesPrice === null || isNaN(yesPrice) || yesPrice < 1 || yesPrice > 99) continue;
 
       relevant.push({ question: primary.question || event.title, yesPrice, volume24h: Math.round(parseFloat(event.volume24hr || 0)), matchCount });
     }
@@ -234,6 +236,7 @@ function _setCors(res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 }
 
 // ── Crypto Fear & Greed index ─────────────────────────────────────────────────
@@ -488,9 +491,17 @@ Respond ONLY with valid JSON, no markdown:
           body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, messages: [{ role: 'user', content: groupPrompt }] })
         });
         const groupData = await groupRes.json();
-        if (groupData.error) return res.status(500).json({ error: groupData.error.message });
+        if (groupData.error) {
+          console.error('[analyze] Anthropic grouping error:', groupData.error.message);
+          return res.status(500).json({ error: 'Analysis service unavailable' });
+        }
 
-        const grouped = JSON.parse(groupData.content[0].text.replace(/```json|```/g, '').trim());
+        let grouped;
+        try {
+          grouped = JSON.parse(groupData.content[0].text.replace(/```json|```/g, '').trim());
+        } catch (_) {
+          return res.status(500).json({ error: 'Analysis service returned invalid data' });
+        }
         const groups = grouped.groups.map(g => {
           const articles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
           const uniqueSources = [...new Set(articles.map(a => a.source))];
@@ -691,9 +702,17 @@ Respond ONLY with valid JSON, no markdown:
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: groupPrompt }] })
       });
       const groupData = await groupRes.json();
-      if (groupData.error) return res.status(500).json({ error: groupData.error.message });
+      if (groupData.error) {
+        console.error('[analyze] Anthropic grouping error:', groupData.error.message);
+        return res.status(500).json({ error: 'Analysis service unavailable' });
+      }
 
-      const grouped = JSON.parse(groupData.content[0].text.replace(/```json|```/g, '').trim());
+      let grouped;
+      try {
+        grouped = JSON.parse(groupData.content[0].text.replace(/```json|```/g, '').trim());
+      } catch (_) {
+        return res.status(500).json({ error: 'Analysis service returned invalid data' });
+      }
       const groups = grouped.groups.map(g => {
         const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
@@ -824,9 +843,17 @@ Respond ONLY with valid JSON, no markdown:
       });
 
       const data = await response.json();
-      if (data.error) return res.status(500).json({ error: data.error.message });
+      if (data.error) {
+        console.error('[analyze POST] Anthropic error:', data.error.message);
+        return res.status(500).json({ error: 'Analysis service unavailable' });
+      }
 
-      const analysis = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+      let analysis;
+      try {
+        analysis = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+      } catch (_) {
+        return res.status(500).json({ error: 'Analysis service returned invalid data' });
+      }
 
       const predictionId    = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
       const winnerTickers   = analysis.winners?.tickers || [];

@@ -32,6 +32,7 @@ function _setCors(res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 }
 
 function _getSupabase() {
@@ -55,7 +56,7 @@ async function _checkRateLimit(supabase, ip) {
     if (data.count >= 20) return false;
     await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
     return true;
-  } catch (_) { return true; }
+  } catch (_) { return false; }
 }
 
 function _sanitize(str, maxLen = 300) {
@@ -225,7 +226,12 @@ Respond ONLY with valid JSON, no markdown:
     }
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
-    const analysis = JSON.parse(raw);
+    let analysis;
+    try {
+      analysis = JSON.parse(raw);
+    } catch (_) {
+      return res.status(500).json({ error: 'Analysis service returned invalid data' });
+    }
 
     if (supabase) {
       const category = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;

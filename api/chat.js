@@ -21,7 +21,7 @@ async function _checkRateLimit(supabase, ip) {
     if (data.count >= 30) return false;
     await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
     return true;
-  } catch (_) { return true; }
+  } catch (_) { return false; }
 }
 
 const PAGE_DESCRIPTIONS = {
@@ -113,6 +113,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Vary', 'Origin');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -165,7 +166,10 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    if (data.error) return res.status(500).json({ error: data.error.message });
+    if (data.error) {
+      console.error('[chat] Anthropic error:', data.error.message);
+      return res.status(500).json({ error: 'Chat service unavailable' });
+    }
 
     const reply = data.content?.[0]?.text || '';
     return res.status(200).json({ reply });

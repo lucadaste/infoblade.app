@@ -87,7 +87,7 @@ export default async function handler(req, res) {
   const isCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`;
   const isManual = manualSecret && manualToken === manualSecret;
 
-  if ((cronSecret || manualSecret) && !isCron && !isManual) {
+  if (!isCron && !isManual) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
