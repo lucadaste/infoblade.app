@@ -33,10 +33,18 @@
     .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
     /* Page layout */
-    .page-header { padding: 48px 48px 0; }
+    .page-header { padding: 48px 48px 0; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .page-header-left { flex: 1; }
     .page-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; margin-bottom: 8px; }
     .page-title span { color: var(--accent); }
     .page-sub { font-size: 15px; color: var(--muted); font-weight: 300; }
+    .header-actions { display: flex; gap: 8px; padding-bottom: 4px; flex-shrink: 0; }
+    .btn-export { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 9px 18px; border-radius: 4px; border: 1.5px solid var(--border); background: none; color: var(--muted); cursor: pointer; letter-spacing: 0.3px; transition: all 0.2s; white-space: nowrap; }
+    .btn-export:hover { border-color: var(--ink); color: var(--ink); }
+    .btn-import { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; padding: 9px 18px; border-radius: 4px; border: 1.5px solid var(--border); background: none; color: var(--muted); cursor: pointer; letter-spacing: 0.3px; transition: all 0.2s; white-space: nowrap; }
+    .btn-import:hover { border-color: var(--accent); color: var(--accent); }
+    .import-toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 12px 24px; border-radius: 6px; letter-spacing: 0.3px; opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 999; white-space: nowrap; }
+    .import-toast.show { opacity: 1; }
 
     /* Tabs */
     .tabs { display: flex; gap: 4px; padding: 32px 48px 0; }
@@ -107,7 +115,7 @@
       .nav-logo { font-size: 13px; }
     }
     @media (max-width: 768px) {
-      .page-header { padding: 32px 24px 0; }
+      .page-header { padding: 32px 24px 0; align-items: flex-start; flex-direction: column; }
       .tabs { padding: 24px 24px 0; gap: 6px; flex-wrap: wrap; }
       .tab-btn { font-size: 12px; padding: 8px 14px; }
       .tab-panel { padding: 32px 24px 64px; }
@@ -137,9 +145,17 @@
   </script>
 
   <div class="page-header">
-    <h1 class="page-title">★ <span>Watchlist</span></h1>
-    <p class="page-sub">Your saved tickers, coins, and sectors across all three tools.</p>
+    <div class="page-header-left">
+      <h1 class="page-title">★ <span>Watchlist</span></h1>
+      <p class="page-sub">Your saved tickers, coins, and sectors across all three tools.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-export" onclick="exportWatchlist()">↓ Export</button>
+      <button class="btn-import" onclick="document.getElementById('import-input').click()">↑ Import</button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importWatchlist(event)" />
+    </div>
   </div>
+  <div class="import-toast" id="import-toast"></div>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('stocks', this)">Stock Markets</button>
@@ -346,6 +362,72 @@
       markets = markets.filter(m => m.slug !== slug);
       localStorage.setItem('ii_markets_watchlist', JSON.stringify(markets));
       loadMarkets();
+    }
+
+    // ── Export / Import ───────────────────────────────────────────
+    function exportWatchlist() {
+      let stocks = { sectors: [], tickers: [] };
+      let crypto = [];
+      let markets = [];
+      try { const s = localStorage.getItem('ii_watchlist');          if (s) stocks  = JSON.parse(s); } catch(e) {}
+      try { const s = localStorage.getItem('ii_crypto_watchlist');   if (s) crypto  = JSON.parse(s); } catch(e) {}
+      try { const s = localStorage.getItem('ii_markets_watchlist');  if (s) markets = JSON.parse(s); } catch(e) {}
+
+      const payload = { version: 1, exportedAt: new Date().toISOString(), stocks, crypto, markets };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'investmentinformatics-watchlist.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importWatchlist(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data || data.version !== 1) { showToast('Invalid watchlist file.', true); return; }
+
+          // Merge stocks
+          let stocks = { sectors: [], tickers: [] };
+          try { const s = localStorage.getItem('ii_watchlist'); if (s) stocks = JSON.parse(s); } catch(_) {}
+          if (data.stocks?.sectors) data.stocks.sectors.forEach(s => { if (!stocks.sectors.includes(s)) stocks.sectors.push(s); });
+          if (data.stocks?.tickers) data.stocks.tickers.forEach(t => { if (!stocks.tickers.includes(t)) stocks.tickers.push(t); });
+          localStorage.setItem('ii_watchlist', JSON.stringify(stocks));
+
+          // Merge crypto
+          let crypto = [];
+          try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) crypto = JSON.parse(s); } catch(_) {}
+          if (Array.isArray(data.crypto)) data.crypto.forEach(c => { if (!crypto.includes(c)) crypto.push(c); });
+          localStorage.setItem('ii_crypto_watchlist', JSON.stringify(crypto));
+
+          // Merge markets
+          let markets = [];
+          try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) markets = JSON.parse(s); } catch(_) {}
+          if (Array.isArray(data.markets)) data.markets.forEach(m => { if (!markets.find(x => x.slug === m.slug)) markets.push(m); });
+          localStorage.setItem('ii_markets_watchlist', JSON.stringify(markets));
+
+          loadStocks(); loadCrypto(); loadMarkets();
+          showToast('Watchlist imported successfully.');
+        } catch(_) {
+          showToast('Could not read file — make sure it\'s a valid watchlist export.', true);
+        }
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    }
+
+    function showToast(msg, isError) {
+      const t = document.getElementById('import-toast');
+      t.textContent = msg;
+      t.style.background = isError ? '#ff6060' : 'var(--accent)';
+      t.style.color = isError ? '#fff' : '#111111';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
     }
 
     // ── Init ──────────────────────────────────────────────────────
