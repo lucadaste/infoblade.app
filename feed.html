@@ -966,7 +966,8 @@
             topic: group.topic,
             headlines: group.headlines,
             sources: group.sources,
-            impactTimeframe
+            impactTimeframe,
+            category: currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any')
           }),
           signal: ctrl.signal
         });

@@ -730,7 +730,8 @@ Respond ONLY with valid JSON, no markdown:
       sources: rawSources,
       sourceGrades: rawSourceGrades = {},
       minGrade = 'medium',
-      impactTimeframe: rawTimeframe
+      impactTimeframe: rawTimeframe,
+      category: rawCategory = ''
     } = req.body || {};
 
     const topic           = _sanitize(rawTopic, 300);
@@ -738,6 +739,7 @@ Respond ONLY with valid JSON, no markdown:
     const sources         = _sanitizeArray(rawSources, 100, 40);
     const sourceGrades    = _sanitizeObject(rawSourceGrades);
     const impactTimeframe = _sanitize(rawTimeframe, 80);
+    const category        = _sanitize(rawCategory, 50);
 
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
 
@@ -847,6 +849,7 @@ Respond ONLY with valid JSON, no markdown:
           source_grades:     sourceGrades,
           min_grade:         minGrade,
           impact_timeframe:  impactTimeframe || null,
+          category:          category || null,
           analysis,
           winner_tickers:    winnerTickers,
           loser_tickers:     loserTickers,

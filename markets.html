@@ -358,7 +358,7 @@
         const res = await fetch('/api/market-analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice })
+          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: document.querySelector('.cat-chip.active')?.textContent?.trim().toLowerCase() || '' })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);

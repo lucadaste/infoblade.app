@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     // Validated predictions
     const { data: validated, error: vErr } = await supabase
       .from('predictions')
-      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices')
+      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices, category')
       .not('correct', 'is', null)
       .order('created_at', { ascending: false });
     if (vErr) throw vErr;
@@ -63,6 +63,20 @@ export default async function handler(req, res) {
       .map(([month, s]) => ({ month, total: s.total, correct: s.correct, accuracy: Math.round(s.correct / s.total * 100) }))
       .sort((a, b) => a.month.localeCompare(b.month));
 
+    // Accuracy by category — independent score per sector/topic
+    const byCategoryMap = {};
+    for (const p of validated ?? []) {
+      const cat = p.category || null;
+      if (!cat) continue;
+      if (!byCategoryMap[cat]) byCategoryMap[cat] = { total: 0, correct: 0 };
+      byCategoryMap[cat].total++;
+      if (p.correct) byCategoryMap[cat].correct++;
+    }
+    const byCategory = Object.entries(byCategoryMap)
+      .filter(([, s]) => s.total >= 2)
+      .map(([cat, s]) => ({ category: cat, total: s.total, correct: s.correct, accuracy: Math.round(s.correct / s.total * 100) }))
+      .sort((a, b) => b.total - a.total);
+
     // Top tickers by win rate (min 3 appearances)
     const tickerStats = {};
     for (const p of validated ?? []) {
@@ -81,6 +95,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0 },
       timeline,
+      byCategory,
       topTickers,
       recent: (recent ?? []).map(p => ({
         id: p.id,

@@ -103,6 +103,7 @@ export default async function handler(req, res) {
 
   const rawQuestion = req.body?.question;
   const rawOdds = req.body?.currentOdds;
+  const rawCategory = typeof req.body?.marketCategory === 'string' ? req.body.marketCategory : '';
 
   const question = _sanitize(rawQuestion, 300);
   if (!question) return res.status(400).json({ error: 'No question provided' });
@@ -227,6 +228,7 @@ Respond ONLY with valid JSON, no markdown:
     const analysis = JSON.parse(raw);
 
     if (supabase) {
+      const category = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
       supabase.from('predictions').insert({
         id: `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at: new Date().toISOString(),
@@ -238,6 +240,7 @@ Respond ONLY with valid JSON, no markdown:
         market_odds_at_time: currentOdds ?? null,
         market_slug: req.body?.slug || null,
         signal: analysis.signal || null,
+        category,
         analysis,
         correct: null,
         notes: null

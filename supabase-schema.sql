@@ -54,3 +54,7 @@ alter table source_reputation enable row level security;
 
 -- Service-role key (server-side only) bypasses RLS automatically.
 -- No browser-side access needed for these tables.
+
+-- Per-category accuracy tracking (independent score per sector/topic)
+alter table predictions add column if not exists category text;
+create index if not exists predictions_category_idx on predictions (category);
