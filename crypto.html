@@ -156,7 +156,7 @@
 
     [data-tip] { position: relative; }
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-    [data-tip]:hover::after { opacity: 1; visibility: visible; }
+    [data-tip]:hover::after, [data-tip]:focus::after { opacity: 1; visibility: visible; }
 
     .btn-coin-watch { background: none; border: 1px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-size: 12px; padding: 5px 10px; transition: all 0.2s; width: 100%; margin-top: 4px; font-family: 'Syne', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
     .btn-coin-watch:hover { border-color: var(--accent); color: var(--accent); }
@@ -183,21 +183,26 @@
       .nav-links li:last-child { border-bottom: none; }
       .nav-links a { padding: 14px 24px; display: block; font-size: 15px; }
       .nav-links a.active, .nav-links a:hover { color: var(--ink); }
-      .nav-burger { display: flex; }
+      .nav-burger { display: flex; padding: 14px 11px; }
       .coin-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 768px) {
       .hero { padding: 28px 24px 20px; flex-direction: column; gap: 16px; }
       .fg-widget { align-items: flex-start; }
       .filters { padding: 16px 24px; gap: 12px; }
-      .coin-search { width: 100%; }
+      .coin-search { width: 100%; font-size: 16px; }
+      .coin-card { padding: 12px; }
+      .btn-coin { min-height: 44px; padding: 10px 12px; }
+      .btn-coin-watch { min-height: 44px; padding: 9px 10px; }
+      .cat-chip { min-height: 44px; padding: 10px 18px; }
+      .tf-btn { min-height: 44px; padding: 10px 13px; }
       .feed-container { padding: 24px 16px 60px; }
       .ap-header { padding: 16px 24px; }
       .tf-bar { padding: 10px 24px; }
       .ap-content { padding: 16px 24px 40px; }
       footer { padding: 24px; }
     }
-    @media (max-width: 480px) { .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .coin-search { width: 140px; } }
+    @media (max-width: 480px) { .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; } .coin-search { width: 100%; } }
   </style>
 </head>
 <body>

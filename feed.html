@@ -147,7 +147,7 @@
 
     [data-tip] { position: relative; }
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
-    [data-tip]:hover::after { opacity: 1; visibility: visible; }
+    [data-tip]:hover::after, [data-tip]:focus::after { opacity: 1; visibility: visible; }
 
     .pill { cursor: pointer; user-select: none; }
     .pill:hover { opacity: 0.8; }
@@ -174,7 +174,7 @@
       .nav-links li:last-child { border-bottom: none; }
       .nav-links a { padding: 14px 24px; display: block; font-size: 15px; }
       .nav-links a.active, .nav-links a:hover { color: var(--ink); }
-      .nav-burger { display: flex; }
+      .nav-burger { display: flex; padding: 14px 11px; }
     }
     @media (max-width: 1300px) {
       .filter-actions { margin-left: 0; flex-basis: 100%; }
@@ -183,7 +183,11 @@
       .hero { padding: 32px 24px 24px; }
       .filters { padding: 16px 24px; gap: 12px; }
       .filter-group { flex: 1 1 calc(50% - 6px); }
-      .filter-select { min-width: 0; width: 100%; }
+      .filter-select { min-width: 0; width: 100%; font-size: 16px; }
+      .stock-search-input { font-size: 16px; }
+      #filter-impact-custom { font-size: 16px !important; }
+      .mode-tab { min-height: 44px; padding: 10px 18px; }
+      .btn-load { min-height: 44px; }
       .filter-actions { flex-basis: 100%; margin-left: 0; }
       .feed-container { padding: 24px 16px 60px; }
       .event-card { padding: 24px; }
