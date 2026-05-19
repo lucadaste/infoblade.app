@@ -811,22 +811,22 @@ STRICT RULES:
 
 Respond ONLY with valid JSON, no markdown:
 {"groups":[{"topic":"Specific descriptive title","indices":[1,3,5,7,12,18,24,31]}]}`
-        : `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group them into distinct specific market events RELEVANT TO ${categoryLabel.toUpperCase()}.
+        : `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group ONLY headlines that are directly and specifically about ${categoryLabel.toUpperCase()}.
 
 Headlines:
 ${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
-1. ONLY create groups about ${categoryLabel} — skip headlines unrelated to this sector
-2. Merge ALL headlines about the same specific event into ONE group — be aggressive about merging
-3. Topics must be SPECIFIC events not general trends
-4. If a topic covers a specific company name it in the title
-5. Do NOT create separate groups for variations of the same story
-6. Only groups with genuine market-moving significance
-7. Aim for 10-15 highly distinct specific groups
-8. Maximum 15 groups
-9. Each index appears in exactly one group
-10. Include ALL relevant indices in each group — do not leave articles ungrouped if they belong to a topic
+1. ONLY create groups about ${categoryLabel}. Discard any headline that is not directly about this sector.
+2. Topic titles MUST explicitly reference the sector. Examples for precious metals: "Gold Drops as Treasury Yields Surge" (correct) vs "Treasury Yield Concerns" (wrong — too generic). Name the metal, company, or sector asset.
+3. Macro events (Fed rates, treasury yields, inflation, GDP) may only appear if they have a DIRECT price effect on this sector's assets, and the topic title must frame it from the sector's perspective.
+4. Merge ALL headlines about the same specific event into ONE group.
+5. Topics must name SPECIFIC events, companies, or assets — not generic trends.
+6. Do NOT create separate groups for variations of the same story.
+7. Only include groups with genuine market-moving significance for ${categoryLabel}.
+8. Aim for 8-12 distinct specific groups. Maximum 12 groups.
+9. Each index appears in exactly one group.
+10. Leave ungroupable or off-topic headlines unused — do not force them into a group.
 
 Respond ONLY with valid JSON, no markdown:
 {"groups":[{"topic":"Specific descriptive title","indices":[1,3,5,7,12,18,24,31]}]}`;
@@ -848,12 +848,29 @@ Respond ONLY with valid JSON, no markdown:
       } catch (_) {
         return res.status(500).json({ error: 'Analysis service returned invalid data' });
       }
+      // Keyword guard: drop any group whose title doesn't reference the category
+      const CATEGORY_TOPIC_KEYWORDS = {
+        'precious-metals': ['gold', 'silver', 'platinum', 'palladium', 'copper', 'bullion', 'mining', 'metal', 'gld', 'slv', 'ore'],
+        'energy':          ['oil', 'gas', 'crude', 'opec', 'energy', 'petroleum', 'lng', 'pipeline', 'solar', 'wind', 'renewable', 'fuel', 'barrel'],
+        'technology':      ['tech', 'ai', 'chip', 'semiconductor', 'software', 'cloud', 'apple', 'microsoft', 'google', 'alphabet', 'meta', 'amazon', 'nvidia', 'digital', 'cyber', 'data'],
+        'healthcare':      ['health', 'pharma', 'drug', 'fda', 'biotech', 'medical', 'vaccine', 'clinical', 'cancer', 'pfizer', 'merck', 'lilly', 'novo', 'glp'],
+        'real-estate':     ['housing', 'estate', 'reit', 'mortgage', 'property', 'home', 'apartment', 'rent', 'construction', 'commercial'],
+        'consumer':        ['retail', 'consumer', 'walmart', 'amazon', 'target', 'spending', 'sales', 'brand', 'auto', 'airline', 'travel', 'restaurant', 'food'],
+        'defense':         ['defense', 'military', 'nato', 'war', 'weapon', 'missile', 'ukraine', 'russia', 'china', 'geopolit', 'sanction', 'pentagon', 'arms', 'conflict', 'troops'],
+        'financials':      ['bank', 'financial', 'credit', 'lending', 'fed', 'treasury', 'bond', 'yield', 'insurance', 'jpmorgan', 'goldman', 'mortgage', 'wall street', 'trading'],
+      };
+      const topicKeywords = CATEGORY_TOPIC_KEYWORDS[category];
+
       const groups = grouped.groups.map(g => {
         const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         const sourceGrades = {};
         uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
         return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: groupArticles.length, headlines: groupArticles.map(a => a.title), dates: groupArticles.map(a => a.date) };
+      }).filter(g => {
+        if (!topicKeywords) return true; // 'any', 'macro', 'crypto', 'political' — no filter
+        const t = g.topic.toLowerCase();
+        return topicKeywords.some(kw => t.includes(kw));
       });
 
       // Sort by source count as a fast proxy for impact (eliminates second LLM round-trip)
@@ -957,6 +974,8 @@ CRITICAL RULES:
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only
 - Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.
+- STOCK SPECIFICITY: Only list a stock if there is a DIRECT, SPECIFIC causal chain between THIS event and that stock's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the stocks with the clearest, most direct exposure.
+- AVOID CONTRADICTIONS: Each stock should appear in EITHER winners OR losers, never both. If the net effect on a stock is unclear, omit it entirely rather than hedging.
 - For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish signals vs weighted bearish signals from credible (High + Medium grade) sources and commit to whichever side has more weight. Only use "uncertain" if the weighted totals are within 15% of each other — meaning genuine deadlock, not just disagreement. Do NOT default to "uncertain" to avoid making a call.
 
 Respond ONLY with valid JSON, no markdown:
