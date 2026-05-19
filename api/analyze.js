@@ -890,21 +890,16 @@ Respond ONLY with valid JSON, no markdown:
       let predictionSaved = false;
       if (supabase) {
         predictionSaved = await _savePrediction(supabase, {
-          id: predictionId,
-          created_at:        new Date().toISOString(),
+          id:              predictionId,
           topic,
-          sources,
-          source_grades:     sourceGrades,
-          min_grade:         minGrade,
-          impact_timeframe:  impactTimeframe || null,
-          category:          category || null,
+          category:        category || null,
           analysis,
-          winner_tickers:    winnerTickers,
-          loser_tickers:     loserTickers,
-          baseline_prices:   Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
-          validation_date:   new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
-          correct:           null,
-          notes:             null
+          winner_tickers:  winnerTickers,
+          loser_tickers:   loserTickers,
+          baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
+          validation_date: new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
+          correct:         null,
+          notes:           null,
         });
       } else {
         console.warn('[analyze POST] Supabase not available — prediction not saved');

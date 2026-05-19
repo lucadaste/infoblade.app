@@ -918,7 +918,10 @@
           loserTickers:    losers,
           category,
         }),
-      }).catch(() => {});
+      }).then(r => r.json()).then(d => {
+        if (d.error) console.warn('[ii] save-prediction error:', d.error, topic.slice(0, 50));
+        else if (!d.skipped) console.log('[ii] prediction queued ✓', topic.slice(0, 50));
+      }).catch(e => console.warn('[ii] save-prediction fetch failed:', e.message));
     }
 
     loadWatchlist();
