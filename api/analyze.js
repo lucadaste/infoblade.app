@@ -240,6 +240,69 @@ function _setCors(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
 }
 
+// ── GDELT real-time news search (free, no key, 65k+ sources) ─────────────────
+async function _searchGDELT(queries, timespanHours = 48) {
+  const timespan = timespanHours <= 6 ? '6h' : timespanHours <= 24 ? '24h' : timespanHours <= 72 ? '3d' : '1week';
+  const results = [];
+  await Promise.allSettled(queries.slice(0, 5).map(async q => {
+    try {
+      const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(q)}&mode=artlist&format=json&maxrecords=20&timespan=${timespan}&sort=DateDesc&sourcelang=english`;
+      const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+      const d = await r.json();
+      for (const art of d.articles || []) {
+        if (!art.title || art.title.length < 15) continue;
+        let date = null;
+        if (art.seendate) {
+          const m = art.seendate.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
+          if (m) date = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`).toUTCString();
+        }
+        results.push({ title: art.title, source: art.domain || 'Web', date, grade: 'Medium' });
+      }
+    } catch (_) {}
+  }));
+  return results;
+}
+
+// ── Tavily AI web search (optional — set TAVILY_API_KEY) ─────────────────────
+async function _searchTavily(queries, apiKey, days = 3) {
+  if (!apiKey) return [];
+  const results = [];
+  await Promise.allSettled(queries.slice(0, 5).map(async q => {
+    try {
+      const r = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey, query: q, topic: 'news', search_depth: 'basic', max_results: 7, days }),
+        signal: AbortSignal.timeout(9000),
+      });
+      const d = await r.json();
+      for (const item of d.results || []) {
+        if (!item.title || item.title.length < 15) continue;
+        let source = 'Web';
+        try { source = new URL(item.url).hostname.replace(/^www\./, ''); } catch (_) {}
+        results.push({ title: item.title, source, date: item.published_date || null, grade: 'Medium' });
+      }
+    } catch (_) {}
+  }));
+  return results;
+}
+
+// ── NewsAPI (optional — set NEWSAPI_KEY, 150k+ sources) ──────────────────────
+async function _searchNewsAPI(queries, apiKey, timespanHours = 48) {
+  if (!apiKey) return [];
+  const from = new Date(Date.now() - timespanHours * 3600000).toISOString().slice(0, 10);
+  const q = queries.slice(0, 4).join(' OR ');
+  try {
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=en&sortBy=publishedAt&from=${from}&pageSize=40&apiKey=${apiKey}`;
+    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const d = await r.json();
+    if (d.status !== 'ok') { console.warn('[newsapi]', d.message); return []; }
+    return (d.articles || [])
+      .filter(a => a.title && a.title !== '[Removed]' && a.title.length > 15)
+      .map(a => ({ title: a.title, source: a.source?.name || 'NewsAPI', date: a.publishedAt || null, grade: 'Medium' }));
+  } catch (_) { return []; }
+}
+
 // ── Crypto Fear & Greed index ─────────────────────────────────────────────────
 async function _fetchCryptoFearGreed() {
   try {
@@ -418,9 +481,13 @@ export default async function handler(req, res) {
           return items;
         }
 
-        const [googleResults, directResults] = await Promise.all([
+        const stockTimespanHours = timeframe === 'today' ? 48 : timeframe === '3days' ? 72 : 168;
+        const [googleResults, directResults, gdeltItems, tavilyItems, newsApiItems] = await Promise.all([
           Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
           Promise.allSettled(BASE_DIRECT_FEEDS.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source })))),
+          _searchGDELT(stockQueries, stockTimespanHours),
+          _searchTavily(stockQueries, process.env.TAVILY_API_KEY, Math.ceil(stockTimespanHours / 24)),
+          _searchNewsAPI(stockQueries, process.env.NEWSAPI_KEY, stockTimespanHours),
         ]);
 
         let rawItems = [];
@@ -433,6 +500,9 @@ export default async function handler(req, res) {
           if (r.status === 'fulfilled') {
             try { const { res, source } = r.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
           }
+        }
+        for (const item of [...gdeltItems, ...tavilyItems, ...newsApiItems]) {
+          rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade });
         }
 
         // Filter to headlines mentioning the ticker or company name words
@@ -664,10 +734,14 @@ Respond ONLY with valid JSON, no markdown:
         return items;
       }
 
-      const [googleResults, directResults, fearGreed] = await Promise.all([
+      const sectorTimespanHours = timeframe === 'today' ? 48 : timeframe === '3days' ? 72 : 168;
+      const [googleResults, directResults, fearGreed, gdeltItems, tavilyItems, newsApiItems] = await Promise.all([
         Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
         Promise.allSettled(directFeeds.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source })))),
-        category === 'crypto' ? _fetchCryptoFearGreed() : Promise.resolve(null)
+        category === 'crypto' ? _fetchCryptoFearGreed() : Promise.resolve(null),
+        _searchGDELT(queries, sectorTimespanHours),
+        _searchTavily(queries, process.env.TAVILY_API_KEY, Math.ceil(sectorTimespanHours / 24)),
+        _searchNewsAPI(queries, process.env.NEWSAPI_KEY, sectorTimespanHours),
       ]);
 
       let rawItems = [];
@@ -680,6 +754,9 @@ Respond ONLY with valid JSON, no markdown:
         if (result.status === 'fulfilled') {
           try { const { res, source } = result.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
         }
+      }
+      for (const item of [...gdeltItems, ...tavilyItems, ...newsApiItems]) {
+        rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade });
       }
 
       if (timeframe && timeframe !== 'any') {
