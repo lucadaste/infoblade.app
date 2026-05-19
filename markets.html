@@ -482,7 +482,7 @@
           <div class="market-question">${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
-            <div class="odds-label">YES odds</div>
+            <div class="odds-label">${market.yesLabel ? esc(market.yesLabel) : 'Market odds'}</div>
           </div>
         </div>
         <div class="chain-row">

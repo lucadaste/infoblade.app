@@ -118,6 +118,32 @@ export default async function handler(req, res) {
       };
     }).filter(Boolean).slice(0, 10);
 
+    // Batch AI call: generate a plain-english "what YES means" label for each market
+    try {
+      const anthropicKey = process.env.ANTHROPIC_KEY;
+      if (anthropicKey && markets.length > 0) {
+        const labelPrompt = `For each prediction market question, write a 3-5 word plain English label describing exactly what the YES outcome means. Be specific — include the name/subject. No punctuation at the end.
+
+${markets.map((m, i) => `${i + 1}. "${m.question}"`).join('\n')}
+
+Respond ONLY with a JSON array of strings in the same order, no markdown:
+["label 1", "label 2", ...]`;
+
+        const labelRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: [{ role: 'user', content: labelPrompt }] }),
+          signal: AbortSignal.timeout(8000)
+        });
+        const labelData = await labelRes.json();
+        const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
+        if (raw) {
+          const labels = JSON.parse(raw);
+          markets.forEach((m, i) => { if (labels[i]) m.yesLabel = String(labels[i]).slice(0, 60); });
+        }
+      }
+    } catch (_) { /* labels are optional — cards still render without them */ }
+
     return res.status(200).json({ markets, category });
   } catch (err) {
     console.error('[markets]', err.message);
