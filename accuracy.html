@@ -293,7 +293,7 @@
   function renderPredictions(recent) {
     const el = document.getElementById('pred-list');
     if (!recent || !recent.length) {
-      el.innerHTML = '<div class="no-data">No predictions logged yet. Run an analysis on the Stock Markets page to start building history.</div>';
+      el.innerHTML = '<div class="no-data">No predictions logged yet.<br><br>Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, and come back — every AI prediction is automatically tracked here.</div>';
       return;
     }
     el.innerHTML = recent.map(p => {
@@ -354,7 +354,7 @@
   function renderByCategory(byCategory) {
     const el = document.getElementById('cat-grid');
     if (!byCategory || !byCategory.length) {
-      el.innerHTML = '<div class="no-data">No category data yet — scores appear after 2+ predictions per category.</div>';
+      el.innerHTML = '<div class="no-data">Category breakdown appears after predictions are logged.</div>';
       return;
     }
     el.innerHTML = byCategory.map(c => `

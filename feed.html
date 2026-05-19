@@ -742,7 +742,11 @@
             feed.innerHTML = '';
             label.style.display = 'block';
             document.getElementById('pre-load').style.display = 'none';
-            results.forEach(({ group, analysis }) => feed.appendChild(buildCard(group, analysis, impact)));
+            const cat = currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any');
+            results.forEach(({ group, analysis }) => {
+              feed.appendChild(buildCard(group, analysis, impact));
+              savePrediction(group.topic, analysis, cat);
+            });
             const cachedCards = [...feed.querySelectorAll('.event-card')];
             cachedCards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
             cachedCards.forEach(c => feed.appendChild(c));
