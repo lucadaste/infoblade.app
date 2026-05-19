@@ -860,7 +860,10 @@
           const body = await res.text().catch(() => '');
           throw new Error(`${res.status}: ${body.slice(0, 150)}`);
         }
-        return await res.json();
+        const data = await res.json();
+        if (data.predictionSaved === false) console.warn('[ii] prediction NOT saved for:', group.topic.slice(0, 60));
+        if (data.predictionSaved === true)  console.log('[ii] prediction saved ✓', group.topic.slice(0, 60));
+        return data;
       } finally {
         clearTimeout(t);
       }

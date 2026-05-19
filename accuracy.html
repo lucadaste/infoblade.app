@@ -395,6 +395,24 @@
     renderChart(data.timeline);
     renderPredictions(data.recent);
     renderTickers(data.topTickers);
+
+    // If zero predictions, run a DB connectivity check and show the result
+    if (data.summary.total === 0 && data.summary.pending === 0) {
+      const dbEl = document.getElementById('pred-list');
+      const chk  = await fetch('/api/db-check').then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      if (!chk.ok) {
+        dbEl.innerHTML = `<div class="error-msg">
+          <strong>Database issue detected:</strong> ${esc(chk.error || 'unknown error')}
+          ${chk.hint ? `<br><em>${esc(chk.hint)}</em>` : ''}
+          <br><br>Check that <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_KEY</code> are set correctly in Vercel environment variables.
+        </div>`;
+      } else {
+        dbEl.innerHTML = `<div class="no-data">
+          Database connected (${chk.totalRows} total rows). No predictions saved yet.<br><br>
+          Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, then return here. Every card the AI generates is automatically tracked.
+        </div>`;
+      }
+    }
   } catch (err) {
     ['stat-accuracy','stat-correct','stat-total','stat-pending'].forEach(id => {
       const el = document.getElementById(id);

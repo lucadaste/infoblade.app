@@ -226,7 +226,8 @@ async function _fetchRedditSentiment(topic, isCrypto) {
 // ── Supabase prediction persistence ──────────────────────────────────────────
 async function _savePrediction(supabase, record) {
   const { error } = await supabase.from('predictions').insert(record);
-  if (error) console.error('Supabase insert error:', error.message);
+  if (error) console.error('Supabase insert error:', error.message, JSON.stringify(error));
+  return !error;
 }
 
 // ── CORS helper ───────────────────────────────────────────────────────────────
@@ -886,8 +887,9 @@ Respond ONLY with valid JSON, no markdown:
       const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
       const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
 
+      let predictionSaved = false;
       if (supabase) {
-        await _savePrediction(supabase, {
+        predictionSaved = await _savePrediction(supabase, {
           id: predictionId,
           created_at:        new Date().toISOString(),
           topic,
@@ -904,9 +906,11 @@ Respond ONLY with valid JSON, no markdown:
           correct:           null,
           notes:             null
         });
+      } else {
+        console.warn('[analyze POST] Supabase not available — prediction not saved');
       }
 
-      return res.status(200).json({ ...analysis, predictionId, technicalSnapshot: fullSnapshot });
+      return res.status(200).json({ ...analysis, predictionId, predictionSaved, technicalSnapshot: fullSnapshot });
 
     } catch (err) {
       console.error('[analyze POST]', err.message);
