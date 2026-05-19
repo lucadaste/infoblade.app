@@ -1,5 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
+const SPORT_LABELS = {
+  nba: 'NBA', nfl: 'NFL', mlb: 'MLB', nhl: 'NHL', mls: 'MLS',
+  tennis: 'Tennis', golf: 'Golf', mma: 'MMA', boxing: 'Boxing',
+  soccer: 'Soccer', basketball: 'Basketball', football: 'Football', baseball: 'Baseball',
+};
+
 // Tags are intentionally exclusive — no tag appears in more than one category
 const CATEGORY_TAGS = {
   sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
@@ -104,6 +110,11 @@ export default async function handler(req, res) {
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
+      // Detect sport from Polymarket event tags
+      const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
+      const sportTag  = eventTags.find(t => SPORT_LABELS[t]);
+      const sport     = sportTag ? SPORT_LABELS[sportTag] : null;
+
       return {
         id: event.id,
         slug: event.slug,
@@ -114,7 +125,8 @@ export default async function handler(req, res) {
         volumeTotal,
         daysLeft,
         totalMarkets: ms.length,
-        category
+        category,
+        sport,
       };
     }).filter(Boolean).slice(0, 10);
 

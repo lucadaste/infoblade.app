@@ -494,7 +494,7 @@
       card.innerHTML = `
         ${isWatched ? '<div class="watchlist-badge">★ Watching</div>' : ''}
         <div class="market-header">
-          <div class="market-question">${esc(market.question)}</div>
+          <div class="market-question">${market.sport ? `<span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">${esc(market.sport)}</span>` : ''}${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
             <div class="odds-label">${market.yesLabel ? esc(market.yesLabel) : 'Market odds'}</div>
