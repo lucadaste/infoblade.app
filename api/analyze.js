@@ -259,7 +259,8 @@ export default async function handler(req, res) {
     'Reuters': 'High', 'Associated Press': 'High', 'Bloomberg': 'High',
     'Financial Times': 'High', 'The Wall Street Journal': 'High', 'The Economist': 'High',
     'BBC': 'High', 'NPR': 'High', 'CNBC': 'High', 'Wall Street Journal': 'High',
-    'AP': 'High', 'Politico': 'Medium', 'Business Insider': 'Medium',
+    'AP': 'High', 'White House': 'High', 'Politico': 'High', 'The Hill': 'Medium',
+    'Business Insider': 'Medium',
     'MarketWatch': 'Medium', 'Yahoo Finance': 'Medium', 'CNN': 'Medium',
     'The Guardian': 'Medium', 'NBC News': 'Medium', 'CBS News': 'Medium',
     'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
@@ -383,9 +384,13 @@ export default async function handler(req, res) {
         const BASE_DIRECT_FEEDS = [
           { url: `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`, source: 'Yahoo Finance' },
           { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
+          { url: 'https://feeds.reuters.com/Reuters/PoliticsNews', source: 'Reuters' },
           { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', source: 'CNBC' },
           { url: 'https://feeds.marketwatch.com/marketwatch/topstories/', source: 'MarketWatch' },
           { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'The Wall Street Journal' },
+          { url: 'https://www.politico.com/rss/politics08.xml', source: 'Politico' },
+          { url: 'https://thehill.com/rss/syndicator/19110', source: 'The Hill' },
+          { url: 'https://www.whitehouse.gov/feed/', source: 'White House' },
           { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
           { url: 'https://www.reddit.com/r/investing/new.rss?limit=25', source: 'Reddit r/investing' },
           { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25', source: 'Reddit r/stocks' },
@@ -515,8 +520,9 @@ Respond ONLY with valid JSON, no markdown:
       }
 
       const categoryQueries = {
-        'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war', 'crypto bitcoin'],
+        'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war', 'crypto bitcoin', 'Trump executive order economy markets', 'White House policy trade sanctions stocks'],
         'macro':           ['federal reserve interest rates', 'inflation CPI GDP', 'recession unemployment', 'treasury yields bonds', 'central bank policy'],
+        'political':       ['Trump executive order market economy stock', 'White House tariffs trade sanctions market impact', 'Congress legislation spending economic markets', 'president administration policy economy', 'geopolitical summit trade deal stocks economy', 'sanctions Russia China trade war markets', 'G7 G20 NATO economic impact', 'executive branch regulation industry stocks', 'election policy fiscal spending markets', 'diplomatic meeting bilateral trade markets'],
         'energy':          ['oil prices OPEC crude', 'natural gas energy sector', 'petroleum refinery LNG', 'energy stocks earnings', 'oil supply demand'],
         'technology':      ['AI stocks nvidia semiconductor', 'tech earnings apple microsoft', 'google meta amazon earnings', 'chip shortage technology', 'software cloud AI'],
         'financials':      ['federal reserve bank earnings', 'interest rates JPMorgan Goldman', 'treasury yields credit', 'banking sector financial', 'lending mortgage rates'],
@@ -534,12 +540,16 @@ Respond ONLY with valid JSON, no markdown:
       const BASE_DIRECT_FEEDS = [
         { url: 'https://feeds.reuters.com/reuters/businessNews',                     source: 'Reuters' },
         { url: 'https://feeds.reuters.com/reuters/topNews',                           source: 'Reuters' },
+        { url: 'https://feeds.reuters.com/Reuters/PoliticsNews',                      source: 'Reuters' },
         { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html',               source: 'CNBC' },
         { url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html',               source: 'CNBC' },
         { url: 'https://feeds.marketwatch.com/marketwatch/topstories/',               source: 'MarketWatch' },
         { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                      source: 'The Wall Street Journal' },
         { url: 'https://www.economist.com/finance-and-economics/rss.xml',             source: 'The Economist' },
         { url: 'https://feeds.npr.org/1017/rss.xml',                                  source: 'NPR' },
+        { url: 'https://www.politico.com/rss/politics08.xml',                         source: 'Politico' },
+        { url: 'https://thehill.com/rss/syndicator/19110',                            source: 'The Hill' },
+        { url: 'https://www.whitehouse.gov/feed/',                                    source: 'White House' },
       ];
       const REDDIT_STOCK_FEEDS = [
         { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
@@ -551,9 +561,18 @@ Respond ONLY with valid JSON, no markdown:
         { url: 'https://www.reddit.com/r/Bitcoin/new.rss?limit=25',        source: 'Reddit r/Bitcoin' },
         { url: 'https://www.reddit.com/r/ethereum/new.rss?limit=25',       source: 'Reddit r/ethereum' },
       ];
+      const POLITICAL_FEEDS = [
+        { url: 'https://feeds.reuters.com/Reuters/PoliticsNews',                      source: 'Reuters' },
+        { url: 'https://www.politico.com/rss/politics08.xml',                         source: 'Politico' },
+        { url: 'https://thehill.com/rss/syndicator/19110',                            source: 'The Hill' },
+        { url: 'https://www.whitehouse.gov/feed/',                                    source: 'White House' },
+        { url: 'https://rss.cnn.com/rss/cnn_allpolitics.rss',                        source: 'CNN' },
+        { url: 'https://feeds.npr.org/1014/rss.xml',                                  source: 'NPR' },
+      ];
       const CATEGORY_DIRECT_FEEDS = {
-        any:             [...REDDIT_STOCK_FEEDS],
-        macro:           [...REDDIT_STOCK_FEEDS],
+        any:             [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
+        macro:           [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
+        political:       [...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
         technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }, ...REDDIT_STOCK_FEEDS],
         energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }, ...REDDIT_STOCK_FEEDS],
         financials:      [...REDDIT_STOCK_FEEDS],
