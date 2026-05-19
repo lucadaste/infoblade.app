@@ -276,6 +276,10 @@
           <option value="healthcare">Healthcare & Pharma</option>
           <option value="defense">Defense & Geopolitics</option>
         </select>
+        <div class="mode-toggle" id="view-toggle" style="margin-top:6px">
+          <button class="mode-tab active" id="view-tab-topics">By Topic</button>
+          <button class="mode-tab" id="view-tab-stocks">By Stock</button>
+        </div>
       </div>
       <div id="stock-filter" style="display:none">
         <div class="stock-search-wrap">
@@ -393,6 +397,40 @@
       `).join('');
     }
 
+    function skeletonStockCard(ticker, name, price, changePct, idx) {
+      const priceStr = price != null ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
+      const changeColor = changePct == null ? '#555' : changePct > 0 ? '#00e676' : changePct < 0 ? '#ff7070' : '#888';
+      const changeStr = changePct != null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%` : '—';
+      return `<div class="skel-stock-card" data-stock-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #1e1e1e;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;color:#e8e6e0">${ticker.replace(/</g,'&lt;')}</div>
+            <div style="font-size:14px;color:#666;margin-top:4px">${name.replace(/</g,'&lt;')}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px">${priceStr}</div>
+            <div style="font-size:14px;font-weight:600;color:${changeColor}">${changeStr}</div>
+          </div>
+        </div>
+        <div class="skel" style="height:12px;width:42%;margin-bottom:20px"></div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div class="skel" style="flex:1;height:14px"></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div class="skel" style="height:22px;width:80px;border-radius:4px"></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">
+            <div class="skel" style="height:22px;width:64px;border-radius:4px"></div>
+            <div class="skel" style="height:22px;width:48px;border-radius:4px"></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     function skeletonCardForGroup(topic, idx) {
       const safeText = topic.length > 90 ? topic.slice(0, 87) + '…' : topic;
       return `<div class="skel-event-card" data-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
@@ -470,10 +508,38 @@
       } catch (_) {}
     })();
 
+    const SECTOR_STOCKS = {
+      'any':             [['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['VTI','Total Market ETF']],
+      'macro':           [['TLT','20yr Treasury ETF'],['GLD','Gold ETF'],['HYG','High Yield Bond ETF'],['UUP','US Dollar ETF'],['BND','Total Bond ETF']],
+      'technology':      [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['META','Meta'],['AMZN','Amazon'],['AMD','AMD'],['AVGO','Broadcom']],
+      'energy':          [['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['XLE','Energy ETF'],['HAL','Halliburton']],
+      'financials':      [['JPM','JPMorgan Chase'],['GS','Goldman Sachs'],['BAC','Bank of America'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo']],
+      'precious-metals': [['GLD','Gold ETF'],['SLV','Silver ETF'],['GDX','Gold Miners ETF'],['NEM','Newmont'],['GOLD','Barrick Gold'],['WPM','Wheaton Precious Metals'],['AEM','Agnico Eagle']],
+      'real-estate':     [['VNQ','Real Estate ETF'],['AMT','American Tower'],['PLD','Prologis'],['EQIX','Equinix'],['PSA','Public Storage'],['SPG','Simon Property Group'],['AVB','AvalonBay']],
+      'consumer':        [['WMT','Walmart'],['COST','Costco'],['AMZN','Amazon'],['TGT','Target'],['NKE','Nike'],['MCD',"McDonald's"],['SBUX','Starbucks']],
+      'healthcare':      [['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher']],
+      'defense':         [['LMT','Lockheed Martin'],['RTX','RTX Corporation'],['NOC','Northrop Grumman'],['GD','General Dynamics'],['BA','Boeing'],['HII','Huntington Ingalls'],['LHX','L3Harris']],
+      'crypto':          [['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['IBIT','iShares Bitcoin ETF'],['FBTC','Fidelity Bitcoin ETF']],
+    };
+
     let watchlist = { sectors: [], tickers: [] };
     let currentMode = 'sector';
+    let viewMode = 'topics'; // 'topics' | 'stocks'
     let selectedStock = null;
     let stockAutocompleteIndex = -1;
+
+    function setViewMode(mode) {
+      if (viewMode === mode) return;
+      viewMode = mode;
+      document.getElementById('view-tab-topics').classList.toggle('active', mode === 'topics');
+      document.getElementById('view-tab-stocks').classList.toggle('active', mode === 'stocks');
+      // Auto-reload if feed is already showing content
+      if (document.querySelector('#feed .event-card, #feed .skel-event-card, #feed .skel-stock-card')) {
+        loadFeed();
+      }
+    }
+    document.getElementById('view-tab-topics').addEventListener('click', () => setViewMode('topics'));
+    document.getElementById('view-tab-stocks').addEventListener('click', () => setViewMode('stocks'));
 
     function setMode(mode) {
       currentMode = mode;
@@ -719,7 +785,192 @@
       return card;
     }
 
+    function buildStockModeCard(tickerData, analysis, impact) {
+      const { ticker, name, price, changePct, week52High, week52Low } = tickerData;
+      const { match } = checkWatchlistMatch(analysis);
+      const confScore = getConfScore(analysis.confidence);
+
+      const priceStr = price != null ? `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '';
+      const changeColor = changePct == null ? '#888' : changePct > 0 ? '#00e676' : changePct < 0 ? '#ff7070' : '#888';
+      const changeStr = changePct != null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%` : '';
+      const range52w = (week52High && week52Low)
+        ? `<div style="font-size:12px;color:#555;margin-top:3px">52w $${week52Low} – $${week52High}</div>` : '';
+
+      const card = document.createElement('div');
+      card.className = 'event-card' + (match ? ' watchlist-match' : '');
+      card.dataset.confScore = confScore;
+      card.innerHTML = `
+        ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #1e1e1e;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px">${esc(ticker)}</div>
+            <div style="font-size:14px;color:#666;margin-top:4px">${esc(name)}</div>
+          </div>
+          <div style="text-align:right">
+            ${priceStr ? `<div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px">${esc(priceStr)}</div>` : ''}
+            ${changeStr ? `<div style="font-size:14px;font-weight:600;color:${changeColor}">${esc(changeStr)}</div>` : ''}
+            ${range52w}
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Why it matters</div>
+          <div class="chain-content">${esc(analysis.why_it_matters)}</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Impact window</div>
+          <div class="chain-content"><span class="impact-badge">${esc(analysis.impact_timeframe || impact)}</span></div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Sectors in play</div>
+          <div class="chain-content">
+            <div class="sectors">
+              ${(analysis.sectors?.positive || []).map(s => `<span class="sector-up">▲ ${esc(s)}</span>`).join('')}
+              ${(analysis.sectors?.negative || []).map(s => `<span class="sector-down">▼ ${esc(s)}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Beneficiaries</div>
+          <div class="chain-content">
+            ${esc(analysis.winners?.explanation || '')}
+            <div class="tickers">${(analysis.winners?.tickers || []).map(t => `<span class="pill ${watchlist.tickers.includes(t) ? 'pill-watched' : 'pill-up'}" data-ticker="${esc(t)}" onclick="toggleTickerWatch('${esc(t)}')" title="${watchlist.tickers.includes(t) ? 'Remove from watchlist' : 'Add to watchlist'}">${esc(t)}<span class="pill-star">${watchlist.tickers.includes(t) ? '★' : '☆'}</span></span>`).join('')}</div>
+          </div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-label">Likely losers</div>
+          <div class="chain-content">
+            ${esc(analysis.losers?.explanation || '')}
+            <div class="tickers">${(analysis.losers?.tickers || []).map(t => `<span class="pill ${watchlist.tickers.includes(t) ? 'pill-watched' : 'pill-down'}" data-ticker="${esc(t)}" onclick="toggleTickerWatch('${esc(t)}')" title="${watchlist.tickers.includes(t) ? 'Remove from watchlist' : 'Add to watchlist'}">${esc(t)}<span class="pill-star">${watchlist.tickers.includes(t) ? '★' : '☆'}</span></span>`).join('')}</div>
+          </div>
+        </div>
+        ${renderTechnicalSnapshot(analysis)}
+        <div class="chain-row">
+          <div class="chain-label">Confidence</div>
+          <div class="chain-content">${renderStars(confScore)}</div>
+        </div>
+      `;
+      return card;
+    }
+
+    async function loadSectorStocks() {
+      const btn        = document.getElementById('btn');
+      const status     = document.getElementById('status');
+      const feed       = document.getElementById('feed');
+      const label      = document.getElementById('feed-label');
+      const loader     = document.getElementById('loader');
+      const feedPending = document.getElementById('feed-pending');
+
+      const sector    = document.getElementById('filter-category').value;
+      const timeframe = document.getElementById('filter-timeframe').value;
+      const rawImpact = document.getElementById('filter-impact').value;
+      const impact    = rawImpact === 'custom'
+        ? (document.getElementById('filter-impact-custom').value.trim() || '1 month')
+        : rawImpact;
+
+      btn.disabled = true;
+      document.getElementById('pre-load').style.display = 'none';
+      label.style.display = 'block';
+      label.textContent = `${sector} · by stock`;
+      loader.classList.add('active');
+      status.textContent = 'Fetching sector stocks and live prices...';
+
+      const stocks = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
+      feed.innerHTML = stocks.map(([ticker, name], idx) => skeletonStockCard(ticker, name, null, null, idx)).join('');
+
+      try {
+        const res  = await fetch(`/api/sector-stocks?sector=${encodeURIComponent(sector)}`);
+        const data = await res.json();
+        const tickers = data.tickers || [];
+
+        if (tickers.length === 0) {
+          feed.innerHTML = `<div class="empty-state"><h3>No data available</h3><p>Could not fetch stock data for this sector. Try again.</p></div>`;
+          status.textContent = '';
+          loader.classList.remove('active');
+          btn.disabled = false;
+          return;
+        }
+
+        // Update skeletons with real prices; remove tickers we got no data for
+        const tickerMap = new Map(tickers.map(t => [t.ticker, t]));
+        stocks.forEach(([sym], idx) => {
+          const skel = feed.querySelector(`.skel-stock-card[data-stock-slot-idx="${idx}"]`);
+          if (!skel) return;
+          const td = tickerMap.get(sym);
+          if (!td) { skel.remove(); return; }
+          const fresh = document.createElement('div');
+          fresh.innerHTML = skeletonStockCard(td.ticker, td.name, td.price, td.changePct, idx);
+          skel.replaceWith(fresh.firstElementChild);
+        });
+
+        status.textContent = `Analyzing ${tickers.length} stocks...`;
+        feedPending.classList.add('active');
+
+        let doneCount = 0;
+        await Promise.allSettled(tickers.map(async (td) => {
+          try {
+            const group = {
+              topic: `${td.ticker} (${td.name}) — Recent Market News`,
+              headlines: td.headlines,
+              sources: td.sources,
+              totalSources: td.sources.length,
+            };
+            const analysis = await analyzeGroup(group, impact);
+            doneCount++;
+            const origIdx = stocks.findIndex(([sym]) => sym === td.ticker);
+            const skel = origIdx >= 0 ? feed.querySelector(`.skel-stock-card[data-stock-slot-idx="${origIdx}"]`) : null;
+
+            if (getConfScore(analysis.confidence) < 2) {
+              if (skel) skel.remove();
+              status.textContent = `${doneCount} of ${tickers.length} stocks analyzed...`;
+              return;
+            }
+
+            const card = buildStockModeCard(td, analysis, impact);
+            if (skel) { feed.insertBefore(card, skel); skel.remove(); }
+            else { feed.appendChild(card); }
+            savePrediction(group.topic, analysis, sector);
+            status.textContent = `${doneCount} of ${tickers.length} stocks analyzed...`;
+          } catch(err) {
+            console.error('Stock analysis failed:', td.ticker, err.message);
+            const origIdx = stocks.findIndex(([sym]) => sym === td.ticker);
+            const skel = origIdx >= 0 ? feed.querySelector(`.skel-stock-card[data-stock-slot-idx="${origIdx}"]`) : null;
+            if (skel) skel.remove();
+            doneCount++;
+          }
+        }));
+
+        feed.querySelectorAll('.skel-stock-card').forEach(s => s.remove());
+
+        const cards = [...feed.querySelectorAll('.event-card')];
+        cards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
+        cards.forEach(card => feed.appendChild(card));
+
+        loader.classList.remove('active');
+        feedPending.classList.remove('active');
+
+        if (cards.length === 0) {
+          feed.innerHTML = `<div class="empty-state"><h3>No signals found</h3><p>Try a different sector or timeframe.</p></div>`;
+          status.textContent = 'No signals with sufficient confidence.';
+        } else {
+          status.textContent = `${cards.length} stocks analyzed, sorted by confidence`;
+        }
+
+      } catch(err) {
+        feed.querySelectorAll('.skel-stock-card').forEach(s => s.remove());
+        loader.classList.remove('active');
+        feedPending.classList.remove('active');
+        status.textContent = 'Error: ' + err.message;
+      }
+
+      btn.disabled = false;
+    }
+
     async function loadFeed() {
+      if (currentMode === 'sector' && viewMode === 'stocks') {
+        await loadSectorStocks();
+        return;
+      }
+
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
       const feed   = document.getElementById('feed');
