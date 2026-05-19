@@ -21,7 +21,14 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+  try { supabase = _getSupabase(); } catch (e) {
+    return res.status(500).json({
+      error: 'Database configuration error',
+      detail: e.message,
+      hasUrl: !!process.env.SUPABASE_URL,
+      hasKey: !!process.env.SUPABASE_SERVICE_KEY,
+    });
+  }
 
   try {
     // Validated predictions
