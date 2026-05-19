@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  const key = process.env.SUPABASE_SERVICEKEY;
   if (!url || !key) return null;
   return createClient(url, key);
 }

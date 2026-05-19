@@ -6,12 +6,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
+  const key = process.env.SUPABASE_SERVICEKEY;
 
   if (!url || !key) {
     return res.status(200).json({
       ok: false,
-      error: 'SUPABASE_URL or SUPABASE_SERVICE_KEY env vars are not set',
+      error: 'SUPABASE_URL or SUPABASE_SERVICEKEY env vars are not set',
       envCheck: { hasUrl: !!url, hasKey: !!key },
     });
   }
