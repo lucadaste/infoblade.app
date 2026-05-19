@@ -796,6 +796,7 @@
             analyzedResults.push({ group, analysis });
             if (!skeletonCleared) { feed.innerHTML = ''; skeletonCleared = true; }
             feed.appendChild(buildCard(group, analysis, impact));
+            savePrediction(group.topic, analysis, currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any'));
             status.textContent = `${doneCount} of ${groups.length} topics analyzed...`;
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
           } catch(err) {
@@ -859,6 +860,25 @@
       } finally {
         clearTimeout(t);
       }
+    }
+
+    function savePrediction(topic, analysis, category) {
+      const winners = analysis.winners?.tickers || [];
+      const losers  = analysis.losers?.tickers  || [];
+      if (!winners.length && !losers.length) return;
+      fetch('/api/save-prediction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic,
+          direction:       analysis.direction,
+          confidence:      analysis.confidence,
+          impactTimeframe: analysis.impact_timeframe,
+          winnerTickers:   winners,
+          loserTickers:    losers,
+          category,
+        }),
+      }).catch(() => {});
     }
 
     loadWatchlist();

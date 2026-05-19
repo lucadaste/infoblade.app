@@ -107,6 +107,9 @@ export default async function handler(req, res) {
         correct: p.correct,
         confidence: p.analysis?.confidence || null,
         impactTimeframe: p.analysis?.impact_timeframe || null,
+        grade: p.analysis?.grade || null,
+        score: p.analysis?.score ?? null,
+        tickerMoves: p.analysis?.ticker_moves || null,
       }))
     });
 

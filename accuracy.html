@@ -107,6 +107,17 @@
     .pred-badge.correct   { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); }
     .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
     .pred-badge.pending   { background: rgba(136,136,136,0.12); color: var(--muted); border: 1px solid var(--border); }
+    .grade-badge { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
+    .grade-A { background: rgba(0,230,118,0.15); color: var(--accent);  border: 1px solid rgba(0,230,118,0.35); }
+    .grade-B { background: rgba(0,200,100,0.12); color: #4dd085;        border: 1px solid rgba(0,200,100,0.25); }
+    .grade-C { background: rgba(255,200,50,0.10); color: #ffc832;       border: 1px solid rgba(255,200,50,0.25); }
+    .grade-D { background: rgba(255,140,50,0.10); color: #ff9020;       border: 1px solid rgba(255,140,50,0.25); }
+    .grade-F { background: rgba(255,82,82,0.12);  color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+    .ticker-moves { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tm-chip { font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+    .tm-chip.hit  { background: rgba(0,230,118,0.10); color: var(--accent); border: 1px solid rgba(0,230,118,0.2); }
+    .tm-chip.miss { background: rgba(255,82,82,0.08);  color: var(--red);   border: 1px solid rgba(255,82,82,0.18); }
+    .score-line { font-size: 11px; color: var(--muted); margin-top: 6px; }
 
     /* Top tickers sidebar */
     .ticker-table { display: flex; flex-direction: column; gap: 8px; }
@@ -286,26 +297,46 @@
       return;
     }
     el.innerHTML = recent.map(p => {
-      const badgeClass = p.correct === true ? 'correct' : p.correct === false ? 'incorrect' : 'pending';
-      const badgeText  = p.correct === true ? '✓ Correct' : p.correct === false ? '✗ Incorrect' : 'Pending';
-      const date = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const wins  = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">${t}</span>`).join('');
-      const loses = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">${t}</span>`).join('');
-      const validDate = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      const tf = p.impactTimeframe ? `<span>${p.impactTimeframe}</span>` : '';
-      const conf = p.confidence ? `<span>★ ${p.confidence.split('—')[0].trim()}</span>` : '';
+      const isPending   = p.correct === null || p.correct === undefined;
+      const isCorrect   = p.correct === true;
+      const badgeClass  = isCorrect ? 'correct' : !isPending ? 'incorrect' : 'pending';
+      const badgeText   = isCorrect ? '✓ Correct' : !isPending ? '✗ Incorrect' : 'Pending';
+      const date        = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const validDate   = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+      const wins        = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">▲ ${esc(t)}</span>`).join('');
+      const loses       = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">▼ ${esc(t)}</span>`).join('');
+      const tf          = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
+      const conf        = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
+
+      // Grade badge (A/B/C/D/F) for resolved predictions
+      const gradeHtml = p.grade
+        ? `<div class="grade-badge grade-${esc(p.grade)}" title="${p.score}% of tickers moved as predicted">${esc(p.grade)}</div>`
+        : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
+
+      // Per-ticker actual move chips
+      let movesHtml = '';
+      if (p.tickerMoves && Object.keys(p.tickerMoves).length) {
+        const chips = Object.entries(p.tickerMoves).map(([sym, m]) => {
+          const arrow = m.direction === 'bullish' ? '▲' : '▼';
+          const sign  = m.pct > 0 ? '+' : '';
+          return `<span class="tm-chip ${m.correct ? 'hit' : 'miss'}" title="${m.correct ? 'Correct' : 'Missed'}">${arrow} ${esc(sym)} ${sign}${m.pct}%</span>`;
+        }).join('');
+        const scoreLine = p.score != null ? `<div class="score-line">${p.score}% of tickers moved as predicted</div>` : '';
+        movesHtml = `<div class="ticker-moves">${chips}</div>${scoreLine}`;
+      }
+
       return `
         <div class="pred-card">
-          <div>
-            <div class="pred-topic">${p.topic}</div>
-            <div class="pred-tickers">${wins}${loses}</div>
+          <div style="flex:1;min-width:0">
+            <div class="pred-topic">${esc(p.topic)}</div>
+            ${movesHtml || `<div class="pred-tickers">${wins}${loses}</div>`}
             <div class="pred-meta" style="margin-top:8px">
               <span>${date}</span>
               ${validDate ? `<span>→ ${validDate}</span>` : ''}
               ${tf}${conf}
             </div>
           </div>
-          <div><span class="pred-badge ${badgeClass}">${badgeText}</span></div>
+          <div style="flex-shrink:0">${gradeHtml}</div>
         </div>`;
     }).join('');
   }
@@ -353,6 +384,9 @@
   }
 
   try {
+    // Resolve any predictions whose timeframe has now expired
+    fetch('/api/resolve-predictions').catch(() => {});
+
     const res  = await fetch('/api/predictions');
     const data = await res.json();
     if (data.error) throw new Error(data.error);
