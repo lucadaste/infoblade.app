@@ -764,29 +764,29 @@
         }
 
         label.style.display = 'block';
-        status.textContent = `Found ${groups.length} topics. Analyzing...`;
+        status.textContent = `Analyzing ${groups.length} topics...`;
         if (typeof gtag !== 'undefined') gtag('event', 'feed_loaded', { category, group_count: groups.length, timeframe });
+        feedPending.classList.add('active');
 
-        // Analyze and display progressively
+        // Analyze all topics in parallel — render each card the moment it resolves
         const analyzedResults = [];
         let skeletonCleared = false;
-        for (let i = 0; i < groups.length; i++) {
-          const group = groups[i];
-          status.textContent = `Analyzing topic ${i + 1} of ${groups.length}: "${group.topic.substring(0, 50)}..."`;
+        let doneCount = 0;
+
+        await Promise.allSettled(groups.map(async (group) => {
           try {
             const analysis = await analyzeGroup(group, impact);
-            if (getConfScore(analysis.confidence) < 3) continue;
+            doneCount++;
+            if (getConfScore(analysis.confidence) < 3) return;
             analyzedResults.push({ group, analysis });
             if (!skeletonCleared) { feed.innerHTML = ''; skeletonCleared = true; }
-            const card = buildCard(group, analysis, impact);
-            feed.appendChild(card);
+            feed.appendChild(buildCard(group, analysis, impact));
+            status.textContent = `${doneCount} of ${groups.length} topics analyzed...`;
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
-            if (i < groups.length - 1) feedPending.classList.add('active');
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
           }
-          await new Promise(r => setTimeout(r, 300));
-        }
+        }));
 
         // Clear any remaining skeleton cards (all events were low-confidence)
         feed.querySelectorAll('.skel-event-card').forEach(s => s.remove());
@@ -797,7 +797,6 @@
         }
 
         // Re-sort by confidence when all done
-        status.textContent = 'Sorting by confidence...';
         const cards = [...feed.querySelectorAll('.event-card')];
         cards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
         cards.forEach(card => feed.appendChild(card));
