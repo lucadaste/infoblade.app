@@ -394,6 +394,30 @@
       `).join('');
     }
 
+    function skeletonCardForGroup(topic, idx) {
+      const safeText = topic.length > 90 ? topic.slice(0, 87) + '…' : topic;
+      return `<div class="skel-event-card" data-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:8px;color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="skel" style="height:12px;width:36%;margin-top:8px"></div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e;margin-top:16px">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div class="skel" style="flex:1;height:14px"></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div class="skel" style="height:22px;width:80px;border-radius:4px"></div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
+          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
+          <div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">
+            <div class="skel" style="height:22px;width:64px;border-radius:4px"></div>
+            <div class="skel" style="height:22px;width:48px;border-radius:4px"></div>
+            <div class="skel" style="height:22px;width:72px;border-radius:4px"></div>
+          </div>
+        </div>
+      </div>`;
+    }
+
     const titleMap = {
       'today': "Today's market-moving events",
       '3days': "Market-moving events, last 3 days",
@@ -787,28 +811,37 @@
         if (typeof gtag !== 'undefined') gtag('event', 'feed_loaded', { category, group_count: groups.length, timeframe });
         feedPending.classList.add('active');
 
-        // Analyze all topics in parallel — render each card the moment it resolves
+        // Replace generic skeletons with one per topic so users see exactly what's loading
+        feed.innerHTML = groups.map((g, i) => skeletonCardForGroup(g.topic, i)).join('');
+
+        // Analyze all topics in parallel — replace each skeleton in-place as it resolves
         const analyzedResults = [];
-        let skeletonCleared = false;
         let doneCount = 0;
 
-        await Promise.allSettled(groups.map(async (group) => {
+        await Promise.allSettled(groups.map(async (group, idx) => {
           try {
             const analysis = await analyzeGroup(group, impact);
             doneCount++;
-            if (getConfScore(analysis.confidence) < 3) return;
+            const skel = feed.querySelector(`.skel-event-card[data-slot-idx="${idx}"]`);
+            if (getConfScore(analysis.confidence) < 3) {
+              if (skel) skel.remove();
+              return;
+            }
             analyzedResults.push({ group, analysis });
-            if (!skeletonCleared) { feed.innerHTML = ''; skeletonCleared = true; }
-            feed.appendChild(buildCard(group, analysis, impact));
+            const card = buildCard(group, analysis, impact);
+            if (skel) { feed.insertBefore(card, skel); skel.remove(); }
+            else { feed.appendChild(card); }
             savePrediction(group.topic, analysis, currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any'));
             status.textContent = `${doneCount} of ${groups.length} topics analyzed...`;
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
+            const skel = feed.querySelector(`.skel-event-card[data-slot-idx="${idx}"]`);
+            if (skel) skel.remove();
           }
         }));
 
-        // Clear any remaining skeleton cards (all events were low-confidence)
+        // Remove any leftover skeletons (shouldn't happen, but be safe)
         feed.querySelectorAll('.skel-event-card').forEach(s => s.remove());
 
         // Save to cache
