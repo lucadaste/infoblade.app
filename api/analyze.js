@@ -521,18 +521,18 @@ Respond ONLY with valid JSON, no markdown:
       }
 
       const categoryQueries = {
-        'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war', 'crypto bitcoin', 'Trump executive order economy markets', 'White House policy trade sanctions stocks'],
-        'macro':           ['federal reserve interest rates', 'inflation CPI GDP', 'recession unemployment', 'treasury yields bonds', 'central bank policy'],
-        'political':       ['Trump executive order market economy stock', 'White House tariffs trade sanctions market impact', 'Congress legislation spending economic markets', 'president administration policy economy', 'geopolitical summit trade deal stocks economy', 'sanctions Russia China trade war markets', 'G7 G20 NATO economic impact', 'executive branch regulation industry stocks', 'election policy fiscal spending markets', 'diplomatic meeting bilateral trade markets'],
-        'energy':          ['oil prices OPEC crude', 'natural gas energy sector', 'petroleum refinery LNG', 'energy stocks earnings', 'oil supply demand'],
-        'technology':      ['AI stocks nvidia semiconductor', 'tech earnings apple microsoft', 'google meta amazon earnings', 'chip shortage technology', 'software cloud AI'],
-        'financials':      ['federal reserve bank earnings', 'interest rates JPMorgan Goldman', 'treasury yields credit', 'banking sector financial', 'lending mortgage rates'],
-        'precious-metals': ['gold price silver', 'precious metals mining', 'gold ETF bullion', 'copper platinum commodity', 'gold market'],
-        'real-estate':     ['housing market mortgage rates', 'real estate home prices', 'REIT property market', 'construction housing starts', 'mortgage lending'],
+        'any':             ['stock market economy', 'federal reserve inflation', 'earnings GDP trade', 'oil prices OPEC', 'tech stocks AI', 'bond yields treasury', 'recession unemployment jobs', 'merger acquisition IPO', 'tariffs trade war sanctions', 'Trump executive order economy markets', 'White House policy trade stocks', 'defense military geopolitical stocks', 'China US trade war supply chain'],
+        'macro':           ['federal reserve interest rates decision', 'inflation CPI PCE GDP data', 'recession unemployment jobs report', 'treasury yields bonds debt', 'central bank policy rate cut hike', 'IMF World Bank economic outlook', 'fiscal stimulus government spending deficit', 'dollar euro currency exchange rates', 'yield curve inversion recession signal'],
+        'political':       ['Trump executive order market economy stock', 'White House tariffs trade sanctions market impact', 'Congress legislation spending economic markets', 'president administration policy economy', 'geopolitical summit trade deal stocks economy', 'sanctions Russia China trade war markets', 'G7 G20 NATO economic impact', 'executive branch regulation industry stocks', 'election policy fiscal spending markets', 'diplomatic meeting bilateral trade markets', 'DOGE government spending cuts federal', 'budget reconciliation bill Congress stocks'],
+        'energy':          ['oil prices OPEC crude WTI Brent', 'natural gas LNG energy sector', 'petroleum refinery pipeline energy', 'energy stocks XOM CVX earnings', 'oil supply demand inventory EIA', 'renewable energy solar wind transition', 'Russia oil sanctions energy supply', 'OPEC+ production cut increase', 'energy crisis electricity prices'],
+        'technology':      ['AI stocks nvidia semiconductor earnings', 'tech earnings apple microsoft google', 'meta amazon cloud computing', 'chip shortage semiconductor supply', 'software cloud AI valuation', 'antitrust tech regulation DOJ FTC', 'cybersecurity breach hack tech stocks', 'AI model GPT anthropic competition', 'semiconductor export controls China chips'],
+        'financials':      ['federal reserve bank earnings', 'interest rates JPMorgan Goldman Sachs', 'treasury yields credit markets', 'banking sector financial results', 'lending mortgage rates housing', 'credit card delinquency consumer debt', 'bank stress test capital requirements', 'private equity IPO M&A deal', 'insurance financial sector stocks'],
+        'precious-metals': ['gold price silver rally safe haven', 'precious metals mining stocks', 'gold ETF GLD bullion demand', 'copper platinum palladium commodity', 'gold market central bank buying', 'inflation hedge gold investment', 'silver industrial demand solar'],
+        'real-estate':     ['housing market mortgage rates affordability', 'real estate home prices index', 'REIT property market stocks', 'construction housing starts permits', 'mortgage lending Fannie Freddie', 'commercial real estate office vacancy', 'housing inventory shortage demand'],
         'crypto':          ['bitcoin price rally crash', 'ethereum ETH market', 'SEC crypto lawsuit enforcement', 'MiCA Europe crypto regulation', 'Japan Korea Asia crypto policy', 'bitcoin ETF blackrock fidelity institutional', 'DeFi protocol hack exploit vulnerability', 'stablecoin USDT USDC depeg', 'binance coinbase crypto exchange', 'solana XRP altcoin', 'crypto whale liquidation funding rate', 'bitcoin mining hash rate difficulty'],
-        'consumer':        ['retail sales consumer spending', 'walmart amazon target earnings', 'consumer confidence retail', 'e-commerce spending', 'consumer prices inflation'],
-        'healthcare':      ['pharma FDA drug approval', 'healthcare biotech earnings', 'drug pricing pharma stocks', 'clinical trial biotech FDA', 'health insurance UnitedHealth Humana', 'Pfizer Moderna Merck Johnson', 'hospital Medicare Medicaid policy', 'cancer treatment biotech pipeline'],
-        'defense':         ['defense stocks military spending', 'lockheed boeing raytheon', 'NATO defense budget', 'weapons contracts pentagon', 'geopolitical defense']
+        'consumer':        ['retail sales consumer spending', 'walmart amazon target earnings', 'consumer confidence retail sentiment', 'e-commerce spending holiday', 'consumer prices inflation CPI', 'Nike Starbucks McDonald consumer brand', 'auto sales Ford GM Tesla', 'airline travel leisure consumer'],
+        'healthcare':      ['pharma FDA drug approval', 'healthcare biotech earnings', 'drug pricing pharma stocks', 'clinical trial biotech FDA', 'health insurance UnitedHealth Humana Cigna', 'Pfizer Moderna Merck Johnson vaccine', 'hospital Medicare Medicaid policy CMS', 'cancer treatment biotech pipeline', 'GLP-1 weight loss drug Eli Lilly Novo Nordisk', 'biosimilar generic drug patent'],
+        'defense':         ['defense contractor stocks Lockheed Raytheon Northrop Boeing', 'Pentagon defense budget spending authorization', 'NATO military alliance defense spending', 'Ukraine Russia war ceasefire military aid', 'China Taiwan military tension strait', 'US weapons arms sale export', 'Middle East conflict Israel Iran military', 'defense bill NDAA appropriations', 'geopolitical risk war stocks market', 'sanctions Russia China Iran North Korea', 'missile test North Korea military threat', 'US China military confrontation Pacific', 'arms race hypersonic nuclear deterrence', 'defense intelligence cybersecurity national security']
       };
 
       const queries = categoryQueries[category] || categoryQueries['any'];
@@ -542,20 +542,30 @@ Respond ONLY with valid JSON, no markdown:
         { url: 'https://feeds.reuters.com/reuters/businessNews',                     source: 'Reuters' },
         { url: 'https://feeds.reuters.com/reuters/topNews',                           source: 'Reuters' },
         { url: 'https://feeds.reuters.com/Reuters/PoliticsNews',                      source: 'Reuters' },
+        { url: 'https://feeds.reuters.com/reuters/worldNews',                         source: 'Reuters' },
         { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html',               source: 'CNBC' },
         { url: 'https://www.cnbc.com/id/20910258/device/rss/rss.html',               source: 'CNBC' },
+        { url: 'https://www.cnbc.com/id/15839069/device/rss/rss.html',               source: 'CNBC' },
         { url: 'https://feeds.marketwatch.com/marketwatch/topstories/',               source: 'MarketWatch' },
         { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                      source: 'The Wall Street Journal' },
+        { url: 'https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml',                    source: 'The Wall Street Journal' },
         { url: 'https://www.economist.com/finance-and-economics/rss.xml',             source: 'The Economist' },
+        { url: 'https://www.economist.com/the-world-this-week/rss.xml',               source: 'The Economist' },
         { url: 'https://feeds.npr.org/1017/rss.xml',                                  source: 'NPR' },
+        { url: 'https://feeds.npr.org/1001/rss.xml',                                  source: 'NPR' },
         { url: 'https://www.politico.com/rss/politics08.xml',                         source: 'Politico' },
         { url: 'https://thehill.com/rss/syndicator/19110',                            source: 'The Hill' },
         { url: 'https://www.whitehouse.gov/feed/',                                    source: 'White House' },
+        { url: 'https://feeds.apnews.com/rss/apf-topnews',                           source: 'AP News' },
+        { url: 'https://feeds.apnews.com/rss/apf-business',                          source: 'AP News' },
+        { url: 'https://feeds.apnews.com/rss/apf-politics',                          source: 'AP News' },
+        { url: 'https://finance.yahoo.com/rss/topfinstories',                         source: 'Yahoo Finance' },
       ];
       const REDDIT_STOCK_FEEDS = [
         { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
         { url: 'https://www.reddit.com/r/investing/new.rss?limit=25',      source: 'Reddit r/investing' },
         { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25',         source: 'Reddit r/stocks' },
+        { url: 'https://www.reddit.com/r/StockMarket/new.rss?limit=25',    source: 'Reddit r/StockMarket' },
       ];
       const REDDIT_CRYPTO_FEEDS = [
         { url: 'https://www.reddit.com/r/CryptoCurrency/new.rss?limit=25', source: 'Reddit r/CryptoCurrency' },
@@ -569,21 +579,49 @@ Respond ONLY with valid JSON, no markdown:
         { url: 'https://www.whitehouse.gov/feed/',                                    source: 'White House' },
         { url: 'https://rss.cnn.com/rss/cnn_allpolitics.rss',                        source: 'CNN' },
         { url: 'https://feeds.npr.org/1014/rss.xml',                                  source: 'NPR' },
+        { url: 'https://feeds.apnews.com/rss/apf-politics',                          source: 'AP News' },
+      ];
+      const DEFENSE_FEEDS = [
+        { url: 'https://www.defensenews.com/rss/',                                    source: 'Defense News' },
+        { url: 'https://breakingdefense.com/feed/',                                   source: 'Breaking Defense' },
+        { url: 'https://www.militarytimes.com/rss/',                                  source: 'Military Times' },
+        { url: 'https://feeds.reuters.com/reuters/worldNews',                         source: 'Reuters' },
+        { url: 'https://feeds.apnews.com/rss/apf-topnews',                           source: 'AP News' },
+        { url: 'https://rss.cnn.com/rss/cnn_world.rss',                              source: 'CNN' },
+        { url: 'https://www.economist.com/international/rss.xml',                     source: 'The Economist' },
       ];
       const CATEGORY_DIRECT_FEEDS = {
         any:             [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
         macro:           [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
         political:       [...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
-        technology:      [{ url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' }, ...REDDIT_STOCK_FEEDS],
-        energy:          [{ url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' }, ...REDDIT_STOCK_FEEDS],
-        financials:      [...REDDIT_STOCK_FEEDS],
+        technology:      [
+          { url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' },
+          { url: 'https://feeds.apnews.com/rss/apf-Technology',           source: 'AP News' },
+          ...REDDIT_STOCK_FEEDS,
+        ],
+        energy:          [
+          { url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10000049/device/rss/rss.html',  source: 'CNBC' },
+          ...REDDIT_STOCK_FEEDS,
+        ],
+        financials:      [
+          { url: 'https://feeds.reuters.com/reuters/financialServicesAndRealEstateNews', source: 'Reuters' },
+          ...REDDIT_STOCK_FEEDS,
+        ],
         'precious-metals': [...REDDIT_STOCK_FEEDS],
-        'real-estate':   [...REDDIT_STOCK_FEEDS],
-        consumer:        [...REDDIT_STOCK_FEEDS],
-        defense:         [...REDDIT_STOCK_FEEDS],
+        'real-estate':   [
+          { url: 'https://feeds.reuters.com/reuters/financialServicesAndRealEstateNews', source: 'Reuters' },
+          ...REDDIT_STOCK_FEEDS,
+        ],
+        consumer:        [
+          { url: 'https://www.cnbc.com/id/10000101/device/rss/rss.html',  source: 'CNBC' },
+          ...REDDIT_STOCK_FEEDS,
+        ],
+        defense:         [...DEFENSE_FEEDS, ...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
         healthcare:      [
           { url: 'https://feeds.reuters.com/reuters/health',               source: 'Reuters' },
           { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',   source: 'CNBC' },
+          { url: 'https://feeds.apnews.com/rss/apf-Health',                source: 'AP News' },
           ...REDDIT_STOCK_FEEDS,
         ],
         crypto:          [
@@ -672,7 +710,7 @@ Respond ONLY with valid JSON, no markdown:
         'technology': 'technology sector', 'energy': 'energy sector', 'financials': 'financial sector',
         'precious-metals': 'precious metals and commodities', 'real-estate': 'real estate and housing',
         'crypto': 'cryptocurrency and blockchain', 'consumer': 'consumer spending and retail',
-        'healthcare': 'healthcare, pharmaceutical, and biotech sectors', 'defense': 'defense and aerospace sector'
+        'healthcare': 'healthcare, pharmaceutical, and biotech sectors', 'defense': 'defense, aerospace, and geopolitics sector'
       };
       const categoryLabel = categoryLabels[category] || 'financial markets';
 

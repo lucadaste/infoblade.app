@@ -817,22 +817,25 @@
         // Analyze all topics in parallel — replace each skeleton in-place as it resolves
         const analyzedResults = [];
         let doneCount = 0;
+        let shownCount = 0;
 
         await Promise.allSettled(groups.map(async (group, idx) => {
           try {
             const analysis = await analyzeGroup(group, impact);
             doneCount++;
             const skel = feed.querySelector(`.skel-event-card[data-slot-idx="${idx}"]`);
-            if (getConfScore(analysis.confidence) < 3) {
+            if (getConfScore(analysis.confidence) < 2) {
               if (skel) skel.remove();
+              status.textContent = `${doneCount} of ${groups.length} analyzed, ${shownCount} shown...`;
               return;
             }
             analyzedResults.push({ group, analysis });
+            shownCount++;
             const card = buildCard(group, analysis, impact);
             if (skel) { feed.insertBefore(card, skel); skel.remove(); }
             else { feed.appendChild(card); }
             savePrediction(group.topic, analysis, currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any'));
-            status.textContent = `${doneCount} of ${groups.length} topics analyzed...`;
+            status.textContent = `${doneCount} of ${groups.length} analyzed, ${shownCount} shown...`;
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
           } catch(err) {
             console.error('Topic failed:', group.topic, err.message);
