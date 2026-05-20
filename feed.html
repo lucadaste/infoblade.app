@@ -1468,33 +1468,32 @@
         label.textContent = feedLabelMap[timeframe] || "Today's analysis";
       }
 
-      // Check cache (10-min TTL)
-      const cacheKey = currentMode === 'stock'
-        ? `ii_feed_v1_stock_${selectedStock?.s || ''}_${timeframe}_${impact}`
-        : `ii_feed_v1_${document.getElementById('filter-category').value}_${timeframe}_${impact}`;
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const { ts, results } = JSON.parse(cached);
-          if (Date.now() - ts < 10 * 60 * 1000) {
-            btn.disabled = true;
-            feed.innerHTML = '';
-            label.style.display = 'block';
-            document.getElementById('pre-load').style.display = 'none';
-            const cat = currentMode === 'stock' ? 'stock' : (document.getElementById('filter-category')?.value || 'any');
-            results.forEach(({ group, analysis }) => {
-              feed.appendChild(buildCard(group, analysis, impact));
-              savePrediction(group.topic, analysis, cat);
-            });
-            const cachedCards = [...feed.querySelectorAll('.event-card')];
-            cachedCards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
-            cachedCards.forEach(c => feed.appendChild(c));
-            status.textContent = `${cachedCards.length} topics (cached · loaded instantly)`;
-            btn.disabled = false;
-            return;
+      // Check cache (10-min TTL) — only for sector/topic mode, not individual stock
+      const cacheKey = `ii_feed_v1_${document.getElementById('filter-category').value}_${timeframe}_${impact}`;
+      if (currentMode !== 'stock') {
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const { ts, results } = JSON.parse(cached);
+            if (Date.now() - ts < 10 * 60 * 1000) {
+              btn.disabled = true;
+              feed.innerHTML = '';
+              label.style.display = 'block';
+              document.getElementById('pre-load').style.display = 'none';
+              results.forEach(({ group, analysis }) => {
+                feed.appendChild(buildCard(group, analysis, impact));
+                savePrediction(group.topic, analysis, document.getElementById('filter-category')?.value || 'any');
+              });
+              const cachedCards = [...feed.querySelectorAll('.event-card')];
+              cachedCards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
+              cachedCards.forEach(c => feed.appendChild(c));
+              status.textContent = `${cachedCards.length} topics (cached · loaded instantly)`;
+              btn.disabled = false;
+              return;
+            }
           }
-        }
-      } catch(e) {}
+        } catch(e) {}
+      }
 
       btn.disabled = true;
       feed.innerHTML = skeletonEventCards(3);
@@ -1657,6 +1656,11 @@
     }
 
     loadWatchlist();
+
+    // Purge old stock-mode cache keys (they used the old buildCard format)
+    try {
+      Object.keys(sessionStorage).filter(k => k.startsWith('ii_feed_v1_stock_')).forEach(k => sessionStorage.removeItem(k));
+    } catch(e) {}
   </script>
   <script src="/chat-widget.js"></script>
 
