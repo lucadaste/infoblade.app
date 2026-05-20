@@ -1,9 +1,6 @@
 {
   "type": "module",
-  "engines": {
-    "node": "20.x"
-  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4"
+    "@supabase/supabase-js": "2.78.0"
   }
 }
