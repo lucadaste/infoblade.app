@@ -57,6 +57,13 @@
     .coin-search:focus { border-color: var(--ink); }
     .coin-search::placeholder { color: #555; }
     .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
+    .search-suggestions { position: absolute; top: calc(100% + 4px); left: 0; min-width: 300px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; z-index: 300; max-height: 264px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+    .sug-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid #1e1e1e; }
+    .sug-item:last-child { border-bottom: none; }
+    .sug-item:hover { background: #242424; }
+    .sug-ticker { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
+    .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .hero > div:first-child { min-height: 130px; }
     .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .cat-chip { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
@@ -424,7 +431,8 @@
         <div class="filter-label">Search</div>
         <div class="search-wrap">
           <span class="search-icon">⌕</span>
-          <input class="coin-search" id="stock-coin-search" type="text" placeholder="Search stocks…" oninput="filterStockGrid()" />
+          <input class="coin-search" id="stock-coin-search" type="text" placeholder="Search stocks…" oninput="handleStockSearch()" onkeydown="handleSearchKey(event)" autocomplete="off" />
+          <div class="search-suggestions" id="search-suggestions" style="display:none"></div>
         </div>
       </div>
       <div class="filter-group">
@@ -635,6 +643,10 @@
       'crypto':          [['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['IBIT','iShares Bitcoin ETF'],['FBTC','Fidelity Bitcoin ETF'],['CLSK','CleanSpark'],['WGMI','Valkyrie Bitcoin Miners ETF'],['BITO','ProShares Bitcoin ETF']],
     };
 
+    // Popularity rank for search suggestions: higher = more popular
+    const _popularityRank = {};
+    SECTOR_STOCKS['any'].forEach(([sym], i) => { _popularityRank[sym] = SECTOR_STOCKS['any'].length - i; });
+
     let watchlist = { sectors: [], tickers: [] };
     let pageMode = 'sector';   // 'sector' | 'stocks'
     let stockSector = 'any';   // selected sector chip in stock mode
@@ -648,13 +660,8 @@
       document.getElementById('pmode-stocks').classList.toggle('active', mode === 'stocks');
       document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
-      if (mode === 'stocks') {
-        document.getElementById('page-title').textContent = 'AI stock news analysis';
-        document.getElementById('hero-sub').textContent = 'Browse 100 top stocks with live prices. Select any to get AI-powered news analysis and predictions.';
-        if (document.getElementById('stock-coin-grid').children.length === 0) loadStockGrid();
-      } else {
-        document.getElementById('page-title').textContent = 'AI market predictions & sector analysis';
-        document.getElementById('hero-sub').textContent = 'Live prices across 500+ sources — pick a sector for AI event analysis, or select any stock for a full news-driven breakdown.';
+      if (mode === 'stocks' && document.getElementById('stock-coin-grid').children.length === 0) {
+        loadStockGrid();
       }
     }
 
@@ -683,6 +690,66 @@
         card.style.display = (!q || sym.includes(q) || name.includes(q)) ? '' : 'none';
       });
     }
+
+    function handleStockSearch() {
+      showSuggestions();
+      filterStockGrid();
+    }
+
+    function showSuggestions() {
+      const q = document.getElementById('stock-coin-search').value.toLowerCase().trim();
+      const box = document.getElementById('search-suggestions');
+      if (!q) { box.style.display = 'none'; return; }
+      const matches = [];
+      for (const {s, n} of TICKERS) {
+        const tl = s.toLowerCase(), nl = n.toLowerCase();
+        let base = 0;
+        if (tl === q)                                                      base = 10000;
+        else if (tl.startsWith(q))                                         base = 5000;
+        else if (nl.split(' ').some(w => w.toLowerCase().startsWith(q)))   base = 2000;
+        else if (nl.startsWith(q))                                         base = 1500;
+        else if (tl.includes(q))                                           base = 500;
+        else if (nl.toLowerCase().includes(q))                             base = 100;
+        if (!base) continue;
+        matches.push({ s, n, score: base + (_popularityRank[s] || 0) });
+      }
+      matches.sort((a, b) => b.score - a.score);
+      const top = matches.slice(0, 8);
+      if (!top.length) { box.style.display = 'none'; return; }
+      box.innerHTML = top.map(t =>
+        `<div class="sug-item" onclick="selectSuggestion(${JSON.stringify(t.s)},${JSON.stringify(t.n)})">
+          <span class="sug-ticker">${esc(t.s)}</span>
+          <span class="sug-name">${esc(t.n)}</span>
+        </div>`
+      ).join('');
+      box.style.display = 'block';
+    }
+
+    function selectSuggestion(ticker, name) {
+      const input = document.getElementById('stock-coin-search');
+      input.value = ticker;
+      document.getElementById('search-suggestions').style.display = 'none';
+      const inCurrent = (SECTOR_STOCKS[stockSector] || []).some(([s]) => s === ticker);
+      if (!inCurrent) {
+        const allBtn = document.querySelector('#stock-sector-chips .cat-chip');
+        setStockSector('any', allBtn);
+      } else {
+        filterStockGrid();
+      }
+    }
+
+    function handleSearchKey(e) {
+      if (e.key === 'Escape') {
+        document.getElementById('search-suggestions').style.display = 'none';
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.search-wrap')) {
+        const box = document.getElementById('search-suggestions');
+        if (box) box.style.display = 'none';
+      }
+    });
 
     async function loadStockGrid() {
       const grid = document.getElementById('stock-coin-grid');
