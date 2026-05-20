@@ -749,6 +749,14 @@
       const input = document.getElementById('stock-coin-search');
       input.value = ticker;
       document.getElementById('search-suggestions').style.display = 'none';
+
+      // Immediately open the analysis panel and start analysis for any ticker
+      selectedStockCard = { ticker, name, tickerData: null };
+      const panel = document.getElementById('stock-analysis-panel');
+      panel.style.display = 'block';
+      document.getElementById('sap-title').textContent = `${name} (${ticker})`;
+
+      // Switch grid sector so the card is visible if it exists
       const inCurrent = (SECTOR_STOCKS[stockSector] || []).some(([s]) => s === ticker);
       if (!inCurrent) {
         const allBtn = document.querySelector('#stock-sector-chips .cat-chip');
@@ -756,6 +764,21 @@
       } else {
         filterStockGrid();
       }
+
+      // Highlight the matching card if it exists in the grid
+      setTimeout(() => {
+        document.querySelectorAll('#stock-coin-grid .coin-card').forEach(card => {
+          const sym = card.querySelector('.coin-symbol')?.textContent;
+          const isMe = sym === ticker;
+          card.classList.toggle('selected', isMe);
+          const b = card.querySelector('.btn-coin');
+          if (b && !b.disabled) b.textContent = isMe ? '★ Analyzing' : 'Analyze →';
+        });
+      }, 600);
+
+      // Scroll to panel and fetch analysis
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      fetchStockAnalysis(ticker, name, null);
     }
 
     function handleSearchKey(e) {
