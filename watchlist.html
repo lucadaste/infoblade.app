@@ -18,7 +18,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
     html { overflow-x: hidden; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; min-height: 100vh; }
 
     /* ── Nav ─────────────────────────────────────────────── */
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
@@ -114,7 +114,7 @@
     .cta-link:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Responsive ──────────────────────────────────────── */
-    @media (max-width: 900px) {
+    @media (max-width: 1200px) {
       nav { padding: 12px 16px; gap: 10px; }
       .nav-logo { font-size: 13px; }
       .nav-chat-btn { font-size: 12px; padding: 6px 12px; letter-spacing: 0; }
@@ -124,6 +124,8 @@
       .nav-links li:last-child { border-bottom: none; }
       .nav-links a { padding: 14px 24px; display: block; font-size: 15px; }
       .nav-burger { display: flex; padding: 14px 11px; }
+    }
+    @media (max-width: 900px) {
       .hero { padding: 28px 24px 20px; }
       .tab-btn { padding: 16px 20px; font-size: 13px; }
       .tab-panel { padding: 32px 24px 64px; }
