@@ -305,7 +305,7 @@
   <div class="hero">
     <div>
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
-      <h1 id="page-title">Live stock & sector intelligence</h1>
+      <h1 id="page-title">AI market predictions & sector analysis</h1>
       <p class="hero-sub" id="hero-sub">Live prices across 500+ sources — pick a sector for AI event analysis, or select any stock for a full news-driven breakdown.</p>
     </div>
     <div class="hero-stats">
@@ -622,17 +622,17 @@
     })();
 
     const SECTOR_STOCKS = {
-      'any':             [['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['VTI','Total Market ETF']],
-      'macro':           [['TLT','20yr Treasury ETF'],['GLD','Gold ETF'],['HYG','High Yield Bond ETF'],['UUP','US Dollar ETF'],['BND','Total Bond ETF']],
-      'technology':      [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['META','Meta'],['AMZN','Amazon'],['AMD','AMD'],['AVGO','Broadcom']],
-      'energy':          [['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['XLE','Energy ETF'],['HAL','Halliburton']],
-      'financials':      [['JPM','JPMorgan Chase'],['GS','Goldman Sachs'],['BAC','Bank of America'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo']],
-      'precious-metals': [['GLD','Gold ETF'],['SLV','Silver ETF'],['GDX','Gold Miners ETF'],['NEM','Newmont'],['GOLD','Barrick Gold'],['WPM','Wheaton Precious Metals'],['AEM','Agnico Eagle']],
-      'real-estate':     [['VNQ','Real Estate ETF'],['AMT','American Tower'],['PLD','Prologis'],['EQIX','Equinix'],['PSA','Public Storage'],['SPG','Simon Property Group'],['AVB','AvalonBay']],
-      'consumer':        [['WMT','Walmart'],['COST','Costco'],['AMZN','Amazon'],['TGT','Target'],['NKE','Nike'],['MCD',"McDonald's"],['SBUX','Starbucks']],
-      'healthcare':      [['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher']],
-      'defense':         [['LMT','Lockheed Martin'],['RTX','RTX Corporation'],['NOC','Northrop Grumman'],['GD','General Dynamics'],['BA','Boeing'],['HII','Huntington Ingalls'],['LHX','L3Harris']],
-      'crypto':          [['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['IBIT','iShares Bitcoin ETF'],['FBTC','Fidelity Bitcoin ETF']],
+      'any':             [['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['AMZN','Amazon'],['META','Meta'],['TSLA','Tesla'],['AVGO','Broadcom'],['ORCL','Oracle'],['AMD','AMD'],['CRM','Salesforce'],['INTC','Intel'],['QCOM','Qualcomm'],['AMAT','Applied Materials'],['MU','Micron'],['NOW','ServiceNow'],['PANW','Palo Alto Networks'],['INTU','Intuit'],['ADBE','Adobe'],['SNOW','Snowflake'],['PLTR','Palantir'],['UBER','Uber'],['JPM','JPMorgan Chase'],['BAC','Bank of America'],['GS','Goldman Sachs'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo'],['AXP','American Express'],['BLK','BlackRock'],['C','Citigroup'],['SCHW','Charles Schwab'],['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher'],['AMGN','Amgen'],['GILD','Gilead Sciences'],['ISRG','Intuitive Surgical'],['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['WMT','Walmart'],['COST','Costco'],['MCD',"McDonald's"],['SBUX','Starbucks'],['NKE','Nike'],['TGT','Target'],['HD','Home Depot'],['KO','Coca-Cola'],['PEP','PepsiCo'],['PG','Procter & Gamble'],['LULU','Lululemon'],['NFLX','Netflix'],['DIS','Disney'],['SPOT','Spotify'],['CMCSA','Comcast'],['T','AT&T'],['VZ','Verizon'],['SNAP','Snap'],['GE','GE Aerospace'],['CAT','Caterpillar'],['RTX','RTX Corporation'],['LMT','Lockheed Martin'],['BA','Boeing'],['NOC','Northrop Grumman'],['HON','Honeywell'],['DE','John Deere'],['SHOP','Shopify'],['MELI','MercadoLibre'],['SQ','Block'],['ABNB','Airbnb'],['RBLX','Roblox'],['PINS','Pinterest'],['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['GLD','Gold ETF'],['SLV','Silver ETF'],['TLT','20yr Treasury ETF'],['XLE','Energy ETF'],['XLF','Financials ETF'],['XLK','Tech ETF'],['XLV','Healthcare ETF'],['IBIT','iShares Bitcoin ETF'],['GDX','Gold Miners ETF'],['VNQ','Real Estate ETF'],['HYG','High Yield Bond ETF']],
+      'macro':           [['TLT','20yr Treasury ETF'],['GLD','Gold ETF'],['HYG','High Yield Bond ETF'],['UUP','US Dollar ETF'],['BND','Total Bond ETF'],['SHY','1-3yr Treasury ETF'],['IEF','7-10yr Treasury ETF'],['LQD','Corp Bond ETF']],
+      'technology':      [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['META','Meta'],['AMZN','Amazon'],['AMD','AMD'],['AVGO','Broadcom'],['ORCL','Oracle'],['CRM','Salesforce'],['INTC','Intel'],['QCOM','Qualcomm'],['AMAT','Applied Materials'],['MU','Micron'],['NOW','ServiceNow'],['PANW','Palo Alto Networks'],['INTU','Intuit'],['ADBE','Adobe'],['PLTR','Palantir'],['SNOW','Snowflake']],
+      'energy':          [['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['XLE','Energy ETF'],['HAL','Halliburton'],['MRO','Marathon Oil'],['PSX','Phillips 66'],['VLO','Valero Energy']],
+      'financials':      [['JPM','JPMorgan Chase'],['GS','Goldman Sachs'],['BAC','Bank of America'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo'],['AXP','American Express'],['BLK','BlackRock'],['C','Citigroup'],['SCHW','Charles Schwab'],['USB','U.S. Bancorp'],['PNC','PNC Financial']],
+      'precious-metals': [['GLD','Gold ETF'],['SLV','Silver ETF'],['GDX','Gold Miners ETF'],['GDXJ','Junior Gold Miners ETF'],['NEM','Newmont'],['GOLD','Barrick Gold'],['WPM','Wheaton Precious Metals'],['AEM','Agnico Eagle'],['FNV','Franco-Nevada']],
+      'real-estate':     [['VNQ','Real Estate ETF'],['AMT','American Tower'],['PLD','Prologis'],['EQIX','Equinix'],['PSA','Public Storage'],['SPG','Simon Property Group'],['AVB','AvalonBay'],['DLR','Digital Realty'],['O','Realty Income'],['SBAC','SBA Communications']],
+      'consumer':        [['WMT','Walmart'],['COST','Costco'],['AMZN','Amazon'],['TGT','Target'],['NKE','Nike'],['MCD',"McDonald's"],['SBUX','Starbucks'],['PG','Procter & Gamble'],['KO','Coca-Cola'],['PEP','PepsiCo'],['LULU','Lululemon'],['HD','Home Depot'],['LOW',"Lowe's"]],
+      'healthcare':      [['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher'],['AMGN','Amgen'],['GILD','Gilead Sciences'],['CVS','CVS Health'],['ISRG','Intuitive Surgical'],['DHR','Danaher']],
+      'defense':         [['LMT','Lockheed Martin'],['RTX','RTX Corporation'],['NOC','Northrop Grumman'],['GD','General Dynamics'],['BA','Boeing'],['HII','Huntington Ingalls'],['LHX','L3Harris'],['LDOS','Leidos'],['CACI','CACI International'],['KTOS','Kratos Defense']],
+      'crypto':          [['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['IBIT','iShares Bitcoin ETF'],['FBTC','Fidelity Bitcoin ETF'],['CLSK','CleanSpark'],['WGMI','Valkyrie Bitcoin Miners ETF'],['BITO','ProShares Bitcoin ETF']],
     };
 
     let watchlist = { sectors: [], tickers: [] };
@@ -649,11 +649,11 @@
       document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
       if (mode === 'stocks') {
-        document.getElementById('page-title').textContent = 'Live stock prices';
-        document.getElementById('hero-sub').textContent = 'Browse stocks with live prices. Select any stock to pull AI-powered news analysis.';
+        document.getElementById('page-title').textContent = 'AI stock news analysis';
+        document.getElementById('hero-sub').textContent = 'Browse 100 top stocks with live prices. Select any to get AI-powered news analysis and predictions.';
         if (document.getElementById('stock-coin-grid').children.length === 0) loadStockGrid();
       } else {
-        document.getElementById('page-title').textContent = 'Live stock & sector intelligence';
+        document.getElementById('page-title').textContent = 'AI market predictions & sector analysis';
         document.getElementById('hero-sub').textContent = 'Live prices across 500+ sources — pick a sector for AI event analysis, or select any stock for a full news-driven breakdown.';
       }
     }

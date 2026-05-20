@@ -1,17 +1,3 @@
-const SECTOR_STOCKS = {
-  'any':             [['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['VTI','Total Market ETF']],
-  'macro':           [['TLT','20yr Treasury ETF'],['GLD','Gold ETF'],['HYG','High Yield Bond ETF'],['UUP','US Dollar ETF'],['BND','Total Bond ETF']],
-  'technology':      [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['META','Meta'],['AMZN','Amazon'],['AMD','AMD'],['AVGO','Broadcom']],
-  'energy':          [['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['XLE','Energy Select ETF'],['HAL','Halliburton']],
-  'financials':      [['JPM','JPMorgan Chase'],['GS','Goldman Sachs'],['BAC','Bank of America'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo']],
-  'precious-metals': [['GLD','Gold ETF'],['SLV','Silver ETF'],['GDX','Gold Miners ETF'],['NEM','Newmont'],['GOLD','Barrick Gold'],['WPM','Wheaton Precious Metals'],['AEM','Agnico Eagle']],
-  'real-estate':     [['VNQ','Real Estate ETF'],['AMT','American Tower'],['PLD','Prologis'],['EQIX','Equinix'],['PSA','Public Storage'],['SPG','Simon Property Group'],['AVB','AvalonBay']],
-  'consumer':        [['WMT','Walmart'],['COST','Costco'],['AMZN','Amazon'],['TGT','Target'],['NKE','Nike'],['MCD',"McDonald's"],['SBUX','Starbucks']],
-  'healthcare':      [['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher']],
-  'defense':         [['LMT','Lockheed Martin'],['RTX','RTX Corporation'],['NOC','Northrop Grumman'],['GD','General Dynamics'],['BA','Boeing'],['HII','Huntington Ingalls'],['LHX','L3Harris']],
-  'crypto':          [['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['IBIT','iShares Bitcoin ETF'],['FBTC','Fidelity Bitcoin ETF']],
-};
-
 function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -19,19 +5,61 @@ function _setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
-function _parseRss(text, fallback, max = 7) {
-  const items = [];
-  for (const m of [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)]) {
-    if (items.length >= max) break;
-    const raw = m[1];
-    const t = raw.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || raw.match(/<title>(.*?)<\/title>/);
-    const s = raw.match(/<source[^>]*>(.*?)<\/source>/);
-    if (t) {
-      const title = t[1].replace(/<[^>]*>/g, '').trim();
-      if (title.length > 15) items.push({ title, source: s ? s[1].replace(/<[^>]*>/g, '').trim() : fallback });
+// Module-level crumb cache (survives warm lambda invocations)
+let _crumb = null;
+let _cookie = null;
+let _crumbTs = 0;
+
+async function _refreshCrumb() {
+  if (_crumb && Date.now() - _crumbTs < 3_600_000) return;
+  try {
+    const r1 = await fetch('https://fc.yahoo.com/', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36' },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(5000),
+    });
+    const raw = r1.headers.get('set-cookie') || '';
+    _cookie = raw.split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
+
+    const r2 = await fetch('https://query1.finance.yahoo.com/v1/test/getcrumb', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Cookie': _cookie,
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    const text = (await r2.text()).trim();
+    if (text && !text.startsWith('<') && text.length < 60) {
+      _crumb = text;
+      _crumbTs = Date.now();
     }
+  } catch (_) {}
+}
+
+async function _fetchPrices(symbols) {
+  await _refreshCrumb();
+  const joined = symbols.join(',');
+  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(joined)}&fields=regularMarketPrice,regularMarketChangePercent,fiftyTwoWeekHigh,fiftyTwoWeekLow${_crumb ? `&crumb=${encodeURIComponent(_crumb)}` : ''}`;
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://finance.yahoo.com/',
+  };
+  if (_cookie) headers['Cookie'] = _cookie;
+
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+  const data = await res.json();
+  const map = {};
+  for (const q of data?.quoteResponse?.result || []) {
+    map[q.symbol] = {
+      price:     q.regularMarketPrice           != null ? +q.regularMarketPrice.toFixed(2)           : null,
+      changePct: q.regularMarketChangePercent   != null ? +q.regularMarketChangePercent.toFixed(2)   : null,
+      week52High:q.fiftyTwoWeekHigh             != null ? +q.fiftyTwoWeekHigh.toFixed(2)             : null,
+      week52Low: q.fiftyTwoWeekLow              != null ? +q.fiftyTwoWeekLow.toFixed(2)              : null,
+    };
   }
-  return items;
+  return map;
 }
 
 export default async function handler(req, res) {
@@ -39,66 +67,37 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).end();
 
-  const sector  = req.query.sector || 'technology';
-  const pairs   = SECTOR_STOCKS[sector] || SECTOR_STOCKS['technology'];
+  const sector = req.query.sector || 'any';
 
-  const results = await Promise.allSettled(pairs.map(async ([ticker, name]) => {
-    const shortName = name.split(' ')[0];
-    const newsQ     = `${ticker} ${shortName} stock`;
-    const gdeltQ    = `${ticker} ${shortName}`;
+  // Inline ticker list (same as client-side SECTOR_STOCKS)
+  const SECTOR_STOCKS = {
+    'any': ['SPY','QQQ','IWM','DIA','AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AVGO','ORCL','AMD','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','SNOW','PLTR','UBER','JPM','BAC','GS','MS','V','MA','WFC','AXP','BLK','C','SCHW','UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','ISRG','XOM','CVX','COP','OXY','SLB','WMT','COST','MCD','SBUX','NKE','TGT','HD','KO','PEP','PG','LULU','NFLX','DIS','SPOT','CMCSA','T','VZ','SNAP','GE','CAT','RTX','LMT','BA','NOC','HON','DE','SHOP','MELI','SQ','ABNB','RBLX','PINS','COIN','MSTR','MARA','RIOT','GLD','SLV','TLT','XLE','XLF','XLK','XLV','IBIT','GDX','VNQ','HYG'],
+    'technology':      ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','AMD','AVGO','ORCL','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','PLTR','SNOW'],
+    'macro':           ['TLT','GLD','HYG','UUP','BND','SHY','IEF','LQD','DXY','VIX'],
+    'energy':          ['XOM','CVX','COP','OXY','SLB','XLE','HAL','MRO','PSX','VLO'],
+    'financials':      ['JPM','GS','BAC','MS','V','MA','WFC','AXP','BLK','C','SCHW','USB','PNC'],
+    'precious-metals': ['GLD','SLV','GDX','GDXJ','NEM','GOLD','WPM','AEM','FNV'],
+    'real-estate':     ['VNQ','AMT','PLD','EQIX','PSA','SPG','AVB','DLR','O','SBAC'],
+    'consumer':        ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
+    'healthcare':      ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
+    'defense':         ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
+    'crypto':          ['COIN','MSTR','MARA','RIOT','IBIT','FBTC','CLSK','WGMI','BITO'],
+  };
 
-    const [quoteRes, newsRes, gdeltRes] = await Promise.allSettled([
-      fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${ticker}&fields=regularMarketPrice,regularMarketChangePercent,fiftyTwoWeekHigh,fiftyTwoWeekLow,marketCap`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000),
-      }),
-      fetch(`https://news.google.com/rss/search?q=${encodeURIComponent(newsQ)}&hl=en-US&gl=US&ceid=US:en`, {
-        signal: AbortSignal.timeout(5000),
-      }),
-      fetch(`https://api.gdeltproject.org/api/v2/doc/doc?query=${encodeURIComponent(gdeltQ)}&mode=artlist&format=json&maxrecords=8&timespan=48h&sort=DateDesc&sourcelang=english`, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000),
-      }),
-    ]);
+  const symbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
 
-    let price = null, changePct = null, week52High = null, week52Low = null;
-    if (quoteRes.status === 'fulfilled') {
-      try {
-        const d = await quoteRes.value.json();
-        const q = d?.quoteResponse?.result?.[0];
-        if (q) {
-          price      = q.regularMarketPrice        ? +q.regularMarketPrice.toFixed(2)        : null;
-          changePct  = q.regularMarketChangePercent ? +q.regularMarketChangePercent.toFixed(2) : null;
-          week52High = q.fiftyTwoWeekHigh           ? +q.fiftyTwoWeekHigh.toFixed(2)           : null;
-          week52Low  = q.fiftyTwoWeekLow            ? +q.fiftyTwoWeekLow.toFixed(2)            : null;
-        }
-      } catch (_) {}
-    }
-
-    const headlines = [], sources = [];
-    if (newsRes.status === 'fulfilled') {
-      try {
-        _parseRss(await newsRes.value.text(), 'Google News').forEach(i => {
-          headlines.push(i.title); sources.push(i.source);
-        });
-      } catch (_) {}
-    }
-    if (gdeltRes.status === 'fulfilled') {
-      try {
-        const d = await gdeltRes.value.json();
-        for (const art of d.articles || []) {
-          if (art.title && art.title.length > 15 && headlines.length < 12) {
-            headlines.push(art.title);
-            sources.push(art.domain || 'Web');
-          }
-        }
-      } catch (_) {}
-    }
-
-    return { ticker, name, price, changePct, week52High, week52Low, headlines: headlines.slice(0, 10), sources: sources.slice(0, 10) };
-  }));
-
-  const tickers = results
-    .filter(r => r.status === 'fulfilled' && r.value.headlines.length >= 2)
-    .map(r => r.value);
-
-  return res.status(200).json({ tickers, sector });
+  try {
+    const priceMap = await _fetchPrices(symbols);
+    const tickers = symbols.map(ticker => ({
+      ticker,
+      price:     priceMap[ticker]?.price     ?? null,
+      changePct: priceMap[ticker]?.changePct ?? null,
+      week52High:priceMap[ticker]?.week52High ?? null,
+      week52Low: priceMap[ticker]?.week52Low  ?? null,
+    }));
+    return res.status(200).json({ tickers, sector });
+  } catch (err) {
+    const tickers = symbols.map(ticker => ({ ticker, price: null, changePct: null }));
+    return res.status(200).json({ tickers, sector });
+  }
 }
