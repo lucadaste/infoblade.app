@@ -18,7 +18,8 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --pos: #2a9e4f; --neg: #c84040; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    html { overflow-x: hidden; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
@@ -77,7 +78,7 @@
     .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    .coin-card { background: #0a0a0a; border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; }
+    .coin-card { background: #0a0a0a; border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; }
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-card.watchlist-match { border-color: rgba(0,230,118,0.4); }

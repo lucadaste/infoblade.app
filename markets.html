@@ -18,7 +18,8 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
-    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    html { overflow-x: hidden; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
@@ -80,7 +81,7 @@
 
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-    .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; position: relative; }
+    .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; }
     .market-card:hover { transform: translateY(-2px); }
     .market-card.watchlist-match { border-color: var(--accent); }
     .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
