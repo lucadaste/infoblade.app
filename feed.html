@@ -305,8 +305,8 @@
   <div class="hero">
     <div>
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live market intelligence</div>
-      <h1 id="page-title">Stock markets</h1>
-      <p class="hero-sub">Sector-level event analysis driven by live news — or pick any stock for a full AI breakdown of how today's headlines affect it.</p>
+      <h1 id="page-title">Live stock & sector intelligence</h1>
+      <p class="hero-sub" id="hero-sub">Live prices across 500+ sources — pick a sector for AI event analysis, or select any stock for a full news-driven breakdown.</p>
     </div>
     <div class="hero-stats">
       <div class="hero-stat">
@@ -314,12 +314,12 @@
         <div class="hero-stat-lbl">Sources scanned</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-val">10</div>
-        <div class="hero-stat-lbl">Sectors</div>
+        <div class="hero-stat-val">Live</div>
+        <div class="hero-stat-lbl">Prices</div>
       </div>
       <div class="hero-stat">
-        <div class="hero-stat-val">Daily</div>
-        <div class="hero-stat-lbl">Updated</div>
+        <div class="hero-stat-val">10</div>
+        <div class="hero-stat-lbl">Sectors</div>
       </div>
     </div>
   </div>
@@ -569,17 +569,17 @@
     }
 
     const titleMap = {
-      'today': "Today's market-moving events",
-      '3days': "Market-moving events, last 3 days",
-      '7days': "Market-moving events, last 7 days",
-      'any': "All market-moving events"
+      'today': "Live sector news · today",
+      '3days': "Live sector news · last 3 days",
+      '7days': "Live sector news · last 7 days",
+      'any': "Sector news · all time"
     };
 
     const feedLabelMap = {
       'today': "Today's analysis",
-      '3days': "Last 3 days analysis",
-      '7days': "Last 7 days analysis",
-      'any': "Latest analysis"
+      '3days': "Last 3 days",
+      '7days': "Last 7 days",
+      'any': "All time"
     };
 
     // Seed list for immediate autocomplete before API loads
@@ -648,7 +648,14 @@
       document.getElementById('pmode-stocks').classList.toggle('active', mode === 'stocks');
       document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
-      if (mode === 'stocks' && document.getElementById('stock-coin-grid').children.length === 0) loadStockGrid();
+      if (mode === 'stocks') {
+        document.getElementById('page-title').textContent = 'Live stock prices';
+        document.getElementById('hero-sub').textContent = 'Browse stocks with live prices. Select any stock to pull AI-powered news analysis.';
+        if (document.getElementById('stock-coin-grid').children.length === 0) loadStockGrid();
+      } else {
+        document.getElementById('page-title').textContent = 'Live stock & sector intelligence';
+        document.getElementById('hero-sub').textContent = 'Live prices across 500+ sources — pick a sector for AI event analysis, or select any stock for a full news-driven breakdown.';
+      }
     }
 
     function setStockSector(sector, btn) {
@@ -1450,7 +1457,7 @@
 
       const category = document.getElementById('filter-category').value;
       const params = new URLSearchParams({ category, timeframe });
-      document.getElementById('page-title').textContent = titleMap[timeframe] || "Today's market-moving events";
+      document.getElementById('page-title').textContent = titleMap[timeframe] || "Live sector news · today";
       label.textContent = feedLabelMap[timeframe] || "Today's analysis";
 
       // Check cache (10-min TTL)
