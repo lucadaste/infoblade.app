@@ -1332,6 +1332,108 @@
       btn.disabled = false;
     }
 
+    async function renderStockFeedCrypto(groups, ticker, stockName, impact) {
+      const feed = document.getElementById('feed');
+      const mySession = ++stockAnalysisSession;
+
+      // Overall prediction card — sits at top, filled async
+      const overallCard = document.createElement('div');
+      overallCard.className = 'overall-card';
+      overallCard.style.marginBottom = '16px';
+      overallCard.innerHTML = `
+        <div class="overall-label">Overall Prediction · ${esc(stockName)} (${esc(ticker)})</div>
+        <div id="sfeed-overall-loading" style="display:flex;flex-direction:column;gap:8px;width:100%">
+          <div class="skel" style="height:14px;width:55%"></div>
+          <div class="skel" style="height:14px;width:80%"></div>
+          <div class="skel" style="height:14px;width:40%"></div>
+        </div>
+        <div id="sfeed-overall-result"></div>`;
+      feed.appendChild(overallCard);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'ap-section-label';
+      lbl.style.cssText = 'margin-bottom:16px;margin-top:8px';
+      lbl.textContent = `${groups.length} news event${groups.length !== 1 ? 's' : ''} affecting ${ticker}`;
+      feed.appendChild(lbl);
+
+      // One group-card per topic, skeletons shown immediately
+      groups.forEach((group, idx) => {
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        card.style.animationDelay = `${idx * 60}ms`;
+        card.innerHTML = `
+          <div class="group-topic">${esc(group.topic)}</div>
+          <div class="group-meta">${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
+          <div id="sfeed-loading-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
+            <div class="skel" style="height:26px;width:100px;border-radius:4px"></div>
+            <div class="skel" style="height:14px;width:100%"></div>
+            <div class="skel" style="height:14px;width:72%"></div>
+          </div>
+          <div id="sfeed-result-${idx}"></div>`;
+        feed.appendChild(card);
+      });
+
+      // Analyze all topics + overall in parallel
+      const allHeadlines = groups.flatMap(g => (g.headlines || []).slice(0,3)).slice(0,20);
+      const allSources   = [...new Set(groups.flatMap(g => g.sources || []))].slice(0,15);
+
+      await Promise.allSettled([
+        // Overall prediction
+        (async () => {
+          try {
+            const res = await fetch('/api/analyze', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                topic: `Net price direction for ${stockName} (${ticker}) over ${impact}. Commit to a directional call.`,
+                headlines: allHeadlines, sources: allSources,
+                impactTimeframe: impact, category: 'stock',
+              })
+            });
+            if (stockAnalysisSession !== mySession) return;
+            const d = await res.json();
+            if (d.error) throw new Error(d.error);
+            document.getElementById('sfeed-overall-loading')?.remove();
+            const el = document.getElementById('sfeed-overall-result');
+            if (!el) return;
+            const dir = (d.direction || '').toLowerCase();
+            const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
+              : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
+              : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+            el.innerHTML = `${badge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
+          } catch(e) {
+            if (stockAnalysisSession !== mySession) return;
+            document.getElementById('sfeed-overall-loading')?.remove();
+            const el = document.getElementById('sfeed-overall-result');
+            if (el) el.innerHTML = `<div style="color:#ff7070;font-size:12px">Could not load overall prediction.</div>`;
+          }
+        })(),
+        // Per-topic cards
+        ...groups.map(async (group, idx) => {
+          try {
+            const res = await fetch('/api/analyze', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                topic: `${group.topic}: impact on ${stockName} (${ticker}) over ${impact}`,
+                headlines: group.headlines || [], sources: group.sources || [],
+                impactTimeframe: impact, category: 'stock',
+              })
+            });
+            if (stockAnalysisSession !== mySession) return;
+            const d = await res.json();
+            if (d.error) throw new Error(d.error);
+            document.getElementById(`sfeed-loading-${idx}`)?.remove();
+            const el = document.getElementById(`sfeed-result-${idx}`);
+            if (el) renderStockResult(el, d);
+          } catch(e) {
+            if (stockAnalysisSession !== mySession) return;
+            document.getElementById(`sfeed-loading-${idx}`)?.remove();
+            const el = document.getElementById(`sfeed-result-${idx}`);
+            if (el) el.innerHTML = `<div style="color:#ff7070;font-size:12px">Analysis failed.</div>`;
+          }
+        })
+      ]);
+    }
+
     async function loadFeed() {
       const btn    = document.getElementById('btn');
       const status = document.getElementById('status');
@@ -1348,14 +1450,15 @@
 
       const category = currentMode === 'stock' ? 'stock' : document.getElementById('filter-category').value;
 
+      let ticker = '', stockName = '';
       let params;
       if (currentMode === 'stock') {
-        const ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('|')[0].trim();
+        ticker = selectedStock?.s || document.getElementById('stock-input').value.trim().toUpperCase().split('|')[0].trim();
         if (!ticker) {
           status.textContent = 'Enter a stock or ETF ticker first.';
           return;
         }
-        const stockName = selectedStock?.n || ticker;
+        stockName = selectedStock?.n || ticker;
         params = new URLSearchParams({ stock: ticker, stockName, timeframe });
         document.getElementById('page-title').textContent = ticker + ' | ' + stockName;
         label.textContent = ticker + ' analysis';
@@ -1419,8 +1522,22 @@
         }
 
         label.style.display = 'block';
-        status.textContent = `Analyzing ${groups.length} topics...`;
         if (typeof gtag !== 'undefined') gtag('event', 'feed_loaded', { category, group_count: groups.length, timeframe });
+
+        // Stock mode: render crypto-style (overall prediction + per-topic cards)
+        if (currentMode === 'stock') {
+          status.textContent = `Analyzing ${groups.length} topics for ${ticker}...`;
+          feedPending.classList.add('active');
+          feed.innerHTML = '';
+          await renderStockFeedCrypto(groups, ticker, stockName, impact);
+          loader.classList.remove('active');
+          feedPending.classList.remove('active');
+          status.textContent = `${groups.length} topics analyzed for ${ticker}`;
+          btn.disabled = false;
+          return;
+        }
+
+        status.textContent = `Analyzing ${groups.length} topics...`;
         feedPending.classList.add('active');
 
         // Replace generic skeletons with one per topic so users see exactly what's loading
