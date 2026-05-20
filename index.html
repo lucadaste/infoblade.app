@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>InvestmentInformatics.AI | World Events. Market Signals. Plain English.</title>
+  <title>InvestmentInformatics.AI | World Events. Market Signals. Expected Outcomes.</title>
   <meta name="description" content="InvestmentInformatics.AI reads global news daily and maps what it means across stocks, crypto, and prediction markets. Every event traced from headline to the sectors, tickers, and odds it actually moves." />
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
@@ -26,12 +26,27 @@
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
     .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
-    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; position: absolute; left: 50%; transform: translateX(-50%); margin: 0; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-buttons { display: flex; gap: 8px; margin-left: auto; align-items: center; }
-    .nav-cta { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; text-decoration: none; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
-    .nav-cta:hover { opacity: 0.82; }
+    .nav-cta { background: transparent; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: 1.5px solid var(--accent); text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; flex-shrink: 0; }
+    .nav-cta:hover { background: var(--accent); color: #111; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; position: relative; }
+    .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; transition: color 0.15s; }
+    .modal-close:hover { color: var(--ink); }
+    .modal-card h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .modal-card > p { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+    .modal-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .modal-field label { font-size: 12px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
+    .modal-field input { background: #0a0a0a; border: 1px solid var(--border); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; border-radius: 6px; outline: none; transition: border-color 0.15s; }
+    .modal-field input:focus { border-color: var(--accent); }
+    .modal-submit { width: 100%; background: var(--accent); color: #111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 13px; border: none; border-radius: 6px; cursor: pointer; margin-top: 8px; transition: opacity 0.15s; }
+    .modal-submit:hover { opacity: 0.85; }
+    .modal-footer-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
+    .modal-footer-note a { color: var(--accent); text-decoration: none; }
     .hero { padding: 96px 48px 80px; max-width: 960px; animation: fadeUp 0.7s ease both; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
@@ -212,7 +227,7 @@
       <li><a href="#how-it-works">How it works</a></li>
     </ul>
     <div class="nav-buttons">
-      <a class="nav-cta" href="/feed.html">Get Started →</a>
+      <a class="nav-cta" href="#" id="signup-btn">Get Started</a>
     </div>
     <div class="nav-menu-wrap">
       <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -236,7 +251,7 @@
 
   <section class="hero">
     <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
-    <h1>World events.<br><em>Market signals.</em><br>Plain English.</h1>
+    <h1>World events.<br><em>Market signals.</em><br>Expected Outcomes.</h1>
     <p class="hero-sub">One AI pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
     <div class="hero-actions">
       <a class="btn-outline" href="/feed.html">Stock Markets →</a>
@@ -526,6 +541,35 @@
     }, { threshold: 0.12 });
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
 
+  </script>
+
+  <div class="modal-overlay" id="signup-modal">
+    <div class="modal-card">
+      <button class="modal-close" id="modal-close">×</button>
+      <h2>Create account</h2>
+      <p>Track markets, save watchlists, and get full access.</p>
+      <div class="modal-field">
+        <label>Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" />
+      </div>
+      <div class="modal-field">
+        <label>Password</label>
+        <input type="password" id="signup-pass" placeholder="Choose a password" autocomplete="new-password" />
+      </div>
+      <button class="modal-submit" id="modal-submit">Create Account</button>
+      <div class="modal-footer-note">Already have an account? <a href="#">Sign in</a></div>
+    </div>
+  </div>
+  <script>
+  (function(){
+    var overlay = document.getElementById('signup-modal');
+    var openBtn = document.getElementById('signup-btn');
+    var closeBtn = document.getElementById('modal-close');
+    openBtn.addEventListener('click', function(e){ e.preventDefault(); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); });
+    closeBtn.addEventListener('click', function(){ overlay.classList.remove('open'); });
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
+    document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });
+  })();
   </script>
 
   <nav class="bottom-nav" aria-label="Mobile navigation">
