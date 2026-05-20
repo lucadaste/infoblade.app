@@ -867,8 +867,6 @@
     }
 
     function renderStockResult(el, d) {
-      const winners = d.winners?.tickers || [];
-      const losers  = d.losers?.tickers  || [];
       const dir = (d.direction || '').toLowerCase();
       const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
         : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
@@ -879,10 +877,6 @@
         <button class="btn-deep" onclick="this.style.display='none';this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
         <div class="ar-details">
           ${d.impact_timeframe ? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
-          ${(winners.length || losers.length) ? `<div class="ar-tickers">
-            ${winners.length ? `<span class="ticker-label">Benefits:</span>${winners.map(t=>`<span class="pill pill-up">${esc(t)}</span>`).join('')}` : ''}
-            ${losers.length  ? `<span class="ticker-label" style="margin-left:${winners.length?'10px':'0'}">Hurts:</span>${losers.map(t=>`<span class="pill pill-down">${esc(t)}</span>`).join('')}` : ''}
-          </div>` : ''}
           ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(String(d.confidence))}</div>` : ''}
         </div>
       </div>`;
@@ -1342,12 +1336,12 @@
       overallCard.style.marginBottom = '16px';
       overallCard.innerHTML = `
         <div class="overall-label">Overall Prediction · ${esc(stockName)} (${esc(ticker)})</div>
-        <div id="sfeed-overall-loading" style="display:flex;flex-direction:column;gap:8px;width:100%">
+        <div id="sfeed-overall-loading-${mySession}" style="display:flex;flex-direction:column;gap:8px;width:100%">
           <div class="skel" style="height:14px;width:55%"></div>
           <div class="skel" style="height:14px;width:80%"></div>
           <div class="skel" style="height:14px;width:40%"></div>
         </div>
-        <div id="sfeed-overall-result"></div>`;
+        <div id="sfeed-overall-result-${mySession}"></div>`;
       feed.appendChild(overallCard);
 
       const lbl = document.createElement('div');
@@ -1364,12 +1358,12 @@
         card.innerHTML = `
           <div class="group-topic">${esc(group.topic)}</div>
           <div class="group-meta">${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
-          <div id="sfeed-loading-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
+          <div id="sfeed-loading-${mySession}-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
             <div class="skel" style="height:26px;width:100px;border-radius:4px"></div>
             <div class="skel" style="height:14px;width:100%"></div>
             <div class="skel" style="height:14px;width:72%"></div>
           </div>
-          <div id="sfeed-result-${idx}"></div>`;
+          <div id="sfeed-result-${mySession}-${idx}"></div>`;
         feed.appendChild(card);
       });
 
@@ -1392,8 +1386,8 @@
             if (stockAnalysisSession !== mySession) return;
             const d = await res.json();
             if (d.error) throw new Error(d.error);
-            document.getElementById('sfeed-overall-loading')?.remove();
-            const el = document.getElementById('sfeed-overall-result');
+            document.getElementById(`sfeed-overall-loading-${mySession}`)?.remove();
+            const el = document.getElementById(`sfeed-overall-result-${mySession}`);
             if (!el) return;
             const dir = (d.direction || '').toLowerCase();
             const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
@@ -1402,8 +1396,8 @@
             el.innerHTML = `${badge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
           } catch(e) {
             if (stockAnalysisSession !== mySession) return;
-            document.getElementById('sfeed-overall-loading')?.remove();
-            const el = document.getElementById('sfeed-overall-result');
+            document.getElementById(`sfeed-overall-loading-${mySession}`)?.remove();
+            const el = document.getElementById(`sfeed-overall-result-${mySession}`);
             if (el) el.innerHTML = `<div style="color:#ff7070;font-size:12px">Could not load overall prediction.</div>`;
           }
         })(),
@@ -1421,13 +1415,13 @@
             if (stockAnalysisSession !== mySession) return;
             const d = await res.json();
             if (d.error) throw new Error(d.error);
-            document.getElementById(`sfeed-loading-${idx}`)?.remove();
-            const el = document.getElementById(`sfeed-result-${idx}`);
+            document.getElementById(`sfeed-loading-${mySession}-${idx}`)?.remove();
+            const el = document.getElementById(`sfeed-result-${mySession}-${idx}`);
             if (el) renderStockResult(el, d);
           } catch(e) {
             if (stockAnalysisSession !== mySession) return;
-            document.getElementById(`sfeed-loading-${idx}`)?.remove();
-            const el = document.getElementById(`sfeed-result-${idx}`);
+            document.getElementById(`sfeed-loading-${mySession}-${idx}`)?.remove();
+            const el = document.getElementById(`sfeed-result-${mySession}-${idx}`);
             if (el) el.innerHTML = `<div style="color:#ff7070;font-size:12px">Analysis failed.</div>`;
           }
         })
