@@ -19,6 +19,7 @@
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh; }
 
+    /* ── Nav ─────────────────────────────────────────────── */
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
     .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
@@ -40,71 +41,78 @@
     .nav-burger.open span:nth-child(2) { opacity: 0; }
     .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-    /* Page layout */
-    .page-header { padding: 48px 48px 0; }
-    .page-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; margin-bottom: 8px; }
-    .page-title span { color: var(--accent); }
-    .page-sub { font-size: 15px; color: var(--muted); font-weight: 300; }
+    /* ── Hero ────────────────────────────────────────────── */
+    .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
+    .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+    @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
+    .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
+    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 10px; line-height: 1.1; color: var(--ink); }
+    .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 500px; }
 
-    /* Tabs */
-    .tabs { display: flex; gap: 4px; padding: 32px 48px 0; }
-    .tab-btn { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 13px; padding: 10px 20px; border-radius: 4px; border: 1.5px solid var(--border); background: none; color: var(--muted); cursor: pointer; letter-spacing: 0.3px; transition: all 0.2s; }
-    .tab-btn:hover { color: var(--ink); border-color: #444; }
-    .tab-btn.active { background: var(--accent); color: #111111; border-color: var(--accent); }
+    /* ── Tab bar ─────────────────────────────────────────── */
+    .tab-bar { display: flex; border-bottom: 2px solid var(--border); background: #0d0d0d; }
+    .tab-btn { padding: 20px 36px; background: none; border: none; border-bottom: 3px solid transparent; position: relative; bottom: -2px; cursor: pointer; transition: all 0.15s; text-align: left; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; color: var(--muted); white-space: nowrap; }
+    .tab-btn.active { border-bottom-color: var(--accent); color: var(--ink); }
+    .tab-btn:hover:not(.active) { color: #bbb; }
 
-    /* Tab panels */
-    .tab-panel { display: none; padding: 40px 48px 80px; }
+    /* ── Tab panels ──────────────────────────────────────── */
+    .tab-panel { display: none; padding: 40px 48px 80px; max-width: 860px; }
     .tab-panel.active { display: block; }
 
-    /* Section within a panel */
-    .wl-section { margin-bottom: 48px; }
-    .wl-section-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
-    .wl-section-label span { color: var(--accent); margin-left: 8px; font-size: 10px; }
+    /* ── Section labels ──────────────────────────────────── */
+    .wl-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .wl-count { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.2); border-radius: 10px; padding: 2px 9px; font-size: 10px; color: var(--accent); font-family: 'Syne', sans-serif; }
+    .wl-section { margin-bottom: 40px; }
 
-    /* Chip/tag items */
+    /* ── Add input row ───────────────────────────────────── */
+    .add-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 40px; }
+    .add-input-wrap { position: relative; flex: 1; max-width: 380px; }
+    .add-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); outline: none; transition: border-color 0.2s; }
+    .add-input:focus { border-color: #555; }
+    .add-input::placeholder { color: #444; }
+    .add-btn { background: var(--accent); color: #111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
+    .add-btn:hover { opacity: 0.85; }
+
+    /* ── Search suggestions ──────────────────────────────── */
+    .add-suggestions { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--card); border: 1px solid var(--border); border-radius: 6px; z-index: 200; max-height: 220px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: none; }
+    .add-suggestions.open { display: block; }
+    .sug-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; border-bottom: 1px solid #1e1e1e; transition: background 0.1s; }
+    .sug-item:last-child { border-bottom: none; }
+    .sug-item:hover { background: #222; }
+    .sug-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; }
+    .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Sector toggle chips ─────────────────────────────── */
+    .sector-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+    .sector-toggle { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 7px 15px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+    .sector-toggle:hover { border-color: #555; color: #ccc; }
+    .sector-toggle.active { background: rgba(0,230,118,0.1); color: var(--accent); border-color: rgba(0,230,118,0.3); }
+    .sector-toggle .st-check { font-size: 11px; }
+
+    /* ── Ticker / coin chips ─────────────────────────────── */
     .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 14px; font-size: 13px; font-family: 'Syne', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
-    .chip.ticker { color: var(--accent); border-color: rgba(0,230,118,0.2); background: rgba(0,230,118,0.06); }
-    .chip.sector { color: var(--ink); }
-    .chip.coin { color: var(--accent); border-color: rgba(0,230,118,0.2); background: rgba(0,230,118,0.06); }
-    .chip-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 0; transition: color 0.15s; display: flex; align-items: center; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,230,118,0.06); border: 1px solid rgba(0,230,118,0.2); border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
+    .chip-remove { background: none; border: none; color: rgba(0,230,118,0.4); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; transition: color 0.15s; display: flex; align-items: center; }
     .chip-remove:hover { color: #ff6060; }
+    .empty-note { font-size: 13px; color: #3a3a3a; font-style: italic; }
 
-    /* Empty state */
-    .empty-state { padding: 56px 0; text-align: center; }
-    .empty-icon { font-size: 36px; margin-bottom: 16px; opacity: 0.3; }
-    .empty-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
-    .empty-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; line-height: 1.7; max-width: 360px; margin-left: auto; margin-right: auto; }
-    .empty-link { display: inline-block; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 11px 24px; border-radius: 4px; border: 1.5px solid var(--ink); color: var(--ink); text-decoration: none; transition: background 0.2s, color 0.2s; letter-spacing: 0.3px; }
-    .empty-link:hover { background: var(--ink); color: #111111; }
-
-    /* Go-to-page link */
-    .panel-footer { margin-top: 40px; padding-top: 32px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-    .panel-footer-text { font-size: 13px; color: var(--muted); }
-    .panel-footer-link { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; transition: border-color 0.2s, background 0.2s; letter-spacing: 0.3px; }
-    .panel-footer-link:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Coming soon badge */
-    .coming-soon-panel { padding: 64px 0; text-align: center; }
-    .cs-badge { display: inline-block; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #111111; background: var(--muted); padding: 4px 12px; border-radius: 10px; margin-bottom: 20px; }
-    .cs-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px; margin-bottom: 10px; }
-    .cs-sub { font-size: 14px; color: var(--muted); max-width: 380px; margin: 0 auto 28px; line-height: 1.75; }
-
-    /* Sector label map display */
-    .sector-chip-label { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 2px; font-family: 'DM Sans', sans-serif; letter-spacing: 0; }
-
-    /* Market watchlist items */
-    .market-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 18px; }
+    /* ── Market watchlist items ──────────────────────────── */
+    .market-list { display: flex; flex-direction: column; gap: 10px; }
+    .market-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
     .market-item-body { flex: 1; min-width: 0; }
-    .market-item-question { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+    .market-item-question { font-family: 'Syne', sans-serif; font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
     .market-item-meta { display: flex; gap: 16px; flex-wrap: wrap; }
     .market-item-odds { font-size: 12px; font-weight: 700; color: var(--accent); font-family: 'Syne', sans-serif; }
     .market-item-date { font-size: 12px; color: var(--muted); }
-    .market-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 0 0 4px; transition: color 0.15s; flex-shrink: 0; margin-top: 2px; }
+    .market-item-remove { background: none; border: none; color: #555; cursor: pointer; font-size: 20px; line-height: 1; padding: 0 0 0 4px; transition: color 0.15s; flex-shrink: 0; }
     .market-item-remove:hover { color: #ff6060; }
-    .market-list { display: flex; flex-direction: column; gap: 10px; }
 
-    /* Mobile */
+    /* ── CTA link ────────────────────────────────────────── */
+    .tab-cta { margin-top: 48px; padding-top: 28px; border-top: 1px solid var(--border); }
+    .cta-link { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; transition: border-color 0.2s, color 0.2s; letter-spacing: 0.3px; display: inline-block; }
+    .cta-link:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Responsive ──────────────────────────────────────── */
     @media (max-width: 900px) {
       nav { padding: 12px 16px; gap: 10px; }
       .nav-logo { font-size: 13px; }
@@ -115,19 +123,20 @@
       .nav-links li:last-child { border-bottom: none; }
       .nav-links a { padding: 14px 24px; display: block; font-size: 15px; }
       .nav-burger { display: flex; padding: 14px 11px; }
-    }
-    @media (max-width: 768px) {
-      .page-header { padding: 32px 24px 0; }
-      .tabs { padding: 24px 24px 0; gap: 6px; flex-wrap: wrap; }
-      .tab-btn { font-size: 12px; padding: 8px 14px; min-height: 44px; }
+      .hero { padding: 28px 24px 20px; }
+      .tab-btn { padding: 16px 20px; font-size: 13px; }
       .tab-panel { padding: 32px 24px 64px; }
-      .panel-footer { flex-direction: column; align-items: flex-start; }
     }
-    @media (max-width: 480px) {
-      .page-header { padding: 24px 16px 0; }
-      .tabs { padding: 16px 16px 0; }
-      .tab-panel { padding: 24px 16px 64px; }
+    @media (max-width: 600px) {
+      .hero { padding: 20px 16px 16px; }
+      .tab-btn { padding: 14px 16px; font-size: 12px; }
+      .tab-panel { padding: 24px 16px 60px; }
+      .add-row { flex-wrap: wrap; }
+      .add-input-wrap { max-width: 100%; }
+      .add-btn { width: 100%; justify-content: center; }
     }
+
+    /* ── Bottom nav ──────────────────────────────────────── */
     .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 1px solid var(--border); z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); }
     .bottom-nav-inner { display: flex; height: 56px; }
     .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.3px; transition: color 0.15s; -webkit-tap-highlight-color: transparent; }
@@ -161,222 +170,326 @@
   })();
   </script>
 
-  <div class="page-header">
-    <h1 class="page-title"><span>Watchlist</span></h1>
-    <p class="page-sub">Your saved tickers, coins, and sectors across all three tools.</p>
+  <div class="hero">
+    <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+    <h1>Watchlist</h1>
+    <p class="hero-sub">Track stocks, crypto, and prediction markets. Watched items are highlighted in real time on each page.</p>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('stocks', this)">Stock Markets</button>
-    <button class="tab-btn" onclick="switchTab('prediction', this)">Prediction Markets</button>
-    <button class="tab-btn" onclick="switchTab('crypto', this)">Crypto</button>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-btn-stocks" onclick="switchTab('stocks',this)">Stock Markets</button>
+    <button class="tab-btn" id="tab-btn-crypto" onclick="switchTab('crypto',this)">Crypto</button>
+    <button class="tab-btn" id="tab-btn-prediction" onclick="switchTab('prediction',this)">Prediction Markets</button>
   </div>
 
-  <!-- ── STOCK MARKETS TAB ──────────────────────────────────────── -->
+  <!-- ── STOCKS TAB ───────────────────────────────────────── -->
   <div class="tab-panel active" id="tab-stocks">
-    <div id="stocks-content"></div>
-    <div class="panel-footer">
-      <span class="panel-footer-text">Watchlist items highlight matching cards in real time on the Stock Markets page.</span>
-      <a class="panel-footer-link" href="/feed.html">Open Stock Markets →</a>
+
+    <div class="add-row">
+      <div class="add-input-wrap">
+        <input class="add-input" id="stock-input" type="text" placeholder="Search ticker e.g. AAPL, MSFT…" autocomplete="off"
+          oninput="stockSearch()" onkeydown="stockKey(event)" />
+        <div class="add-suggestions" id="stock-suggestions"></div>
+      </div>
+      <button class="add-btn" onclick="addTickerFromInput()">+ Add Stock</button>
+    </div>
+
+    <div class="wl-section">
+      <div class="wl-label">Sectors <span class="wl-count" id="sector-count">0</span></div>
+      <div class="sector-toggles" id="sector-toggles"></div>
+    </div>
+
+    <div class="wl-section" id="ticker-section" style="display:none">
+      <div class="wl-label">Stocks <span class="wl-count" id="ticker-count">0</span></div>
+      <div class="chip-list" id="ticker-chips"></div>
+    </div>
+
+    <div class="tab-cta">
+      <a class="cta-link" href="/feed.html">Open Stock Markets →</a>
     </div>
   </div>
 
-  <!-- ── PREDICTION MARKETS TAB ────────────────────────────────── -->
-  <div class="tab-panel" id="tab-prediction">
-    <div id="prediction-content"></div>
-    <div class="panel-footer">
-      <span class="panel-footer-text">Watched markets are highlighted on the Prediction Markets page.</span>
-      <a class="panel-footer-link" href="/markets.html">Open Prediction Markets →</a>
-    </div>
-  </div>
-
-  <!-- ── CRYPTO TAB ─────────────────────────────────────────────── -->
+  <!-- ── CRYPTO TAB ───────────────────────────────────────── -->
   <div class="tab-panel" id="tab-crypto">
-    <div id="crypto-content"></div>
-    <div class="panel-footer">
-      <span class="panel-footer-text">Watched coins are highlighted on the Crypto Markets page.</span>
-      <a class="panel-footer-link" href="/crypto.html">Open Crypto Markets →</a>
+
+    <div class="add-row">
+      <div class="add-input-wrap">
+        <input class="add-input" id="crypto-input" type="text" placeholder="Search coin e.g. BTC, ETH, SOL…" autocomplete="off"
+          oninput="cryptoSearch()" onkeydown="cryptoKey(event)" />
+        <div class="add-suggestions" id="crypto-suggestions"></div>
+      </div>
+      <button class="add-btn" onclick="addCoinFromInput()">+ Add Coin</button>
+    </div>
+
+    <div class="wl-section">
+      <div class="wl-label">Coins <span class="wl-count" id="coin-count">0</span></div>
+      <div class="chip-list" id="coin-chips"></div>
+    </div>
+
+    <div class="tab-cta">
+      <a class="cta-link" href="/crypto.html">Open Crypto Markets →</a>
+    </div>
+  </div>
+
+  <!-- ── PREDICTION MARKETS TAB ──────────────────────────── -->
+  <div class="tab-panel" id="tab-prediction">
+    <div class="wl-section">
+      <div class="wl-label">Saved Markets <span class="wl-count" id="market-count">0</span></div>
+      <div id="market-list-wrap"></div>
+    </div>
+    <div class="tab-cta">
+      <a class="cta-link" href="/markets.html">Browse Prediction Markets →</a>
     </div>
   </div>
 
   <script>
+    /* ── Data ──────────────────────────────────────────── */
     const SECTOR_LABELS = {
-      'macro':          'Macro & Fed Policy',
-      'energy':         'Energy & Oil',
       'technology':     'Technology & AI',
       'financials':     'Financials & Banking',
+      'healthcare':     'Healthcare & Pharma',
+      'energy':         'Energy & Oil',
+      'consumer':       'Consumer & Retail',
+      'defense':        'Defense & Geopolitics',
       'precious-metals':'Precious Metals',
       'real-estate':    'Real Estate',
-      'consumer':       'Consumer & Retail',
-      'healthcare':     'Healthcare & Pharma',
-      'defense':        'Defense & Geopolitics',
+      'macro':          'Macro & Fed Policy',
+      'crypto':         'Crypto',
     };
 
-    // ── Tab switching ──────────────────────────────────────────────
+    const POPULAR_STOCKS = [
+      {s:'AAPL',n:'Apple'},{s:'MSFT',n:'Microsoft'},{s:'NVDA',n:'Nvidia'},{s:'GOOGL',n:'Alphabet'},
+      {s:'AMZN',n:'Amazon'},{s:'META',n:'Meta'},{s:'TSLA',n:'Tesla'},{s:'AVGO',n:'Broadcom'},
+      {s:'PLTR',n:'Palantir'},{s:'AMD',n:'AMD'},{s:'INTC',n:'Intel'},{s:'QCOM',n:'Qualcomm'},
+      {s:'JPM',n:'JPMorgan Chase'},{s:'GS',n:'Goldman Sachs'},{s:'BAC',n:'Bank of America'},
+      {s:'V',n:'Visa'},{s:'MA',n:'Mastercard'},{s:'MS',n:'Morgan Stanley'},
+      {s:'UNH',n:'UnitedHealth Group'},{s:'LLY',n:'Eli Lilly'},{s:'JNJ',n:'Johnson & Johnson'},
+      {s:'PFE',n:'Pfizer'},{s:'MRK',n:'Merck'},{s:'ABBV',n:'AbbVie'},
+      {s:'XOM',n:'ExxonMobil'},{s:'CVX',n:'Chevron'},{s:'COP',n:'ConocoPhillips'},
+      {s:'WMT',n:'Walmart'},{s:'COST',n:'Costco'},{s:'MCD',"McDonald's"},{s:'NFLX',n:'Netflix'},
+      {s:'DIS',n:'Disney'},{s:'LMT',n:'Lockheed Martin'},{s:'RTX',n:'RTX Corporation'},
+      {s:'COIN',n:'Coinbase'},{s:'MSTR',n:'MicroStrategy'},{s:'MARA',n:'MARA Holdings'},
+      {s:'GLD',n:'Gold ETF'},{s:'SLV',n:'Silver ETF'},{s:'TLT',n:'20yr Treasury ETF'},
+      {s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
+      {s:'IBIT',n:'iShares Bitcoin ETF'},{s:'SHOP',n:'Shopify'},{s:'ABNB',n:'Airbnb'},
+      {s:'UBER',n:'Uber'},{s:'SNOW',n:'Snowflake'},{s:'CRM',n:'Salesforce'},
+    ];
+
+    const POPULAR_COINS = [
+      {s:'BTC',n:'Bitcoin'},{s:'ETH',n:'Ethereum'},{s:'SOL',n:'Solana'},{s:'XRP',n:'XRP'},
+      {s:'ADA',n:'Cardano'},{s:'DOGE',n:'Dogecoin'},{s:'BNB',n:'BNB'},{s:'AVAX',n:'Avalanche'},
+      {s:'DOT',n:'Polkadot'},{s:'LINK',n:'Chainlink'},{s:'MATIC',n:'Polygon'},
+      {s:'LTC',n:'Litecoin'},{s:'UNI',n:'Uniswap'},{s:'ATOM',n:'Cosmos'},
+      {s:'NEAR',n:'NEAR Protocol'},{s:'APT',n:'Aptos'},{s:'ARB',n:'Arbitrum'},
+      {s:'OP',n:'Optimism'},{s:'INJ',n:'Injective'},{s:'SUI',n:'Sui'},
+    ];
+
+    /* ── Storage helpers ──────────────────────────────── */
+    function getWL()   { try { return JSON.parse(localStorage.getItem('ii_watchlist'))||{sectors:[],tickers:[]}; } catch(e) { return {sectors:[],tickers:[]}; } }
+    function saveWL(w) { localStorage.setItem('ii_watchlist', JSON.stringify(w)); }
+    function getCryptoWL()   { try { return JSON.parse(localStorage.getItem('ii_crypto_watchlist'))||[]; } catch(e) { return []; } }
+    function saveCryptoWL(c) { localStorage.setItem('ii_crypto_watchlist', JSON.stringify(c)); }
+    function getMarketsWL()  { try { return JSON.parse(localStorage.getItem('ii_markets_watchlist'))||[]; } catch(e) { return []; } }
+
+    /* ── Tab switching ────────────────────────────────── */
     function switchTab(name, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('tab-' + name).classList.add('active');
+      closeSuggestions();
     }
 
-    // ── Stocks watchlist ──────────────────────────────────────────
-    function loadStocks() {
-      let wl = { sectors: [], tickers: [] };
-      try { const s = localStorage.getItem('ii_watchlist'); if (s) wl = JSON.parse(s); } catch(e) {}
+    /* ── Stocks tab ───────────────────────────────────── */
+    function renderStocks() {
+      const wl = getWL();
+      // Sectors
+      const sectors = Object.keys(SECTOR_LABELS);
+      document.getElementById('sector-toggles').innerHTML = sectors.map(s => {
+        const on = wl.sectors.includes(s);
+        return `<button class="sector-toggle${on?' active':''}" onclick="toggleSector('${s}')">
+          ${on ? '<span class="st-check">✓</span>' : '<span class="st-check" style="opacity:.4">+</span>'}
+          ${SECTOR_LABELS[s]}
+        </button>`;
+      }).join('');
+      document.getElementById('sector-count').textContent = wl.sectors.length;
 
-      const el = document.getElementById('stocks-content');
-      const hasSectors = wl.sectors && wl.sectors.length > 0;
-      const hasTickers = wl.tickers && wl.tickers.length > 0;
-
-      if (!hasSectors && !hasTickers) {
-        el.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">★</div>
-            <div class="empty-title">No stocks watched yet</div>
-            <p class="empty-sub">On the Stock Markets page, click any ticker pill or check a sector in the sidebar to start building your watchlist.</p>
-            <a class="empty-link" href="/feed.html">Go to Stock Markets →</a>
-          </div>`;
-        return;
+      // Tickers
+      const tickerSection = document.getElementById('ticker-section');
+      const chips = document.getElementById('ticker-chips');
+      if (wl.tickers && wl.tickers.length > 0) {
+        tickerSection.style.display = '';
+        chips.innerHTML = wl.tickers.map(t =>
+          `<div class="chip">${t}<button class="chip-remove" onclick="removeTicker('${t}')" title="Remove">×</button></div>`
+        ).join('');
+        document.getElementById('ticker-count').textContent = wl.tickers.length;
+      } else {
+        tickerSection.style.display = 'none';
       }
-
-      let html = '';
-
-      if (hasSectors) {
-        html += `<div class="wl-section">
-          <div class="wl-section-label">Sectors <span>${wl.sectors.length} watching</span></div>
-          <div class="chip-list" id="sector-chips">`;
-        wl.sectors.forEach(s => {
-          html += `<div class="chip sector">
-            ${SECTOR_LABELS[s] || s}
-            <button class="chip-remove" onclick="removeSector('${s}')" title="Remove">×</button>
-          </div>`;
-        });
-        html += `</div></div>`;
-      }
-
-      if (hasTickers) {
-        html += `<div class="wl-section">
-          <div class="wl-section-label">Tickers <span>${wl.tickers.length} watching</span></div>
-          <div class="chip-list" id="ticker-chips">`;
-        wl.tickers.forEach(t => {
-          html += `<div class="chip ticker" id="chip-ticker-${t}">
-            $${t}
-            <button class="chip-remove" onclick="removeTicker('${t}')" title="Remove">×</button>
-          </div>`;
-        });
-        html += `</div></div>`;
-      }
-
-      el.innerHTML = html;
     }
 
-    function removeSector(sector) {
-      let wl = { sectors: [], tickers: [] };
-      try { const s = localStorage.getItem('ii_watchlist'); if (s) wl = JSON.parse(s); } catch(e) {}
-      wl.sectors = wl.sectors.filter(s => s !== sector);
-      localStorage.setItem('ii_watchlist', JSON.stringify(wl));
-      loadStocks();
+    function toggleSector(s) {
+      const wl = getWL();
+      if (wl.sectors.includes(s)) wl.sectors = wl.sectors.filter(x => x !== s);
+      else wl.sectors.push(s);
+      saveWL(wl);
+      renderStocks();
     }
 
-    function removeTicker(ticker) {
-      let wl = { sectors: [], tickers: [] };
-      try { const s = localStorage.getItem('ii_watchlist'); if (s) wl = JSON.parse(s); } catch(e) {}
-      wl.tickers = wl.tickers.filter(t => t !== ticker);
-      localStorage.setItem('ii_watchlist', JSON.stringify(wl));
-      loadStocks();
+    function addTicker(t) {
+      t = t.toUpperCase().trim().replace(/[^A-Z.]/g, '');
+      if (!t || t.length > 6) return;
+      const wl = getWL();
+      if (!wl.tickers) wl.tickers = [];
+      if (!wl.tickers.includes(t)) { wl.tickers.push(t); saveWL(wl); }
+      renderStocks();
     }
 
-    // ── Crypto watchlist ──────────────────────────────────────────
-    function loadCrypto() {
-      let coins = [];
-      try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) coins = JSON.parse(s); } catch(e) {}
+    function removeTicker(t) {
+      const wl = getWL();
+      wl.tickers = (wl.tickers || []).filter(x => x !== t);
+      saveWL(wl);
+      renderStocks();
+    }
 
-      const el = document.getElementById('crypto-content');
+    function addTickerFromInput() {
+      const input = document.getElementById('stock-input');
+      addTicker(input.value);
+      input.value = '';
+      closeSuggestions();
+    }
 
-      if (!coins.length) {
-        el.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">◈</div>
-            <div class="empty-title">No coins watched yet</div>
-            <p class="empty-sub">On the Crypto Markets page, search for a coin in the watchlist sidebar to start tracking it.</p>
-            <a class="empty-link" href="/crypto.html">Go to Crypto Markets →</a>
-          </div>`;
-        return;
+    /* ── Stock search suggestions ─────────────────────── */
+    function stockSearch() {
+      const q = document.getElementById('stock-input').value.toLowerCase().trim();
+      const box = document.getElementById('stock-suggestions');
+      if (!q) { box.classList.remove('open'); return; }
+      const matches = POPULAR_STOCKS.filter(i =>
+        i.s.toLowerCase().startsWith(q) || i.n.toLowerCase().includes(q)
+      ).slice(0, 7);
+      if (!matches.length) { box.classList.remove('open'); return; }
+      box.innerHTML = matches.map(i =>
+        `<div class="sug-item" onclick="selectStock('${i.s}')">
+          <span class="sug-sym">${i.s}</span><span class="sug-name">${i.n}</span>
+        </div>`
+      ).join('');
+      box.classList.add('open');
+    }
+
+    function selectStock(sym) {
+      addTicker(sym);
+      document.getElementById('stock-input').value = '';
+      document.getElementById('stock-suggestions').classList.remove('open');
+    }
+
+    function stockKey(e) {
+      if (e.key === 'Enter') addTickerFromInput();
+      if (e.key === 'Escape') closeSuggestions();
+    }
+
+    /* ── Crypto tab ───────────────────────────────────── */
+    function renderCrypto() {
+      const coins = getCryptoWL();
+      const chips = document.getElementById('coin-chips');
+      document.getElementById('coin-count').textContent = coins.length;
+      if (coins.length > 0) {
+        chips.innerHTML = coins.map(c =>
+          `<div class="chip">${c}<button class="chip-remove" onclick="removeCoin('${c}')" title="Remove">×</button></div>`
+        ).join('');
+      } else {
+        chips.innerHTML = '<span class="empty-note">No coins watched yet. Search above to add one.</span>';
       }
+    }
 
-      let html = `<div class="wl-section">
-        <div class="wl-section-label">Coins <span>${coins.length} watching</span></div>
-        <div class="chip-list">`;
-      coins.forEach(sym => {
-        html += `<div class="chip coin" id="chip-coin-${sym}">
-          ${sym}
-          <button class="chip-remove" onclick="removeCoin('${sym}')" title="Remove">×</button>
-        </div>`;
-      });
-      html += `</div></div>`;
-      el.innerHTML = html;
+    function addCoin(sym) {
+      sym = sym.toUpperCase().trim().replace(/[^A-Z0-9]/g, '');
+      if (!sym || sym.length > 10) return;
+      const coins = getCryptoWL();
+      if (!coins.includes(sym)) { coins.push(sym); saveCryptoWL(coins); }
+      renderCrypto();
     }
 
     function removeCoin(sym) {
-      let coins = [];
-      try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) coins = JSON.parse(s); } catch(e) {}
-      coins = coins.filter(c => c !== sym);
-      localStorage.setItem('ii_crypto_watchlist', JSON.stringify(coins));
-      loadCrypto();
+      saveCryptoWL(getCryptoWL().filter(c => c !== sym));
+      renderCrypto();
     }
 
-    // ── Prediction Markets watchlist ──────────────────────────────
-    function loadMarkets() {
-      let markets = [];
-      try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) markets = JSON.parse(s); } catch(e) {}
+    function addCoinFromInput() {
+      const input = document.getElementById('crypto-input');
+      addCoin(input.value);
+      input.value = '';
+      closeSuggestions();
+    }
 
-      const el = document.getElementById('prediction-content');
+    function cryptoSearch() {
+      const q = document.getElementById('crypto-input').value.toLowerCase().trim();
+      const box = document.getElementById('crypto-suggestions');
+      if (!q) { box.classList.remove('open'); return; }
+      const matches = POPULAR_COINS.filter(i =>
+        i.s.toLowerCase().startsWith(q) || i.n.toLowerCase().includes(q)
+      ).slice(0, 7);
+      if (!matches.length) { box.classList.remove('open'); return; }
+      box.innerHTML = matches.map(i =>
+        `<div class="sug-item" onclick="selectCoin('${i.s}')">
+          <span class="sug-sym">${i.s}</span><span class="sug-name">${i.n}</span>
+        </div>`
+      ).join('');
+      box.classList.add('open');
+    }
 
+    function selectCoin(sym) {
+      addCoin(sym);
+      document.getElementById('crypto-input').value = '';
+      document.getElementById('crypto-suggestions').classList.remove('open');
+    }
+
+    function cryptoKey(e) {
+      if (e.key === 'Enter') addCoinFromInput();
+      if (e.key === 'Escape') closeSuggestions();
+    }
+
+    /* ── Prediction markets tab ───────────────────────── */
+    function renderMarkets() {
+      const markets = getMarketsWL();
+      document.getElementById('market-count').textContent = markets.length;
+      const wrap = document.getElementById('market-list-wrap');
       if (!markets.length) {
-        el.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">◎</div>
-            <div class="empty-title">No markets watched yet</div>
-            <p class="empty-sub">On the Prediction Markets page, click ☆ Watch on any market card to save it here and track the odds.</p>
-            <a class="empty-link" href="/markets.html">Go to Prediction Markets →</a>
-          </div>`;
+        wrap.innerHTML = '<span class="empty-note">No prediction markets saved yet. Visit the Prediction Markets page to save some.</span>';
         return;
       }
-
-      let html = `<div class="wl-section">
-        <div class="wl-section-label">Markets <span>${markets.length} watching</span></div>
-        <div class="market-list">`;
-      markets.forEach(m => {
-        const dateStr = m.savedAt ? new Date(m.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-        const safeSlug = (m.slug || '').replace(/'/g, "\\'");
-        html += `<div class="market-item" id="market-item-${(m.slug||'').replace(/[^a-z0-9]/gi,'-')}">
+      wrap.innerHTML = `<div class="market-list">${markets.map(m => {
+        const dateStr = m.savedAt ? new Date(m.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+        const safeSlug = (m.slug||'').replace(/'/g,"\\'");
+        return `<div class="market-item">
           <div class="market-item-body">
-            <div class="market-item-question">${m.question || ''}</div>
+            <div class="market-item-question">${m.question||''}</div>
             <div class="market-item-meta">
-              ${m.yesPrice != null ? `<span class="market-item-odds">${m.yesPrice}% YES</span>` : ''}
-              ${dateStr ? `<span class="market-item-date">Saved ${dateStr}</span>` : ''}
+              ${m.yesPrice!=null?`<span class="market-item-odds">${m.yesPrice}% YES</span>`:''}
+              ${dateStr?`<span class="market-item-date">Saved ${dateStr}</span>`:''}
             </div>
           </div>
           <button class="market-item-remove" onclick="removeMarket('${safeSlug}')" title="Remove">×</button>
         </div>`;
-      });
-      html += `</div></div>`;
-      el.innerHTML = html;
+      }).join('')}</div>`;
     }
 
     function removeMarket(slug) {
-      let markets = [];
-      try { const s = localStorage.getItem('ii_markets_watchlist'); if (s) markets = JSON.parse(s); } catch(e) {}
-      markets = markets.filter(m => m.slug !== slug);
-      localStorage.setItem('ii_markets_watchlist', JSON.stringify(markets));
-      loadMarkets();
+      localStorage.setItem('ii_markets_watchlist', JSON.stringify(getMarketsWL().filter(m => m.slug !== slug)));
+      renderMarkets();
     }
 
-    // ── Init ──────────────────────────────────────────────────────
-    loadStocks();
-    loadCrypto();
-    loadMarkets();
+    /* ── Close suggestions on outside click ───────────── */
+    function closeSuggestions() {
+      document.querySelectorAll('.add-suggestions').forEach(b => b.classList.remove('open'));
+    }
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.add-input-wrap')) closeSuggestions();
+    });
+
+    /* ── Init ─────────────────────────────────────────── */
+    renderStocks();
+    renderCrypto();
+    renderMarkets();
   </script>
 
   <nav class="bottom-nav" aria-label="Mobile navigation">
