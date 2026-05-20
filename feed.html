@@ -155,6 +155,22 @@
     .pill-star { font-size: 10px; opacity: 0.5; margin-left: 3px; }
     .pill.pill-watched .pill-star { opacity: 1; }
 
+    .view-mode-bar { display: flex; border-bottom: 2px solid var(--border); background: var(--paper); }
+    .view-mode-btn { flex: 1; display: flex; align-items: center; gap: 16px; padding: 18px 48px; background: transparent; border: none; border-right: 1px solid var(--border); cursor: pointer; color: var(--muted); transition: background 0.15s, color 0.15s, border-bottom 0.15s; text-align: left; position: relative; bottom: -2px; border-bottom: 2px solid transparent; }
+    .view-mode-btn:last-child { border-right: none; }
+    .view-mode-btn.active { color: var(--ink); border-bottom: 2px solid var(--accent); }
+    .view-mode-btn:hover:not(.active) { background: #161616; color: #ccc; }
+    .vmb-icon { font-size: 22px; flex-shrink: 0; line-height: 1; }
+    .vmb-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; margin-bottom: 3px; }
+    .vmb-desc { font-size: 12px; color: var(--muted); font-weight: 400; line-height: 1.4; }
+    .view-mode-btn.active .vmb-title { color: var(--ink); }
+    .view-mode-btn.active .vmb-desc { color: #666; }
+    .view-mode-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    @media (max-width: 768px) {
+      .view-mode-btn { padding: 14px 16px; gap: 10px; }
+      .vmb-desc { display: none; }
+    }
+
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
     .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
     .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
@@ -276,10 +292,6 @@
           <option value="healthcare">Healthcare & Pharma</option>
           <option value="defense">Defense & Geopolitics</option>
         </select>
-        <div class="mode-toggle" id="view-toggle" style="margin-top:6px">
-          <button class="mode-tab active" id="view-tab-topics">By Topic</button>
-          <button class="mode-tab" id="view-tab-stocks">By Stock</button>
-        </div>
       </div>
       <div id="stock-filter" style="display:none">
         <div class="stock-search-wrap">
@@ -318,6 +330,23 @@
         <span class="status-text" id="status"></span>
       </div>
     </div>
+  </div>
+
+  <div class="view-mode-bar" id="view-mode-bar">
+    <button class="view-mode-btn active" id="view-tab-topics">
+      <span class="vmb-icon">◎</span>
+      <div class="vmb-text">
+        <div class="vmb-title">By Topic</div>
+        <div class="vmb-desc">AI scans 500+ sources, groups headlines into themes, traces full market impact chain</div>
+      </div>
+    </button>
+    <button class="view-mode-btn" id="view-tab-stocks">
+      <span class="vmb-icon">▦</span>
+      <div class="vmb-text">
+        <div class="vmb-title">By Stock</div>
+        <div class="vmb-desc">Pull live prices + news for each stock in the selected sector — one card per ticker</div>
+      </div>
+    </button>
   </div>
 
   <div class="main-layout">
@@ -548,6 +577,10 @@
       document.getElementById('sector-filter').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-filter').style.display = mode === 'stock' ? '' : 'none';
       if (mode === 'stock') document.getElementById('stock-input').focus();
+      // By Stock view only applies to sector mode; disable + reset to By Topic when in stock search mode
+      const stockBtn = document.getElementById('view-tab-stocks');
+      stockBtn.disabled = mode === 'stock';
+      if (mode === 'stock' && viewMode === 'stocks') setViewMode('topics');
     }
 
     function handleStockInput(e) {
