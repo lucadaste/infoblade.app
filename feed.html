@@ -750,22 +750,27 @@
       input.value = ticker;
       document.getElementById('search-suggestions').style.display = 'none';
 
-      // Immediately open the analysis panel and start analysis for any ticker
-      selectedStockCard = { ticker, name, tickerData: null };
-      const panel = document.getElementById('stock-analysis-panel');
-      panel.style.display = 'block';
-      document.getElementById('sap-title').textContent = `${name} (${ticker})`;
-
-      // Switch grid sector so the card is visible if it exists
+      // Update sector WITHOUT calling setStockSector — that calls closeStockPanel()
+      // which hides the panel and cancels the analysis session.
       const inCurrent = (SECTOR_STOCKS[stockSector] || []).some(([s]) => s === ticker);
       if (!inCurrent) {
-        const allBtn = document.querySelector('#stock-sector-chips .cat-chip');
-        setStockSector('any', allBtn);
+        stockSector = 'any';
+        document.querySelectorAll('#stock-sector-chips .cat-chip').forEach(c => c.classList.remove('active'));
+        document.querySelector('#stock-sector-chips .cat-chip').classList.add('active');
+        loadStockGrid();
       } else {
         filterStockGrid();
       }
 
-      // Highlight the matching card if it exists in the grid
+      // Open panel and start analysis
+      selectedStockCard = { ticker, name, tickerData: null };
+      const panel = document.getElementById('stock-analysis-panel');
+      panel.style.display = 'block';
+      document.getElementById('sap-title').textContent = `${name} (${ticker})`;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      fetchStockAnalysis(ticker, name, null);
+
+      // After grid finishes loading, highlight the card if it exists
       setTimeout(() => {
         document.querySelectorAll('#stock-coin-grid .coin-card').forEach(card => {
           const sym = card.querySelector('.coin-symbol')?.textContent;
@@ -774,11 +779,7 @@
           const b = card.querySelector('.btn-coin');
           if (b && !b.disabled) b.textContent = isMe ? '★ Analyzing' : 'Analyze →';
         });
-      }, 600);
-
-      // Scroll to panel and fetch analysis
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      fetchStockAnalysis(ticker, name, null);
+      }, 900);
     }
 
     function handleSearchKey(e) {
