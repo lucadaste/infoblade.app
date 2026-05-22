@@ -503,26 +503,17 @@ export default async function handler(req, res) {
           `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`
         );
 
+        // Only feeds that frequently name individual tickers — general news feeds are excluded
+        // because they almost never mention specific stocks and get filtered out anyway.
         const BASE_DIRECT_FEEDS = [
           { url: `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`, source: 'Yahoo Finance' },
-          { url: 'https://feeds.reuters.com/reuters/businessNews',                     source: 'Reuters' },
-          { url: 'https://feeds.reuters.com/Reuters/PoliticsNews',                     source: 'Reuters' },
-          { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html',              source: 'CNBC' },
-          { url: 'https://feeds.marketwatch.com/marketwatch/topstories/',             source: 'MarketWatch' },
-          { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                    source: 'The Wall Street Journal' },
-          { url: 'https://www.politico.com/rss/politics08.xml',                       source: 'Politico' },
-          { url: 'https://thehill.com/rss/syndicator/19110',                          source: 'The Hill' },
-          { url: 'https://www.whitehouse.gov/feed/',                                  source: 'White House' },
-          // Financial analysis sources
           { url: 'https://www.benzinga.com/feed',                                     source: 'Benzinga' },
           { url: 'https://investorplace.com/feed/',                                   source: 'InvestorPlace' },
           { url: 'https://www.thestreet.com/.rss/full',                              source: 'TheStreet' },
           { url: 'https://www.nasdaq.com/feed/nasdaq-original/rss.xml',              source: 'Nasdaq' },
           { url: 'https://www.zacks.com/customfeeds/zacksheadlines.rss',             source: 'Zacks' },
-          { url: 'https://stockstotrade.com/feed/',                                   source: 'StocksToTrade' },
           { url: 'https://www.stocktitan.net/news/rss.xml',                          source: 'Stock Titan' },
           { url: 'https://finbold.com/feed/',                                         source: 'Finbold' },
-          // Reddit sentiment
           { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25',         source: 'Reddit r/wallstreetbets' },
           { url: 'https://www.reddit.com/r/investing/new.rss?limit=25',              source: 'Reddit r/investing' },
           { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25',                source: 'Reddit r/stocks' },
@@ -560,26 +551,30 @@ export default async function handler(req, res) {
         ]);
 
         let rawItems = [];
+        // Google RSS comes from ticker-specific search queries — already relevant, skip word filter
         for (const r of googleResults) {
           if (r.status === 'fulfilled') {
-            try { for (const item of parseRssItems(await r.value.text(), 'Unknown')) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+            try { for (const item of parseRssItems(await r.value.text(), 'Google News')) rawItems.push({ ...item, grade: getSourceGrade(item.source), queryFiltered: true }); } catch (_) {}
           }
         }
+        // Direct feeds are general firehoses — need word matching
         for (const r of directResults) {
           if (r.status === 'fulfilled') {
             try { const { res, source } = r.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
           }
         }
+        // GDELT/Tavily/NewsAPI are search-filtered — skip word filter
         for (const item of [...gdeltItems, ...tavilyItems, ...newsApiItems]) {
-          rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade });
+          rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade, queryFiltered: true });
         }
 
-        // Filter to headlines mentioning the ticker or company name words
+        // Apply word filter only to general RSS feeds (not search-targeted sources)
         const matchWords = [
           ticker.toLowerCase(),
           ...shortName.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 2),
         ];
         rawItems = rawItems.filter(a => {
+          if (a.queryFiltered) return true;
           const t = a.title.toLowerCase();
           return matchWords.some(w => t.includes(w));
         });
