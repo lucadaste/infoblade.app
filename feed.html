@@ -153,7 +153,7 @@
     .pill:hover { opacity: 0.8; }
     .pill-star { font-size: 10px; opacity: 0.5; margin-left: 3px; }
     .pill.pill-watched .pill-star { opacity: 1; }
-    #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: #111; border: 1px solid #282828; border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; line-height: 1.6; color: #bbb; pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); animation: fadeUp 0.12s ease both; }
+    #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: #111; border: 1px solid #282828; border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; line-height: 1.6; color: #bbb; pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.1s ease; }
 
     /* Page mode bar — primary two-tab switcher */
     .page-mode-bar { display: flex; border-bottom: 2px solid var(--border); background: #0d0d0d; }
@@ -1775,31 +1775,29 @@
     // ── Ticker blurb tooltip ────────────────────────────────────────────────
     (function() {
       const blurbCache = new Map();
-      let tip = null;
       let hoverTimer = null;
       let activePill = null;
+      let tip = null;
 
       function getTip() {
         if (!tip) {
           tip = document.createElement('div');
           tip.id = 'ticker-blurb-tip';
-          tip.style.display = 'none';
           document.body.appendChild(tip);
         }
         return tip;
       }
 
       function position(pill) {
-        const t = getTip();
+        const el = getTip();
         const r = pill.getBoundingClientRect();
-        const left = Math.max(8, Math.min(r.left, window.innerWidth - 288));
-        t.style.left = left + 'px';
+        el.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 288)) + 'px';
         if (r.top > 160) {
-          t.style.top = 'auto';
-          t.style.bottom = (window.innerHeight - r.top + 8) + 'px';
+          el.style.top = 'auto';
+          el.style.bottom = (window.innerHeight - r.top + 8) + 'px';
         } else {
-          t.style.bottom = 'auto';
-          t.style.top = (r.bottom + 8) + 'px';
+          el.style.bottom = 'auto';
+          el.style.top = (r.bottom + 8) + 'px';
         }
       }
 
@@ -1807,33 +1805,33 @@
         const ticker = pill.dataset.ticker;
         if (!ticker) return;
         activePill = pill;
-        const t = getTip();
+        const el = getTip();
         position(pill);
 
         if (blurbCache.has(ticker)) {
-          t.textContent = blurbCache.get(ticker);
-          t.style.display = 'block';
+          el.textContent = blurbCache.get(ticker);
+          el.style.opacity = '1';
           return;
         }
 
-        t.innerHTML = '<span style="color:#444">Loading…</span>';
-        t.style.display = 'block';
+        el.innerHTML = '<span style="color:#555">Loading…</span>';
+        el.style.opacity = '1';
 
-        fetch('/api/ticker-blurb?ticker=' + encodeURIComponent(ticker))
+        fetch('/api/analyze?blurb=' + encodeURIComponent(ticker))
           .then(r => r.ok ? r.json() : null)
           .then(d => {
-            if (!d || !d.blurb) { t.style.display = 'none'; return; }
+            if (!d || !d.blurb) { if (activePill === pill) el.style.opacity = '0'; return; }
             blurbCache.set(ticker, d.blurb);
-            if (activePill === pill && t.style.display !== 'none') t.textContent = d.blurb;
+            if (activePill === pill) el.textContent = d.blurb;
           })
-          .catch(() => { if (activePill === pill) t.style.display = 'none'; });
+          .catch(() => { if (activePill === pill) el.style.opacity = '0'; });
       }
 
       function hide(pill) {
         clearTimeout(hoverTimer);
         if (activePill === pill) {
           activePill = null;
-          getTip().style.display = 'none';
+          getTip().style.opacity = '0';
         }
       }
 
@@ -1841,7 +1839,7 @@
         const pill = e.target.closest('.pill[data-ticker]');
         if (!pill) return;
         clearTimeout(hoverTimer);
-        hoverTimer = setTimeout(() => show(pill), 420);
+        hoverTimer = setTimeout(() => show(pill), 100);
       });
 
       document.addEventListener('mouseout', e => {
