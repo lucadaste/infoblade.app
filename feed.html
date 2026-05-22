@@ -755,11 +755,14 @@
       const top = matches.slice(0, 8);
       if (!top.length) { box.style.display = 'none'; return; }
       box.innerHTML = top.map(t =>
-        `<div class="sug-item" onclick="selectSuggestion(${JSON.stringify(t.s)},${JSON.stringify(t.n)})">
+        `<div class="sug-item" data-ticker="${esc(t.s)}" data-name="${esc(t.n)}">
           <span class="sug-ticker">${esc(t.s)}</span>
           <span class="sug-name">${esc(t.n)}</span>
         </div>`
       ).join('');
+      box.querySelectorAll('.sug-item').forEach(el => {
+        el.addEventListener('click', () => selectSuggestion(el.dataset.ticker, el.dataset.name));
+      });
       box.style.display = 'block';
     }
 
