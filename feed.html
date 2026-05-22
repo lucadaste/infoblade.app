@@ -1775,6 +1775,7 @@
     // ── Ticker blurb tooltip ────────────────────────────────────────────────
     (function() {
       const blurbCache = new Map();
+      const _fetching = new Set();
       let hoverTimer = null;
       let activePill = null;
       let tip = null;
@@ -1801,30 +1802,35 @@
         }
       }
 
+      function fetchBlurb(ticker, onDone) {
+        if (_fetching.has(ticker)) return;
+        _fetching.add(ticker);
+        fetch('/api/analyze?blurb=' + encodeURIComponent(ticker))
+          .then(r => r.ok ? r.json() : null)
+          .then(d => { if (d?.blurb) { blurbCache.set(ticker, d.blurb); onDone?.(ticker, d.blurb); } })
+          .catch(() => {})
+          .finally(() => _fetching.delete(ticker));
+      }
+
       function show(pill) {
         const ticker = pill.dataset.ticker;
         if (!ticker) return;
         activePill = pill;
-        const el = getTip();
-        position(pill);
-
         if (blurbCache.has(ticker)) {
+          const el = getTip();
+          position(pill);
           el.textContent = blurbCache.get(ticker);
           el.style.opacity = '1';
-          return;
+        } else {
+          fetchBlurb(ticker, (t, blurb) => {
+            if (activePill === pill) {
+              const el = getTip();
+              position(pill);
+              el.textContent = blurb;
+              el.style.opacity = '1';
+            }
+          });
         }
-
-        el.innerHTML = '<span style="color:#555">Loading…</span>';
-        el.style.opacity = '1';
-
-        fetch('/api/analyze?blurb=' + encodeURIComponent(ticker))
-          .then(r => r.ok ? r.json() : null)
-          .then(d => {
-            if (!d || !d.blurb) { if (activePill === pill) el.style.opacity = '0'; return; }
-            blurbCache.set(ticker, d.blurb);
-            if (activePill === pill) el.textContent = d.blurb;
-          })
-          .catch(() => { if (activePill === pill) el.style.opacity = '0'; });
       }
 
       function hide(pill) {
@@ -1834,6 +1840,24 @@
           getTip().style.opacity = '0';
         }
       }
+
+      // Pre-fetch blurbs for all pills whenever new ones appear in the DOM
+      let _prefetchTimer = null;
+      function schedulePrefetch() {
+        clearTimeout(_prefetchTimer);
+        _prefetchTimer = setTimeout(() => {
+          const tickers = [...new Set(
+            [...document.querySelectorAll('.pill[data-ticker]')].map(p => p.dataset.ticker).filter(Boolean)
+          )];
+          tickers.forEach((ticker, i) => {
+            if (blurbCache.has(ticker) || _fetching.has(ticker)) return;
+            setTimeout(() => fetchBlurb(ticker), i * 250);
+          });
+        }, 400);
+      }
+
+      const _obs = new MutationObserver(schedulePrefetch);
+      _obs.observe(document.body, { childList: true, subtree: true });
 
       document.addEventListener('mouseover', e => {
         const pill = e.target.closest('.pill[data-ticker]');
