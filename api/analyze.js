@@ -441,16 +441,17 @@ export default async function handler(req, res) {
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
         return res.status(200).json({ ticker, blurb: hit.blurb });
       }
-      const prompt = `You are a concise financial analyst. In exactly 2 sentences, describe the stock ${ticker}: (1) what the company does and its core business, (2) one notable recent development or the stock's current market narrative. Be factual, specific, no filler phrases.`;
+      const prompt = `Write exactly one plain-text sentence about ${ticker}. Start with the full name of the stock or ETF (not the ticker symbol), then briefly state what it is. No markdown, no hashtags, no bullet points, no headers — just the sentence.`;
       try {
         const cr = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 60, temperature: 0, messages: [{ role: 'user', content: prompt }] }),
           signal: AbortSignal.timeout(6000),
         });
         const cd = await cr.json();
-        const blurb = cd.content?.[0]?.text?.trim() || '';
+        const raw = cd.content?.[0]?.text?.trim() || '';
+        const blurb = raw.replace(/^#+\s*/gm, '').replace(/\*+/g, '').replace(/\n+/g, ' ').trim();
         if (!blurb) return res.status(500).json({ error: 'no response' });
         _blurbCache.set(ticker, { blurb, ts: Date.now() });
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
