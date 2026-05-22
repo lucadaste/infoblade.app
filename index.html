@@ -196,14 +196,15 @@
     #nav-menu a { display: flex; align-items: center; padding: 13px 18px; font-size: 14px; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border); transition: color 0.15s, background 0.15s; }
     #nav-menu a:last-child { border-bottom: none; }
     #nav-menu a:hover { color: var(--ink); background: #1e1e1e; }
-    .hiw-icon { display: none; font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; line-height: 1; }
-    @media (max-width: 640px) {
+    .hiw-icon { display: none; width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid #666; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #666; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: border-color 0.2s, color 0.2s; }
+    .nav-links a:hover .hiw-icon { border-color: var(--ink); color: var(--ink); }
+    @media (max-width: 700px) {
       nav:not(.bottom-nav) { padding: 12px 16px; gap: 10px; }
       .nav-logo { font-size: 13px; }
       .nav-cta { font-size: 12px; padding: 7px 14px; }
-      .nav-links { position: static; transform: none; margin-left: 0; }
+      .nav-links { position: static; transform: none; margin: 0; flex: 1; justify-content: center; }
       .hiw-text { display: none; }
-      .hiw-icon { display: inline; }
+      .hiw-icon { display: inline-flex; }
     }
     @media (max-width: 768px) {
       .hero { padding: 64px 24px 56px; } .section { padding: 64px 24px; }
@@ -229,7 +230,7 @@
   <nav>
     <a class="nav-logo" href="#"><span>Investment</span>Informatics.AI</a>
     <ul class="nav-links">
-      <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">ℹ</span></a></li>
+      <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">?</span></a></li>
     </ul>
     <div class="nav-buttons">
       <a class="nav-cta" href="#" id="signup-btn">Get Started</a>
