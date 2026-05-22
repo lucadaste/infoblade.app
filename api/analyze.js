@@ -320,22 +320,46 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const sourceQualityMap = {
+    // Tier: High — wire services, major financial press
     'Reuters': 'High', 'Associated Press': 'High', 'Bloomberg': 'High',
     'Financial Times': 'High', 'The Wall Street Journal': 'High', 'The Economist': 'High',
     'BBC': 'High', 'NPR': 'High', 'CNBC': 'High', 'Wall Street Journal': 'High',
-    'AP': 'High', 'White House': 'High', 'Politico': 'High', 'The Hill': 'Medium',
-    'Business Insider': 'Medium',
+    'AP': 'High', 'White House': 'High', 'Politico': 'High', 'Barron\'s': 'High',
+    'S&P Global': 'High', 'Moody\'s': 'High', 'Fitch': 'High',
+    // Tier: Medium — established financial & tech media
+    'The Hill': 'Medium', 'Business Insider': 'Medium',
     'MarketWatch': 'Medium', 'Yahoo Finance': 'Medium', 'CNN': 'Medium',
     'The Guardian': 'Medium', 'NBC News': 'Medium', 'CBS News': 'Medium',
     'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
-    'Axios': 'Medium', 'Bloomberg Opinion': 'Medium', 'Fox News': 'Low',
-    'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
-    'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
+    'Axios': 'Medium', 'Bloomberg Opinion': 'Medium',
+    // Financial analysis & stock news
+    'Benzinga': 'Medium', 'InvestorPlace': 'Medium', 'The Motley Fool': 'Medium',
+    'Motley Fool': 'Medium', 'Zacks': 'Medium', 'TheStreet': 'Medium',
+    'Investopedia': 'Medium', 'Nasdaq': 'Medium', 'Barchart': 'Medium',
+    'TipRanks': 'Medium', 'Seeking Alpha': 'Medium', 'Stock Analysis': 'Medium',
+    'Stock Titan': 'Medium', 'StocksToTrade': 'Medium', 'Quiver Quantitative': 'Medium',
+    'Traders Union': 'Medium', 'AlphaStreet': 'Medium', 'Finbold': 'Medium',
+    'GuruFocus': 'Medium', '24/7 Wall St': 'Medium', 'Simply Wall St': 'Medium',
+    'Proactive Investors': 'Medium', 'GlobeNewswire': 'Medium', 'PR Newswire': 'Medium',
+    'Business Wire': 'Medium', 'Globe Newswire': 'Medium',
+    // Tech media
+    'TechCrunch': 'Medium', 'The Verge': 'Medium', 'Wired': 'Medium',
+    'VentureBeat': 'Medium', 'Ars Technica': 'Medium', 'MIT Technology Review': 'Medium',
+    '9to5Mac': 'Medium', 'MacRumors': 'Medium', 'AppleInsider': 'Medium',
+    'Android Authority': 'Medium', 'ZDNet': 'Medium', 'CNET': 'Medium',
+    'Tom\'s Hardware': 'Medium', 'AnandTech': 'Medium', 'PCMag': 'Medium',
+    'Engadget': 'Medium', 'TechStock²': 'Medium',
+    // Crypto
     'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
-    'Cointelegraph': 'Low', 'Forkast': 'Medium', 'CoinPost': 'Medium',
+    'Forkast': 'Medium', 'CoinPost': 'Medium', 'Cointelegraph': 'Low',
+    // Low-credibility
+    'Fox News': 'Low', 'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
+    'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
+    // Reddit
     'Reddit r/wallstreetbets': 'Low', 'Reddit r/investing': 'Low', 'Reddit r/stocks': 'Low',
-    'Reddit r/options': 'Low', 'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
-    'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low'
+    'Reddit r/options': 'Low', 'Reddit r/StockMarket': 'Low',
+    'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
+    'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low',
   };
   const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
   const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
@@ -447,17 +471,28 @@ export default async function handler(req, res) {
 
         const BASE_DIRECT_FEEDS = [
           { url: `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${ticker}&region=US&lang=en-US`, source: 'Yahoo Finance' },
-          { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
-          { url: 'https://feeds.reuters.com/Reuters/PoliticsNews', source: 'Reuters' },
-          { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html', source: 'CNBC' },
-          { url: 'https://feeds.marketwatch.com/marketwatch/topstories/', source: 'MarketWatch' },
-          { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml', source: 'The Wall Street Journal' },
-          { url: 'https://www.politico.com/rss/politics08.xml', source: 'Politico' },
-          { url: 'https://thehill.com/rss/syndicator/19110', source: 'The Hill' },
-          { url: 'https://www.whitehouse.gov/feed/', source: 'White House' },
-          { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
-          { url: 'https://www.reddit.com/r/investing/new.rss?limit=25', source: 'Reddit r/investing' },
-          { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25', source: 'Reddit r/stocks' },
+          { url: 'https://feeds.reuters.com/reuters/businessNews',                     source: 'Reuters' },
+          { url: 'https://feeds.reuters.com/Reuters/PoliticsNews',                     source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10001147/device/rss/rss.html',              source: 'CNBC' },
+          { url: 'https://feeds.marketwatch.com/marketwatch/topstories/',             source: 'MarketWatch' },
+          { url: 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',                    source: 'The Wall Street Journal' },
+          { url: 'https://www.politico.com/rss/politics08.xml',                       source: 'Politico' },
+          { url: 'https://thehill.com/rss/syndicator/19110',                          source: 'The Hill' },
+          { url: 'https://www.whitehouse.gov/feed/',                                  source: 'White House' },
+          // Financial analysis sources
+          { url: 'https://www.benzinga.com/feed',                                     source: 'Benzinga' },
+          { url: 'https://investorplace.com/feed/',                                   source: 'InvestorPlace' },
+          { url: 'https://www.thestreet.com/.rss/full',                              source: 'TheStreet' },
+          { url: 'https://www.nasdaq.com/feed/nasdaq-original/rss.xml',              source: 'Nasdaq' },
+          { url: 'https://www.zacks.com/customfeeds/zacksheadlines.rss',             source: 'Zacks' },
+          { url: 'https://stockstotrade.com/feed/',                                   source: 'StocksToTrade' },
+          { url: 'https://www.stocktitan.net/news/rss.xml',                          source: 'Stock Titan' },
+          { url: 'https://finbold.com/feed/',                                         source: 'Finbold' },
+          // Reddit sentiment
+          { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25',         source: 'Reddit r/wallstreetbets' },
+          { url: 'https://www.reddit.com/r/investing/new.rss?limit=25',              source: 'Reddit r/investing' },
+          { url: 'https://www.reddit.com/r/stocks/new.rss?limit=25',                source: 'Reddit r/stocks' },
+          { url: 'https://www.reddit.com/r/StockMarket/new.rss?limit=25',           source: 'Reddit r/StockMarket' },
         ];
 
         function fetchWithTimeout(url, ms) {
@@ -608,6 +643,28 @@ Respond ONLY with valid JSON, no markdown:
       const queries = categoryQueries[category] || categoryQueries['any'];
       const indianKeywords = ['nse', 'bse', 'sensex', 'nifty', 'rupee', 'crore', 'lakh', 'sebi', 'rbi', 'swiggy', 'zomato'];
 
+      const FINANCIAL_NEWS_FEEDS = [
+        { url: 'https://www.benzinga.com/feed',                                       source: 'Benzinga' },
+        { url: 'https://investorplace.com/feed/',                                     source: 'InvestorPlace' },
+        { url: 'https://www.thestreet.com/.rss/full',                                source: 'TheStreet' },
+        { url: 'https://www.nasdaq.com/feed/nasdaq-original/rss.xml',                source: 'Nasdaq' },
+        { url: 'https://www.zacks.com/customfeeds/zacksheadlines.rss',               source: 'Zacks' },
+        { url: 'https://stockstotrade.com/feed/',                                     source: 'StocksToTrade' },
+        { url: 'https://www.stocktitan.net/news/rss.xml',                            source: 'Stock Titan' },
+        { url: 'https://finbold.com/feed/',                                           source: 'Finbold' },
+        { url: 'https://finance.yahoo.com/rss/topfinstories',                         source: 'Yahoo Finance' },
+      ];
+      const TECH_FEEDS = [
+        { url: 'https://techcrunch.com/feed/',                                        source: 'TechCrunch' },
+        { url: 'https://www.theverge.com/rss/index.xml',                             source: 'The Verge' },
+        { url: 'https://www.wired.com/feed/rss',                                     source: 'Wired' },
+        { url: 'https://venturebeat.com/feed/',                                       source: 'VentureBeat' },
+        { url: 'https://feeds.arstechnica.com/arstechnica/index',                    source: 'Ars Technica' },
+        { url: 'https://www.technologyreview.com/feed/',                             source: 'MIT Technology Review' },
+        { url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html',              source: 'CNBC' },
+        { url: 'https://feeds.apnews.com/rss/apf-Technology',                        source: 'AP News' },
+      ];
+
       const BASE_DIRECT_FEEDS = [
         { url: 'https://feeds.reuters.com/reuters/businessNews',                     source: 'Reuters' },
         { url: 'https://feeds.reuters.com/reuters/topNews',                           source: 'Reuters' },
@@ -629,7 +686,6 @@ Respond ONLY with valid JSON, no markdown:
         { url: 'https://feeds.apnews.com/rss/apf-topnews',                           source: 'AP News' },
         { url: 'https://feeds.apnews.com/rss/apf-business',                          source: 'AP News' },
         { url: 'https://feeds.apnews.com/rss/apf-politics',                          source: 'AP News' },
-        { url: 'https://finance.yahoo.com/rss/topfinstories',                         source: 'Yahoo Finance' },
       ];
       const REDDIT_STOCK_FEEDS = [
         { url: 'https://www.reddit.com/r/wallstreetbets/new.rss?limit=25', source: 'Reddit r/wallstreetbets' },
@@ -661,45 +717,50 @@ Respond ONLY with valid JSON, no markdown:
         { url: 'https://www.economist.com/international/rss.xml',                     source: 'The Economist' },
       ];
       const CATEGORY_DIRECT_FEEDS = {
-        any:             [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
-        macro:           [...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
-        political:       [...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
+        any:             [...FINANCIAL_NEWS_FEEDS, ...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
+        macro:           [...FINANCIAL_NEWS_FEEDS, ...REDDIT_STOCK_FEEDS, ...POLITICAL_FEEDS],
+        political:       [...FINANCIAL_NEWS_FEEDS, ...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
         technology:      [
-          { url: 'https://www.cnbc.com/id/19854910/device/rss/rss.html', source: 'CNBC' },
-          { url: 'https://feeds.apnews.com/rss/apf-Technology',           source: 'AP News' },
+          ...TECH_FEEDS,
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
         energy:          [
-          { url: 'https://feeds.reuters.com/reuters/energy',              source: 'Reuters' },
-          { url: 'https://www.cnbc.com/id/10000049/device/rss/rss.html',  source: 'CNBC' },
+          { url: 'https://feeds.reuters.com/reuters/energy',               source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10000049/device/rss/rss.html',   source: 'CNBC' },
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
         financials:      [
           { url: 'https://feeds.reuters.com/reuters/financialServicesAndRealEstateNews', source: 'Reuters' },
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
-        'precious-metals': [...REDDIT_STOCK_FEEDS],
+        'precious-metals': [...FINANCIAL_NEWS_FEEDS, ...REDDIT_STOCK_FEEDS],
         'real-estate':   [
           { url: 'https://feeds.reuters.com/reuters/financialServicesAndRealEstateNews', source: 'Reuters' },
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
         consumer:        [
-          { url: 'https://www.cnbc.com/id/10000101/device/rss/rss.html',  source: 'CNBC' },
+          { url: 'https://www.cnbc.com/id/10000101/device/rss/rss.html',   source: 'CNBC' },
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
-        defense:         [...DEFENSE_FEEDS, ...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
+        defense:         [...DEFENSE_FEEDS, ...FINANCIAL_NEWS_FEEDS, ...POLITICAL_FEEDS, ...REDDIT_STOCK_FEEDS],
         healthcare:      [
-          { url: 'https://feeds.reuters.com/reuters/health',               source: 'Reuters' },
-          { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',   source: 'CNBC' },
-          { url: 'https://feeds.apnews.com/rss/apf-Health',                source: 'AP News' },
+          { url: 'https://feeds.reuters.com/reuters/health',                source: 'Reuters' },
+          { url: 'https://www.cnbc.com/id/10000108/device/rss/rss.html',    source: 'CNBC' },
+          { url: 'https://feeds.apnews.com/rss/apf-Health',                 source: 'AP News' },
+          ...FINANCIAL_NEWS_FEEDS,
           ...REDDIT_STOCK_FEEDS,
         ],
         crypto:          [
-          { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',        source: 'CoinDesk' },
-          { url: 'https://www.theblock.co/rss.xml',                        source: 'The Block' },
-          { url: 'https://decrypt.co/feed',                                source: 'Decrypt' },
-          { url: 'https://cointelegraph.com/rss',                          source: 'Cointelegraph' },
-          { url: 'https://forkast.news/feed/',                             source: 'Forkast' },
+          { url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',         source: 'CoinDesk' },
+          { url: 'https://www.theblock.co/rss.xml',                         source: 'The Block' },
+          { url: 'https://decrypt.co/feed',                                 source: 'Decrypt' },
+          { url: 'https://cointelegraph.com/rss',                           source: 'Cointelegraph' },
+          { url: 'https://forkast.news/feed/',                              source: 'Forkast' },
           ...REDDIT_CRYPTO_FEEDS,
         ],
       };
