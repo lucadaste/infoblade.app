@@ -608,10 +608,16 @@ export default async function handler(req, res) {
 
         if (deduped.length === 0) return res.status(200).json({ groups: [], expandedTimeframe });
 
-        const groupPrompt = `You are a senior equity analyst. Here are ${deduped.length} headlines related to ${ticker} (${fullName}). Group them into distinct specific events or themes that directly affect ${ticker}'s business outlook, financial performance, or stock market expectations.
+        // Cap at 60 articles sorted by grade — keeps the Claude prompt fast and within limits
+        const gradeOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+        const capped = deduped
+          .sort((a, b) => (gradeOrder[b.grade] || 0) - (gradeOrder[a.grade] || 0))
+          .slice(0, 60);
+
+        const groupPrompt = `You are a senior equity analyst. Here are ${capped.length} headlines related to ${ticker} (${fullName}). Group them into distinct specific events or themes that directly affect ${ticker}'s business outlook, financial performance, or stock market expectations.
 
 Headlines:
-${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+${capped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
 1. Only create groups directly relevant to ${ticker} — skip unrelated news
@@ -628,7 +634,8 @@ Respond ONLY with valid JSON, no markdown:
         const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, messages: [{ role: 'user', content: groupPrompt }] })
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1500, messages: [{ role: 'user', content: groupPrompt }] }),
+          signal: AbortSignal.timeout(8000),
         });
         const groupData = await groupRes.json();
         if (groupData.error) {
@@ -643,7 +650,7 @@ Respond ONLY with valid JSON, no markdown:
           return res.status(500).json({ error: 'Analysis service returned invalid data' });
         }
         const groups = grouped.groups.map(g => {
-          const articles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+          const articles = g.indices.map(i => capped[i - 1]).filter(Boolean);
           const uniqueSources = [...new Set(articles.map(a => a.source))];
           const sourceGrades = {};
           uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
@@ -872,6 +879,12 @@ Respond ONLY with valid JSON, no markdown:
 
       if (deduped.length === 0) return res.status(200).json({ groups: [] });
 
+      // Cap at 80 sorted by grade — keeps prompt size reasonable
+      const gradeOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+      const capped = deduped
+        .sort((a, b) => (gradeOrder[b.grade] || 0) - (gradeOrder[a.grade] || 0))
+        .slice(0, 80);
+
       const categoryLabels = {
         'any': 'general financial markets', 'macro': 'macroeconomics and monetary policy',
         'technology': 'technology sector', 'energy': 'energy sector', 'financials': 'financial sector',
@@ -882,10 +895,10 @@ Respond ONLY with valid JSON, no markdown:
       const categoryLabel = categoryLabels[category] || 'financial markets';
 
       const groupPrompt = category === 'crypto'
-        ? `You are a senior crypto markets analyst covering global cryptocurrency and blockchain markets. Here are ${deduped.length} headlines from global sources. Group them into distinct specific crypto market events.
+        ? `You are a senior crypto markets analyst covering global cryptocurrency and blockchain markets. Here are ${capped.length} headlines from global sources. Group them into distinct specific crypto market events.
 ${fearGreed ? `\nCrypto Fear & Greed Index right now: ${fearGreed.value}/100 — ${fearGreed.label}. Use this to contextualise sentiment-driven events.\n` : ''}
 Headlines:
-${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+${capped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
 1. Cover ALL global crypto events — regulatory (any jurisdiction: US SEC, EU MiCA, Asia), protocol, exchange, institutional, macro impact on crypto
@@ -901,10 +914,10 @@ STRICT RULES:
 
 Respond ONLY with valid JSON, no markdown:
 {"groups":[{"topic":"Specific descriptive title","indices":[1,3,5,7,12,18,24,31]}]}`
-        : `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${deduped.length} headlines. Group ONLY headlines that are directly and specifically about ${categoryLabel.toUpperCase()}.
+        : `You are a senior financial news editor at The Economist specializing in ${categoryLabel}. Here are ${capped.length} headlines. Group ONLY headlines that are directly and specifically about ${categoryLabel.toUpperCase()}.
 
 Headlines:
-${deduped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
+${capped.map((a, i) => `${i + 1}. "${a.title}" — ${a.source}`).join('\n')}
 
 STRICT RULES:
 1. ONLY create groups about ${categoryLabel}. Discard any headline that is not directly about this sector.
@@ -924,7 +937,8 @@ Respond ONLY with valid JSON, no markdown:
       const groupRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: groupPrompt }] })
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: groupPrompt }] }),
+          signal: AbortSignal.timeout(8000),
       });
       const groupData = await groupRes.json();
       if (groupData.error) {
@@ -952,7 +966,7 @@ Respond ONLY with valid JSON, no markdown:
       const topicKeywords = CATEGORY_TOPIC_KEYWORDS[category];
 
       const groups = grouped.groups.map(g => {
-        const groupArticles = g.indices.map(i => deduped[i - 1]).filter(Boolean);
+        const groupArticles = g.indices.map(i => capped[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         const sourceGrades = {};
         uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
