@@ -23,13 +23,14 @@
     }
     html { scroll-behavior: smooth; max-width: 100%; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; -webkit-font-smoothing: antialiased; }
-    nav:not(.bottom-nav) { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
-    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
+    nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
     .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
-    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; position: absolute; left: 50%; transform: translateX(-50%); margin: 0; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin: 0; justify-content: center; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
-    .nav-buttons { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+    .nav-right { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+    .nav-buttons { display: flex; gap: 8px; align-items: center; }
     .nav-cta { background: transparent; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: 1.5px solid var(--accent); text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; flex-shrink: 0; }
     .nav-cta:hover { background: var(--accent); color: #111; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; align-items: center; justify-content: center; }
@@ -199,10 +200,9 @@
     .hiw-icon { display: none; width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid #666; font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #666; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: border-color 0.2s, color 0.2s; }
     .nav-links a:hover .hiw-icon { border-color: var(--ink); color: var(--ink); }
     @media (max-width: 880px) {
-      nav:not(.bottom-nav) { padding: 12px 16px; gap: 10px; }
+      nav:not(.bottom-nav) { padding: 12px 16px; }
       .nav-logo { font-size: 13px; }
       .nav-cta { font-size: 12px; padding: 7px 14px; }
-      .nav-links { position: static; transform: none; margin: 0; flex: 1; justify-content: center; }
       .hiw-text { display: none; }
       .hiw-icon { display: inline-flex; }
     }
@@ -232,17 +232,19 @@
     <ul class="nav-links">
       <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">?</span></a></li>
     </ul>
-    <div class="nav-buttons">
-      <a class="nav-cta" href="#" id="signup-btn">Get Started</a>
-    </div>
-    <div class="nav-menu-wrap">
-      <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
-      <div id="nav-menu">
-        <a href="/feed.html">Stock Markets</a>
-        <a href="/markets.html">Prediction Markets</a>
-        <a href="/crypto.html">Crypto Markets</a>
-        <a href="/watchlist.html">Watchlist</a>
-        <a href="/accuracy.html">Accuracy History</a>
+    <div class="nav-right">
+      <div class="nav-buttons">
+        <a class="nav-cta" href="#" id="signup-btn">Get Started</a>
+      </div>
+      <div class="nav-menu-wrap">
+        <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
+        <div id="nav-menu">
+          <a href="/feed.html">Stock Markets</a>
+          <a href="/markets.html">Prediction Markets</a>
+          <a href="/crypto.html">Crypto Markets</a>
+          <a href="/watchlist.html">Watchlist</a>
+          <a href="/accuracy.html">Accuracy History</a>
+        </div>
       </div>
     </div>
   </nav>
