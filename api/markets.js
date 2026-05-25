@@ -6,6 +6,14 @@ const SPORT_LABELS = {
   soccer: 'Soccer', basketball: 'Basketball', football: 'Football', baseball: 'Baseball',
 };
 
+// Events matching any of these tags are excluded regardless of category
+const ESPORTS_TAGS = new Set([
+  'esports', 'e-sports', 'esport', 'gaming', 'video-games',
+  'league-of-legends', 'lol', 'dota', 'dota-2', 'counter-strike', 'cs-go', 'csgo',
+  'valorant', 'overwatch', 'fortnite', 'starcraft', 'rocket-league', 'apex-legends',
+  'call-of-duty', 'pubg', 'hearthstone', 'world-of-warcraft',
+]);
+
 // Tags are intentionally exclusive — no tag appears in more than one category
 const CATEGORY_TAGS = {
   sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
@@ -82,6 +90,7 @@ export default async function handler(req, res) {
     const filtered = (Array.isArray(events) ? events : []).filter(event => {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
+      if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
       return targetTags.some(tag => eventTags.includes(tag));
     });
 

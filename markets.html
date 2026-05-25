@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI | Prediction Markets</title>
   <meta name="description" content="AI analysis meets Polymarket. See whether crowd odds on live prediction markets align or contradict what the news is actually saying." />
+  <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -89,6 +90,7 @@
     .btn-watch:hover { border-color: var(--accent); color: var(--accent); }
     .btn-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
+    .sport-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25); color: var(--accent); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px 3px 8px; border-radius: 20px; margin-bottom: 8px; }
     .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
     .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
     .odds-block { flex-shrink: 0; text-align: right; }
@@ -123,6 +125,13 @@
     .analysis-signal-detail { font-size: 12px; color: #888; font-style: italic; }
     .analysis-sources { font-size: 12px; color: #888; }
     .analysis-sources strong { color: var(--ink); font-weight: 500; }
+    .ar-sources-toggle { background: none; border: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 4px; }
+    .ar-sources-toggle:hover { color: #888; }
+    .ar-sources-toggle .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .ar-sources-toggle.open .toggle-arrow { transform: rotate(90deg); }
+    .ar-sources-list { display: none; flex-direction: column; gap: 3px; padding: 8px 10px; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; margin-top: 4px; }
+    .ar-sources-list.open { display: flex; }
+    .ar-source-item { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .analysis-error { font-size: 13px; color: #c84040; }
 
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
@@ -214,7 +223,7 @@
 
   <div class="hero">
     <div class="hero-left">
-      <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Market Intelligence</div>
       <h1>Prediction markets</h1>
       <p class="hero-sub">Real money, real odds. Select a category to see what the crowd is pricing, then let the news tell you whether they're right.</p>
     </div>
@@ -265,7 +274,7 @@
 
   <footer>
     <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
-    <p>For informational purposes only. Not financial advice.</p>
+    <p>For informational purposes only. Not financial advice. <a href="/privacy.html" style="color:var(--muted);text-decoration:underline">Privacy Policy</a></p>
   </footer>
 
   <script>
@@ -422,7 +431,7 @@
       cardEl.insertAdjacentHTML('beforeend', skeletonAnalysis());
 
       try {
-        const res = await fetch('/api/market-analyze', {
+        const res = await fetch(window.API_BASE + '/api/market-analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: document.querySelector('.cat-chip.active')?.textContent?.trim().toLowerCase() || '' })
@@ -451,14 +460,17 @@
           </div>
           <div class="analysis-reasoning">${esc(data.reasoning)}</div>
           ${data.signal_detail ? `<div class="analysis-signal-detail">${esc(data.signal_detail)}</div>` : ''}
-          ${data.key_sources?.length ? `<div class="analysis-sources"><strong>Sources:</strong> ${data.key_sources.map(esc).join(' · ')}</div>` : ''}
+          ${data.key_sources?.length ? `
+            <button class="ar-sources-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><i class="toggle-arrow">›</i> ${data.key_sources.length} source${data.key_sources.length !== 1 ? 's' : ''}</button>
+            <div class="ar-sources-list">${data.key_sources.map(s => `<span class="ar-source-item">${esc(s)}</span>`).join('')}</div>
+          ` : ''}
           ${data.articlesFound !== undefined ? `<div class="analysis-sources">${esc(String(data.articlesFound))} articles analyzed</div>` : ''}
         `;
         cardEl.appendChild(block);
         btn.textContent = 'Re-analyze';
 
         if (isFirstAnalysis && (data.lean === 'Yes' || data.lean === 'No')) {
-          fetch('/api/predictions', {
+          fetch(window.API_BASE + '/api/predictions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -480,7 +492,7 @@
         if (skelBlock) skelBlock.remove();
         const block = document.createElement('div');
         block.className = 'analysis-block';
-        block.innerHTML = `<div class="analysis-error">Analysis failed: ${esc(err.message)}</div>`;
+        block.innerHTML = `<div class="analysis-error">Analysis failed: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
         cardEl.appendChild(block);
         btn.textContent = 'Retry';
       }
@@ -502,7 +514,7 @@
       card.innerHTML = `
         ${isWatched ? '<div class="watchlist-badge">★ Watching</div>' : ''}
         <div class="market-header">
-          <div class="market-question">${market.sport ? `<span style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">${esc(market.sport)}</span>` : ''}${esc(market.question)}</div>
+          <div class="market-question">${market.sport ? `<span class="sport-badge">${esc(market.sport)}</span><br>` : ''}${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
             <div class="odds-label">${market.yesLabel ? esc(market.yesLabel) : 'Market odds'}</div>
@@ -578,7 +590,7 @@
         grid.innerHTML = `
           <div class="empty-state">
             <h3>Could not load markets</h3>
-            <p>${esc(err.message)}</p>
+            <p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p>
           </div>`;
       }
     }
@@ -609,9 +621,10 @@
       <a href="/feed.html" class="bn-item">Stocks</a>
       <a href="/markets.html" class="bn-item active">Markets</a>
       <a href="/crypto.html" class="bn-item">Crypto</a>
-      <a href="/watchlist.html" class="bn-item">Watchlist</a>
+      <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
-
+  <script src="/onboarding.js"></script>
+  <script src="/offline.js"></script>
 </body>
 </html>

@@ -1138,12 +1138,15 @@ Respond ONLY with valid JSON, no markdown:
           validation_date: new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
           correct:         null,
           notes:           null,
+          sources,
+          source_grades:   sourceGrades,
+          min_grade:       minGrade,
         });
       } else {
         console.warn('[analyze POST] Supabase not available — prediction not saved');
       }
 
-      return res.status(200).json({ ...analysis, predictionId, predictionSaved, technicalSnapshot: fullSnapshot });
+      return res.status(200).json({ ...analysis, predictionId, predictionSaved, technicalSnapshot: fullSnapshot, sources });
 
     } catch (err) {
       console.error('[analyze POST]', err.message);

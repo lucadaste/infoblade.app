@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI | Track Record</title>
   <meta name="description" content="InvestmentInformatics.AI public track record. Every AI market prediction logged with source, confidence, and outcome so you can verify accuracy over time." />
+  <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -149,6 +150,14 @@
     .cat-pct { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
     .cat-count { font-size: 11px; color: var(--muted); }
 
+    .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-chip { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .filter-chip:hover { border-color: var(--ink); color: var(--ink); }
+    .filter-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
+    .validate-btn { margin-left: auto; background: none; border: 1px solid var(--border); border-radius: 4px; padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .validate-btn:hover { border-color: var(--ink); color: var(--ink); }
+    .validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .validate-status { font-size: 12px; color: var(--muted); }
     .disclaimer { font-size: 12px; color: var(--muted); margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); line-height: 1.7; }
     .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 1px solid var(--border); z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); }
     .bottom-nav-inner { display: flex; height: 56px; }
@@ -184,7 +193,7 @@
 </script>
 
 <div class="hero">
-  <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+  <div class="hero-tag"><span class="hero-tag-dot"></span> Market Intelligence</div>
   <h1>Our <em>Track Record</em></h1>
   <p class="hero-sub">Every market prediction this platform makes is logged at the moment it's generated, then automatically validated against real price data when the timeframe expires. No retroactive edits. No cherry-picking.</p>
 </div>
@@ -212,6 +221,14 @@
 
       <!-- Recent predictions -->
       <div class="section-title">Recent Predictions</div>
+      <div class="filter-row">
+        <button class="filter-chip active" data-filter="all">All</button>
+        <button class="filter-chip" data-filter="pending">Pending</button>
+        <button class="filter-chip" data-filter="correct">Correct</button>
+        <button class="filter-chip" data-filter="incorrect">Incorrect</button>
+        <button class="validate-btn" id="validate-btn">Run validation</button>
+        <span class="validate-status" id="validate-status"></span>
+      </div>
       <div id="pred-list" class="pred-list">
         <div class="no-data">Loading…</div>
       </div>
@@ -232,6 +249,7 @@
     Accuracy is measured by whether winner/loser tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
     A prediction is correct if ≥ 60% of its tickers moved as predicted.
     Historical accuracy does not guarantee future performance.
+    <br><br><a href="/privacy.html" style="color:var(--muted)">Privacy Policy</a>
   </p>
 </div>
 
@@ -297,7 +315,7 @@
   function renderPredictions(recent) {
     const el = document.getElementById('pred-list');
     if (!recent || !recent.length) {
-      el.innerHTML = '<div class="no-data">No predictions logged yet.<br><br>Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, and come back — every AI prediction is automatically tracked here.</div>';
+      el.innerHTML = '<div class="no-data">No predictions logged yet.<br><br>Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, and come back. Every AI prediction is automatically tracked here.</div>';
       return;
     }
     el.innerHTML = recent.map(p => {
@@ -387,23 +405,56 @@
       </div>`).join('');
   }
 
-  try {
-    // Resolve any predictions whose timeframe has now expired
-    fetch('/api/resolve-predictions').catch(() => {});
+  let allRecent = [];
 
-    const res  = await fetch('/api/predictions');
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', function () {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      this.classList.add('active');
+      const filter = this.dataset.filter;
+      const filtered = filter === 'all' ? allRecent
+        : filter === 'pending'   ? allRecent.filter(p => p.correct === null || p.correct === undefined)
+        : filter === 'correct'   ? allRecent.filter(p => p.correct === true)
+        : allRecent.filter(p => p.correct === false);
+      renderPredictions(filtered);
+    });
+  });
+
+  // Run validation button
+  document.getElementById('validate-btn').addEventListener('click', async function () {
+    const btn = document.getElementById('validate-btn');
+    const status = document.getElementById('validate-status');
+    btn.disabled = true;
+    status.textContent = 'Checking…';
+    try {
+      const r = await fetch(window.API_BASE + '/api/resolve-predictions');
+      const d = await r.json();
+      const count = d.resolved ?? 0;
+      status.textContent = count > 0 ? `${count} prediction${count > 1 ? 's' : ''} resolved` : 'Nothing new to resolve';
+      if (count > 0) location.reload();
+    } catch (e) {
+      status.textContent = 'Error: ' + e.message;
+    }
+    btn.disabled = false;
+    setTimeout(() => { status.textContent = ''; }, 5000);
+  });
+
+  try {
+    const res  = await fetch(window.API_BASE + '/api/predictions');
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    allRecent = data.recent || [];
     renderStats(data.summary);
     renderByCategory(data.byCategory);
     renderChart(data.timeline);
-    renderPredictions(data.recent);
+    renderPredictions(allRecent);
     renderTickers(data.topTickers);
 
-    // If zero predictions, run a DB connectivity check and show the result
+    // If zero predictions, check DB connectivity and show a helpful message
     if (data.summary.total === 0 && data.summary.pending === 0) {
       const dbEl = document.getElementById('pred-list');
-      const chk  = await fetch('/api/db-check').then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      const chk  = await fetch(window.API_BASE + '/api/db-check').then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
       if (!chk.ok) {
         dbEl.innerHTML = `<div class="error-msg">
           <strong>Database issue detected:</strong> ${esc(chk.error || 'unknown error')}
@@ -413,7 +464,7 @@
       } else {
         dbEl.innerHTML = `<div class="no-data">
           Database connected (${chk.totalRows} total rows). No predictions saved yet.<br><br>
-          Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, then return here. Every card the AI generates is automatically tracked.
+          Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, then return here. Every analysis is automatically tracked.
         </div>`;
       }
     }
@@ -423,8 +474,8 @@
       el.classList.remove('skeleton');
       el.textContent = '--';
     });
-    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc(err.message)}</div>`;
-    document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc(err.message)}</div>`;
+    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
+    document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
     document.getElementById('ticker-table').innerHTML = '';
   }
 })();
@@ -437,9 +488,10 @@
       <a href="/feed.html" class="bn-item">Stocks</a>
       <a href="/markets.html" class="bn-item">Markets</a>
       <a href="/crypto.html" class="bn-item">Crypto</a>
-      <a href="/watchlist.html" class="bn-item">Watchlist</a>
+      <a href="/accuracy.html" class="bn-item active">Track Record</a>
     </div>
   </nav>
-
+  <script src="/onboarding.js"></script>
+  <script src="/offline.js"></script>
 </body>
 </html>

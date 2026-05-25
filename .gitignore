@@ -145,3 +145,8 @@ test.html
 
 # Runtime prediction data (grows at runtime, not for version control)
 data/*.json
+
+# Capacitor build output
+www/
+ios/
+android/

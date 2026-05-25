@@ -1,0 +1,15 @@
+{
+  "appId": "ai.investmentinformatics.app",
+  "appName": "InvestmentInformatics.AI",
+  "webDir": "www",
+  "server": {
+    "allowNavigation": [
+      "investmentinformatics.ai"
+    ]
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "backgroundColor": "#111111"
+  }
+}

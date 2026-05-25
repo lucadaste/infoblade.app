@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI | Crypto Markets</title>
   <meta name="description" content="Live prices and AI news analysis for 32 crypto assets. Fear and Greed index, real-time data, and news-driven signals for Bitcoin, Ethereum, Solana, and more." />
+  <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -142,6 +143,13 @@
     .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
     .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
     .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
+    .ar-sources-toggle { background: none; border: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 2px; }
+    .ar-sources-toggle:hover { color: var(--muted); }
+    .ar-sources-toggle .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .ar-sources-toggle.open .toggle-arrow { transform: rotate(90deg); }
+    .ar-sources-list { display: none; flex-direction: column; gap: 3px; padding: 8px 10px; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; margin-top: 2px; }
+    .ar-sources-list.open { display: flex; }
+    .ar-source-item { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
     .ar-row { font-size: 13px; line-height: 1.65; }
     .ar-row strong { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
@@ -249,7 +257,7 @@
 
   <div class="hero">
     <div>
-      <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Market Intelligence</div>
       <h1>Crypto markets</h1>
       <p class="hero-sub">Browse assets with live prices. Select any coin to pull global news analysis.</p>
     </div>
@@ -464,7 +472,7 @@
       } catch(e) {}
 
       try {
-        const res = await fetch('/api/crypto-prices');
+        const res = await fetch(window.API_BASE + '/api/crypto-prices');
         const result = await res.json();
         const prices = result.prices;
         if (!Array.isArray(prices)) return;
@@ -634,7 +642,7 @@
       const allSources   = [...new Set(groups.flatMap(g => g.sources || []))].slice(0, 15);
       const mergedGrades = Object.assign({}, ...groups.map(g => g.sourceGrades || {}));
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -671,7 +679,7 @@
     async function autoAnalyzeGroup(group, coin, idx, mySession) {
       const tf = TIMEFRAMES[currentTimeframe];
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -717,7 +725,7 @@
     async function runGeneralAnalysis(coin, mySession) {
       const tf = TIMEFRAMES[currentTimeframe];
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -752,6 +760,11 @@
         : dir === 'bearish'
         ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
         : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+      const srcList = Array.isArray(d.sources) ? d.sources.filter(Boolean) : [];
+      const sourcesHtml = srcList.length ? `
+        <button class="ar-sources-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><i class="toggle-arrow">›</i> ${srcList.length} source${srcList.length !== 1 ? 's' : ''}</button>
+        <div class="ar-sources-list">${srcList.map(s => `<span class="ar-source-item">${esc(s)}</span>`).join('')}</div>` : '';
+
       el.innerHTML = `
         <div class="ar-block">
           ${dirBadge}
@@ -769,6 +782,7 @@
             ` : ''}
             ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(d.confidence)}</div>` : ''}
           </div>
+          ${sourcesHtml}
         </div>`;
     }
 
@@ -821,9 +835,10 @@
       <a href="/feed.html" class="bn-item">Stocks</a>
       <a href="/markets.html" class="bn-item">Markets</a>
       <a href="/crypto.html" class="bn-item active">Crypto</a>
-      <a href="/watchlist.html" class="bn-item">Watchlist</a>
+      <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
-
+  <script src="/onboarding.js"></script>
+  <script src="/offline.js"></script>
 </body>
 </html>

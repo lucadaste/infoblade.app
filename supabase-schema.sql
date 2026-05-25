@@ -58,3 +58,15 @@ alter table source_reputation enable row level security;
 -- Per-category accuracy tracking (independent score per sector/topic)
 alter table predictions add column if not exists category text;
 create index if not exists predictions_category_idx on predictions (category);
+
+-- Atomic upsert for source reputation (called by resolve-predictions.js)
+create or replace function upsert_source_reputation(p_source text, p_correct integer)
+returns void language plpgsql security definer as $$
+begin
+  insert into source_reputation (source, attempts, correct)
+    values (p_source, 1, p_correct)
+  on conflict (source) do update
+    set attempts = source_reputation.attempts + 1,
+        correct  = source_reputation.correct  + p_correct;
+end;
+$$;

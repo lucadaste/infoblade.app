@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   // Fetch pending predictions whose validation window has passed
   const { data: pending, error } = await supabase
     .from('predictions')
-    .select('id, winner_tickers, loser_tickers, baseline_prices, analysis, category')
+    .select('id, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources')
     .is('correct', null)
     .not('validation_date', 'is', null)
     .lte('validation_date', now)
@@ -104,7 +104,17 @@ export default async function handler(req, res) {
       })
       .eq('id', pred.id);
 
-    if (!updateErr) resolved++;
+    if (!updateErr) {
+      resolved++;
+
+      // Update source reputation so the learning model tracks which sources are accurate
+      const predSources = pred.sources || [];
+      if (predSources.length) {
+        await Promise.allSettled(predSources.map(source =>
+          supabase.rpc('upsert_source_reputation', { p_source: source, p_correct: correct ? 1 : 0 })
+        ));
+      }
+    }
   }
 
   return res.status(200).json({ resolved });

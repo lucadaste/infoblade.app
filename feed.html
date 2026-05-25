@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI | Stock Markets</title>
   <meta name="description" content="Daily AI analysis of market-moving news events. Every headline traced to affected sectors, specific stocks, and confidence ratings across 500+ global sources." />
+  <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -220,6 +221,13 @@
     .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
     .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
     .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
+    .ar-sources-toggle { background: none; border: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 2px; }
+    .ar-sources-toggle:hover { color: var(--muted); }
+    .ar-sources-toggle .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .ar-sources-toggle.open .toggle-arrow { transform: rotate(90deg); }
+    .ar-sources-list { display: none; flex-direction: column; gap: 3px; padding: 8px 10px; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; margin-top: 2px; }
+    .ar-sources-list.open { display: flex; }
+    .ar-source-item { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     @media (max-width: 1100px) { .coin-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 768px) {
       .pmode-tab { padding: 16px 20px; }
@@ -344,7 +352,7 @@
 
   <div class="hero">
     <div>
-      <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Market Intelligence</div>
       <h1 id="page-title">Live Stock Market Analysis</h1>
       <p class="hero-sub" id="hero-sub">World news → economic impact → sectors in play → winners &amp; losers. Pick a sector and load the feed to see today's analysis.</p>
     </div>
@@ -368,11 +376,11 @@
   <div class="page-mode-bar">
     <button class="pmode-tab active" id="pmode-sector" onclick="setMode('sector')">
       <span class="pmode-title">Sector Analysis</span>
-      <span class="pmode-desc">AI scans global news by sector — macro, tech, energy, financials and more</span>
+      <span class="pmode-desc">AI scans global news by sector: macro, tech, energy, financials and more</span>
     </button>
     <button class="pmode-tab" id="pmode-stocks" onclick="setMode('stocks')">
       <span class="pmode-title">Individual Stocks</span>
-      <span class="pmode-desc">Pick any stock — get a full AI breakdown of how today's news affects it</span>
+      <span class="pmode-desc">Pick any stock for a full AI breakdown of how today's news affects it</span>
     </button>
   </div>
 
@@ -419,7 +427,7 @@
         <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
       </div>
       <div class="filter-actions">
-        <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact — takes ~30–60 sec">Load feed →</button>
+        <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
         <div class="status-wrap">
           <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
           <span class="status-text" id="status"></span>
@@ -507,7 +515,7 @@
 
   <footer>
     <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
-    <p>For informational purposes only. Not financial advice.</p>
+    <p>For informational purposes only. Not financial advice. <a href="/privacy.html" style="color:var(--muted);text-decoration:underline">Privacy Policy</a></p>
   </footer>
 
   <script>
@@ -652,7 +660,7 @@
       try {
         const cached = sessionStorage.getItem('ii_tickers_v2');
         if (cached) { TICKERS = JSON.parse(cached); return; }
-        const r = await fetch('/api/tickers');
+        const r = await fetch(window.API_BASE + '/api/tickers');
         if (!r.ok) return;
         const d = await r.json();
         if (d.tickers?.length > 100) {
@@ -874,7 +882,7 @@
         });
         filterStockGrid();
       } catch(err) {
-        grid.innerHTML = `<div class="grid-empty"><h3>Failed to load stocks</h3><p>${esc(err.message)}</p></div>`;
+        grid.innerHTML = `<div class="grid-empty"><h3>Failed to load stocks</h3><p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p></div>`;
       }
     }
 
@@ -935,7 +943,7 @@
         renderStockGroupsAndAnalyze(ticker, name, toAnalyze, mySession, impact);
       } catch(err) {
         if (stockAnalysisSession !== mySession) return;
-        content.innerHTML = `<div style="color:#ff7070;font-size:13px;padding:16px 0">Failed to load news: ${esc(err.message)}</div>`;
+        content.innerHTML = `<div style="color:#ff7070;font-size:13px;padding:16px 0">Failed to load news: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
       }
     }
 
@@ -991,7 +999,7 @@
 
     async function autoAnalyzeStockGroup(group, ticker, name, idx, mySession, impact) {
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             topic: `${group.topic}: impact on ${name} (${ticker}) over ${impact}`,
@@ -1012,7 +1020,7 @@
         const loadingEl = document.getElementById(`sap-loading-${idx}`);
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById(`sap-result-${idx}`);
-        if (resultEl) resultEl.innerHTML = `<div style="color:#ff7070;font-size:12px">Analysis failed: ${esc(err.message)}</div>`;
+        if (resultEl) resultEl.innerHTML = `<div style="color:#ff7070;font-size:12px">Analysis failed: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
       }
     }
 
@@ -1020,7 +1028,7 @@
       const allHeadlines = groups.flatMap(g => (g.headlines || []).slice(0,3)).slice(0,20);
       const allSources   = [...new Set(groups.flatMap(g => g.sources || []))].slice(0,15);
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             topic: `Net price direction for ${name} (${ticker}) over ${impact}. Weigh all news and commit to a directional call.`,
@@ -1040,7 +1048,13 @@
         const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
           : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
           : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
-        resultEl.innerHTML = `${badge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
+        resultEl.innerHTML = `${badge}
+          <div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>
+          <div id="sap-market-signal" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div class="skel" style="height:10px;width:120px;margin-bottom:6px"></div>
+            <div class="skel" style="height:14px;width:80%"></div>
+          </div>`;
+        fetchMarketSignal(ticker, name, impact, mySession);
       } catch(err) {
         if (stockAnalysisSession !== mySession) return;
         const loadingEl = document.getElementById('sap-overall-loading');
@@ -1050,9 +1064,40 @@
       }
     }
 
+    async function fetchMarketSignal(ticker, name, impact, mySession) {
+      const el = document.getElementById('sap-market-signal');
+      if (!el) return;
+      try {
+        const res = await fetch(window.API_BASE + '/api/market-analyze', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: `Will ${name} (${ticker}) stock price rise over the next ${impact}?` })
+        });
+        if (stockAnalysisSession !== mySession) return;
+        const d = await res.json();
+        if (!el || stockAnalysisSession !== mySession) return;
+        if (d.error || !d.lean || d.lean === 'Uncertain') {
+          el.remove();
+          return;
+        }
+        const leanColor = d.lean === 'Yes' ? '#2a9e4f' : '#c84040';
+        const leanLabel = d.lean === 'Yes' ? '↑ Likely to rise' : '↓ Unlikely to rise';
+        const confBadge = d.lean_confidence
+          ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">${esc(d.lean_confidence)} confidence</span>` : '';
+        el.innerHTML = `
+          <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:12px;color:${leanColor}">${leanLabel}</span>
+            ${confBadge}
+          </div>
+          ${d.reasoning ? `<div style="font-size:13px;color:#bbb;line-height:1.6">${esc(d.reasoning)}</div>` : ''}`;
+      } catch(_) {
+        if (el) el.remove();
+      }
+    }
+
     async function runGeneralStockAnalysis(ticker, name, mySession, impact) {
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             topic: `${name} (${ticker}) stock market outlook over ${impact}`,
@@ -1082,14 +1127,50 @@
       const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
         : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
         : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+
+      const winnersHtml = (d.winners?.tickers || []).length
+        ? `<div class="ar-row"><strong>Beneficiaries</strong>
+            <div class="tickers" style="margin-top:4px">${(d.winners.tickers).map(t => `<span class="pill pill-up">${esc(t)}</span>`).join('')}</div>
+            <div style="font-size:13px;color:#bbb;margin-top:4px">${esc(d.winners.explanation || '')}</div>
+          </div>` : '';
+      const losersHtml = (d.losers?.tickers || []).length
+        ? `<div class="ar-row"><strong>Likely Losers</strong>
+            <div class="tickers" style="margin-top:4px">${(d.losers.tickers).map(t => `<span class="pill pill-down">${esc(t)}</span>`).join('')}</div>
+            <div style="font-size:13px;color:#bbb;margin-top:4px">${esc(d.losers.explanation || '')}</div>
+          </div>` : '';
+      const sectorsHtml = ((d.sectors?.positive || []).length || (d.sectors?.negative || []).length)
+        ? `<div class="ar-row"><strong>Sectors in Play</strong>
+            <div class="sectors" style="margin-top:4px">
+              ${(d.sectors.positive || []).map(s => `<span class="sector-up">▲ ${esc(s)}</span>`).join('')}
+              ${(d.sectors.negative || []).map(s => `<span class="sector-down">▼ ${esc(s)}</span>`).join('')}
+            </div>
+          </div>` : '';
+      const crowdHtml = d.crowd_summary
+        ? `<div class="ar-row"><strong>Crowd Signal</strong>${esc(d.crowd_summary)}</div>` : '';
+
+      const srcList = Array.isArray(d.sources) ? d.sources.filter(Boolean) : [];
+      const sourcesHtml = srcList.length ? `
+        <button class="ar-sources-toggle" onclick="
+          this.classList.toggle('open');
+          this.nextElementSibling.classList.toggle('open');
+        "><i class="toggle-arrow">›</i> ${srcList.length} source${srcList.length !== 1 ? 's' : ''}</button>
+        <div class="ar-sources-list">
+          ${srcList.map(s => `<span class="ar-source-item">${esc(s)}</span>`).join('')}
+        </div>` : '';
+
       el.innerHTML = `<div class="ar-block">
         ${badge}
         ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
         <button class="btn-deep" onclick="this.style.display='none';this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
         <div class="ar-details">
-          ${d.impact_timeframe ? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
+          ${d.impact_timeframe ? `<div class="ar-row"><strong>Expected Timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
+          ${crowdHtml}
+          ${sectorsHtml}
+          ${winnersHtml}
+          ${losersHtml}
           ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(String(d.confidence))}</div>` : ''}
         </div>
+        ${sourcesHtml}
       </div>`;
     }
 
@@ -1301,7 +1382,7 @@
       const changeColor = changePct == null ? '#888' : changePct > 0 ? '#00e676' : changePct < 0 ? '#ff7070' : '#888';
       const changeStr = changePct != null ? `${changePct > 0 ? '+' : ''}${changePct.toFixed(2)}%` : '';
       const range52w = (week52High && week52Low)
-        ? `<div style="font-size:12px;color:#555;margin-top:3px">52w $${week52Low} – $${week52High}</div>` : '';
+        ? `<div style="font-size:12px;color:#555;margin-top:3px">52w $${week52Low} - $${week52High}</div>` : '';
 
       const card = document.createElement('div');
       card.className = 'event-card' + (match ? ' watchlist-match' : '');
@@ -1416,7 +1497,7 @@
         await Promise.allSettled(tickers.map(async (td) => {
           try {
             const group = {
-              topic: `${td.ticker} (${td.name}) — Recent Market News`,
+              topic: `${td.ticker} (${td.name}) : Recent Market News`,
               headlines: td.headlines,
               sources: td.sources,
               totalSources: td.sources.length,
@@ -1521,7 +1602,7 @@
         // Overall prediction
         (async () => {
           try {
-            const res = await fetch('/api/analyze', {
+            const res = await fetch(window.API_BASE + '/api/analyze', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 topic: `Net price direction for ${stockName} (${ticker}) over ${impact}. Commit to a directional call.`,
@@ -1550,7 +1631,7 @@
         // Per-topic cards
         ...groups.map(async (group, idx) => {
           try {
-            const res = await fetch('/api/analyze', {
+            const res = await fetch(window.API_BASE + '/api/analyze', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 topic: `${group.topic}: impact on ${stockName} (${ticker}) over ${impact}`,
@@ -1718,7 +1799,7 @@
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), 50000);
       try {
-        const res = await fetch('/api/analyze', {
+        const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1747,7 +1828,7 @@
       const winners = analysis.winners?.tickers || [];
       const losers  = analysis.losers?.tickers  || [];
       if (!winners.length && !losers.length) return;
-      fetch('/api/save-prediction', {
+      fetch(window.API_BASE + '/api/save-prediction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1883,7 +1964,7 @@
       <a href="/feed.html" class="bn-item active">Stocks</a>
       <a href="/markets.html" class="bn-item">Markets</a>
       <a href="/crypto.html" class="bn-item">Crypto</a>
-      <a href="/watchlist.html" class="bn-item">Watchlist</a>
+      <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
   <script>
@@ -1895,6 +1976,7 @@
       }
     })();
   </script>
-
+  <script src="/onboarding.js"></script>
+  <script src="/offline.js"></script>
 </body>
 </html>

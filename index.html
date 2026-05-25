@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InvestmentInformatics.AI | World Events. Market Signals. Expected Outcomes.</title>
   <meta name="description" content="InvestmentInformatics.AI reads global news daily and maps what it means across stocks, crypto, and prediction markets. Every event traced from headline to the sectors, tickers, and odds it actually moves." />
+  <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -223,6 +224,16 @@
     .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.3px; transition: color 0.15s; -webkit-tap-highlight-color: transparent; }
     .bn-item.active { color: var(--accent); }
     @media (max-width: 768px) { .bottom-nav { display: block; } body { padding-bottom: 72px; } }
+
+    /* Expandable explanation */
+    .expand-bar { padding: 48px 48px 0; display: flex; align-items: center; gap: 20px; }
+    @media (max-width: 768px) { .expand-bar { padding: 36px 24px 0; } }
+    .btn-expand { display: inline-flex; align-items: center; gap: 10px; background: none; border: 1.5px solid var(--border); color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 12px 22px; border-radius: 4px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+    .btn-expand:hover { border-color: var(--ink); color: var(--ink); }
+    .btn-expand .expand-arrow { display: inline-block; transition: transform 0.3s ease; }
+    .btn-expand.open .expand-arrow { transform: rotate(180deg); }
+    #explanation { overflow: hidden; max-height: 0; transition: max-height 0.5s ease; }
+    #explanation.open { max-height: 9999px; }
   </style>
 </head>
 <body>
@@ -258,9 +269,9 @@
   </script>
 
   <section class="hero">
-    <div class="hero-tag"><span class="hero-tag-dot"></span> AI-Powered Market Intelligence</div>
+    <div class="hero-tag"><span class="hero-tag-dot"></span> Market Intelligence</div>
     <h1>World events.<br><em>Market signals.</em><br>Expected Outcomes.</h1>
-    <p class="hero-sub">One AI pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
+    <p class="hero-sub">One pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
     <div class="hero-actions">
       <a class="btn-outline" href="/feed.html">Stock Markets →</a>
       <a class="btn-outline" href="/markets.html">Prediction Markets →</a>
@@ -283,6 +294,11 @@
     </div>
   </div>
 
+  <div class="expand-bar">
+    <button class="btn-expand" id="expand-btn" onclick="toggleExplanation()">How it works <span class="expand-arrow">&#8964;</span></button>
+  </div>
+
+  <div id="explanation">
   <div class="platform-header fade-in">
     <div class="section-label">The platform</div>
     <h2>Three tools. One pipeline.</h2>
@@ -300,7 +316,7 @@
       <div class="step fade-in">
         <div class="step-num">02</div>
         <h3>AI reasons through it</h3>
-        <p>Our AI identifies which events carry real economic weight, then traces the full chain reaction to sectors, specific stocks, digital assets, and prediction market odds.</p>
+        <p>We identify which events carry real economic weight, then traces the full chain reaction to sectors, specific stocks, digital assets, and prediction market odds.</p>
       </div>
       <div class="step fade-in">
         <div class="step-num">03</div>
@@ -315,7 +331,7 @@
     <div class="split-left">
       <div class="split-label">Stock Markets</div>
       <h2>Market-moving events, traced to the ticker</h2>
-      <p>Every day, our AI reads hundreds of sources, groups related headlines into distinct market events, and maps the full economic chain from the story to affected sectors and specific stocks.</p>
+      <p>Every day, we read hundreds of sources, groups related headlines into distinct market events, and maps the full economic chain from the story to affected sectors and specific stocks.</p>
       <p>Filtered by category, timeframe, and source quality. Updated daily.</p>
       <a class="btn-outline" href="/feed.html">Open Stock Markets →</a>
     </div>
@@ -389,7 +405,7 @@
     <div class="split-left">
       <div class="split-label">Crypto Markets</div>
       <h2>Live prices, fear and greed, and AI news analysis for 32 digital assets</h2>
-      <p>The same source-weighted intelligence pipeline that powers Stock Markets, applied to crypto. Track BTC, ETH, SOL, and 29 more assets in real time, then run AI analysis on any coin to see which news events are driving price action.</p>
+      <p>The same pipeline that powers Stock Markets, applied to crypto. Track BTC, ETH, SOL, and 29 more assets in real time, then run analysis on any coin to see which news events are driving price action.</p>
       <a class="btn-outline" href="/crypto.html">Open Crypto Markets →</a>
     </div>
     <div>
@@ -529,13 +545,15 @@
     </div>
   </section>
 
+  </div><!-- /#explanation -->
+
   <div class="disclaimer">
     <strong style="color:#666;">Disclaimer:</strong> InvestmentInformatics.AI is an informational tool only. Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any security. All analysis is AI-generated based on publicly available information and is provided for educational and informational purposes only. Past patterns and historical precedents do not guarantee future market results. Always conduct your own research and consult a licensed financial advisor before making any investment decisions.
   </div>
 
   <footer>
     <div class="footer-logo"><span>Investment</span>Informatics.AI</div>
-    <p>© 2026 · Built for curious investors</p>
+    <p>© 2026 · Built for curious investors · <a href="/privacy.html" style="color:var(--muted);text-decoration:underline">Privacy Policy</a></p>
   </footer>
 
   <script>
@@ -548,6 +566,19 @@
       });
     }, { threshold: 0.12 });
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    function toggleExplanation() {
+      var btn = document.getElementById('expand-btn');
+      var box = document.getElementById('explanation');
+      var opening = !box.classList.contains('open');
+      box.classList.toggle('open');
+      btn.classList.toggle('open');
+      if (opening) {
+        box.querySelectorAll('.fade-in:not(.visible)').forEach(function(el) {
+          el.classList.add('visible');
+        });
+      }
+    }
 
   </script>
 
@@ -586,9 +617,10 @@
       <a href="/feed.html" class="bn-item">Stocks</a>
       <a href="/markets.html" class="bn-item">Markets</a>
       <a href="/crypto.html" class="bn-item">Crypto</a>
-      <a href="/watchlist.html" class="bn-item">Watchlist</a>
+      <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
-
+  <script src="/onboarding.js"></script>
+  <script src="/offline.js"></script>
 </body>
 </html>
