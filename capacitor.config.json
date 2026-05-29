@@ -8,7 +8,7 @@
     ]
   },
   "ios": {
-    "contentInset": "automatic",
+    "contentInset": "never",
     "scrollEnabled": true,
     "backgroundColor": "#111111"
   }

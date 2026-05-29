@@ -20,9 +20,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --red: #ff5252; }
     html { max-width: 100%; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; }
+        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
 
-    nav:not(.bottom-nav) { display: flex; align-items: center; padding: calc(env(safe-area-inset-top, 0px) + 20px) 48px 20px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 100; gap: 16px; }
+    nav:not(.bottom-nav) { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; gap: 16px; }
     .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
     .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
     .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
@@ -43,7 +43,7 @@
     .nav-burger.open span:nth-child(2) { opacity: 0; }
     .nav-burger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
     @media (max-width: 1200px) {
-      nav:not(.bottom-nav) { padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 12px; gap: 10px; }
+      nav:not(.bottom-nav) { padding: 12px 16px; gap: 10px; }
       .nav-logo { font-size: 13px; }
       .nav-chat-btn { font-size: 12px; padding: 6px 12px; letter-spacing: 0; }
       .nav-links { display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background: var(--paper); border-bottom: 1px solid var(--border); padding: 8px 0; gap: 0; margin-left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
