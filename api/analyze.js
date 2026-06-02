@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 
-// ── Ticker blurb cache (module-level, survives warm invocations) ──────────────
-const _blurbCache = new Map();
+// ── Module-level caches (survive warm Vercel invocations) ─────────────────────
+const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
+const _groupCache = new Map();    // headlines fingerprint -> { data, ts }  TTL 30min
 
 // ── Supabase ──────────────────────────────────────────────────────────────────
 function _getSupabase() {
@@ -615,6 +616,13 @@ export default async function handler(req, res) {
           .sort((a, b) => (gradeOrder[b.grade] || 0) - (gradeOrder[a.grade] || 0))
           .slice(0, 60);
 
+        // Serve from in-memory cache if same news was grouped recently (30 min TTL)
+        const stockCacheKey = `stock|${ticker}|${timeframe}|${capped.slice(0, 12).map(a => a.title.slice(0, 35)).join('~')}`;
+        const stockCacheHit = _groupCache.get(stockCacheKey);
+        if (stockCacheHit && Date.now() - stockCacheHit.ts < 1800000) {
+          return res.status(200).json(stockCacheHit.data);
+        }
+
         const groupPrompt = `You are a senior equity analyst. Here are ${capped.length} headlines related to ${ticker} (${fullName}). Group them into distinct specific events or themes that directly affect ${ticker}'s business outlook, financial performance, or stock market expectations.
 
 Headlines:
@@ -659,7 +667,9 @@ Respond ONLY with valid JSON, no markdown:
         });
 
         const sorted = [...groups].sort((a, b) => b.totalSources - a.totalSources);
-        return res.status(200).json({ groups: sorted, expandedTimeframe });
+        const stockResult = { groups: sorted, expandedTimeframe };
+        _groupCache.set(stockCacheKey, { data: stockResult, ts: Date.now() });
+        return res.status(200).json(stockResult);
       }
 
       const categoryQueries = {
@@ -886,6 +896,13 @@ Respond ONLY with valid JSON, no markdown:
         .sort((a, b) => (gradeOrder[b.grade] || 0) - (gradeOrder[a.grade] || 0))
         .slice(0, 80);
 
+      // Serve from in-memory cache if same news was grouped recently (30 min TTL)
+      const catCacheKey = `${category}|${timeframe}|${capped.slice(0, 12).map(a => a.title.slice(0, 35)).join('~')}`;
+      const catCacheHit = _groupCache.get(catCacheKey);
+      if (catCacheHit && Date.now() - catCacheHit.ts < 1800000) {
+        return res.status(200).json(catCacheHit.data);
+      }
+
       const categoryLabels = {
         'any': 'general financial markets', 'macro': 'macroeconomics and monetary policy',
         'technology': 'technology sector', 'energy': 'energy sector', 'financials': 'financial sector',
@@ -980,7 +997,9 @@ Respond ONLY with valid JSON, no markdown:
 
       // Sort by source count as a fast proxy for impact (eliminates second LLM round-trip)
       const sorted = [...groups].sort((a, b) => b.totalSources - a.totalSources);
-      return res.status(200).json({ groups: sorted });
+      const catResult = { groups: sorted };
+      _groupCache.set(catCacheKey, { data: catResult, ts: Date.now() });
+      return res.status(200).json(catResult);
 
     } catch (err) {
       console.error('[analyze GET]', err.message);
@@ -1018,6 +1037,27 @@ Respond ONLY with valid JSON, no markdown:
     const category        = _sanitize(rawCategory, 50);
 
     if (!topic) return res.status(400).json({ error: 'No topic provided' });
+
+    // ── Response cache: return saved analysis if same topic was generated recently ──
+    if (supabase) {
+      try {
+        const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
+        const { data: cached } = await supabase
+          .from('predictions')
+          .select('id, analysis, winner_tickers, loser_tickers')
+          .eq('topic', topic)
+          .gte('created_at', twoHoursAgo)
+          .not('analysis', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cached?.analysis?.direction) {
+          const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
+          const snapshot = cachedTickers.length ? await _fetchTickerSnapshot(cachedTickers) : {};
+          return res.status(200).json({ ...cached.analysis, predictionId: cached.id, predictionSaved: true, technicalSnapshot: snapshot, sources, _cached: true });
+        }
+      } catch (_) { /* cache miss — fall through to generation */ }
+    }
 
     try {
       const candidateTickers = _extractTickerCandidates(headlines);

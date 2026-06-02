@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForChat } from '../lib/context-graph.js';
 
+// Module-level headline cache — shared across warm invocations, 5-min TTL
+const _headlineCache = new Map();
+
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICEKEY;
@@ -63,8 +66,12 @@ RULES:
 - Use markdown formatting: **bold** for key terms, bullet points for lists, numbered lists for steps. NEVER use # or ## headings — this is a chat interface, not a document. Use **bold** instead of headings to label sections.
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.`;
 
-// Fetch live headlines for a given query from Google News RSS
+// Fetch live headlines for a given query from Google News RSS (5-min cache)
 async function fetchLiveHeadlines(query) {
+  const cacheKey = query.slice(0, 120);
+  const cached = _headlineCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 300000) return cached.headlines;
+
   const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 5000);
@@ -86,6 +93,7 @@ async function fetchLiveHeadlines(query) {
         if (title.length > 15) headlines.push(`- "${title}"${source ? ` — ${source}` : ''}${pub ? ` (${pub})` : ''}`);
       }
     }
+    _headlineCache.set(cacheKey, { headlines, ts: Date.now() });
     return headlines;
   } catch (e) {
     clearTimeout(t);
@@ -161,7 +169,8 @@ export default async function handler(req, res) {
   }
 
   const pageDesc = PAGE_DESCRIPTIONS[pageContext] || PAGE_DESCRIPTIONS.general;
-  const contextualSystem = `${SYSTEM_PROMPT}\n\nCURRENT PAGE CONTEXT: ${pageDesc}${liveContext}`;
+  // Split into static (cacheable) + dynamic parts so Anthropic caches the large static prompt
+  const dynamicContext = `\n\nCURRENT PAGE CONTEXT: ${pageDesc}${liveContext}`;
 
   const trimmed = messages.slice(-12).map(m => ({
     role: m.role === 'user' ? 'user' : 'assistant',
@@ -174,15 +183,19 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'prompt-caching-2024-07-31',
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 800,
-        system: contextualSystem,
-        messages: trimmed
+        system: [
+          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: dynamicContext },
+        ],
+        messages: trimmed,
       }),
-      signal: AbortSignal.timeout(30000)
+      signal: AbortSignal.timeout(30000),
     });
 
     const data = await response.json();
