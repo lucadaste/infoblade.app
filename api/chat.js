@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildContextGraph, formatContextForChat } from '../lib/context-graph.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -92,6 +93,17 @@ async function fetchLiveHeadlines(query) {
   }
 }
 
+// Extract ticker symbols mentioned in a message ($NVDA, (NVDA), or plain NVDA 2–5 caps)
+function extractTickers(text) {
+  const matches = [
+    ...text.matchAll(/\$([A-Z]{1,5})\b/g),
+    ...text.matchAll(/\(([A-Z]{2,5})\)/g),
+    ...text.matchAll(/\b([A-Z]{2,5})\b/g),
+  ];
+  const exclude = new Set(['AI', 'US', 'UK', 'EU', 'GDP', 'CPI', 'IPO', 'ETF', 'SEC', 'FED', 'CEO', 'CFO', 'USD', 'EUR']);
+  return [...new Set(matches.map(m => m[1]).filter(t => !exclude.has(t)))].slice(0, 10);
+}
+
 // Detect if the message is asking about market news/stocks (vs site functionality)
 function isMarketQuestion(text) {
   const lower = text.toLowerCase();
@@ -130,14 +142,22 @@ export default async function handler(req, res) {
 
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
 
-  // Fetch live headlines in parallel if the question is market-related
+  // Fetch live headlines + context graph in parallel when market-related
+  const mentionedTickers = extractTickers(lastUserMsg);
   let liveContext = '';
   if (isMarketQuestion(lastUserMsg)) {
     const query = lastUserMsg.slice(0, 120) + ' stock market';
-    const headlines = await fetchLiveHeadlines(query);
+    const [headlines, contextGraph] = await Promise.all([
+      fetchLiveHeadlines(query),
+      supabase && mentionedTickers.length
+        ? buildContextGraph(supabase, { tickers: mentionedTickers }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
     if (headlines.length > 0) {
       liveContext = `\n\nLIVE NEWS HEADLINES (fetched right now from Google News — use these to answer the user's question):\n${headlines.join('\n')}\n\nAnalyze the above headlines and use them as the basis for your response. Identify which stocks, sectors, or ETFs are affected and explain the market implications.`;
     }
+    const trackRecord = formatContextForChat(contextGraph);
+    if (trackRecord) liveContext += trackRecord;
   }
 
   const pageDesc = PAGE_DESCRIPTIONS[pageContext] || PAGE_DESCRIPTIONS.general;

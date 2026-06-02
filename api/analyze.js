@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 
 // ── Ticker blurb cache (module-level, survives warm invocations) ──────────────
 const _blurbCache = new Map();
@@ -1021,7 +1022,7 @@ Respond ONLY with valid JSON, no markdown:
     try {
       const candidateTickers = _extractTickerCandidates(headlines);
       const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-      const [relevantMarkets, technicalSnapshot, redditPosts, reputation] = await Promise.all([
+      const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph] = await Promise.all([
         _fetchRelevantMarkets(topic),
         _fetchTickerSnapshot(candidateTickers),
         _fetchRedditSentiment(topic, isCryptoTopic),
@@ -1033,7 +1034,10 @@ Respond ONLY with valid JSON, no markdown:
                 return map;
               })
               .catch(() => ({}))
-          : Promise.resolve({})
+          : Promise.resolve({}),
+        supabase
+          ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
+          : Promise.resolve(null),
       ]);
 
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
@@ -1048,6 +1052,8 @@ Respond ONLY with valid JSON, no markdown:
       const redditSection = redditPosts.length
         ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
         : '';
+
+      const trackRecordSection = formatContextForPrompt(contextGraph);
 
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
 
@@ -1066,7 +1072,7 @@ Use weighted source consensus to shape the prediction:
 Only include sources that meet the selected factuality threshold for the final prediction.
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${redditSection}
+${marketsSection}${technicalSection}${redditSection}${trackRecordSection}
 Only use ${thresholdText} for this analysis.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
