@@ -87,7 +87,8 @@ export default async function handler(req, res) {
     // Top tickers by win rate (min 3 appearances)
     const tickerStats = {};
     for (const p of validated ?? []) {
-      for (const t of p.winner_tickers || []) {
+      const allPredTickers = [...new Set([...(p.winner_tickers || []), ...(p.loser_tickers || [])])];
+      for (const t of allPredTickers) {
         if (!tickerStats[t]) tickerStats[t] = { wins: 0, total: 0 };
         tickerStats[t].total++;
         if (p.correct) tickerStats[t].wins++;

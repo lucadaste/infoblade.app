@@ -15,6 +15,14 @@ function _setCors(res) {
   res.setHeader('Vary', 'Origin');
 }
 
+function _letterGrade(score) {
+  if (score >= 80) return 'A';
+  if (score >= 65) return 'B';
+  if (score >= 50) return 'C';
+  if (score >= 35) return 'D';
+  return 'F';
+}
+
 async function _fetchCurrentPrices(tickers) {
   if (!tickers.length) return {};
   try {
@@ -97,7 +105,7 @@ export default async function handler(req, res) {
     // Fetch predictions past their validation date with no outcome yet
     const { data: pending, error: fetchErr } = await supabase
       .from('predictions')
-      .select('id, topic, sources, winner_tickers, loser_tickers, baseline_prices, validation_date')
+      .select('id, topic, sources, winner_tickers, loser_tickers, baseline_prices, validation_date, analysis, category')
       .is('correct', null)
       .lte('validation_date', now.toISOString())
       .not('baseline_prices', 'is', null);
@@ -120,14 +128,34 @@ export default async function handler(req, res) {
     const results = [];
 
     for (const p of ready) {
-      const scores = _scoreDirections(p.winner_tickers || [], p.loser_tickers || [], p.baseline_prices, currentPrices);
-      const total = scores.correct + scores.incorrect;
-      if (total === 0) continue;
-
-      const correct = scores.correct / total >= 0.6;
+      const predTickers = (p.winner_tickers || []).concat(p.loser_tickers || []);
       const relevantPrices = Object.fromEntries(
-        Object.entries(currentPrices).filter(([t]) => allTickers.includes(t) && (p.winner_tickers || []).concat(p.loser_tickers || []).includes(t))
+        Object.entries(currentPrices).filter(([t]) => predTickers.includes(t))
       );
+
+      // Per-ticker moves (consistent with resolve-predictions.js)
+      const tickerMoves = {};
+      for (const t of p.winner_tickers || []) {
+        if (!p.baseline_prices[t] || !currentPrices[t]) continue;
+        const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
+        tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5 };
+      }
+      for (const t of p.loser_tickers || []) {
+        if (!p.baseline_prices[t] || !currentPrices[t]) continue;
+        const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
+        tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5 };
+      }
+
+      const gradedCount = Object.keys(tickerMoves).length;
+      if (gradedCount === 0) continue;
+
+      const correctCount = Object.values(tickerMoves).filter(m => m.correct).length;
+      const score = Math.round(correctCount / gradedCount * 100);
+      const correct = score >= 60;
+      const grade = _letterGrade(score);
+
+      // Keep legacy scores for notes
+      const scores = _scoreDirections(p.winner_tickers || [], p.loser_tickers || [], p.baseline_prices, currentPrices);
 
       const { error: updateErr } = await supabase
         .from('predictions')
@@ -135,14 +163,20 @@ export default async function handler(req, res) {
           correct,
           validated_at: now.toISOString(),
           actual_prices: relevantPrices,
-          notes: { scores, method: 'auto' }
+          notes: { scores, method: 'auto' },
+          analysis: {
+            ...(p.analysis || {}),
+            grade,
+            score,
+            ticker_moves: tickerMoves,
+          },
         })
         .eq('id', p.id);
 
       if (updateErr) { console.error('Update error for', p.id, updateErr.message); continue; }
 
       validatedCount++;
-      results.push({ id: p.id, topic: p.topic, correct, scores });
+      results.push({ id: p.id, topic: p.topic, correct, grade, score, scores });
     }
 
     // ── Update source_reputation ─────────────────────────────────────────────
