@@ -427,7 +427,7 @@
     btn.disabled = true;
     status.textContent = 'Checking…';
     try {
-      const r = await fetch(window.API_BASE + '/api/resolve-predictions');
+      const r = await fetch(window.API_BASE + '/api/predictions?resolve=true');
       const d = await r.json();
       const count = d.resolved ?? 0;
       status.textContent = count > 0 ? `${count} prediction${count > 1 ? 's' : ''} resolved` : 'Nothing new to resolve';

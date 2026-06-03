@@ -1827,7 +1827,7 @@
       const winners = analysis.winners?.tickers || [];
       const losers  = analysis.losers?.tickers  || [];
       if (!winners.length && !losers.length) return;
-      fetch(window.API_BASE + '/api/save-prediction', {
+      fetch(window.API_BASE + '/api/predictions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
