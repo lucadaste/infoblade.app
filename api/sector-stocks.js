@@ -90,14 +90,35 @@ async function _fetchFromYahoo(symbols) {
 }
 
 async function _fetchPrices(symbols) {
-  // Try Robinhood first — no auth required, reliable server-side
-  try {
-    const map = await _fetchFromRobinhood(symbols);
-    const hits = Object.values(map).filter(v => v.price != null).length;
-    if (hits >= Math.min(3, Math.ceil(symbols.length * 0.15))) return map;
-  } catch (_) {}
-  // Fall back to Yahoo Finance with crumb authentication
-  return _fetchFromYahoo(symbols);
+  const indices = symbols.filter(s => s.startsWith('^'));
+  const regular = symbols.filter(s => !s.startsWith('^'));
+
+  let map = {};
+
+  // Regular symbols: try Robinhood first, fall back to Yahoo
+  if (regular.length) {
+    try {
+      const rbMap = await _fetchFromRobinhood(regular);
+      const hits = Object.values(rbMap).filter(v => v.price != null).length;
+      if (hits >= Math.min(3, Math.ceil(regular.length * 0.15))) {
+        map = rbMap;
+      } else {
+        map = await _fetchFromYahoo(regular);
+      }
+    } catch (_) {
+      map = await _fetchFromYahoo(regular);
+    }
+  }
+
+  // Index symbols (^GSPC etc): always use Yahoo Finance — Robinhood doesn't support them
+  if (indices.length) {
+    try {
+      const idxMap = await _fetchFromYahoo(indices);
+      Object.assign(map, idxMap);
+    } catch (_) {}
+  }
+
+  return map;
 }
 
 export default async function handler(req, res) {
