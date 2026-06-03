@@ -260,8 +260,7 @@
       <div id="auth-badge"></div>
       <div class="nav-buttons">
         <a class="nav-cta" href="#" id="signup-btn">Let's Begin !</a>
-        <a href="#" id="auth-signin-nav" style="display:none;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;" onclick="event.preventDefault();document.getElementById('signup-modal').classList.add('open');_openTab('signin');">Sign in</a>
-      </div>
+        </div>
       <div class="nav-menu-wrap">
         <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
         <div id="nav-menu">
@@ -700,16 +699,6 @@
     </div>
   </nav>
   <script src="/auth.js"></script>
-  <script>
-  // Hide "Let's Begin!" when user is logged in; show auth badge
-  (function poll() {
-    if (!window._auth) { setTimeout(poll, 100); return; }
-    window._auth.onReady(function(user) {
-      var ctaBtn = document.getElementById('signup-btn');
-      if (user && ctaBtn) ctaBtn.style.display = 'none';
-    });
-  })();
-  </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>
