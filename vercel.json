@@ -1,6 +1,6 @@
 {
-  "buildCommand": "",
-  "outputDirectory": ".",
+  "buildCommand": "bash scripts/build-www.sh",
+  "outputDirectory": "www",
   "crons": [
     {
       "path": "/api/validate",
