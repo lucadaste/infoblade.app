@@ -1,5 +1,6 @@
 {
   "buildCommand": "",
+  "outputDirectory": ".",
   "crons": [
     {
       "path": "/api/validate",
