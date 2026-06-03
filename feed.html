@@ -384,8 +384,8 @@
       <span class="pmode-desc">AI scans global news by sector: macro, tech, energy, financials and more</span>
     </button>
     <button class="pmode-tab" id="pmode-stocks" onclick="setMode('stocks')">
-      <span class="pmode-title">Individual Stocks</span>
-      <span class="pmode-desc">Pick any stock for a full AI breakdown of how today's news affects it</span>
+      <span class="pmode-title">Individual Stocks & ETFs</span>
+      <span class="pmode-desc">Pick any stock or ETF for a full AI breakdown of how today's news affects it</span>
     </button>
   </div>
 
@@ -647,7 +647,7 @@
       {s:'GLD',n:'SPDR Gold ETF'},{s:'SLV',n:'iShares Silver ETF'},{s:'GDX',n:'VanEck Gold Miners'},
       {s:'BAC',n:'Bank of America'},{s:'GS',n:'Goldman Sachs'},{s:'MS',n:'Morgan Stanley'},
       {s:'KRE',n:'Regional Banking ETF'},{s:'VNQ',n:'Vanguard Real Estate ETF'},
-      {s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
+      {s:'^GSPC',n:'S&P 500 Index'},{s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
       {s:'TLT',n:'iShares 20yr Treasury'},{s:'COIN',n:'Coinbase Global'},
       {s:'DAL',n:'Delta Air Lines'},{s:'UAL',n:'United Airlines'},{s:'AAL',n:'American Airlines'},
       {s:'UPS',n:'United Parcel Service'},{s:'FDX',n:'FedEx Corp.'},
@@ -676,7 +676,7 @@
     })();
 
     const SECTOR_STOCKS = {
-      'any':             [['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['AMZN','Amazon'],['META','Meta'],['TSLA','Tesla'],['AVGO','Broadcom'],['ORCL','Oracle'],['AMD','AMD'],['CRM','Salesforce'],['INTC','Intel'],['QCOM','Qualcomm'],['AMAT','Applied Materials'],['MU','Micron'],['NOW','ServiceNow'],['PANW','Palo Alto Networks'],['INTU','Intuit'],['ADBE','Adobe'],['SNOW','Snowflake'],['PLTR','Palantir'],['UBER','Uber'],['JPM','JPMorgan Chase'],['BAC','Bank of America'],['GS','Goldman Sachs'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo'],['AXP','American Express'],['BLK','BlackRock'],['C','Citigroup'],['SCHW','Charles Schwab'],['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher'],['AMGN','Amgen'],['GILD','Gilead Sciences'],['ISRG','Intuitive Surgical'],['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['WMT','Walmart'],['COST','Costco'],['MCD',"McDonald's"],['SBUX','Starbucks'],['NKE','Nike'],['TGT','Target'],['HD','Home Depot'],['KO','Coca-Cola'],['PEP','PepsiCo'],['PG','Procter & Gamble'],['LULU','Lululemon'],['NFLX','Netflix'],['DIS','Disney'],['SPOT','Spotify'],['CMCSA','Comcast'],['T','AT&T'],['VZ','Verizon'],['SNAP','Snap'],['GE','GE Aerospace'],['CAT','Caterpillar'],['RTX','RTX Corporation'],['LMT','Lockheed Martin'],['BA','Boeing'],['NOC','Northrop Grumman'],['HON','Honeywell'],['DE','John Deere'],['SHOP','Shopify'],['MELI','MercadoLibre'],['SQ','Block'],['ABNB','Airbnb'],['RBLX','Roblox'],['PINS','Pinterest'],['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['GLD','Gold ETF'],['SLV','Silver ETF'],['TLT','20yr Treasury ETF'],['XLE','Energy ETF'],['XLF','Financials ETF'],['XLK','Tech ETF'],['XLV','Healthcare ETF'],['IBIT','iShares Bitcoin ETF'],['GDX','Gold Miners ETF'],['VNQ','Real Estate ETF'],['HYG','High Yield Bond ETF']],
+      'any':             [['^GSPC','S&P 500 Index'],['SPY','S&P 500 ETF'],['QQQ','Nasdaq 100 ETF'],['IWM','Russell 2000 ETF'],['DIA','Dow Jones ETF'],['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['AMZN','Amazon'],['META','Meta'],['TSLA','Tesla'],['AVGO','Broadcom'],['ORCL','Oracle'],['AMD','AMD'],['CRM','Salesforce'],['INTC','Intel'],['QCOM','Qualcomm'],['AMAT','Applied Materials'],['MU','Micron'],['NOW','ServiceNow'],['PANW','Palo Alto Networks'],['INTU','Intuit'],['ADBE','Adobe'],['SNOW','Snowflake'],['PLTR','Palantir'],['UBER','Uber'],['JPM','JPMorgan Chase'],['BAC','Bank of America'],['GS','Goldman Sachs'],['MS','Morgan Stanley'],['V','Visa'],['MA','Mastercard'],['WFC','Wells Fargo'],['AXP','American Express'],['BLK','BlackRock'],['C','Citigroup'],['SCHW','Charles Schwab'],['UNH','UnitedHealth Group'],['LLY','Eli Lilly'],['JNJ','Johnson & Johnson'],['ABBV','AbbVie'],['PFE','Pfizer'],['MRK','Merck'],['TMO','Thermo Fisher'],['AMGN','Amgen'],['GILD','Gilead Sciences'],['ISRG','Intuitive Surgical'],['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['WMT','Walmart'],['COST','Costco'],['MCD',"McDonald's"],['SBUX','Starbucks'],['NKE','Nike'],['TGT','Target'],['HD','Home Depot'],['KO','Coca-Cola'],['PEP','PepsiCo'],['PG','Procter & Gamble'],['LULU','Lululemon'],['NFLX','Netflix'],['DIS','Disney'],['SPOT','Spotify'],['CMCSA','Comcast'],['T','AT&T'],['VZ','Verizon'],['SNAP','Snap'],['GE','GE Aerospace'],['CAT','Caterpillar'],['RTX','RTX Corporation'],['LMT','Lockheed Martin'],['BA','Boeing'],['NOC','Northrop Grumman'],['HON','Honeywell'],['DE','John Deere'],['SHOP','Shopify'],['MELI','MercadoLibre'],['SQ','Block'],['ABNB','Airbnb'],['RBLX','Roblox'],['PINS','Pinterest'],['COIN','Coinbase'],['MSTR','MicroStrategy'],['MARA','MARA Holdings'],['RIOT','Riot Platforms'],['GLD','Gold ETF'],['SLV','Silver ETF'],['TLT','20yr Treasury ETF'],['XLE','Energy ETF'],['XLF','Financials ETF'],['XLK','Tech ETF'],['XLV','Healthcare ETF'],['IBIT','iShares Bitcoin ETF'],['GDX','Gold Miners ETF'],['VNQ','Real Estate ETF'],['HYG','High Yield Bond ETF']],
       'macro':           [['TLT','20yr Treasury ETF'],['GLD','Gold ETF'],['HYG','High Yield Bond ETF'],['UUP','US Dollar ETF'],['BND','Total Bond ETF'],['SHY','1-3yr Treasury ETF'],['IEF','7-10yr Treasury ETF'],['LQD','Corp Bond ETF']],
       'technology':      [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','Nvidia'],['GOOGL','Alphabet'],['META','Meta'],['AMZN','Amazon'],['AMD','AMD'],['AVGO','Broadcom'],['ORCL','Oracle'],['CRM','Salesforce'],['INTC','Intel'],['QCOM','Qualcomm'],['AMAT','Applied Materials'],['MU','Micron'],['NOW','ServiceNow'],['PANW','Palo Alto Networks'],['INTU','Intuit'],['ADBE','Adobe'],['PLTR','Palantir'],['SNOW','Snowflake']],
       'energy':          [['XOM','ExxonMobil'],['CVX','Chevron'],['COP','ConocoPhillips'],['OXY','Occidental Petroleum'],['SLB','SLB'],['XLE','Energy ETF'],['HAL','Halliburton'],['MRO','Marathon Oil'],['PSX','Phillips 66'],['VLO','Valero Energy']],
@@ -837,7 +837,7 @@
       grid.innerHTML = stocks.map(([sym, name], i) => `
         <div class="coin-card" style="animation-delay:${i*40}ms">
           <div class="coin-top">
-            <div class="coin-logo-placeholder">${esc(sym.slice(0,3))}</div>
+            <div class="coin-logo-placeholder">${esc((sym.startsWith('^')?sym.slice(1):sym).slice(0,3))}</div>
             <div>
               <div class="coin-name">${esc(name)}</div>
               <div class="coin-symbol">${esc(sym)}</div>
@@ -869,7 +869,7 @@
           card._tickerData = td || null;
           card.innerHTML = `
             <div class="coin-top">
-              <div class="coin-logo-placeholder">${esc(sym.slice(0,3))}</div>
+              <div class="coin-logo-placeholder">${esc((sym.startsWith('^')?sym.slice(1):sym).slice(0,3))}</div>
               <div>
                 <div class="coin-name">${esc(name)}</div>
                 <div class="coin-symbol">${esc(sym)}</div>

@@ -209,7 +209,7 @@
     </div>
 
     <div class="wl-section" id="ticker-section" style="display:none">
-      <div class="wl-label">Stocks <span class="wl-count" id="ticker-count">0</span></div>
+      <div class="wl-label">Stocks & ETFs <span class="wl-count" id="ticker-count">0</span></div>
       <div class="chip-list" id="ticker-chips"></div>
     </div>
 
@@ -279,7 +279,7 @@
       {s:'DIS',n:'Disney'},{s:'LMT',n:'Lockheed Martin'},{s:'RTX',n:'RTX Corporation'},
       {s:'COIN',n:'Coinbase'},{s:'MSTR',n:'MicroStrategy'},{s:'MARA',n:'MARA Holdings'},
       {s:'GLD',n:'Gold ETF'},{s:'SLV',n:'Silver ETF'},{s:'TLT',n:'20yr Treasury ETF'},
-      {s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
+      {s:'^GSPC',n:'S&P 500 Index'},{s:'SPY',n:'S&P 500 ETF'},{s:'QQQ',n:'Nasdaq 100 ETF'},{s:'IWM',n:'Russell 2000 ETF'},
       {s:'IBIT',n:'iShares Bitcoin ETF'},{s:'SHOP',n:'Shopify'},{s:'ABNB',n:'Airbnb'},
       {s:'UBER',n:'Uber'},{s:'SNOW',n:'Snowflake'},{s:'CRM',n:'Salesforce'},
     ];
@@ -346,8 +346,8 @@
     }
 
     function addTicker(t) {
-      t = t.toUpperCase().trim().replace(/[^A-Z.]/g, '');
-      if (!t || t.length > 6) return;
+      t = t.toUpperCase().trim().replace(/[^A-Z.^]/g, '');
+      if (!t || t.length > 7) return;
       const wl = getWL();
       if (!wl.tickers) wl.tickers = [];
       if (!wl.tickers.includes(t)) { wl.tickers.push(t); saveWL(wl); }
