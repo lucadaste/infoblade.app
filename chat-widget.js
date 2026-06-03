@@ -23,10 +23,10 @@
   style.textContent = `
     #ii-ai-panel {
       position: fixed;
-      top: 65px;
-      right: 48px;
+      bottom: 84px;
+      right: 28px;
       width: min(360px, calc(100vw - 32px));
-      max-height: min(540px, calc(100vh - 80px));
+      max-height: min(540px, calc(100vh - 120px));
       background: #141414;
       z-index: 9998;
       display: flex;
@@ -35,8 +35,8 @@
       border: 1px solid #282828;
       box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
       opacity: 0;
-      transform: translateY(-6px) scale(0.97);
-      transform-origin: top right;
+      transform: translateY(6px) scale(0.97);
+      transform-origin: bottom right;
       pointer-events: none;
       transition: opacity 0.18s cubic-bezier(0.4,0,0.2,1), transform 0.18s cubic-bezier(0.4,0,0.2,1);
     }
@@ -45,6 +45,51 @@
       transform: translateY(0) scale(1);
       pointer-events: auto;
     }
+
+    #ii-chat-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      z-index: 9997;
+      background: #111111;
+      color: #e8e6e0;
+      font-family: 'Share Tech Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.3px;
+      padding: 12px 22px;
+      border-radius: 50px;
+      border: none;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      isolation: isolate;
+      transition: color 0.2s;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    #ii-chat-btn::before {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) rotate(0deg);
+      background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg);
+      animation: ii-spin 2.8s linear infinite;
+      z-index: -1;
+    }
+    #ii-chat-btn::after {
+      content: '';
+      position: absolute;
+      inset: 1.5px;
+      background: #111111;
+      border-radius: 48px;
+      z-index: -1;
+      transition: background 0.2s;
+    }
+    #ii-chat-btn:hover::after { background: #1a1a1a; }
+    #ii-chat-btn.active { color: #00e676; }
+    #ii-chat-btn.active::after { background: #181818; }
+    @keyframes ii-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
     .ii-ph {
       background: #1c1c1c;
@@ -220,7 +265,8 @@
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
 
     @media (max-width: 768px) {
-      #ii-ai-panel { top: 60px; right: 16px; }
+      #ii-ai-panel { bottom: 80px; right: 16px; }
+      #ii-chat-btn { bottom: 20px; right: 16px; padding: 11px 18px; font-size: 12px; }
     }
   `;
   document.head.appendChild(style);
@@ -245,6 +291,14 @@
     </div>
   `;
   document.body.appendChild(panel);
+
+  // Floating trigger button
+  const floatBtn = document.createElement('button');
+  floatBtn.id = 'ii-chat-btn';
+  floatBtn.setAttribute('aria-label', 'AI Chat');
+  floatBtn.textContent = '✦ AI Chat';
+  floatBtn.addEventListener('click', () => window.iiToggleChat?.());
+  document.body.appendChild(floatBtn);
 
   // Starters
   const startersEl = document.getElementById('ii-starters');
