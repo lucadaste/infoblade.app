@@ -6,14 +6,14 @@
   <title>infoblade | Privacy Policy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Share+Tech&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700&family=DM+Sans:wght@300;400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.7; padding-top: env(safe-area-inset-top, 0px); }
 
     nav { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
-    .nav-logo { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
+    .nav-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
     .nav-logo span { color: var(--accent); }
 
     .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
@@ -53,10 +53,10 @@
 </div>
 
 <div class="content">
-  <p class="updated">Last updated: May 24, 2025</p>
+  <p class="updated">Last updated: June 3, 2026</p>
 
   <div class="highlight">
-    <p><strong>The short version:</strong> We do not create user accounts, collect your name or email, or sell any data. We collect minimal technical information solely to keep the service running reliably.</p>
+    <p><strong>The short version:</strong> We offer optional user accounts (email and password only). We never sell or share your personal data with third parties. You can delete your account at any time.</p>
   </div>
 
   <h2>Who we are</h2>
@@ -64,47 +64,53 @@
 
   <h2>Information we collect</h2>
 
-  <h2 style="font-size:15px;margin-top:20px">1. IP addresses (automatic, temporary)</h2>
-  <p>When you use our service, your IP address is temporarily stored for rate limiting purposes, to prevent abuse and ensure fair access for all users. This data is automatically deleted on a rolling basis and is never used to identify you personally or shared with third parties.</p>
+  <h2 style="font-size:15px;margin-top:20px">1. Account data (optional)</h2>
+  <p>Creating an account is entirely optional. If you do create one, we store your email address and a securely hashed password. We never store plaintext passwords. Your email is used solely for authentication and password recovery — never for marketing.</p>
 
-  <h2 style="font-size:15px;margin-top:20px">2. Usage analytics (anonymous)</h2>
+  <h2 style="font-size:15px;margin-top:20px">2. Watchlist (account holders)</h2>
+  <p>If you have an account, your watchlist is synced to our secure database so it persists across devices. Without an account, watchlist data is stored locally in your browser's localStorage and never transmitted to our servers.</p>
+
+  <h2 style="font-size:15px;margin-top:20px">3. IP addresses (automatic, temporary)</h2>
+  <p>Your IP address is temporarily stored for rate limiting purposes, to prevent abuse and ensure fair access for all users. This data is automatically purged on a rolling basis and is never used to identify you personally or shared with third parties.</p>
+
+  <h2 style="font-size:15px;margin-top:20px">4. Usage analytics (anonymous)</h2>
   <p>We use Google Analytics to understand how the app is used in aggregate: which pages are visited, how often features are used, and general usage patterns. Google Analytics collects anonymized data including approximate location (country/city level), device type, and page interaction events. This data is never linked to any personal identity.</p>
   <p>You can opt out of Google Analytics tracking at any time using the <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">Google Analytics Opt-out Browser Add-on</a>.</p>
 
-  <h2 style="font-size:15px;margin-top:20px">3. Watchlist (stored on your device only)</h2>
-  <p>If you use the watchlist feature to save tickers, that data is stored locally on your device using your browser's localStorage. It never leaves your device and is never transmitted to our servers.</p>
-
-  <h2 style="font-size:15px;margin-top:20px">4. AI analysis requests</h2>
-  <p>When you request an analysis, the news topic and associated headlines are sent to our AI provider (Anthropic) to generate the analysis. No personal information is included in these requests. Anthropic's privacy policy governs their handling of this data: <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">anthropic.com/privacy</a>.</p>
+  <h2 style="font-size:15px;margin-top:20px">5. AI analysis requests</h2>
+  <p>When you use AI Chat, the content of your query and relevant context are sent to our AI provider (Anthropic) to generate a response. No personal information is included in these requests. Anthropic's privacy policy governs their handling of this data: <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">anthropic.com/privacy</a>.</p>
 
   <h2>Information we do NOT collect</h2>
   <ul>
-    <li>Your name, email address, or any account credentials</li>
+    <li>Your name, physical address, or phone number</li>
     <li>Financial account information or investment history</li>
     <li>Precise location data</li>
     <li>Payment information</li>
     <li>Any data from your contacts, camera, or microphone</li>
+    <li>Any data sold or shared with advertisers or data brokers</li>
   </ul>
 
   <h2>Third-party services</h2>
   <p>We use the following third-party services, each governed by their own privacy policies:</p>
   <ul>
     <li><strong>Anthropic</strong> — AI analysis engine. <a href="https://www.anthropic.com/privacy" target="_blank" rel="noopener">Privacy policy</a></li>
+    <li><strong>Supabase</strong> — Authentication and database infrastructure. Stores user accounts, watchlists, and application data. <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Privacy policy</a></li>
     <li><strong>Google Analytics</strong> — Anonymous usage analytics. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy policy</a></li>
-    <li><strong>Supabase</strong> — Database infrastructure (stores predictions and rate limit records). <a href="https://supabase.com/privacy" target="_blank" rel="noopener">Privacy policy</a></li>
     <li><strong>Vercel</strong> — Hosting and serverless infrastructure. <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener">Privacy policy</a></li>
     <li><strong>Yahoo Finance</strong> — Live stock price data. <a href="https://legal.yahoo.com/us/en/yahoo/privacy/index.html" target="_blank" rel="noopener">Privacy policy</a></li>
     <li><strong>Polymarket</strong> — Prediction market odds data. <a href="https://polymarket.com/privacy-policy" target="_blank" rel="noopener">Privacy policy</a></li>
   </ul>
 
   <h2>Data retention</h2>
-  <p>Rate limiting records (IP-based) are automatically purged on a rolling 60-second window. AI-generated market predictions are stored indefinitely for accuracy tracking purposes. These records contain no personal information.</p>
+  <p>Rate limiting records (IP-based) are automatically purged on a rolling basis. AI-generated market predictions are stored indefinitely for accuracy tracking purposes — these records contain no personal information.</p>
+  <p>Account data (email address and hashed password) and watchlist data are retained until you request deletion of your account.</p>
+
+  <h2>Your rights and account deletion</h2>
+  <p>If you have created an account, you have the right to request deletion of your account and all associated data (email, hashed password, watchlist). To do so, email us at <a href="mailto:sharedbuisness2024@gmail.com">sharedbuisness2024@gmail.com</a> and we will process your request within 30 days.</p>
+  <p>If you have not created an account, we hold no personal data tied to your identity. Any questions about IP-related data can also be directed to that address.</p>
 
   <h2>Children's privacy</h2>
-  <p>infoblade is not directed at children under 13 and we do not knowingly collect any information from children. If you believe a child has provided us with information, please contact us and we will delete it promptly.</p>
-
-  <h2>Your rights</h2>
-  <p>Since we do not collect personal information tied to an identity, there is no personal profile to access, correct, or delete. If you have questions about any data we may hold related to your IP address, contact us and we will respond within 30 days.</p>
+  <p>infoblade is not directed at children under 13 and we do not knowingly collect any information from children. If you believe a child has created an account or provided us with information, please contact us and we will delete it promptly.</p>
 
   <h2>Changes to this policy</h2>
   <p>We may update this policy as the service evolves. The "last updated" date at the top of this page will always reflect the most recent version. Continued use of the service after changes constitutes acceptance.</p>
