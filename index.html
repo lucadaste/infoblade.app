@@ -225,15 +225,6 @@
     .bn-item.active { color: var(--accent); }
     @media (max-width: 768px) { .bottom-nav { display: block; } body { padding-bottom: 72px; } }
 
-    /* Expandable explanation */
-    .expand-bar { padding: 48px 48px 0; display: flex; align-items: center; gap: 20px; }
-    @media (max-width: 768px) { .expand-bar { padding: 36px 24px 0; } }
-    .btn-expand { display: inline-flex; align-items: center; gap: 10px; background: none; border: 1.5px solid var(--border); color: var(--muted); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 12px 22px; border-radius: 4px; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
-    .btn-expand:hover { border-color: var(--ink); color: var(--ink); }
-    .btn-expand .expand-arrow { display: inline-block; transition: transform 0.3s ease; }
-    .btn-expand.open .expand-arrow { transform: rotate(180deg); }
-    #explanation { overflow: hidden; max-height: 0; transition: max-height 0.5s ease; }
-    #explanation.open { max-height: 9999px; }
   </style>
 </head>
 <body>
@@ -293,11 +284,6 @@
     </div>
   </div>
 
-  <div class="expand-bar">
-    <button class="btn-expand" id="expand-btn" onclick="toggleExplanation()">How it works <span class="expand-arrow">&#8964;</span></button>
-  </div>
-
-  <div id="explanation">
   <div class="platform-header fade-in">
     <div class="section-label">The platform</div>
     <h2>Three tools. One pipeline.</h2>
@@ -544,8 +530,6 @@
     </div>
   </section>
 
-  </div><!-- /#explanation -->
-
   <div class="disclaimer">
     <strong style="color:#666;">Disclaimer:</strong> infoblade is an informational tool only. Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any security. All analysis is AI-generated based on publicly available information and is provided for educational and informational purposes only. Past patterns and historical precedents do not guarantee future market results. Always conduct your own research and consult a licensed financial advisor before making any investment decisions.
   </div>
@@ -565,19 +549,6 @@
       });
     }, { threshold: 0.12 });
     document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
-    function toggleExplanation() {
-      var btn = document.getElementById('expand-btn');
-      var box = document.getElementById('explanation');
-      var opening = !box.classList.contains('open');
-      box.classList.toggle('open');
-      btn.classList.toggle('open');
-      if (opening) {
-        box.querySelectorAll('.fade-in:not(.visible)').forEach(function(el) {
-          el.classList.add('visible');
-        });
-      }
-    }
 
   </script>
 
