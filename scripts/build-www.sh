@@ -17,6 +17,7 @@ cp "$ROOT/api-base.js"    "$WWW/"
 cp "$ROOT/offline.js"     "$WWW/"
 cp "$ROOT/onboarding.js"  "$WWW/"
 cp "$ROOT/chat-widget.js" "$WWW/"
+cp "$ROOT/auth.js"        "$WWW/"
 
 # Static data assets
 if [ -d "$ROOT/data" ]; then

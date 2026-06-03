@@ -1,8 +1,18 @@
-/**
- * auth.js — Supabase auth module loaded by all pages.
- * Exposes window._auth = { user, token, sb, signUp, signIn, signOut, onReady }
- */
 (async function () {
+  let _readyCallbacks = [];
+  let _ready = false;
+  let _currentUser = null;
+  let _currentToken = null;
+
+  function _fireReady() {
+    _ready = true;
+    _readyCallbacks.forEach(fn => fn(_currentUser, _currentToken));
+    _readyCallbacks = [];
+  }
+
+  function _noop() { return Promise.resolve({ error: { message: 'Auth unavailable' } }); }
+  function _noopReady(fn) { fn(null, null); }
+
   // Load Supabase JS from CDN
   if (!window.supabase) {
     await new Promise((resolve, reject) => {
@@ -30,14 +40,6 @@
     return;
   }
 
-  let _readyCallbacks = [];
-  let _ready = false;
-  let _currentUser = null;
-  let _currentToken = null;
-
-  function _noop() { return Promise.resolve({ error: { message: 'Auth unavailable' } }); }
-  function _noopReady(fn) { fn(null, null); }
-
   async function signUp(email, password) {
     const { data, error } = await sb.auth.signUp({ email, password });
     return { data, error };
@@ -57,19 +59,14 @@
     _readyCallbacks.push(fn);
   }
 
-  function _fireReady() {
-    _ready = true;
-    _readyCallbacks.forEach(fn => fn(_currentUser, _currentToken));
-    _readyCallbacks = [];
-  }
-
   function _updateUI(user, token) {
     _currentUser = user;
     _currentToken = token;
-    window._auth.user = user;
-    window._auth.token = token;
+    if (window._auth) {
+      window._auth.user = user;
+      window._auth.token = token;
+    }
 
-    // Update auth badge if present on this page
     const badge = document.getElementById('auth-badge');
     const signinLink = document.getElementById('auth-signin-nav');
     if (!badge) return;
@@ -90,13 +87,21 @@
 
   // Initialize session
   const { data: { session } } = await sb.auth.getSession();
-  _updateUI(session?.user ?? null, session?.access_token ?? null);
+  _currentUser = session?.user ?? null;
+  _currentToken = session?.access_token ?? null;
 
-  // Listen for changes
+  window._auth = { user: _currentUser, token: _currentToken, sb, signUp, signIn, signOut, onReady };
+
+  _updateUI(_currentUser, _currentToken);
+
+  // Listen for future auth state changes
   sb.auth.onAuthStateChange((_event, session) => {
     _updateUI(session?.user ?? null, session?.access_token ?? null);
+    if (window._auth) {
+      window._auth.user = _currentUser;
+      window._auth.token = _currentToken;
+    }
   });
 
-  window._auth = { get user() { return _currentUser; }, get token() { return _currentToken; }, sb, signUp, signIn, signOut, onReady };
   _fireReady();
 })();
