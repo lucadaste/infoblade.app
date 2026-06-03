@@ -22,14 +22,15 @@
     html { max-width: 100%; }
         body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
 
-    nav:not(.bottom-nav) { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; gap: 16px; }
-    .nav-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
+    nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100;  }
+    .nav-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); }
     .nav-logo span { color: var(--accent); }
-    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
+    .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; justify-content: center; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--accent); font-weight: 600; }
-    .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
+    .nav-buttons { display: flex; gap: 8px; }
+    .nav-right { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
     .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
     .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
     .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
@@ -207,10 +208,15 @@
       <li><a href="/watchlist.html">Watchlist</a></li>
       <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
+    <div class="nav-right">
+  
     <div class="nav-buttons">
       <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
     </div>
+  
     <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
+
+    </div>
   </nav>
   <script>
   (function(){
