@@ -139,7 +139,7 @@ export default async function handler(req, res) {
     'consumer':        ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
     'healthcare':      ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
     'defense':         ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
-    'crypto':          ['COIN','MSTR','MARA','RIOT','IBIT','FBTC','CLSK','WGMI','BITO'],
+    'etfs':            ['^GSPC','SPY','QQQ','IWM','DIA','VTI','GLD','SLV','GDX','TLT','SHY','HYG','LQD','XLE','XLF','XLK','XLV','XLI','IBIT','VNQ'],
   };
 
   const symbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
