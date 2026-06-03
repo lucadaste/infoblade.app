@@ -1,5 +1,5 @@
 {
-  "buildCommand": null,
+  "buildCommand": "",
   "crons": [
     {
       "path": "/api/validate",
