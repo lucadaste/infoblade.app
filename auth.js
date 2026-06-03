@@ -140,6 +140,9 @@
 
   sb.auth.onAuthStateChange((_event, session) => {
     _updateUI(session?.user ?? null, session?.access_token ?? null);
+    if (_event === 'PASSWORD_RECOVERY') {
+      document.dispatchEvent(new CustomEvent('ii-password-recovery'));
+    }
   });
 
   _fireReady();

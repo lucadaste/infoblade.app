@@ -617,6 +617,33 @@
           </div>
         </div>
         <button class="modal-submit" id="btn-signin">Sign In</button>
+        <p class="modal-footer-note" style="margin-top:14px"><a href="#" id="forgot-link">Forgot password?</a></p>
+      </div>
+
+      <!-- Reset password form -->
+      <div id="form-reset" style="display:none">
+        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Reset password</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter your email and we'll send a reset link.</p>
+        <div class="modal-field">
+          <label>Email</label>
+          <input type="email" id="reset-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <button class="modal-submit" id="btn-reset">Send Reset Link</button>
+        <p class="modal-footer-note" style="margin-top:16px"><a href="#" id="reset-back-btn">← Back to sign in</a></p>
+      </div>
+
+      <!-- New password form (shown after clicking reset email link) -->
+      <div id="form-newpass" style="display:none">
+        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Set new password</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Choose a new password for your account.</p>
+        <div class="modal-field">
+          <label>New Password</label>
+          <div class="pass-wrap">
+            <input type="password" id="newpass-input" placeholder="New password (min. 6 chars)" autocomplete="new-password" />
+            <button type="button" class="pass-eye" onclick="_togglePass('newpass-input',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </div>
+        </div>
+        <button class="modal-submit" id="btn-newpass">Set New Password</button>
       </div>
     </div>
   </div>
@@ -630,11 +657,16 @@
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   }
   function _openTab(tab) {
-    var isSignup = tab === 'signup';
-    document.getElementById('tab-signup').classList.toggle('active', isSignup);
-    document.getElementById('tab-signin').classList.toggle('active', !isSignup);
-    document.getElementById('form-signup').style.display = isSignup ? '' : 'none';
-    document.getElementById('form-signin').style.display = isSignup ? 'none' : '';
+    ['signup','signin','reset','newpass'].forEach(function(t) {
+      var el = document.getElementById('form-' + t);
+      if (el) el.style.display = (t === tab) ? '' : 'none';
+    });
+    var showTabs = (tab === 'signup' || tab === 'signin');
+    document.querySelector('.modal-tabs').style.display = showTabs ? '' : 'none';
+    if (showTabs) {
+      document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+      document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+    }
     _clearMsg();
   }
   function _setMsg(text, type) {
@@ -665,7 +697,7 @@
       var { error } = await auth.signUp(email, pass);
       this.disabled = false; this.textContent = 'Create Account';
       if (error) return _setMsg(error.message, 'error');
-      _setMsg('Account created! Check your email to confirm, then sign in.', 'success');
+      _setMsg('Account created! You can now sign in.', 'success');
     });
 
     document.getElementById('btn-signin').addEventListener('click', async function(){
@@ -680,6 +712,52 @@
       if (error) return _setMsg(error.message, 'error');
       overlay.classList.remove('open');
       _clearMsg();
+    });
+
+    // Forgot password link
+    document.getElementById('forgot-link').addEventListener('click', function(e) {
+      e.preventDefault();
+      var email = document.getElementById('signin-email').value;
+      _openTab('reset');
+      if (email) document.getElementById('reset-email').value = email;
+      setTimeout(function(){ document.getElementById('reset-email').focus(); }, 80);
+    });
+
+    document.getElementById('reset-back-btn').addEventListener('click', function(e) {
+      e.preventDefault();
+      _openTab('signin');
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', async function() {
+      var email = document.getElementById('reset-email').value.trim();
+      if (!email) return _setMsg('Please enter your email.', 'error');
+      this.disabled = true; this.textContent = 'Sending…';
+      var sb = window._auth?.sb;
+      if (!sb) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Send Reset Link'; return; }
+      var { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/' });
+      this.disabled = false; this.textContent = 'Send Reset Link';
+      if (error) return _setMsg(error.message, 'error');
+      _setMsg('Reset link sent! Check your inbox.', 'success');
+    });
+
+    document.getElementById('btn-newpass').addEventListener('click', async function() {
+      var pass = document.getElementById('newpass-input').value;
+      if (!pass || pass.length < 6) return _setMsg('Password must be at least 6 characters.', 'error');
+      this.disabled = true; this.textContent = 'Saving…';
+      var sb = window._auth?.sb;
+      if (!sb) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Set New Password'; return; }
+      var { error } = await sb.auth.updateUser({ password: pass });
+      this.disabled = false; this.textContent = 'Set New Password';
+      if (error) return _setMsg(error.message, 'error');
+      _setMsg('Password updated! You\'re now signed in.', 'success');
+      setTimeout(function(){ overlay.classList.remove('open'); _openTab('signin'); }, 1500);
+    });
+
+    // Open new-password form automatically when user arrives via a reset link
+    document.addEventListener('ii-password-recovery', function() {
+      overlay.classList.add('open');
+      _openTab('newpass');
+      setTimeout(function(){ document.getElementById('newpass-input')?.focus(); }, 80);
     });
 
     // Check URL param ?modal=signin
