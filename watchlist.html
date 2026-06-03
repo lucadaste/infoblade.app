@@ -147,6 +147,20 @@
     .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.3px; transition: color 0.15s; -webkit-tap-highlight-color: transparent; }
     .bn-item.active { color: var(--accent); }
     @media (max-width: 768px) { .bottom-nav { display: block; } body { padding-bottom: 72px; } }
+    /* Auth gate */
+    #auth-gate { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(17,17,17,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; flex-direction: column; gap: 20px; text-align: center; padding: 24px; }
+    #auth-gate.show { display: flex; }
+    #auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(20px, 4vw, 28px); letter-spacing: -0.5px; }
+    #auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
+    #auth-gate-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
+    #auth-gate-btn:hover { opacity: 0.85; }
+    /* Supabase sync indicator */
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 6px; opacity: 0.7; }
+    /* Auth badge in nav */
+    #auth-badge { display: none; align-items: center; gap: 8px; }
+    .auth-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: default; }
+    .auth-signout-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+    .auth-signout-btn:hover { color: var(--ink); }
   </style>
 </head>
 <body>
@@ -162,13 +176,12 @@
       <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
     <div class="nav-right">
-  
+    <div id="auth-badge"></div>
+    <a href="/?modal=signin" id="auth-signin-nav" style="display:none;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;">Sign in</a>
     <div class="nav-buttons">
       <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
     </div>
-  
     <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
-
     </div>
   </nav>
   <script>
@@ -511,6 +524,77 @@
       <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
+  <script src="/auth.js"></script>
+  <script>
+  // Supabase watchlist sync
+  (function () {
+    function poll() {
+      if (!window._auth) { setTimeout(poll, 100); return; }
+      window._auth.onReady(function (user) {
+        if (!user) { document.getElementById('auth-gate').classList.add('show'); return; }
+        _loadFromSupabase();
+      });
+    }
+    poll();
+
+    async function _api(method, type, body) {
+      const token = window._auth?.token;
+      if (!token) return null;
+      try {
+        const r = await fetch((window.API_BASE || '') + '/api/user-watchlist?type=' + type, {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+        return r.ok ? r.json() : null;
+      } catch (_) { return null; }
+    }
+
+    async function _loadFromSupabase() {
+      const [stocks, crypto] = await Promise.all([_api('GET', 'stocks'), _api('GET', 'crypto')]);
+      if (stocks?.symbols) {
+        const sectors = stocks.symbols.filter(s => s.startsWith('SECTOR:')).map(s => s.slice(7));
+        const tickers = stocks.symbols.filter(s => !s.startsWith('SECTOR:'));
+        localStorage.setItem('ii_watchlist', JSON.stringify({ sectors, tickers }));
+        window.renderStocks?.();
+      }
+      if (crypto?.symbols) {
+        localStorage.setItem('ii_crypto_watchlist', JSON.stringify(crypto.symbols));
+        window.renderCrypto?.();
+      }
+    }
+
+    // Patch saveWL to sync changes to Supabase
+    var _origSaveWL = window.saveWL;
+    window.saveWL = function (w) {
+      var old = getWL();
+      _origSaveWL(w);
+      if (!window._auth?.token) return;
+      var oldSet = new Set([...(old.sectors || []).map(s => 'SECTOR:' + s), ...(old.tickers || [])]);
+      var newSet = new Set([...(w.sectors || []).map(s => 'SECTOR:' + s), ...(w.tickers || [])]);
+      newSet.forEach(sym => { if (!oldSet.has(sym)) _api('POST', 'stocks', { symbol: sym }); });
+      oldSet.forEach(sym => { if (!newSet.has(sym)) _api('DELETE', 'stocks', { symbol: sym }); });
+    };
+
+    // Patch saveCryptoWL to sync changes to Supabase
+    var _origSaveCrypto = window.saveCryptoWL;
+    window.saveCryptoWL = function (c) {
+      var old = getCryptoWL();
+      _origSaveCrypto(c);
+      if (!window._auth?.token) return;
+      var oldSet = new Set(old), newSet = new Set(c);
+      newSet.forEach(sym => { if (!oldSet.has(sym)) _api('POST', 'crypto', { symbol: sym }); });
+      oldSet.forEach(sym => { if (!newSet.has(sym)) _api('DELETE', 'crypto', { symbol: sym }); });
+    };
+  })();
+  </script>
+
+  <div id="auth-gate">
+    <h2>Account required</h2>
+    <p>Your watchlist is tied to your infoblade account so it syncs across devices. Create a free profile or sign in to continue.</p>
+    <a href="/?modal=signin" id="auth-gate-btn">Sign in / Create profile</a>
+  </div>
+
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>

@@ -49,6 +49,17 @@
     .modal-submit:hover { opacity: 0.85; }
     .modal-footer-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
     .modal-footer-note a { color: var(--accent); text-decoration: none; }
+    .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 28px; gap: 0; }
+    .modal-tab { flex: 1; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 13px; font-weight: 700; padding: 10px 0; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
+    .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .modal-msg { font-size: 13px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: none; }
+    .modal-msg.error { background: rgba(255,82,82,0.12); color: #ff7070; border: 1px solid rgba(255,82,82,0.2); display: block; }
+    .modal-msg.success { background: rgba(0,230,118,0.1); color: var(--accent); border: 1px solid rgba(0,230,118,0.2); display: block; }
+    /* Auth badge in nav */
+    #auth-badge { display: none; align-items: center; gap: 8px; }
+    .auth-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: default; }
+    .auth-signout-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+    .auth-signout-btn:hover { color: var(--ink); }
     .hero { padding: 96px 48px 80px; max-width: 1440px; display: flex; align-items: center; gap: 80px; animation: fadeUp 0.7s ease both; }
     @media (prefers-reduced-motion: reduce) { .hero { animation: none; opacity: 1; } }
     .hero-left { flex: 1; min-width: 0; }
@@ -242,8 +253,10 @@
       <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">?</span></a></li>
     </ul>
     <div class="nav-right">
+      <div id="auth-badge"></div>
       <div class="nav-buttons">
         <a class="nav-cta" href="#" id="signup-btn">Let's Begin !</a>
+        <a href="#" id="auth-signin-nav" style="display:none;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;" onclick="event.preventDefault();document.getElementById('signup-modal').classList.add('open');_openTab('signin');">Sign in</a>
       </div>
       <div class="nav-menu-wrap">
         <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -565,29 +578,97 @@
   <div class="modal-overlay" id="signup-modal">
     <div class="modal-card">
       <button class="modal-close" id="modal-close">×</button>
-      <h2>Create your profile</h2>
-      <p>Unlock your watchlist, accuracy history, and AI chat.</p>
-      <div class="modal-field">
-        <label>Email</label>
-        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" />
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-signup" onclick="_openTab('signup')">Create Profile</button>
+        <button class="modal-tab" id="tab-signin" onclick="_openTab('signin')">Sign In</button>
       </div>
-      <div class="modal-field">
-        <label>Password</label>
-        <input type="password" id="signup-pass" placeholder="Choose a password" autocomplete="new-password" />
+      <div id="modal-msg" class="modal-msg"></div>
+
+      <!-- Sign-up form -->
+      <div id="form-signup">
+        <div class="modal-field">
+          <label>Email</label>
+          <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="modal-field">
+          <label>Password</label>
+          <input type="password" id="signup-pass" placeholder="Choose a password" autocomplete="new-password" />
+        </div>
+        <button class="modal-submit" id="btn-signup">Create Account</button>
       </div>
-      <button class="modal-submit" id="modal-submit">Create Account</button>
-      <div class="modal-footer-note">Already have an account? <a href="#">Sign in</a></div>
+
+      <!-- Sign-in form -->
+      <div id="form-signin" style="display:none">
+        <div class="modal-field">
+          <label>Email</label>
+          <input type="email" id="signin-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="modal-field">
+          <label>Password</label>
+          <input type="password" id="signin-pass" placeholder="Your password" autocomplete="current-password" />
+        </div>
+        <button class="modal-submit" id="btn-signin">Sign In</button>
+      </div>
     </div>
   </div>
   <script>
+  function _openTab(tab) {
+    var isSignup = tab === 'signup';
+    document.getElementById('tab-signup').classList.toggle('active', isSignup);
+    document.getElementById('tab-signin').classList.toggle('active', !isSignup);
+    document.getElementById('form-signup').style.display = isSignup ? '' : 'none';
+    document.getElementById('form-signin').style.display = isSignup ? 'none' : '';
+    _clearMsg();
+  }
+  function _setMsg(text, type) {
+    var el = document.getElementById('modal-msg');
+    el.textContent = text;
+    el.className = 'modal-msg ' + type;
+  }
+  function _clearMsg() {
+    var el = document.getElementById('modal-msg');
+    el.textContent = '';
+    el.className = 'modal-msg';
+  }
   (function(){
     var overlay = document.getElementById('signup-modal');
-    var openBtn = document.getElementById('signup-btn');
-    var closeBtn = document.getElementById('modal-close');
-    openBtn.addEventListener('click', function(e){ e.preventDefault(); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); });
-    closeBtn.addEventListener('click', function(){ overlay.classList.remove('open'); });
+    document.getElementById('signup-btn').addEventListener('click', function(e){ e.preventDefault(); _openTab('signup'); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); });
+    document.getElementById('modal-close').addEventListener('click', function(){ overlay.classList.remove('open'); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });
+
+    document.getElementById('btn-signup').addEventListener('click', async function(){
+      var email = document.getElementById('signup-email').value.trim();
+      var pass  = document.getElementById('signup-pass').value;
+      if (!email || !pass) return _setMsg('Please fill in all fields.', 'error');
+      if (pass.length < 6) return _setMsg('Password must be at least 6 characters.', 'error');
+      this.disabled = true; this.textContent = 'Creating…';
+      var auth = window._auth;
+      if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Create Account'; return; }
+      var { error } = await auth.signUp(email, pass);
+      this.disabled = false; this.textContent = 'Create Account';
+      if (error) return _setMsg(error.message, 'error');
+      _setMsg('Account created! Check your email to confirm, then sign in.', 'success');
+    });
+
+    document.getElementById('btn-signin').addEventListener('click', async function(){
+      var email = document.getElementById('signin-email').value.trim();
+      var pass  = document.getElementById('signin-pass').value;
+      if (!email || !pass) return _setMsg('Please fill in all fields.', 'error');
+      this.disabled = true; this.textContent = 'Signing in…';
+      var auth = window._auth;
+      if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Sign In'; return; }
+      var { error } = await auth.signIn(email, pass);
+      this.disabled = false; this.textContent = 'Sign In';
+      if (error) return _setMsg(error.message, 'error');
+      overlay.classList.remove('open');
+      _clearMsg();
+    });
+
+    // Check URL param ?modal=signin
+    if (new URLSearchParams(window.location.search).get('modal') === 'signin') {
+      _openTab('signin'); overlay.classList.add('open');
+    }
   })();
   </script>
 
@@ -600,6 +681,17 @@
       <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
+  <script src="/auth.js"></script>
+  <script>
+  // Hide "Let's Begin!" when user is logged in; show auth badge
+  (function poll() {
+    if (!window._auth) { setTimeout(poll, 100); return; }
+    window._auth.onReady(function(user) {
+      var ctaBtn = document.getElementById('signup-btn');
+      if (user && ctaBtn) ctaBtn.style.display = 'none';
+    });
+  })();
+  </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>

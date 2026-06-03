@@ -358,6 +358,15 @@
   async function send(text) {
     text = (text || inp.value).trim();
     if (!text || busy) return;
+
+    // Auth gate — require sign-in
+    const token = window._auth?.token;
+    if (!token) {
+      addMsg('assistant', '**AI Chat is available to account holders only.**\n\nCreate a free profile or sign in using the button in the nav — it only takes a second.');
+      inp.value = '';
+      return;
+    }
+
     busy = true;
     startersEl.remove();
     inp.value = '';
@@ -371,7 +380,7 @@
     try {
       const res = await fetch(window.API_BASE + '/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ messages: history, pageContext }),
         signal: AbortSignal.timeout(35000)
       });

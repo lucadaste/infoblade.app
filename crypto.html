@@ -38,6 +38,10 @@
     .nav-chat-btn.active::after { background: #181818; }
     .nav-chat-btn.active { color: #00e676; }
     @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+    #auth-badge { display: none; align-items: center; gap: 8px; }
+    .auth-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: default; }
+    .auth-signout-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+    .auth-signout-btn:hover { color: var(--ink); }
 
     .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; flex-wrap: wrap; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
@@ -243,13 +247,12 @@
       <li><a href="/accuracy.html">Accuracy History</a></li>
     </ul>
     <div class="nav-right">
-  
+    <div id="auth-badge"></div>
+    <a href="/?modal=signin" id="auth-signin-nav" style="display:none;font-size:13px;color:var(--muted);text-decoration:none;white-space:nowrap;">Sign in</a>
     <div class="nav-buttons">
       <button class="nav-chat-btn" id="ii-chat-btn" onclick="window.iiToggleChat?.()">✦ AI Chat</button>
     </div>
-  
     <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
-
     </div>
   </nav>
   <script>
@@ -844,6 +847,7 @@
       <a href="/accuracy.html" class="bn-item">Track Record</a>
     </div>
   </nav>
+  <script src="/auth.js"></script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>
