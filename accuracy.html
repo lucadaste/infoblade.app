@@ -15,7 +15,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Share+Tech&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Share+Tech&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --red: #ff5252; }
@@ -31,7 +31,7 @@
     .nav-links a.active { color: var(--accent); font-weight: 600; }
     .nav-buttons { display: flex; gap: 8px; }
     .nav-right { display: flex; gap: 48px; align-items: center; justify-content: flex-end; grid-column: 3; }
-    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
     .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
     .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
     .nav-chat-btn:hover::after { background: #1a1a1a; }
@@ -62,7 +62,7 @@
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
-    .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
+    .hero h1 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero h1 em { font-style: normal; background: var(--accent); color: #111; padding: 1px 8px; }
     .hero-sub { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.7; font-weight: 300; }
     @media (max-width: 700px) { .hero { padding: 28px 20px 24px; } }
@@ -78,7 +78,7 @@
     .stat-card:first-child { border-radius: 10px 0 0 10px; }
     .stat-card:last-child  { border-radius: 0 10px 10px 0; }
     .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-    .stat-value { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -2px; line-height: 1; }
+    .stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -2px; line-height: 1; }
     .stat-value.green { color: var(--accent); }
     .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
@@ -87,7 +87,7 @@
     @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
 
     /* Section header */
-    .section-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 18px; letter-spacing: -0.3px; }
+    .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 18px; letter-spacing: -0.3px; }
 
     /* Accuracy chart */
     .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; }
@@ -97,7 +97,7 @@
     .chart-bar-inner { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; transition: height 0.4s ease; }
     .chart-bar-inner.dim { background: #2a5c3a; }
     .chart-month { font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; }
-    .chart-pct { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); }
+    .chart-pct { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
     /* Recent predictions list */
@@ -106,21 +106,21 @@
     .pred-topic { font-size: 14px; font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
     .pred-meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; }
     .pred-tickers { display: flex; flex-wrap: wrap; gap: 4px; }
-    .pred-ticker { font-size: 11px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
+    .pred-ticker { font-size: 11px; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; padding: 2px 6px; border-radius: 3px; }
     .pred-ticker.win  { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pred-ticker.lose { background: rgba(255,82,82,0.10); color: var(--red); border: 1px solid rgba(255,82,82,0.2); }
-    .pred-badge { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
+    .pred-badge { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
     .pred-badge.correct   { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); }
     .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
     .pred-badge.pending   { background: rgba(136,136,136,0.12); color: var(--muted); border: 1px solid var(--border); }
-    .grade-badge { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
+    .grade-badge { font-family: 'Share Tech Mono', sans-serif; font-size: 20px; font-weight: 700; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
     .grade-A { background: rgba(0,230,118,0.15); color: var(--accent);  border: 1px solid rgba(0,230,118,0.35); }
     .grade-B { background: rgba(0,200,100,0.12); color: #4dd085;        border: 1px solid rgba(0,200,100,0.25); }
     .grade-C { background: rgba(255,200,50,0.10); color: #ffc832;       border: 1px solid rgba(255,200,50,0.25); }
     .grade-D { background: rgba(255,140,50,0.10); color: #ff9020;       border: 1px solid rgba(255,140,50,0.25); }
     .grade-F { background: rgba(255,82,82,0.12);  color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
     .ticker-moves { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .tm-chip { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
+    .tm-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
     .tm-chip.hit  { background: rgba(0,230,118,0.10); color: var(--accent); border: 1px solid rgba(0,230,118,0.2); }
     .tm-chip.miss { background: rgba(255,82,82,0.08);  color: var(--red);   border: 1px solid rgba(255,82,82,0.18); }
     .score-line { font-size: 11px; color: var(--muted); margin-top: 6px; }
@@ -128,10 +128,10 @@
     /* Top tickers sidebar */
     .ticker-table { display: flex; flex-direction: column; gap: 8px; }
     .ticker-row { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-    .ticker-sym { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
+    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
     .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
     .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
-    .ticker-pct { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
+    .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
     .ticker-count { font-size: 11px; color: var(--muted); min-width: 32px; text-align: right; }
 
     /* Loading skeleton */
@@ -144,11 +144,11 @@
     /* By-category accuracy */
     .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 36px; }
     .cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-    .cat-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
+    .cat-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
     .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 3px; margin-bottom: 10px; }
     .cat-bar-fill { height: 3px; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
     .cat-stat { display: flex; justify-content: space-between; align-items: baseline; }
-    .cat-pct { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
+    .cat-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
     .cat-count { font-size: 11px; color: var(--muted); }
 
     .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }

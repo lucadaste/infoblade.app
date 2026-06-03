@@ -15,7 +15,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Share+Tech&family=Inconsolata:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Share+Tech&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
@@ -31,7 +31,7 @@
     .nav-links a.active { color: var(--accent); font-weight: 600; }
     .nav-buttons { display: flex; gap: 8px; }
     .nav-right { display: flex; gap: 48px; align-items: center; justify-content: flex-end; grid-column: 3; }
-    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
     .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
     .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
     .nav-chat-btn:hover::after { background: #1a1a1a; }
@@ -43,11 +43,11 @@
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
-    .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
+    .hero h1 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
     .hero-stats { display: flex; gap: 28px; flex-shrink: 0; padding-bottom: 4px; }
     .hero-stat { text-align: right; }
-    .hero-stat-val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
+    .hero-stat-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
@@ -64,15 +64,15 @@
     .sug-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid #1e1e1e; }
     .sug-item:last-child { border-bottom: none; }
     .sug-item:hover { background: #242424; }
-    .sug-ticker { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
+    .sug-ticker { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
     .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .hero > div:first-child { min-height: 130px; }
     .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cat-chip { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .cat-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
     .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
-    .btn-load { background: var(--accent); color: #111111; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
+    .btn-load { background: var(--accent); color: #111111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .btn-load:hover { opacity: 0.85; }
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
     .status-wrap { display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0; flex: 1; max-width: 420px; }
@@ -102,8 +102,8 @@
     .event-card:hover { transform: translateY(-2px); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     .event-card.watchlist-match { border-color: var(--accent); }
-    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .event-topic { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
+    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Share Tech Mono', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .event-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
     .event-sources { font-size: 12px; color: #666; margin-bottom: 28px; }
     .event-sources span { color: #777; }
     .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid #1e1e1e; }
@@ -111,7 +111,7 @@
     .chain-content { font-size: 14px; color: #bbb; line-height: 1.7; flex: 1; }
     .impact-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); margin-top: 6px; }
     .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .pill { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .pill { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up      { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pill-down    { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-watched { background: rgba(0,230,118,0.3); color: var(--ink); border: 1px solid var(--accent); }
@@ -120,7 +120,7 @@
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
     .tech-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
     .tech-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-    .tech-sym { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; color: var(--ink); min-width: 44px; }
+    .tech-sym { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; color: var(--ink); min-width: 44px; }
     .tech-price { font-size: 12px; color: #bbb; }
     .tech-stat { font-size: 11px; padding: 2px 7px; border-radius: 3px; }
     .tech-stat-up   { background: rgba(0,230,118,0.1); color: #00e676; }
@@ -130,11 +130,11 @@
     .conf-stars { font-size: 16px; letter-spacing: 1px; }
     .conf-label { font-size: 13px; color: var(--muted); }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
-    .empty-state h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
 
     .pre-load { padding: 52px 0 40px; display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
-    .pre-load-text h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+    .pre-load-text h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
     .pre-load-text p { font-size: 14px; color: var(--muted); line-height: 1.65; max-width: 380px; }
     .quick-cats-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
     .quick-cats { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 560px; }
@@ -161,7 +161,7 @@
     .page-mode-bar { display: flex; border-bottom: 2px solid var(--border); background: #0d0d0d; }
     .pmode-tab { flex: 1; padding: 24px 48px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.15s; position: relative; bottom: -2px; text-align: left; border-right: 1px solid var(--border); }
     .pmode-tab:last-child { border-right: none; }
-    .pmode-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--muted); transition: color 0.15s; display: block; }
+    .pmode-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--muted); transition: color 0.15s; display: block; }
     .pmode-desc { font-size: 13px; color: #3a3a3a; font-weight: 400; display: block; margin-top: 5px; line-height: 1.4; }
     .pmode-tab.active { border-bottom-color: var(--accent); }
     .pmode-tab.active .pmode-title { color: var(--ink); }
@@ -175,44 +175,44 @@
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-top { display: flex; align-items: center; gap: 10px; }
-    .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 9px; color: var(--muted); flex-shrink: 0; }
-    .coin-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; line-height: 1.2; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 9px; color: var(--muted); flex-shrink: 0; }
+    .coin-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; line-height: 1.2; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .coin-symbol { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; }
-    .coin-price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; }
+    .coin-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; }
     .coin-change { font-size: 12px; font-weight: 600; min-height: 16px; }
     .pos { color: #2a9e4f; }
     .neg { color: #c84040; }
-    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; width: 100%; }
+    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; width: 100%; }
     .btn-coin:hover { border-color: var(--accent); color: var(--accent); }
     .coin-card.selected .btn-coin { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
-    .btn-coin-watch { background: none; border: 1px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-size: 12px; padding: 5px 10px; transition: all 0.2s; width: 100%; font-family: 'Space Grotesk', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
+    .btn-coin-watch { background: none; border: 1px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-size: 12px; padding: 5px 10px; transition: all 0.2s; width: 100%; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
     .btn-coin-watch:hover { border-color: var(--accent); color: var(--accent); }
     .btn-coin-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
     .grid-empty { grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted); }
-    .grid-empty h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
+    .grid-empty h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
 
     /* Stock analysis panel */
     .stock-analysis-panel { border-top: 2px solid var(--accent); background: #0a0a0a; display: none; }
     .ap-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 48px 16px; border-bottom: 1px solid var(--border); }
-    .ap-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+    .ap-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
     .ap-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
     .ap-close:hover { color: var(--ink); }
     .tf-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 48px; border-bottom: 1px solid var(--border); background: #0a0a0a; }
     .tf-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; margin-right: 4px; }
-    .tf-btn { font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
+    .tf-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
     .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
     .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
     .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
-    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
     .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
     .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
     .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
     .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
-    .group-topic { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
+    .group-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
     .group-meta { font-size: 12px; color: var(--muted); }
     .ar-block { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.3s ease both; }
     .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
@@ -220,7 +220,7 @@
     .ar-row strong { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
     .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
     .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
-    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Grotesk', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
+    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
     .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
     .ar-sources-toggle { background: none; border: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 2px; }
     .ar-sources-toggle:hover { color: var(--muted); }
@@ -572,11 +572,11 @@
       return `<div class="skel-stock-card" data-stock-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #1e1e1e;flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;color:#e8e6e0">${ticker.replace(/</g,'&lt;')}</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;color:#e8e6e0">${ticker.replace(/</g,'&lt;')}</div>
             <div style="font-size:14px;color:#666;margin-top:4px">${name.replace(/</g,'&lt;')}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px">${priceStr}</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:22px">${priceStr}</div>
             <div style="font-size:14px;font-weight:600;color:${changeColor}">${changeStr}</div>
           </div>
         </div>
@@ -602,7 +602,7 @@
     function skeletonCardForGroup(topic, idx) {
       const safeText = topic.length > 90 ? topic.slice(0, 87) + '…' : topic;
       return `<div class="skel-event-card" data-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
-        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:8px;color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:8px;color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
         <div class="skel" style="height:12px;width:36%;margin-top:8px"></div>
         <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e;margin-top:16px">
           <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
@@ -1092,7 +1092,7 @@
         el.innerHTML = `
           <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:12px;color:${leanColor}">${leanLabel}</span>
+            <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:12px;color:${leanColor}">${leanLabel}</span>
             ${confBadge}
           </div>
           ${d.reasoning ? `<div style="font-size:13px;color:#bbb;line-height:1.6">${esc(d.reasoning)}</div>` : ''}`;
@@ -1397,11 +1397,11 @@
         ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid #1e1e1e;flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px">${esc(ticker)}</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px">${esc(ticker)}</div>
             <div style="font-size:14px;color:#666;margin-top:4px">${esc(name)}</div>
           </div>
           <div style="text-align:right">
-            ${priceStr ? `<div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:22px">${esc(priceStr)}</div>` : ''}
+            ${priceStr ? `<div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:22px">${esc(priceStr)}</div>` : ''}
             ${changeStr ? `<div style="font-size:14px;font-weight:600;color:${changeColor}">${esc(changeStr)}</div>` : ''}
             ${range52w}
           </div>
