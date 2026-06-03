@@ -32,11 +32,11 @@ const PAGE_DESCRIPTIONS = {
   'stock-markets': 'The user is on the Stock Markets page, which analyzes US market-moving news events. It groups headlines by topic, rates predicted market impact, identifies winning/losing US-listed stocks and ETFs, and assigns a 1-5 star confidence rating.',
   'prediction-markets': 'The user is on the Prediction Markets page, which shows live Polymarket odds for financial and economic events. It only shows markets with 20–80% YES odds (the genuine uncertainty zone). Volume figures indicate how much real money is behind each market.',
   'crypto': 'The user is on the Crypto Markets page. This section is currently under construction / coming soon.',
-  'home': 'The user is on the infoblade home page.',
-  'general': 'The user is on the infoblade platform.',
+  'home': 'The user is on the Infoblade home page.',
+  'general': 'The user is on the Infoblade platform.',
 };
 
-const SYSTEM_PROMPT = `You are the AI Informant embedded in infoblade, a financial intelligence platform. You are helpful, sharp, and concise.
+const SYSTEM_PROMPT = `You are the AI Informant embedded in Infoblade, a financial intelligence platform. You are helpful, sharp, and concise.
 
 THE PLATFORM HAS THREE TOOLS:
 1. Stock Markets — Groups live US financial news by topic, analyzes each event's market impact using Goldman Sachs-style reasoning, identifies which US-listed stocks/ETFs benefit or suffer, and rates prediction confidence 1–5 stars (5 = highest). Only topics with 3+ stars are shown. Sources are graded by factuality (High/Medium/Low) and weighted accordingly.
