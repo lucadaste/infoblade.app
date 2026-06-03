@@ -15,7 +15,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; }
@@ -23,14 +23,14 @@
         body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
 
     nav:not(.bottom-nav) { display: flex; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; gap: 16px; }
-    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
-    .nav-logo span { background: var(--accent); padding: 1px 6px; color: #111111; }
+    .nav-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
+    .nav-logo span { color: var(--accent); }
     .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin-left: 48px; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--accent); font-weight: 600; }
     .nav-buttons { display: flex; gap: 8px; margin-left: auto; }
-    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
+    .nav-chat-btn { position: relative; background: #111111; color: #e8e6e0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: none; cursor: pointer; white-space: nowrap; overflow: hidden; isolation: isolate; transition: color 0.2s; }
     .nav-chat-btn::before { content: ''; position: absolute; width: 280px; height: 280px; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(0deg); background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg); animation: chat-spin 2.8s linear infinite; z-index: -1; }
     .nav-chat-btn::after { content: ''; position: absolute; inset: 1.5px; background: #111111; border-radius: 4px; z-index: -1; transition: background 0.2s; }
     .nav-chat-btn:hover::after { background: #1a1a1a; }
@@ -42,18 +42,18 @@
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
-    .hero h1 { font-family: 'Syne', sans-serif; font-weight: 800; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
+    .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; max-width: 560px; }
     .hero-stats { display: flex; gap: 28px; flex-shrink: 0; padding-bottom: 4px; }
     .hero-stat { text-align: right; }
-    .hero-stat-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 22px; letter-spacing: -0.5px; }
+    .hero-stat-val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cat-chip { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .cat-chip { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
     .tf-chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -85,16 +85,16 @@
     .market-card { background: #0a0a0a; color: var(--ink); border-radius: 12px; padding: 36px 40px; animation: fadeUp 0.4s ease both; border: 2px solid transparent; transition: transform 0.2s; }
     .market-card:hover { transform: translateY(-2px); }
     .market-card.watchlist-match { border-color: var(--accent); }
-    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .btn-watch { background: none; border: 1.5px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 16px; transition: all 0.2s; letter-spacing: 0.3px; }
+    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .btn-watch { background: none; border: 1.5px solid #333; border-radius: 4px; color: #666; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; padding: 8px 16px; transition: all 0.2s; letter-spacing: 0.3px; }
     .btn-watch:hover { border-color: var(--accent); color: var(--accent); }
     .btn-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
-    .sport-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25); color: var(--accent); font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px 3px 8px; border-radius: 20px; margin-bottom: 8px; }
+    .sport-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25); color: var(--accent); font-family: 'Space Grotesk', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px 3px 8px; border-radius: 20px; margin-bottom: 8px; }
     .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
-    .market-question { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
+    .market-question { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
     .odds-block { flex-shrink: 0; text-align: right; }
-    .odds-number { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 36px; letter-spacing: -1px; line-height: 1; }
+    .odds-number { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px; letter-spacing: -1px; line-height: 1; }
     .odds-number.high { color: #2a9e4f; }
     .odds-number.medium { color: var(--ink); }
     .odds-number.low { color: #c84040; }
@@ -105,13 +105,13 @@
     .chain-content { font-size: 14px; color: #bbb; line-height: 1.7; flex: 1; }
     .impact-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); }
 
-    .btn-analyze { background: var(--accent); color: #111111; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.2px; }
+    .btn-analyze { background: var(--accent); color: #111111; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 4px; border: none; cursor: pointer; transition: opacity 0.2s; letter-spacing: 0.2px; }
     .btn-analyze:hover { opacity: 0.85; }
     .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
 
     .analysis-block { border-top: 1px solid #1e1e1e; padding-top: 18px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .analysis-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .lean-badge { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.3px; }
+    .lean-badge { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.3px; }
     .lean-yes { background: rgba(42,158,79,0.12); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.25); }
     .lean-no { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
     .lean-uncertain { background: var(--border); color: var(--muted); border: 1px solid transparent; }
@@ -135,12 +135,12 @@
     .analysis-error { font-size: 13px; color: #c84040; }
 
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
-    .empty-state h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; max-width: 360px; margin: 0 auto; }
 
     footer { padding: 28px 48px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px; color: var(--ink); }
-    .footer-logo span { background: var(--accent); padding: 1px 5px; color: #111111; }
+    .footer-logo { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); }
+    .footer-logo span { color: var(--accent); }
     footer p { font-size: 13px; color: var(--muted); }
 
     .nav-burger { display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer; padding: 4px 6px; flex-shrink: 0; }
@@ -198,7 +198,7 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="/"><span>info</span>blade</a>
+    <a class="nav-logo" href="/">info<span>blade</span></a>
     <ul class="nav-links">
       <li><a href="/">Home</a></li>
       <li><a href="/feed.html">Stock Markets</a></li>
@@ -272,7 +272,7 @@
   </div>
 
   <footer>
-    <div class="footer-logo"><span>info</span>blade</div>
+    <div class="footer-logo">info<span>blade</span></div>
     <p>For informational purposes only. Not financial advice. <a href="/privacy.html" style="color:var(--muted);text-decoration:underline">Privacy Policy</a></p>
   </footer>
 
