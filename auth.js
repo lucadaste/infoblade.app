@@ -120,13 +120,11 @@
         document.getElementById('auth-signout-btn').addEventListener('click', signOut);
       }
 
-      if (chatBtn) chatBtn.style.removeProperty('display');
       if (ctaBtn)  ctaBtn.style.display = 'none';
 
     } else {
       // Logged out
       if (badge) { badge.innerHTML = ''; badge.style.display = 'none'; }
-      if (chatBtn) chatBtn.style.display = 'none';
       if (ctaBtn)  ctaBtn.style.removeProperty('display');
 
       if (_dropdownCloseHandler) { document.removeEventListener('click', _dropdownCloseHandler); _dropdownCloseHandler = null; }

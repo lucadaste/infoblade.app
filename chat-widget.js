@@ -362,7 +362,7 @@
     // Auth gate — require sign-in
     const token = window._auth?.token;
     if (!token) {
-      addMsg('assistant', '**AI Chat is available to account holders only.**\n\nCreate a free profile or sign in using the button in the nav — it only takes a second.');
+      addMsg('assistant', '**AI Chat requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click **Let\'s Begin !** in the top-right corner to get started.');
       inp.value = '';
       return;
     }
