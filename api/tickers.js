@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   try {
     const r = await fetch('https://www.sec.gov/files/company_tickers.json', {
       headers: {
-        'User-Agent': 'InvestmentInformatics.AI contact@investmentinformatics.ai',
+        'User-Agent': 'infoblade contact@infoblade.app',
         'Accept': 'application/json',
       },
     });

@@ -2,5 +2,5 @@
 // (where relative /api/* URLs would resolve to capacitor://localhost, not the server).
 // On the web it stays empty so relative URLs work unchanged.
 window.API_BASE = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform())
-  ? 'https://investmentinformatics.ai'
+  ? 'https://infoblade.app'
   : '';

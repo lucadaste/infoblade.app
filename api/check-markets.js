@@ -8,7 +8,7 @@ const predictionPath = path.resolve(_dir, '../data/prediction-log.json');
 const reputationPath = path.resolve(_dir, '../data/source-reputation.json');
 
 function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

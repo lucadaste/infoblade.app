@@ -237,7 +237,7 @@ async function _savePrediction(supabase, record) {
 
 // ── CORS helper ───────────────────────────────────────────────────────────────
 function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://investmentinformatics.ai';
+  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');

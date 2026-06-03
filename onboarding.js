@@ -10,7 +10,7 @@
         <circle cx="42" cy="14" r="3" fill="#00e676"/>
         <line x1="10" y1="44" x2="46" y2="44" stroke="#00e676" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
       </svg>`,
-      heading: 'InvestmentInformatics.AI',
+      heading: 'infoblade',
       body: 'Market intelligence. Real-time news analysis, stock predictions, and a live track record of accuracy.',
       cta: 'Get Started',
     },
@@ -40,7 +40,7 @@
         <circle cx="28" cy="44" r="1.5" fill="#ff9800"/>
       </svg>`,
       heading: 'Important Notice',
-      body: 'InvestmentInformatics.AI provides analysis for informational purposes only. Nothing here is financial advice. Always do your own research before making investment decisions. Past accuracy does not guarantee future results.',
+      body: 'infoblade provides analysis for informational purposes only. Nothing here is financial advice. Always do your own research before making investment decisions. Past accuracy does not guarantee future results.',
       cta: 'I Understand, Let\'s Go',
       ctaAccent: true,
       final: true,
