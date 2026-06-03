@@ -49,15 +49,17 @@
     .modal-submit:hover { opacity: 0.85; }
     .modal-footer-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
     .modal-footer-note a { color: var(--accent); text-decoration: none; }
-    .hero { padding: 96px 48px 80px; max-width: 960px; animation: fadeUp 0.7s ease both; }
+    .hero { padding: 96px 48px 80px; display: flex; align-items: center; gap: 72px; animation: fadeUp 0.7s ease both; }
     @media (prefers-reduced-motion: reduce) { .hero { animation: none; opacity: 1; } }
+    .hero-left { flex: 1; min-width: 0; }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
     @keyframes dot-pulse { 0% { box-shadow: 0 0 0 0 rgba(0,200,80,.75); } 70% { box-shadow: 0 0 0 14px rgba(0,200,80,0); } 100% { box-shadow: 0 0 0 0 rgba(0,200,80,0); } }
     .hero-tag-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--ink); animation: dot-pulse 2s ease-out infinite; }
     .hero h1 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(42px, 6.5vw, 76px); line-height: 1.12; letter-spacing: -2.5px; margin-bottom: 28px; }
     .hero h1 em { font-style: normal; background: var(--accent); color: #111111; padding: 0 10px; }
-    .hero-sub { font-size: 18px; color: var(--muted); max-width: 580px; line-height: 1.75; margin-bottom: 44px; font-weight: 300; }
-    .hero-actions { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .hero-sub { font-size: 18px; color: var(--muted); max-width: 560px; line-height: 1.75; margin-bottom: 0; font-weight: 300; }
+    .hero-actions { display: flex; flex-direction: column; gap: 14px; flex-shrink: 0; }
+    .hero-actions .btn-outline { display: block; min-width: 260px; padding: 26px 48px; font-size: 16px; text-align: center; border-radius: 8px; letter-spacing: 0.2px; }
     .btn-primary { background: #111111; color: var(--accent); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 4px; border: 1.5px solid var(--accent); cursor: pointer; letter-spacing: 0.3px; transition: background 0.2s, color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
     .btn-primary:hover { background: var(--accent); color: #111111; transform: translateY(-1px); }
     .btn-secondary { font-size: 14px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; transition: color 0.2s; }
@@ -209,7 +211,11 @@
       .hiw-icon { display: inline-flex; }
     }
     @media (max-width: 768px) {
-      .hero { padding: 64px 24px 56px; } .section { padding: 64px 24px; }
+      .hero { padding: 64px 24px 56px; flex-direction: column; align-items: flex-start; gap: 36px; }
+      .hero-sub { margin-bottom: 0; }
+      .hero-actions { flex-direction: row; flex-wrap: wrap; gap: 14px; }
+      .hero-actions .btn-outline { min-width: auto; padding: 12px 24px; font-size: 13px; border-radius: 4px; }
+      .section { padding: 64px 24px; }
       .example-section { padding: 0 24px 64px; } .features-section { padding: 0 24px 64px; }
       .steps { grid-template-columns: 1fr; gap: 2px; }
       .step:first-child { border-radius: 10px 10px 0 0; } .step:last-child { border-radius: 0 0 10px 10px; }
@@ -261,9 +267,11 @@
   </script>
 
   <section class="hero">
-    <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
-    <h1>World events.<br><em>Market signals.</em><br>Expected Outcomes.</h1>
-    <p class="hero-sub">One pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
+    <div class="hero-left">
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
+      <h1>World events.<br><em>Market signals.</em><br>Expected Outcomes.</h1>
+      <p class="hero-sub">One pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
+    </div>
     <div class="hero-actions">
       <a class="btn-outline" href="/feed.html">Stock Markets →</a>
       <a class="btn-outline" href="/markets.html">Prediction Markets →</a>
