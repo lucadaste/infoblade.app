@@ -1083,6 +1083,15 @@ Respond ONLY with valid JSON, no markdown:
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
       const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
 
+      const _tfDays = _parseTimeframeDays(impactTimeframe || '1 month');
+      const timeframeGuidance = _tfDays <= 7
+        ? `SHORT-TERM LENS (${impactTimeframe || '1 week'}): Weight recent momentum and breaking news most heavily. Immediate catalysts, technicals, and short-term sentiment dominate at this horizon. Macro trends are secondary unless they are themselves the catalyst.`
+        : _tfDays <= 45
+        ? `MEDIUM-TERM LENS (${impactTimeframe || '1 month'}): Weigh upcoming earnings cycles, guidance revisions, and confirmed trend shifts. Analyst ratings, sector rotation signals, and macro momentum all matter alongside the recent news.`
+        : _tfDays <= 100
+        ? `MEDIUM-LONG LENS (${impactTimeframe || '3 months'}): Analyst price targets, sector cycle position, and recurring macro headwinds or tailwinds carry more weight than day-to-day news. Recent headlines are context, not the primary driver. Consider whether the current trend is early or late-cycle.`
+        : `LONG-TERM LENS (${impactTimeframe || '6 months'}): Structural forces dominate over this horizon. Weight analyst consensus price targets, secular growth or decline themes, competitive positioning, and macro cycles above short-term news noise. Explicitly note that recent news is only one input, and that longer-term fundamentals and industry trends should anchor your call.`;
+
       const marketsSection = relevantMarkets.length
         ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence.\n`
         : '';
@@ -1115,7 +1124,9 @@ Consensus summary: ${consensus}
 ${marketsSection}${technicalSection}${redditSection}${trackRecordSection}
 Only use ${thresholdText} for this analysis.
 
-Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends. Impact timeframe: ${impactTimeframe || '1 month'}.
+Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends.
+
+TIMEFRAME LENS: ${timeframeGuidance}
 
 CRITICAL RULES:
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
@@ -1143,7 +1154,7 @@ Respond ONLY with valid JSON, no markdown:
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
       });
 
       const data = await response.json();

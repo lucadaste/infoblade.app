@@ -1075,13 +1075,16 @@
         const badge = dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
           : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
           : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+        const signalColor = dir === 'bullish' ? '#2a9e4f' : dir === 'bearish' ? '#c84040' : null;
+        const signalLabel = dir === 'bullish' ? '↑ Likely to rise' : dir === 'bearish' ? '↓ Unlikely to rise' : null;
+        const signalHtml = signalColor ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:12px;color:${signalColor}">${signalLabel}</div>
+          </div>` : '';
         resultEl.innerHTML = `${badge}
           <div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>
-          <div id="sap-market-signal" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-            <div class="skel" style="height:10px;width:120px;margin-bottom:6px"></div>
-            <div class="skel" style="height:14px;width:80%"></div>
-          </div>`;
-        fetchMarketSignal(ticker, name, impact, mySession);
+          ${signalHtml}`;
       } catch(err) {
         if (stockAnalysisSession !== mySession) return;
         const loadingEl = document.getElementById('sap-overall-loading');
