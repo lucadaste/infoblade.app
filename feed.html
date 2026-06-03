@@ -172,6 +172,14 @@
     .pmode-tab.active .pmode-desc { color: #666; }
     .pmode-tab:hover:not(.active) .pmode-title { color: #bbb; }
     .pmode-tab:hover:not(.active) .pmode-desc { color: #555; }
+    /* Auth gate for Individual Stocks */
+    #stock-section { position: relative; }
+    #stock-auth-gate { display: none; position: absolute; inset: 0; min-height: 420px; z-index: 10; background: rgba(17,17,17,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 40px 24px; }
+    #stock-auth-gate.show { display: flex; }
+    #stock-auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(18px, 3vw, 26px); letter-spacing: -0.5px; }
+    #stock-auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
+    #stock-auth-gate-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
+    #stock-auth-gate-btn:hover { opacity: 0.85; }
 
     /* Stock mode — coin-card grid matching crypto page exactly */
     .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -475,6 +483,11 @@
 
   <!-- ═══ INDIVIDUAL STOCKS MODE ═══ -->
   <div id="stock-section" style="display:none">
+    <div id="stock-auth-gate">
+      <h2>Account required</h2>
+      <p>Individual stock analysis is available to infoblade account holders. Create a free profile or sign in to continue.</p>
+      <a href="/?modal=signin" id="stock-auth-gate-btn">Sign in / Create profile</a>
+    </div>
     <div class="filters">
       <div class="filter-group">
         <div class="filter-label">Search</div>
@@ -715,8 +728,12 @@
       document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
       document.getElementById('hero-sub').innerHTML = _heroSub[mode] || _heroSub.sector;
-      if (mode === 'stocks' && document.getElementById('stock-coin-grid').children.length === 0) {
-        loadStockGrid();
+      if (mode === 'stocks') {
+        const authed = !!window._auth?.user;
+        document.getElementById('stock-auth-gate').classList.toggle('show', !authed);
+        if (authed && document.getElementById('stock-coin-grid').children.length === 0) {
+          loadStockGrid();
+        }
       }
     }
 
@@ -1985,6 +2002,15 @@
     })();
   </script>
   <script src="/auth.js"></script>
+  <script>
+  // Recheck gate when auth state resolves (handles sign-in while on stocks tab)
+  (function poll() {
+    if (!window._auth) { setTimeout(poll, 100); return; }
+    window._auth.onReady(function() {
+      if (pageMode === 'stocks') setMode('stocks');
+    });
+  })();
+  </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>
