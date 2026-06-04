@@ -5,6 +5,13 @@ function _setCors(res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+// Display-name aliases → real Yahoo Finance symbols
+const SYMBOL_ALIASES = { 'SPX': '^GSPC' };
+const ALIAS_REVERSE  = Object.fromEntries(Object.entries(SYMBOL_ALIASES).map(([k, v]) => [v, k]));
+
+function _realSymbol(s) { return SYMBOL_ALIASES[s] || s; }
+function _displaySymbol(s) { return ALIAS_REVERSE[s] || s; }
+
 // Yahoo Finance crumb cache (survives warm lambda invocations)
 let _crumb = null;
 let _cookie = null;
@@ -51,11 +58,11 @@ async function _fetchFromRobinhood(symbols) {
   const map = {};
   for (const q of (data.results || [])) {
     if (!q?.symbol) continue;
-    const price    = parseFloat(q.last_trade_price ?? q.last_extended_hours_trade_price ?? 0);
-    const prev     = parseFloat(q.adjusted_previous_close ?? q.previous_close ?? 0);
+    const price     = parseFloat(q.last_trade_price ?? q.last_extended_hours_trade_price ?? 0);
+    const prev      = parseFloat(q.adjusted_previous_close ?? q.previous_close ?? 0);
     const changePct = (price > 0 && prev > 0) ? (price - prev) / prev * 100 : null;
     map[q.symbol] = {
-      price:      price > 0 ? +price.toFixed(2)           : null,
+      price:      price > 0 ? +price.toFixed(2)            : null,
       changePct:  changePct != null ? +changePct.toFixed(2) : null,
       week52High: null,
       week52Low:  null,
@@ -64,9 +71,11 @@ async function _fetchFromRobinhood(symbols) {
   return map;
 }
 
-async function _fetchFromYahoo(symbols) {
+async function _fetchFromYahoo(displaySymbols) {
   await _refreshCrumb();
-  const joined = symbols.join(',');
+  // Translate display names → real Yahoo symbols
+  const realSymbols = displaySymbols.map(_realSymbol);
+  const joined = realSymbols.join(',');
   const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(joined)}&fields=regularMarketPrice,regularMarketChangePercent,fiftyTwoWeekHigh,fiftyTwoWeekLow${_crumb ? `&crumb=${encodeURIComponent(_crumb)}` : ''}`;
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -79,7 +88,9 @@ async function _fetchFromYahoo(symbols) {
   const data = await res.json();
   const map = {};
   for (const q of data?.quoteResponse?.result || []) {
-    map[q.symbol] = {
+    // Map real symbol back to display name (e.g. ^GSPC → SPX)
+    const key = _displaySymbol(q.symbol);
+    map[key] = {
       price:      q.regularMarketPrice           != null ? +q.regularMarketPrice.toFixed(2)           : null,
       changePct:  q.regularMarketChangePercent   != null ? +q.regularMarketChangePercent.toFixed(2)   : null,
       week52High: q.fiftyTwoWeekHigh             != null ? +q.fiftyTwoWeekHigh.toFixed(2)             : null,
@@ -89,9 +100,37 @@ async function _fetchFromYahoo(symbols) {
   return map;
 }
 
-async function _fetchPrices(symbols) {
-  const indices = symbols.filter(s => s.startsWith('^'));
-  const regular = symbols.filter(s => !s.startsWith('^'));
+// v8 chart API — no crumb/cookie needed, reliable fallback for index symbols
+async function _fetchChartFallback(displaySymbol) {
+  const real = _realSymbol(displaySymbol);
+  try {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(real)}?interval=1d&range=1d`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const meta = data?.chart?.result?.[0]?.meta;
+    if (!meta) return null;
+    const price = meta.regularMarketPrice;
+    const prev  = meta.previousClose ?? meta.chartPreviousClose;
+    const changePct = (price && prev) ? (price - prev) / prev * 100 : null;
+    return {
+      price:      price != null ? +price.toFixed(2)          : null,
+      changePct:  changePct != null ? +changePct.toFixed(2)  : null,
+      week52High: meta.fiftyTwoWeekHigh != null ? +meta.fiftyTwoWeekHigh.toFixed(2) : null,
+      week52Low:  meta.fiftyTwoWeekLow  != null ? +meta.fiftyTwoWeekLow.toFixed(2)  : null,
+    };
+  } catch (_) { return null; }
+}
+
+async function _fetchPrices(displaySymbols) {
+  const indices = displaySymbols.filter(s => _realSymbol(s).startsWith('^'));
+  const regular = displaySymbols.filter(s => !_realSymbol(s).startsWith('^'));
 
   let map = {};
 
@@ -110,15 +149,71 @@ async function _fetchPrices(symbols) {
     }
   }
 
-  // Index symbols (^GSPC etc): always use Yahoo Finance — Robinhood doesn't support them
+  // Index symbols: Yahoo v7, then v8 chart fallback for any still missing
   if (indices.length) {
     try {
       const idxMap = await _fetchFromYahoo(indices);
       Object.assign(map, idxMap);
     } catch (_) {}
+    for (const sym of indices) {
+      if (map[sym]?.price == null) {
+        const fallback = await _fetchChartFallback(sym);
+        if (fallback) map[sym] = fallback;
+      }
+    }
   }
 
   return map;
+}
+
+// Fetch Robinhood's 100-most-popular list; returns ordered array of symbols
+async function _fetchPopularityRanking() {
+  const RH_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json',
+  };
+  try {
+    const tagRes = await fetch('https://api.robinhood.com/midlands/tags/tag/100-most-popular/', {
+      headers: RH_HEADERS,
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!tagRes.ok) return [];
+    const tagData = await tagRes.json();
+    const instrumentUrls = tagData.instruments || [];
+    if (!instrumentUrls.length) return [];
+
+    // Extract UUIDs from instrument URLs
+    const ids = instrumentUrls.map(url => {
+      const m = url.match(/\/instruments\/([a-f0-9-]+)\//i);
+      return m ? m[1] : null;
+    }).filter(Boolean);
+    if (!ids.length) return [];
+
+    // Batch-fetch symbols (up to 50 per request to stay safe)
+    const allSymbols = [];
+    for (let i = 0; i < ids.length; i += 50) {
+      const chunk = ids.slice(i, i + 50);
+      try {
+        const instRes = await fetch(`https://api.robinhood.com/instruments/?ids=${chunk.join(',')}`, {
+          headers: RH_HEADERS,
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!instRes.ok) continue;
+        const instData = await instRes.json();
+        // Preserve the order from the tag (instruments are popularity-ordered)
+        const byId = {};
+        for (const inst of instData.results || []) {
+          if (inst.symbol && inst.id) byId[inst.id] = inst.symbol;
+        }
+        for (const id of chunk) {
+          if (byId[id]) allSymbols.push(byId[id]);
+        }
+      } catch (_) {}
+    }
+    return allSymbols;
+  } catch (_) {
+    return [];
+  }
 }
 
 export default async function handler(req, res) {
@@ -129,33 +224,56 @@ export default async function handler(req, res) {
   const sector = req.query.sector || 'any';
 
   const SECTOR_STOCKS = {
-    'any': ['^GSPC','SPY','QQQ','IWM','DIA','AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AVGO','ORCL','AMD','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','SNOW','PLTR','UBER','JPM','BAC','GS','MS','V','MA','WFC','AXP','BLK','C','SCHW','UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','ISRG','XOM','CVX','COP','OXY','SLB','WMT','COST','MCD','SBUX','NKE','TGT','HD','KO','PEP','PG','LULU','NFLX','DIS','SPOT','CMCSA','T','VZ','SNAP','GE','CAT','RTX','LMT','BA','NOC','HON','DE','SHOP','MELI','SQ','ABNB','RBLX','PINS','COIN','MSTR','MARA','RIOT','GLD','SLV','TLT','XLE','XLF','XLK','XLV','IBIT','GDX','VNQ','HYG'],
-    'technology':      ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','AMD','AVGO','ORCL','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','PLTR','SNOW'],
-    'macro':           ['TLT','GLD','HYG','UUP','BND','SHY','IEF','LQD'],
-    'energy':          ['XOM','CVX','COP','OXY','SLB','XLE','HAL','MRO','PSX','VLO'],
-    'financials':      ['JPM','GS','BAC','MS','V','MA','WFC','AXP','BLK','C','SCHW','USB','PNC'],
-    'precious-metals': ['GLD','SLV','GDX','GDXJ','NEM','GOLD','WPM','AEM','FNV'],
-    'real-estate':     ['VNQ','AMT','PLD','EQIX','PSA','SPG','AVB','DLR','O','SBAC'],
-    'consumer':        ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
-    'healthcare':      ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
-    'defense':         ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
-    'etfs':            ['^GSPC','SPY','QQQ','IWM','DIA','VTI','GLD','SLV','GDX','TLT','SHY','HYG','LQD','XLE','XLF','XLK','XLV','XLI','IBIT','VNQ'],
+    'any':           ['SPX','SPY','QQQ','IWM','DIA','AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AVGO','ORCL','AMD','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','SNOW','PLTR','UBER','JPM','BAC','GS','MS','V','MA','WFC','AXP','BLK','C','SCHW','UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','ISRG','XOM','CVX','COP','OXY','SLB','WMT','COST','MCD','SBUX','NKE','TGT','HD','KO','PEP','PG','LULU','NFLX','DIS','SPOT','CMCSA','T','VZ','SNAP','GE','CAT','RTX','LMT','BA','NOC','HON','DE','SHOP','MELI','SQ','ABNB','RBLX','PINS','COIN','MSTR','MARA','RIOT','GLD','SLV','TLT','XLE','XLF','XLK','XLV','IBIT','GDX','VNQ','HYG'],
+    'technology':    ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','AMD','AVGO','ORCL','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','PLTR','SNOW'],
+    'macro':         ['TLT','GLD','HYG','UUP','BND','SHY','IEF','LQD'],
+    'energy':        ['XOM','CVX','COP','OXY','SLB','XLE','HAL','MRO','PSX','VLO'],
+    'financials':    ['JPM','GS','BAC','MS','V','MA','WFC','AXP','BLK','C','SCHW','USB','PNC'],
+    'precious-metals':['GLD','SLV','GDX','GDXJ','NEM','GOLD','WPM','AEM','FNV'],
+    'real-estate':   ['VNQ','AMT','PLD','EQIX','PSA','SPG','AVB','DLR','O','SBAC'],
+    'consumer':      ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
+    'healthcare':    ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
+    'defense':       ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
+    'etfs':          ['SPX','SPY','QQQ','IWM','DIA','VTI','GLD','SLV','GDX','TLT','SHY','HYG','LQD','XLE','XLF','XLK','XLV','XLI','IBIT','VNQ'],
   };
 
-  const symbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
+  const baseSymbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
+  let finalSymbols = baseSymbols;
+  let popularitySorted = false;
+
+  // For 'any' sector: sort by Robinhood real-time popularity, keeping SPX pinned first
+  if (sector === 'any') {
+    const ranking = await _fetchPopularityRanking();
+    if (ranking.length > 0) {
+      const rankMap = {};
+      ranking.forEach((sym, i) => { rankMap[sym] = i; });
+
+      const pinned  = baseSymbols.filter(s => _realSymbol(s).startsWith('^'));  // SPX etc always first
+      const rest    = baseSymbols.filter(s => !_realSymbol(s).startsWith('^'));
+
+      rest.sort((a, b) => {
+        const ra = rankMap[a] ?? 9999;
+        const rb = rankMap[b] ?? 9999;
+        return ra - rb;
+      });
+
+      finalSymbols = [...pinned, ...rest];
+      popularitySorted = true;
+    }
+  }
 
   try {
-    const priceMap = await _fetchPrices(symbols);
-    const tickers = symbols.map(ticker => ({
+    const priceMap = await _fetchPrices(finalSymbols);
+    const tickers = finalSymbols.map(ticker => ({
       ticker,
       price:      priceMap[ticker]?.price      ?? null,
       changePct:  priceMap[ticker]?.changePct  ?? null,
       week52High: priceMap[ticker]?.week52High ?? null,
       week52Low:  priceMap[ticker]?.week52Low  ?? null,
     }));
-    return res.status(200).json({ tickers, sector });
+    return res.status(200).json({ tickers, sector, popularitySorted });
   } catch (err) {
-    const tickers = symbols.map(ticker => ({ ticker, price: null, changePct: null }));
+    const tickers = finalSymbols.map(ticker => ({ ticker, price: null, changePct: null }));
     return res.status(200).json({ tickers, sector });
   }
 }
