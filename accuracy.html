@@ -218,9 +218,8 @@
 
 <div class="main">
   <!-- Stats -->
-  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)" id="stats-grid">
+  <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);max-width:640px" id="stats-grid">
     <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
-    <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value skeleton" id="stat-avg-score" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">pts per prediction</div></div>
     <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">&nbsp;</div></div>
   </div>
 
@@ -235,7 +234,7 @@
       <!-- Cumulative score -->
       <div class="chart-wrap" style="margin-bottom:24px">
         <div class="section-title">Cumulative Accuracy Score</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total of accuracy points. Each resolved prediction contributes -100 to +100 pts based on % return magnitude in the predicted direction.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence — a 5-star prediction moves the needle 5× more than a 1-star call.</p>
         <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
       </div>
 
@@ -294,17 +293,6 @@
     acc.style.height = acc.style.width = 'auto';
     acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
 
-    const avgScore = document.getElementById('stat-avg-score');
-    avgScore.classList.remove('skeleton');
-    avgScore.style.height = avgScore.style.width = 'auto';
-    if (s.avgScore != null) {
-      const sign = s.avgScore >= 0 ? '+' : '';
-      avgScore.textContent = sign + s.avgScore;
-      avgScore.style.color = s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
-    } else {
-      avgScore.textContent = '--';
-    }
-
     const correct = document.getElementById('stat-correct');
     correct.classList.remove('skeleton');
     correct.style.height = correct.style.width = 'auto';
@@ -325,15 +313,13 @@
     area.innerHTML = `
       <div class="chart-bars">
         ${timeline.map(t => {
-          const barH = Math.max(4, Math.round(Math.abs(t.avgScore ?? t.accuracy) / 100 * 100));
-          const score = t.avgScore ?? null;
-          const cls   = score != null ? (score >= 0 ? '' : 'dim') : (t.accuracy >= 60 ? '' : 'dim');
-          const label = score != null ? (score >= 0 ? '+' : '') + score + ' pts' : t.accuracy + '%';
+          const barH = Math.max(4, Math.round(t.accuracy / 100 * 100));
+          const cls  = t.accuracy >= 60 ? '' : 'dim';
           return `
-            <div class="chart-col" title="${t.month}: avg ${score != null ? (score>=0?'+':'')+score+' pts' : t.accuracy+'%'} (${t.correct}/${t.total})">
-              <div class="chart-pct" style="${score != null && score < 0 ? 'color:var(--red)' : ''}">${label}</div>
+            <div class="chart-col" title="${t.month}: ${t.accuracy}% (${t.correct}/${t.total})">
+              <div class="chart-pct">${t.accuracy}%</div>
               <div class="chart-bar-outer" style="height:${barH}px">
-                <div class="chart-bar-inner ${cls}" style="height:100%;${score != null && score < 0 ? 'background:var(--red);opacity:0.6' : ''}"></div>
+                <div class="chart-bar-inner ${cls}" style="height:100%"></div>
               </div>
               <div class="chart-month">${t.month.slice(5)}</div>
             </div>`;
@@ -444,22 +430,22 @@
   function renderBySection(bySection) {
     const el = document.getElementById('section-grid');
     if (!bySection || !bySection.length) {
-      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">Section breakdown appears after predictions are logged.</div>';
+      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">Section breakdown appears after predictions are resolved.</div>';
       return;
     }
     el.innerHTML = bySection.map(s => {
-      const acc = s.accuracy ?? '--';
-      const scoreSign = s.avgScore != null ? (s.avgScore >= 0 ? '+' : '') : '';
-      const scoreColor = s.avgScore == null ? 'var(--muted)' : s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
+      const hasData = s.accuracy != null;
+      const acc     = hasData ? s.accuracy : null;
+      const barW    = hasData ? acc : 0;
+      const accColor = hasData ? (acc >= 60 ? 'var(--accent)' : acc >= 40 ? '#ffc832' : 'var(--red)') : 'var(--muted)';
       return `
       <div class="cat-card">
         <div class="cat-name">${esc(s.label)}</div>
-        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${acc === '--' ? 0 : acc}%"></div></div>
+        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${barW}%;background:${accColor}"></div></div>
         <div class="cat-stat">
-          <span class="cat-pct">${acc}${acc !== '--' ? '%' : ''}</span>
-          <span class="cat-count">${s.correct}/${s.total}</span>
+          <span class="cat-pct" style="color:${accColor}">${hasData ? acc + '%' : '—'}</span>
         </div>
-        ${s.avgScore != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:12px;font-weight:700;color:${scoreColor};margin-top:8px">${scoreSign}${s.avgScore} pts avg</div>` : ''}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">${hasData ? 'confidence-weighted' : 'no resolved predictions yet'}</div>
       </div>`;
     }).join('');
   }
@@ -478,8 +464,6 @@
 
     const s = userStats.summary;
     const accColor = s.accuracy == null ? 'var(--ink)' : s.accuracy >= 60 ? 'var(--accent)' : 'var(--red)';
-    const scoreSign = s.avgScore != null ? (s.avgScore >= 0 ? '+' : '') : '';
-    const scoreColor = s.avgScore == null ? 'var(--ink)' : s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
 
     const recentHtml = userStats.recent?.length
       ? userStats.recent.map(p => renderPredCard(p)).join('')
@@ -490,9 +474,8 @@
          each one gets automatically logged here.</div>`;
 
     el.innerHTML = `
-      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
+      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px">
         <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">My Accuracy</div><div class="stat-value" style="color:${accColor}">${s.accuracy != null ? s.accuracy + '%' : '--'}</div><div class="stat-sub">${s.total > 0 ? s.correct + ' of ' + s.total + ' correct' : 'No resolved predictions yet'}</div></div>
-        <div class="stat-card"><div class="stat-label">My Avg Score</div><div class="stat-value" style="color:${scoreColor}">${s.avgScore != null ? scoreSign + s.avgScore : '--'}</div><div class="stat-sub">pts per prediction</div></div>
         <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value">${s.total}</div><div class="stat-sub">predictions scored</div></div>
         <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Awaiting Outcome</div><div class="stat-value">${s.pending}</div><div class="stat-sub">still in timeframe</div></div>
       </div>
@@ -589,7 +572,7 @@
           `${data.summary.totalInDb} predictions in database — validating timeframes…`;
       }
     } catch (err) {
-      ['stat-accuracy','stat-avg-score','stat-correct'].forEach(id => {
+      ['stat-accuracy','stat-correct'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
       });

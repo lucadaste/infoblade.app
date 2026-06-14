@@ -202,12 +202,13 @@ export default async function handler(req, res) {
       const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
       const correct = accuracyScore > 0;
       const grade   = _letterGrade(accuracyScore);
-      // Legacy pct-correct for notes
       const correctCount = Object.values(tickerMoves).filter(m => m.correct).length;
-      const score = Math.round(correctCount / gradedCount * 100);
-
-      // Keep legacy scores for notes
       const scores = _scoreDirections(p.winner_tickers || [], p.loser_tickers || [], p.baseline_prices, currentPrices);
+
+      // Parse confidence for weighting (1-5 stars)
+      const confStr = p.analysis?.confidence ?? '';
+      const confMatch = String(confStr).match(/^\s*([1-5])/);
+      const confidence_weight = confMatch ? parseInt(confMatch[1]) : 3;
 
       const { error: updateErr } = await supabase
         .from('predictions')
@@ -215,13 +216,14 @@ export default async function handler(req, res) {
           correct,
           validated_at: now.toISOString(),
           actual_prices: relevantPrices,
-          notes: { scores, method: 'auto', pct_correct: score },
+          notes: { scores, method: 'auto' },
           analysis: {
             ...(p.analysis || {}),
             grade,
-            score:          accuracyScore,   // signed accuracy score -100..+100
-            accuracy_score: accuracyScore,
-            ticker_moves:   tickerMoves,
+            score:             accuracyScore,
+            accuracy_score:    accuracyScore,
+            confidence_weight,
+            ticker_moves:      tickerMoves,
           },
         })
         .eq('id', p.id);

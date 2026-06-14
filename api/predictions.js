@@ -35,21 +35,18 @@ function _sectionStats(preds) {
   const map = {};
   for (const p of preds) {
     const sec = _categoryToSection(p.category || 'any');
-    if (!map[sec]) map[sec] = { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
-    map[sec].total++;
-    if (p.correct) map[sec].correct++;
-    const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? null;
-    if (s != null) { map[sec].scoreSum += s; map[sec].scoreCount++; }
+    if (!map[sec]) map[sec] = { weightedCorrect: 0, totalWeight: 0 };
+    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+    map[sec].totalWeight    += w;
+    if (p.correct) map[sec].weightedCorrect += w;
   }
   return Object.entries(_SECTION_LABELS).map(([sec, label]) => {
-    const d = map[sec] || { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    const d = map[sec] || { weightedCorrect: 0, totalWeight: 0 };
     return {
       section:  sec,
       label,
-      total:    d.total,
-      correct:  d.correct,
-      accuracy: d.total > 0 ? Math.round(d.correct / d.total * 100) : null,
-      avgScore: d.scoreCount > 0 ? +(d.scoreSum / d.scoreCount).toFixed(1) : null,
+      total:    d.totalWeight > 0 ? 1 : 0, // presence flag for rendering
+      accuracy: d.totalWeight > 0 ? Math.round(d.weightedCorrect / d.totalWeight * 100) : null,
     };
   });
 }
@@ -123,6 +120,13 @@ function _priceOnDate(historyMap, targetDate) {
 function _tickerScore(pct, direction) {
   const signed = direction === 'bullish' ? pct : -pct;
   return +(Math.max(-100, Math.min(100, signed * 10)).toFixed(1));
+}
+
+// Parse confidence stars (1-5) from stored string e.g. "4 — strong signal"
+function _parseConfidenceStars(conf) {
+  if (!conf) return 3;
+  const m = String(conf).match(/^\s*([1-5])/);
+  return m ? parseInt(m[1]) : 3;
 }
 
 function _letterGrade(score) {
@@ -274,10 +278,11 @@ async function handleResolve(req, res, supabase) {
 
     if (!Object.keys(tickerMoves).length) { skipped++; continue; }
 
-    const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
-    const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
-    const correct = accuracyScore > 0;
-    const grade   = _letterGrade(accuracyScore);
+    const tickerScores       = Object.values(tickerMoves).map(m => m.pts);
+    const accuracyScore      = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+    const correct            = accuracyScore > 0;
+    const grade              = _letterGrade(accuracyScore);
+    const confidence_weight  = _parseConfidenceStars(pred.analysis?.confidence);
 
     updates.push({
       id: pred.id, correct,
@@ -285,7 +290,7 @@ async function handleResolve(req, res, supabase) {
       validation_date: valDate.toISOString(),
       baseline_prices: baseline,
       actual_prices:   actual,
-      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, ticker_moves: tickerMoves },
+      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, confidence_weight, ticker_moves: tickerMoves },
       sources: pred.sources,
     });
   }
@@ -365,11 +370,17 @@ async function handleStats(req, res, supabase) {
     .from('predictions')
     .select('id', { count: 'exact', head: true });
 
-  const total    = validated?.length ?? 0;
+  const total = validated?.length ?? 0;
+
+  // Confidence-weighted accuracy: high-confidence correct predictions count more
+  let weightedCorrect = 0, totalWeight = 0;
+  for (const p of validated ?? []) {
+    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+    totalWeight    += w;
+    if (p.correct) weightedCorrect += w;
+  }
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : null;
-  const scores   = (validated || []).map(p => p.analysis?.accuracy_score ?? p.analysis?.score ?? null).filter(s => s != null);
-  const avgScore = scores.length > 0 ? +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
+  const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
 
   const { data: recent, error: rErr } = await supabase
     .from('predictions')
@@ -381,28 +392,29 @@ async function handleStats(req, res, supabase) {
   const byMonth = {};
   for (const p of validated ?? []) {
     const month = p.created_at.slice(0, 7);
-    if (!byMonth[month]) byMonth[month] = { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    if (!byMonth[month]) byMonth[month] = { weightedCorrect: 0, totalWeight: 0, total: 0, correct: 0 };
+    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
     byMonth[month].total++;
-    if (p.correct) byMonth[month].correct++;
-    const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? null;
-    if (s != null) { byMonth[month].scoreSum += s; byMonth[month].scoreCount++; }
+    byMonth[month].totalWeight += w;
+    if (p.correct) { byMonth[month].correct++; byMonth[month].weightedCorrect += w; }
   }
   const timeline = Object.entries(byMonth)
     .map(([month, s]) => ({
       month,
       total:    s.total,
       correct:  s.correct,
-      accuracy: Math.round(s.correct / s.total * 100),
-      avgScore: s.scoreCount > 0 ? +(s.scoreSum / s.scoreCount).toFixed(1) : null,
+      accuracy: s.totalWeight > 0 ? Math.round(s.weightedCorrect / s.totalWeight * 100) : 0,
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  // Cumulative score timeline (running total of accuracy points, oldest-first)
+  // Cumulative weighted score timeline (running total, oldest-first)
   const validatedAsc = [...(validated ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
   let cumulative = 0;
   const cumulativeTimeline = validatedAsc.map(p => {
     const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? 0;
-    cumulative = +(cumulative + s).toFixed(1);
+    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+    // Weighted: high-confidence predictions move the needle more
+    cumulative = +(cumulative + s * w / 3).toFixed(1); // divide by 3 (avg weight) to keep scale
     return { date: p.created_at.slice(0, 10), cumulative };
   });
 
@@ -450,14 +462,18 @@ async function handleStats(req, res, supabase) {
       const uValidated = userPreds.filter(p => p.correct !== null);
       const uTotal   = uValidated.length;
       const uCorrect = uValidated.filter(p => p.correct).length;
-      const uScores  = uValidated.map(p => p.analysis?.accuracy_score ?? p.analysis?.score ?? null).filter(s => s != null);
+      let uWeightedCorrect = 0, uTotalWeight = 0;
+      for (const p of uValidated) {
+        const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+        uTotalWeight    += w;
+        if (p.correct) uWeightedCorrect += w;
+      }
       userStats = {
         summary: {
           total:    uTotal,
           correct:  uCorrect,
           pending:  userPreds.filter(p => p.correct === null).length,
-          accuracy: uTotal > 0 ? Math.round(uCorrect / uTotal * 100) : null,
-          avgScore: uScores.length > 0 ? +(uScores.reduce((a, b) => a + b, 0) / uScores.length).toFixed(1) : null,
+          accuracy: uTotalWeight > 0 ? Math.round(uWeightedCorrect / uTotalWeight * 100) : null,
         },
         bySection: _sectionStats(uValidated),
         recent: userPreds.map(p => ({
@@ -476,7 +492,7 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, avgScore, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
