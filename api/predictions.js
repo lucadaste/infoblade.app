@@ -217,13 +217,16 @@ async function handleResolve(req, res, supabase) {
   }
 
   // ── 4. ONE history fetch per ticker covering the full date range ───────────
-  //    This replaces thousands of per-date API calls with just [#tickers] calls.
+  //    Batched in groups of 5 to avoid Yahoo Finance rate limiting.
   const histories = {}; // { ticker: { "YYYY-MM-DD": price } }
-  await Promise.allSettled(
-    [...uniqueTickers].map(async ticker => {
-      histories[ticker] = await _fetchTickerHistory(ticker, minMs, maxMs);
-    })
-  );
+  const tickerList = [...uniqueTickers];
+  for (let i = 0; i < tickerList.length; i += 5) {
+    const chunk = tickerList.slice(i, i + 5);
+    await Promise.all(chunk.map(async t => {
+      histories[t] = await _fetchTickerHistory(t, minMs, maxMs);
+    }));
+    if (i + 5 < tickerList.length) await new Promise(r => setTimeout(r, 300));
+  }
 
   // ── 5. Score every prediction from the cached history ─────────────────────
   const updates = [];

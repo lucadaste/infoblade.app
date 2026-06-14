@@ -483,14 +483,18 @@
 
     const recentHtml = userStats.recent?.length
       ? userStats.recent.map(p => renderPredCard(p)).join('')
-      : '<div class="no-data">No predictions yet. Run an analysis on <a href="/feed.html" style="color:var(--accent)">Stock Markets</a> to start tracking.</div>';
+      : `<div class="no-data">No predictions tracked to your account yet.<br><br>
+         Run an analysis on <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>,
+         <a href="/crypto.html" style="color:var(--accent)">Crypto</a>, or
+         <a href="/markets.html" style="color:var(--accent)">Prediction Markets</a> —
+         each one gets automatically logged here.</div>`;
 
     el.innerHTML = `
-      <div class="stats-grid" style="margin-bottom:28px">
-        <div class="stat-card"><div class="stat-label">My Accuracy</div><div class="stat-value" style="color:${accColor}">${s.accuracy != null ? s.accuracy + '%' : '--'}</div><div class="stat-sub">${s.total > 0 ? s.correct + ' of ' + s.total + ' correct' : 'No resolved predictions yet'}</div></div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
+        <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">My Accuracy</div><div class="stat-value" style="color:${accColor}">${s.accuracy != null ? s.accuracy + '%' : '--'}</div><div class="stat-sub">${s.total > 0 ? s.correct + ' of ' + s.total + ' correct' : 'No resolved predictions yet'}</div></div>
         <div class="stat-card"><div class="stat-label">My Avg Score</div><div class="stat-value" style="color:${scoreColor}">${s.avgScore != null ? scoreSign + s.avgScore : '--'}</div><div class="stat-sub">pts per prediction</div></div>
-        <div class="stat-card"><div class="stat-label">My Total</div><div class="stat-value">${s.total}</div><div class="stat-sub">predictions resolved</div></div>
-        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value">${s.pending}</div><div class="stat-sub">still in timeframe</div></div>
+        <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value">${s.total}</div><div class="stat-sub">predictions scored</div></div>
+        <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Awaiting Outcome</div><div class="stat-value">${s.pending}</div><div class="stat-sub">still in timeframe</div></div>
       </div>
       <div class="section-title" style="margin-bottom:14px">My Recent Predictions</div>
       <div class="filter-row" id="personal-filters">
@@ -605,25 +609,30 @@
     await loadStats();
   }
 
-  // ── Step 2: Wait for REAL auth state, then load personal stats ───────────────
-  // The placeholder _auth is set synchronously; the real one (with .sb) is set
-  // after getSession() completes. We poll for .sb to know auth is truly ready.
-  const _authUser = await new Promise(resolve => {
-    function check() {
-      if (window._auth?.sb) {
-        // Real auth object is ready — onReady fires immediately if session resolved
-        window._auth.onReady(user => resolve(user ?? null));
-      } else {
-        setTimeout(check, 80);
-      }
+  // ── Step 2: Load personal stats once auth is settled ────────────────────────
+  // auth.js is async and may not finish before this code runs.
+  // Poll until window._auth.sb exists (real Supabase client, not placeholder),
+  // OR up to 5 seconds max, then read user/token directly from window._auth.
+  {
+    let waited = 0;
+    while (!window._auth?.sb && waited < 5000) {
+      await new Promise(r => setTimeout(r, 100));
+      waited += 100;
     }
-    check();
-  });
+    // Also wait for onAuthStateChange to fire if the initial session was null
+    // but a refresh is in progress (Supabase may update the token asynchronously)
+    if (window._auth?.sb && !window._auth?.user) {
+      await new Promise(r => setTimeout(r, 600));
+    }
+  }
 
-  if (_authUser && window._auth?.token) {
+  const _authToken = window._auth?.token ?? null;
+  const _authUser  = window._auth?.user  ?? null;
+
+  if (_authUser && _authToken) {
     try {
       const r2 = await fetch(window.API_BASE + '/api/predictions', {
-        headers: { 'Authorization': 'Bearer ' + window._auth.token }
+        headers: { 'Authorization': 'Bearer ' + _authToken }
       });
       const d2 = await r2.json();
       renderPersonalSection(d2.userStats ?? null);
