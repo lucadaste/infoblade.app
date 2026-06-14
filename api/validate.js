@@ -47,6 +47,34 @@ async function _fetchCurrentPrices(tickers) {
   } catch (_) { return {}; }
 }
 
+async function _fetchPriceOnDate(symbol, targetDate) {
+  const dayMs = 86400000;
+  const p1 = Math.floor((targetDate.getTime() - 4 * dayMs) / 1000);
+  const p2 = Math.floor((targetDate.getTime() + 2 * dayMs) / 1000);
+  try {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${p1}&period2=${p2}`;
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const result = d?.chart?.result?.[0];
+    if (!result) return null;
+    const tss    = result.timestamps || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    if (!tss.length) return null;
+    const targetTs = targetDate.getTime() / 1000;
+    let bestIdx = -1, bestDiff = Infinity;
+    for (let i = 0; i < tss.length; i++) {
+      if (closes[i] == null) continue;
+      const diff = Math.abs(tss[i] - targetTs);
+      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    }
+    return bestIdx >= 0 ? +closes[bestIdx].toFixed(4) : null;
+  } catch (_) { return null; }
+}
+
 // A ticker direction is correct if it moved >= 0.5% the predicted way.
 function _scoreDirections(winnerTickers, loserTickers, baseline, current) {
   let correct = 0, incorrect = 0, neutral = 0;
@@ -127,7 +155,7 @@ export default async function handler(req, res) {
 
     if (!ready.length) return res.status(200).json({ validated: 0, message: 'No predictions ready for validation' });
 
-    // Fetch current prices for all relevant tickers at once
+    // Batch-fetch current prices (used as fallback for fresh predictions)
     const allTickers = [...new Set(ready.flatMap(p => [...(p.winner_tickers || []), ...(p.loser_tickers || [])]))];
     const currentPrices = await _fetchCurrentPrices(allTickers);
 
@@ -136,23 +164,34 @@ export default async function handler(req, res) {
 
     for (const p of ready) {
       const predTickers = (p.winner_tickers || []).concat(p.loser_tickers || []);
-      const relevantPrices = Object.fromEntries(
+
+      // Use historical price at validation_date for late resolutions (retroactive accuracy)
+      const validationDate = new Date(p.validation_date);
+      const daysSince = (Date.now() - validationDate.getTime()) / 86400000;
+      let resolvedPrices = Object.fromEntries(
         Object.entries(currentPrices).filter(([t]) => predTickers.includes(t))
       );
+      if (daysSince > 2) {
+        await Promise.allSettled(predTickers.map(async t => {
+          const hp = await _fetchPriceOnDate(t, validationDate);
+          if (hp != null) resolvedPrices[t] = hp;
+        }));
+      }
+      const relevantPrices = resolvedPrices;
 
       // Per-ticker moves (consistent with resolve-predictions.js)
       const tickerMoves = {};
       for (const t of p.winner_tickers || []) {
-        if (!p.baseline_prices[t] || !currentPrices[t]) continue;
-        const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
+        if (!p.baseline_prices[t] || !resolvedPrices[t]) continue;
+        const pct = +((resolvedPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
         const pts = _tickerScore(pct, 'bullish');
-        tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts };
+        tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts, priceAtValidation: resolvedPrices[t] };
       }
       for (const t of p.loser_tickers || []) {
-        if (!p.baseline_prices[t] || !currentPrices[t]) continue;
-        const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
+        if (!p.baseline_prices[t] || !resolvedPrices[t]) continue;
+        const pct = +((resolvedPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
         const pts = _tickerScore(pct, 'bearish');
-        tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts };
+        tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts, priceAtValidation: resolvedPrices[t] };
       }
 
       const gradedCount = Object.keys(tickerMoves).length;

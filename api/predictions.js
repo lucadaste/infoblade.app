@@ -80,6 +80,56 @@ async function _fetchPrices(tickers, timeoutMs = 7000) {
   } catch (_) { return {}; }
 }
 
+// Fetch closing price on a specific date via Yahoo Finance v8 chart API.
+// Used for retroactive validation — gets the actual price at the end of the prediction timeframe.
+async function _fetchPriceOnDate(symbol, targetDate) {
+  const dayMs = 86400000;
+  const p1 = Math.floor((targetDate.getTime() - 4 * dayMs) / 1000); // 4 days before (weekend buffer)
+  const p2 = Math.floor((targetDate.getTime() + 2 * dayMs) / 1000); // 2 days after
+  try {
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${p1}&period2=${p2}`;
+    const r = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const result = d?.chart?.result?.[0];
+    if (!result) return null;
+    const tss    = result.timestamps || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    if (!tss.length) return null;
+    // Find the trading day closest to targetDate
+    const targetTs = targetDate.getTime() / 1000;
+    let bestIdx = -1, bestDiff = Infinity;
+    for (let i = 0; i < tss.length; i++) {
+      if (closes[i] == null) continue;
+      const diff = Math.abs(tss[i] - targetTs);
+      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+    }
+    return bestIdx >= 0 ? +closes[bestIdx].toFixed(4) : null;
+  } catch (_) { return null; }
+}
+
+// Get actual prices for a prediction — uses historical price at validation_date for late resolutions.
+async function _resolveActualPrices(pred, currentPriceMap) {
+  const validationDate = new Date(pred.validation_date);
+  const daysSince = (Date.now() - validationDate.getTime()) / 86400000;
+  // If validation date passed more than 2 days ago, use historical prices for accuracy
+  if (daysSince <= 2) return currentPriceMap;
+
+  const allTickers = [...new Set([...(pred.winner_tickers || []), ...(pred.loser_tickers || [])])];
+  const historicalPrices = {};
+  await Promise.allSettled(
+    allTickers.map(async t => {
+      const p = await _fetchPriceOnDate(t, validationDate);
+      if (p != null) historicalPrices[t] = p;
+    })
+  );
+  // Merge: historical takes priority, fall back to current if unavailable
+  return { ...currentPriceMap, ...historicalPrices };
+}
+
 function _tickerScore(pct, direction) {
   const signed = direction === 'bullish' ? pct : -pct;
   return +(Math.max(-100, Math.min(100, signed * 10)).toFixed(1));
@@ -142,7 +192,7 @@ async function handleResolve(req, res, supabase) {
     .is('correct', null)
     .not('validation_date', 'is', null)
     .lte('validation_date', now)
-    .limit(50);
+    .limit(500);
 
   if (error) return res.status(500).json({ error: error.message });
   if (!pending?.length) return res.status(200).json({ resolved: 0 });
@@ -154,8 +204,9 @@ async function handleResolve(req, res, supabase) {
     const allTickers = [...new Set([...winners, ...losers])];
     if (!allTickers.length) continue;
 
-    const baseline = pred.baseline_prices || {};
-    const actual   = await _fetchPrices(allTickers, 8000);
+    const baseline     = pred.baseline_prices || {};
+    const currentPrices = await _fetchPrices(allTickers, 8000);
+    const actual        = await _resolveActualPrices(pred, currentPrices);
 
     const tickerMoves = {};
     let correctCount = 0, gradedCount = 0;

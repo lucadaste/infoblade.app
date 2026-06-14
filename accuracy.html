@@ -218,11 +218,10 @@
 
 <div class="main">
   <!-- Stats -->
-  <div class="stats-grid" id="stats-grid">
-    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
+  <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)" id="stats-grid">
+    <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
     <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value skeleton" id="stat-avg-score" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">pts per prediction</div></div>
-    <div class="stat-card"><div class="stat-label">Correct / Total</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">validated predictions</div></div>
-    <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">still in timeframe</div></div>
+    <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">&nbsp;</div></div>
   </div>
 
   <!-- Per-section breakdown -->
@@ -309,12 +308,9 @@
     const correct = document.getElementById('stat-correct');
     correct.classList.remove('skeleton');
     correct.style.height = correct.style.width = 'auto';
-    correct.textContent = s.total > 0 ? `${fmt(s.correct)}/${fmt(s.total)}` : '--';
-
-    const pending = document.getElementById('stat-pending');
-    pending.classList.remove('skeleton');
-    pending.style.height = pending.style.width = 'auto';
-    pending.textContent = fmt(s.pending);
+    correct.textContent = fmt(s.total);
+    const subCorrect = document.getElementById('stat-sub-correct');
+    if (subCorrect) subCorrect.textContent = s.total > 0 ? `${s.correct} correct, ${s.incorrect} incorrect` : 'No validated predictions yet';
 
     const sub = document.getElementById('stat-sub-accuracy');
     sub.textContent = s.total > 0 ? `${s.correct} correct of ${s.total} resolved` : 'No validated predictions yet';
@@ -553,57 +549,52 @@
     setTimeout(() => { status.textContent = ''; }, 5000);
   });
 
-  // Wait for auth to resolve before fetching so the token is available
-  await new Promise(resolve => {
-    if (window._auth) { window._auth.onReady(resolve); } else {
-      const t = setInterval(() => { if (window._auth) { clearInterval(t); window._auth.onReady(resolve); } }, 50);
-    }
-  });
-
-  function _predHeaders() {
-    const t = window._auth?.token;
-    return t ? { 'Authorization': 'Bearer ' + t } : {};
-  }
-
+  // ── Step 1: Load public stats immediately (no auth needed) ──────────────────
   try {
-    const res  = await fetch(window.API_BASE + '/api/predictions', { headers: _predHeaders() });
+    const res  = await fetch(window.API_BASE + '/api/predictions');
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    allRecent = data.recent || [];
     renderStats(data.summary);
     renderBySection(data.bySection);
     renderCumulativeChart(data.cumulativeTimeline);
     renderChart(data.timeline);
     renderTickers(data.topTickers);
-    renderPersonalSection(data.userStats ?? null);
+  } catch (err) {
+    ['stat-accuracy','stat-avg-score','stat-correct'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
+    });
+    document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load data: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
+    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
+  }
 
-    // If zero predictions, check DB connectivity and show a helpful message
-    if (data.summary.total === 0 && data.summary.pending === 0) {
-      const dbEl = document.getElementById('pred-list');
-      const chk  = await fetch(window.API_BASE + '/api/db-check').then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
-      if (!chk.ok) {
-        dbEl.innerHTML = `<div class="error-msg">
-          <strong>Database issue detected:</strong> ${esc(chk.error || 'unknown error')}
-          ${chk.hint ? `<br><em>${esc(chk.hint)}</em>` : ''}
-          <br><br>Check that <code>SUPABASE_URL</code> and <code>SUPABASE_SERVICE_KEY</code> are set correctly in Vercel environment variables.
-        </div>`;
+  // ── Step 2: Wait for REAL auth state, then load personal stats ───────────────
+  // The placeholder _auth is set synchronously; the real one (with .sb) is set
+  // after getSession() completes. We poll for .sb to know auth is truly ready.
+  const _authUser = await new Promise(resolve => {
+    function check() {
+      if (window._auth?.sb) {
+        // Real auth object is ready — onReady fires immediately if session resolved
+        window._auth.onReady(user => resolve(user ?? null));
       } else {
-        dbEl.innerHTML = `<div class="no-data">
-          Database connected (${chk.totalRows} total rows). No predictions saved yet.<br><br>
-          Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, then return here. Every analysis is automatically tracked.
-        </div>`;
+        setTimeout(check, 80);
       }
     }
-  } catch (err) {
-    ['stat-accuracy','stat-correct','stat-total','stat-pending'].forEach(id => {
-      const el = document.getElementById(id);
-      el.classList.remove('skeleton');
-      el.textContent = '--';
-    });
-    document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load data.</div>`;
-    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
-    document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
-    document.getElementById('ticker-table').innerHTML = '';
+    check();
+  });
+
+  if (_authUser && window._auth?.token) {
+    try {
+      const r2 = await fetch(window.API_BASE + '/api/predictions', {
+        headers: { 'Authorization': 'Bearer ' + window._auth.token }
+      });
+      const d2 = await r2.json();
+      renderPersonalSection(d2.userStats ?? null);
+    } catch (_) {
+      renderPersonalSection(null);
+    }
+  } else {
+    renderPersonalSection(null);
   }
 })();
 </script>
