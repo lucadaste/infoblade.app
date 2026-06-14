@@ -44,11 +44,16 @@ async function _fetchPrices(tickers, timeoutMs = 7000) {
   } catch (_) { return {}; }
 }
 
+function _tickerScore(pct, direction) {
+  const signed = direction === 'bullish' ? pct : -pct;
+  return +(Math.max(-100, Math.min(100, signed * 10)).toFixed(1));
+}
+
 function _letterGrade(score) {
-  if (score >= 80) return 'A';
-  if (score >= 65) return 'B';
-  if (score >= 50) return 'C';
-  if (score >= 35) return 'D';
+  if (score >= 70)  return 'A';
+  if (score >= 40)  return 'B';
+  if (score >= 5)   return 'C';
+  if (score >= -20) return 'D';
   return 'F';
 }
 
@@ -122,28 +127,30 @@ async function handleResolve(req, res, supabase) {
     for (const t of winners) {
       if (!actual[t] || !baseline[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const isCorrect = pct >= 0.5;
-      tickerMoves[t] = { pct, direction: 'bullish', correct: isCorrect };
-      if (isCorrect) correctCount++;
+      const pts = _tickerScore(pct, 'bullish');
+      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts };
+      if (pct >= 0.5) correctCount++;
       gradedCount++;
     }
     for (const t of losers) {
       if (!actual[t] || !baseline[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const isCorrect = pct <= -0.5;
-      tickerMoves[t] = { pct, direction: 'bearish', correct: isCorrect };
-      if (isCorrect) correctCount++;
+      const pts = _tickerScore(pct, 'bearish');
+      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts };
+      if (pct <= -0.5) correctCount++;
       gradedCount++;
     }
 
     if (gradedCount === 0) continue;
-    const score   = Math.round(correctCount / gradedCount * 100);
-    const correct = score >= 60;
-    const grade   = _letterGrade(score);
+    const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
+    const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+    const correct = accuracyScore > 0;
+    const grade   = _letterGrade(accuracyScore);
+    const score   = accuracyScore;
 
     const { error: updateErr } = await supabase
       .from('predictions')
-      .update({ correct, actual_prices: actual, validated_at: now, analysis: { ...(pred.analysis || {}), grade, score, ticker_moves: tickerMoves } })
+      .update({ correct, actual_prices: actual, validated_at: now, analysis: { ...(pred.analysis || {}), grade, score, accuracy_score: score, ticker_moves: tickerMoves } })
       .eq('id', pred.id);
 
     if (!updateErr) {
@@ -191,6 +198,8 @@ async function handleStats(req, res, supabase) {
   const total    = validated?.length ?? 0;
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : null;
+  const scores   = (validated || []).map(p => p.analysis?.accuracy_score ?? p.analysis?.score ?? null).filter(s => s != null);
+  const avgScore = scores.length > 0 ? +(scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : null;
 
   const { data: recent, error: rErr } = await supabase
     .from('predictions')
@@ -202,13 +211,30 @@ async function handleStats(req, res, supabase) {
   const byMonth = {};
   for (const p of validated ?? []) {
     const month = p.created_at.slice(0, 7);
-    if (!byMonth[month]) byMonth[month] = { total: 0, correct: 0 };
+    if (!byMonth[month]) byMonth[month] = { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
     byMonth[month].total++;
     if (p.correct) byMonth[month].correct++;
+    const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? null;
+    if (s != null) { byMonth[month].scoreSum += s; byMonth[month].scoreCount++; }
   }
   const timeline = Object.entries(byMonth)
-    .map(([month, s]) => ({ month, total: s.total, correct: s.correct, accuracy: Math.round(s.correct / s.total * 100) }))
+    .map(([month, s]) => ({
+      month,
+      total:    s.total,
+      correct:  s.correct,
+      accuracy: Math.round(s.correct / s.total * 100),
+      avgScore: s.scoreCount > 0 ? +(s.scoreSum / s.scoreCount).toFixed(1) : null,
+    }))
     .sort((a, b) => a.month.localeCompare(b.month));
+
+  // Cumulative score timeline (running total of accuracy points, oldest-first)
+  const validatedAsc = [...(validated ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  let cumulative = 0;
+  const cumulativeTimeline = validatedAsc.map(p => {
+    const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? 0;
+    cumulative = +(cumulative + s).toFixed(1);
+    return { date: p.created_at.slice(0, 10), cumulative };
+  });
 
   const byCategoryMap = {};
   for (const p of validated ?? []) {
@@ -238,8 +264,8 @@ async function handleStats(req, res, supabase) {
     .slice(0, 10);
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0 },
-    timeline, byCategory, topTickers,
+    summary: { total, correct, incorrect: total - correct, accuracy, avgScore, pending: pending ?? 0 },
+    timeline, cumulativeTimeline, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
       validationDate: p.validation_date, winnerTickers: p.winner_tickers,

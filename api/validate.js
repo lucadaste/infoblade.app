@@ -15,11 +15,18 @@ function _setCors(res) {
   res.setHeader('Vary', 'Origin');
 }
 
+// Accuracy score: direction_sign × pct_return × 10, clamped to [-100, 100].
+// +10% correct call = +100 pts; 5% wrong call = -50 pts.
+function _tickerScore(pct, direction) {
+  const signed = direction === 'bullish' ? pct : -pct;
+  return +(Math.max(-100, Math.min(100, signed * 10)).toFixed(1));
+}
+
 function _letterGrade(score) {
-  if (score >= 80) return 'A';
-  if (score >= 65) return 'B';
-  if (score >= 50) return 'C';
-  if (score >= 35) return 'D';
+  if (score >= 70)  return 'A';
+  if (score >= 40)  return 'B';
+  if (score >= 5)   return 'C';
+  if (score >= -20) return 'D';
   return 'F';
 }
 
@@ -138,21 +145,27 @@ export default async function handler(req, res) {
       for (const t of p.winner_tickers || []) {
         if (!p.baseline_prices[t] || !currentPrices[t]) continue;
         const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
-        tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5 };
+        const pts = _tickerScore(pct, 'bullish');
+        tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts };
       }
       for (const t of p.loser_tickers || []) {
         if (!p.baseline_prices[t] || !currentPrices[t]) continue;
         const pct = +((currentPrices[t] - p.baseline_prices[t]) / p.baseline_prices[t] * 100).toFixed(2);
-        tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5 };
+        const pts = _tickerScore(pct, 'bearish');
+        tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts };
       }
 
       const gradedCount = Object.keys(tickerMoves).length;
       if (gradedCount === 0) continue;
 
+      // Accuracy score = average of per-ticker point scores (-100 to +100)
+      const tickerScores = Object.values(tickerMoves).map(m => m.pts);
+      const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+      const correct = accuracyScore > 0;
+      const grade   = _letterGrade(accuracyScore);
+      // Legacy pct-correct for notes
       const correctCount = Object.values(tickerMoves).filter(m => m.correct).length;
       const score = Math.round(correctCount / gradedCount * 100);
-      const correct = score >= 60;
-      const grade = _letterGrade(score);
 
       // Keep legacy scores for notes
       const scores = _scoreDirections(p.winner_tickers || [], p.loser_tickers || [], p.baseline_prices, currentPrices);
@@ -163,12 +176,13 @@ export default async function handler(req, res) {
           correct,
           validated_at: now.toISOString(),
           actual_prices: relevantPrices,
-          notes: { scores, method: 'auto' },
+          notes: { scores, method: 'auto', pct_correct: score },
           analysis: {
             ...(p.analysis || {}),
             grade,
-            score,
-            ticker_moves: tickerMoves,
+            score:          accuracyScore,   // signed accuracy score -100..+100
+            accuracy_score: accuracyScore,
+            ticker_moves:   tickerMoves,
           },
         })
         .eq('id', p.id);
@@ -176,7 +190,7 @@ export default async function handler(req, res) {
       if (updateErr) { console.error('Update error for', p.id, updateErr.message); continue; }
 
       validatedCount++;
-      results.push({ id: p.id, topic: p.topic, correct, grade, score, scores });
+      results.push({ id: p.id, topic: p.topic, correct, grade, score: accuracyScore, scores });
     }
 
     // ── Update source_reputation ─────────────────────────────────────────────

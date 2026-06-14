@@ -59,6 +59,11 @@ alter table source_reputation enable row level security;
 alter table predictions add column if not exists category text;
 create index if not exists predictions_category_idx on predictions (category);
 
+-- Accuracy score column: signed float -100..+100 derived from % return magnitude.
+-- Stored at resolution time; also written into analysis jsonb as accuracy_score.
+-- Positive = correct direction, magnitude = how far the ticker moved.
+alter table predictions add column if not exists accuracy_score numeric;
+
 -- Atomic upsert for source reputation (called by resolve-predictions.js)
 create or replace function upsert_source_reputation(p_source text, p_correct integer)
 returns void language plpgsql security definer as $$

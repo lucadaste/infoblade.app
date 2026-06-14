@@ -220,8 +220,8 @@
   <!-- Stats -->
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
-    <div class="stat-card"><div class="stat-label">Correct Calls</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">validated predictions</div></div>
-    <div class="stat-card"><div class="stat-label">Total Validated</div><div class="stat-value skeleton" id="stat-total" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">predictions resolved</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value skeleton" id="stat-avg-score" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">pts per prediction</div></div>
+    <div class="stat-card"><div class="stat-label">Correct / Total</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">validated predictions</div></div>
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">still in timeframe</div></div>
   </div>
 
@@ -231,9 +231,16 @@
 
   <div class="cols">
     <div>
+      <!-- Cumulative score -->
+      <div class="chart-wrap" style="margin-bottom:24px">
+        <div class="section-title">Cumulative Accuracy Score</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total of accuracy points across all resolved predictions. Each prediction contributes -100 to +100 pts based on how much tickers moved in the predicted direction.</p>
+        <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
+      </div>
+
       <!-- Accuracy over time -->
       <div class="chart-wrap">
-        <div class="section-title">Accuracy Over Time</div>
+        <div class="section-title">Avg Score by Month</div>
         <div id="chart-area"><div class="chart-empty">Loading…</div></div>
       </div>
 
@@ -284,15 +291,21 @@
     acc.style.height = acc.style.width = 'auto';
     acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
 
+    const avgScore = document.getElementById('stat-avg-score');
+    avgScore.classList.remove('skeleton');
+    avgScore.style.height = avgScore.style.width = 'auto';
+    if (s.avgScore != null) {
+      const sign = s.avgScore >= 0 ? '+' : '';
+      avgScore.textContent = sign + s.avgScore;
+      avgScore.style.color = s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
+    } else {
+      avgScore.textContent = '--';
+    }
+
     const correct = document.getElementById('stat-correct');
     correct.classList.remove('skeleton');
     correct.style.height = correct.style.width = 'auto';
-    correct.textContent = fmt(s.correct);
-
-    const total = document.getElementById('stat-total');
-    total.classList.remove('skeleton');
-    total.style.height = total.style.width = 'auto';
-    total.textContent = fmt(s.total);
+    correct.textContent = s.total > 0 ? `${fmt(s.correct)}/${fmt(s.total)}` : '--';
 
     const pending = document.getElementById('stat-pending');
     pending.classList.remove('skeleton');
@@ -300,7 +313,7 @@
     pending.textContent = fmt(s.pending);
 
     const sub = document.getElementById('stat-sub-accuracy');
-    sub.textContent = s.total > 0 ? `${s.correct} of ${s.total} predictions` : 'No validated predictions yet';
+    sub.textContent = s.total > 0 ? `${s.correct} correct of ${s.total} resolved` : 'No validated predictions yet';
   }
 
   function renderChart(timeline) {
@@ -309,24 +322,57 @@
       area.innerHTML = '<div class="chart-empty">No validated predictions yet. Check back once timeframes expire.</div>';
       return;
     }
-    const maxPct = 100;
     area.innerHTML = `
       <div class="chart-bars">
         ${timeline.map(t => {
-          const barH = Math.max(4, Math.round(t.accuracy / maxPct * 100));
-          const cls  = t.accuracy >= 60 ? '' : 'dim';
-          const label = t.month; // "YYYY-MM"
+          const barH = Math.max(4, Math.round(Math.abs(t.avgScore ?? t.accuracy) / 100 * 100));
+          const score = t.avgScore ?? null;
+          const cls   = score != null ? (score >= 0 ? '' : 'dim') : (t.accuracy >= 60 ? '' : 'dim');
+          const label = score != null ? (score >= 0 ? '+' : '') + score + ' pts' : t.accuracy + '%';
           return `
-            <div class="chart-col" title="${t.month}: ${t.accuracy}% (${t.correct}/${t.total})">
-              <div class="chart-pct">${t.accuracy}%</div>
+            <div class="chart-col" title="${t.month}: avg ${score != null ? (score>=0?'+':'')+score+' pts' : t.accuracy+'%'} (${t.correct}/${t.total})">
+              <div class="chart-pct" style="${score != null && score < 0 ? 'color:var(--red)' : ''}">${label}</div>
               <div class="chart-bar-outer" style="height:${barH}px">
-                <div class="chart-bar-inner ${cls}" style="height:100%"></div>
+                <div class="chart-bar-inner ${cls}" style="height:100%;${score != null && score < 0 ? 'background:var(--red);opacity:0.6' : ''}"></div>
               </div>
-              <div class="chart-month">${label.slice(5)}</div>
+              <div class="chart-month">${t.month.slice(5)}</div>
             </div>`;
         }).join('')}
       </div>
       <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:right">${timeline.reduce((a,t)=>a+t.total,0)} validated predictions across ${timeline.length} month${timeline.length===1?'':'s'}</div>
+    `;
+  }
+
+  function renderCumulativeChart(cum) {
+    const area = document.getElementById('cumulative-chart-area');
+    if (!cum || cum.length < 2) {
+      area.innerHTML = '<div class="chart-empty">Needs 2+ resolved predictions to draw.</div>';
+      return;
+    }
+    const vals  = cum.map(c => c.cumulative);
+    const min   = Math.min(0, ...vals);
+    const max   = Math.max(0, ...vals);
+    const range = max - min || 1;
+    const H = 120, W = 100; // SVG viewBox %
+    const pts = cum.map((c, i) => {
+      const x = (i / (cum.length - 1)) * W;
+      const y = H - ((c.cumulative - min) / range) * H;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    const zeroY = (H - ((0 - min) / range) * H).toFixed(1);
+    const lastVal = vals[vals.length - 1];
+    const color = lastVal >= 0 ? 'var(--accent)' : 'var(--red)';
+    area.innerHTML = `
+      <svg viewBox="0 0 100 ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
+        <line x1="0" y1="${zeroY}" x2="100" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5"/>
+        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${(100).toFixed(1)}" cy="${(H - ((lastVal - min)/range)*H).toFixed(1)}" r="2" fill="${color}"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
+        <span>${cum[0].date}</span>
+        <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;color:${color}">${lastVal >= 0 ? '+' : ''}${lastVal} pts total</span>
+        <span>${cum[cum.length-1].date}</span>
+      </div>
     `;
   }
 
@@ -349,8 +395,12 @@
       const conf        = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
 
       // Grade badge (A/B/C/D/F) for resolved predictions
+      const scoreVal = p.score ?? p.accuracy_score ?? null;
       const gradeHtml = p.grade
-        ? `<div class="grade-badge grade-${esc(p.grade)}" title="${p.score}% of tickers moved as predicted">${esc(p.grade)}</div>`
+        ? `<div style="text-align:center">
+             <div class="grade-badge grade-${esc(p.grade)}" title="${scoreVal != null ? (scoreVal>=0?'+':'')+scoreVal+' pts' : ''}">${esc(p.grade)}</div>
+             ${scoreVal != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:4px;color:${scoreVal>=0?'var(--accent)':'var(--red)'}">${scoreVal>=0?'+':''}${scoreVal}</div>` : ''}
+           </div>`
         : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
 
       // Per-ticker actual move chips
@@ -359,10 +409,11 @@
         const chips = Object.entries(p.tickerMoves).map(([sym, m]) => {
           const arrow = m.direction === 'bullish' ? '▲' : '▼';
           const sign  = m.pct > 0 ? '+' : '';
-          return `<span class="tm-chip ${m.correct ? 'hit' : 'miss'}" title="${m.correct ? 'Correct' : 'Missed'}">${arrow} ${esc(sym)} ${sign}${m.pct}%</span>`;
+          const ptsSign = (m.pts ?? 0) >= 0 ? '+' : '';
+          const ptsTip = m.pts != null ? ` (${ptsSign}${m.pts} pts)` : '';
+          return `<span class="tm-chip ${m.correct ? 'hit' : 'miss'}" title="${m.correct ? 'Correct' : 'Missed'}${ptsTip}">${arrow} ${esc(sym)} ${sign}${m.pct}%</span>`;
         }).join('');
-        const scoreLine = p.score != null ? `<div class="score-line">${p.score}% of tickers moved as predicted</div>` : '';
-        movesHtml = `<div class="ticker-moves">${chips}</div>${scoreLine}`;
+        movesHtml = `<div class="ticker-moves">${chips}</div>`;
       }
 
       return `
@@ -465,6 +516,7 @@
     allRecent = data.recent || [];
     renderStats(data.summary);
     renderByCategory(data.byCategory);
+    renderCumulativeChart(data.cumulativeTimeline);
     renderChart(data.timeline);
     renderPredictions(allRecent);
     renderTickers(data.topTickers);
@@ -492,6 +544,7 @@
       el.classList.remove('skeleton');
       el.textContent = '--';
     });
+    document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load data.</div>`;
     document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
     document.getElementById('pred-list').innerHTML   = `<div class="error-msg">${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
     document.getElementById('ticker-table').innerHTML = '';
