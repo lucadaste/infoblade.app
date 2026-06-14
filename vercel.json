@@ -1,6 +1,10 @@
 {
   "buildCommand": "bash scripts/build-www.sh",
   "outputDirectory": "www",
+  "functions": {
+    "api/predictions.js": { "maxDuration": 60 },
+    "api/validate.js":    { "maxDuration": 60 }
+  },
   "crons": [
     {
       "path": "/api/predictions?resolve=true",

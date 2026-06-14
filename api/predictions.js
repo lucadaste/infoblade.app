@@ -80,54 +80,44 @@ async function _fetchPrices(tickers, timeoutMs = 7000) {
   } catch (_) { return {}; }
 }
 
-// Fetch closing price on a specific date via Yahoo Finance v8 chart API.
-// Used for retroactive validation — gets the actual price at the end of the prediction timeframe.
-async function _fetchPriceOnDate(symbol, targetDate) {
-  const dayMs = 86400000;
-  const p1 = Math.floor((targetDate.getTime() - 4 * dayMs) / 1000); // 4 days before (weekend buffer)
-  const p2 = Math.floor((targetDate.getTime() + 2 * dayMs) / 1000); // 2 days after
+// Fetch the FULL daily price history for a ticker over a date range in ONE request.
+// Returns a map of { "YYYY-MM-DD": closePrice } covering all trading days in the range.
+async function _fetchTickerHistory(ticker, startMs, endMs) {
+  const p1 = Math.floor(startMs / 1000) - 7 * 86400; // 1 week buffer before
+  const p2 = Math.floor(endMs   / 1000) + 7 * 86400; // 1 week buffer after
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${p1}&period2=${p2}`;
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${p1}&period2=${p2}`;
     const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible)', 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(12000),
     });
-    if (!r.ok) return null;
+    if (!r.ok) return {};
     const d = await r.json();
     const result = d?.chart?.result?.[0];
-    if (!result) return null;
-    const tss    = result.timestamps || [];
+    if (!result) return {};
+    const tss    = result.timestamps    || [];
     const closes = result.indicators?.quote?.[0]?.close || [];
-    if (!tss.length) return null;
-    // Find the trading day closest to targetDate
-    const targetTs = targetDate.getTime() / 1000;
-    let bestIdx = -1, bestDiff = Infinity;
+    const map    = {};
     for (let i = 0; i < tss.length; i++) {
       if (closes[i] == null) continue;
-      const diff = Math.abs(tss[i] - targetTs);
-      if (diff < bestDiff) { bestDiff = diff; bestIdx = i; }
+      map[new Date(tss[i] * 1000).toISOString().slice(0, 10)] = +closes[i].toFixed(4);
     }
-    return bestIdx >= 0 ? +closes[bestIdx].toFixed(4) : null;
-  } catch (_) { return null; }
+    return map;
+  } catch (_) { return {}; }
 }
 
-// Get actual prices for a prediction — uses historical price at validation_date for late resolutions.
-async function _resolveActualPrices(pred, currentPriceMap) {
-  const validationDate = new Date(pred.validation_date);
-  const daysSince = (Date.now() - validationDate.getTime()) / 86400000;
-  // If validation date passed more than 2 days ago, use historical prices for accuracy
-  if (daysSince <= 2) return currentPriceMap;
-
-  const allTickers = [...new Set([...(pred.winner_tickers || []), ...(pred.loser_tickers || [])])];
-  const historicalPrices = {};
-  await Promise.allSettled(
-    allTickers.map(async t => {
-      const p = await _fetchPriceOnDate(t, validationDate);
-      if (p != null) historicalPrices[t] = p;
-    })
-  );
-  // Merge: historical takes priority, fall back to current if unavailable
-  return { ...currentPriceMap, ...historicalPrices };
+// Look up the price closest to targetDate in a pre-fetched history map.
+// Returns null if no price within 5 trading days (7 calendar days).
+function _priceOnDate(historyMap, targetDate) {
+  const keys = Object.keys(historyMap);
+  if (!keys.length) return null;
+  const targetMs = targetDate.getTime();
+  let best = null, bestDiff = Infinity;
+  for (const k of keys) {
+    const diff = Math.abs(new Date(k).getTime() - targetMs);
+    if (diff < bestDiff) { bestDiff = diff; best = k; }
+  }
+  return bestDiff <= 7 * 86400000 ? historyMap[best] : null;
 }
 
 function _tickerScore(pct, direction) {
@@ -188,90 +178,81 @@ async function handleResolve(req, res, supabase) {
   const nowStr = new Date().toISOString();
   const nowMs  = Date.now();
 
-  // Fetch ALL unresolved predictions — no filter on validation_date or baseline_prices
-  // so we handle legacy predictions that were saved without those fields.
+  // ── 1. Fetch all unresolved predictions (no filters — handle all legacy data) ──
   const { data: all, error } = await supabase
     .from('predictions')
     .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources')
     .is('correct', null)
     .order('created_at', { ascending: true })
-    .limit(500);
+    .limit(1000);
 
   if (error) return res.status(500).json({ error: error.message });
   if (!all?.length) return res.status(200).json({ resolved: 0, total: 0 });
 
-  // Determine effective validation date for each prediction (derive if missing)
-  const ready = all
-    .map(p => {
-      let vDate = p.validation_date ? new Date(p.validation_date) : null;
-      if (!vDate && p.created_at) {
-        const days = _parseTimeframeDays(p.analysis?.impact_timeframe);
-        vDate = new Date(new Date(p.created_at).getTime() + days * 86400000);
-      }
-      return { ...p, _vDate: vDate };
-    })
-    .filter(p =>
-      p._vDate && p._vDate.getTime() <= nowMs &&  // timeframe has expired
-      ((p.winner_tickers?.length || 0) + (p.loser_tickers?.length || 0)) > 0
-    );
-
-  if (!ready.length) return res.status(200).json({ resolved: 0, total: all.length, skipped: all.length });
-
-  // ── Build a cache of (ticker, dateKey) → price to avoid duplicate API calls ──
-  const priceCache = new Map(); // key: "TICKER::YYYY-MM-DD"
-
-  async function _cachedPrice(ticker, date) {
-    const key = `${ticker}::${date.toISOString().slice(0, 10)}`;
-    if (priceCache.has(key)) return priceCache.get(key);
-    const p = await _fetchPriceOnDate(ticker, date);
-    priceCache.set(key, p);
-    return p;
-  }
-
-  // Pre-warm cache in parallel for all unique (ticker, baselineDate, validationDate) combos
-  const lookups = new Set();
-  for (const p of ready) {
-    const baseDate = new Date(p.created_at);
-    for (const t of [...(p.winner_tickers || []), ...(p.loser_tickers || [])]) {
-      if (!p.baseline_prices?.[t]) lookups.add(`${t}::${baseDate.toISOString().slice(0, 10)}`);
-      lookups.add(`${t}::${p._vDate.toISOString().slice(0, 10)}`);
+  // ── 2. Derive effective validation date for each; keep only expired ones ───
+  const ready = [];
+  for (const p of all) {
+    if (!p.winner_tickers?.length && !p.loser_tickers?.length) continue;
+    let vDate = p.validation_date ? new Date(p.validation_date) : null;
+    if (!vDate && p.created_at) {
+      const days = _parseTimeframeDays(p.analysis?.impact_timeframe);
+      vDate = new Date(new Date(p.created_at).getTime() + days * 86400000);
     }
+    if (!vDate || vDate.getTime() > nowMs) continue; // not expired yet
+    ready.push({ ...p, _vDate: vDate });
   }
 
+  if (!ready.length) return res.status(200).json({ resolved: 0, total: all.length, pending: all.length });
+
+  // ── 3. Collect unique tickers and the overall date range ──────────────────
+  const uniqueTickers = new Set();
+  let minMs = nowMs, maxMs = 0;
+  for (const p of ready) {
+    for (const t of [...(p.winner_tickers || []), ...(p.loser_tickers || [])]) {
+      if (/^[A-Z^.]{1,7}$/.test(t)) uniqueTickers.add(t);
+    }
+    const createdMs = new Date(p.created_at).getTime();
+    if (createdMs < minMs) minMs = createdMs;
+    if (p._vDate.getTime() > maxMs) maxMs = p._vDate.getTime();
+  }
+
+  // ── 4. ONE history fetch per ticker covering the full date range ───────────
+  //    This replaces thousands of per-date API calls with just [#tickers] calls.
+  const histories = {}; // { ticker: { "YYYY-MM-DD": price } }
   await Promise.allSettled(
-    [...lookups].map(key => {
-      const [ticker, dateStr] = key.split('::');
-      if (priceCache.has(key)) return;
-      return _fetchPriceOnDate(ticker, new Date(dateStr)).then(p => priceCache.set(key, p));
+    [...uniqueTickers].map(async ticker => {
+      histories[ticker] = await _fetchTickerHistory(ticker, minMs, maxMs);
     })
   );
 
-  // ── Score each prediction ──────────────────────────────────────────────────
-  let resolved = 0, skipped = 0;
+  // ── 5. Score every prediction from the cached history ─────────────────────
   const updates = [];
+  let skipped = 0;
 
   for (const pred of ready) {
-    const winners    = (pred.winner_tickers || []).filter(t => /^[A-Z.]{1,7}$/.test(t));
-    const losers     = (pred.loser_tickers  || []).filter(t => /^[A-Z.]{1,7}$/.test(t));
-    const allTickers = [...new Set([...winners, ...losers])];
+    const winners    = (pred.winner_tickers || []).filter(t => histories[t]);
+    const losers     = (pred.loser_tickers  || []).filter(t => histories[t]);
+    if (!winners.length && !losers.length) { skipped++; continue; }
 
-    const baseDate = new Date(pred.created_at);
-    const valDate  = pred._vDate;
+    const createdDate = new Date(pred.created_at);
+    const valDate     = pred._vDate;
 
-    // Build baseline: use stored value or fall back to historical price at created_at
+    // Build baseline: stored price preferred; fall back to price at created_at from history
     const baseline = { ...(pred.baseline_prices || {}) };
-    for (const t of allTickers) {
-      if (!baseline[t]) {
-        const hp = priceCache.get(`${t}::${baseDate.toISOString().slice(0, 10)}`);
-        if (hp != null) baseline[t] = hp;
+    for (const t of [...winners, ...losers]) {
+      if (!baseline[t] && histories[t]) {
+        const p = _priceOnDate(histories[t], createdDate);
+        if (p != null) baseline[t] = p;
       }
     }
 
-    // Actual prices at validation_date
+    // Actual price: price at the validation date from history
     const actual = {};
-    for (const t of allTickers) {
-      const hp = priceCache.get(`${t}::${valDate.toISOString().slice(0, 10)}`);
-      if (hp != null) actual[t] = hp;
+    for (const t of [...winners, ...losers]) {
+      if (histories[t]) {
+        const p = _priceOnDate(histories[t], valDate);
+        if (p != null) actual[t] = p;
+      }
     }
 
     const tickerMoves = {};
@@ -296,42 +277,46 @@ async function handleResolve(req, res, supabase) {
     const grade   = _letterGrade(accuracyScore);
 
     updates.push({
-      id:              pred.id,
-      correct,
+      id: pred.id, correct,
       validated_at:    nowStr,
-      validation_date: valDate.toISOString(), // persist derived date
-      baseline_prices: baseline,              // persist filled-in baseline
+      validation_date: valDate.toISOString(),
+      baseline_prices: baseline,
       actual_prices:   actual,
-      analysis:        { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, ticker_moves: tickerMoves },
-      sources:         pred.sources,
+      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, ticker_moves: tickerMoves },
+      sources: pred.sources,
     });
   }
 
-  // ── Apply updates in parallel ──────────────────────────────────────────────
-  await Promise.allSettled(updates.map(async u => {
-    const { error: updateErr } = await supabase
-      .from('predictions')
-      .update({
-        correct:         u.correct,
-        validated_at:    u.validated_at,
-        validation_date: u.validation_date,
-        baseline_prices: u.baseline_prices,
-        actual_prices:   u.actual_prices,
-        analysis:        u.analysis,
+  // ── 6. Write results to DB in parallel chunks of 50 ───────────────────────
+  let resolved = 0;
+  const CHUNK = 50;
+  for (let i = 0; i < updates.length; i += CHUNK) {
+    await Promise.allSettled(
+      updates.slice(i, i + CHUNK).map(async u => {
+        const { error: e } = await supabase
+          .from('predictions')
+          .update({
+            correct:         u.correct,
+            validated_at:    u.validated_at,
+            validation_date: u.validation_date,
+            baseline_prices: u.baseline_prices,
+            actual_prices:   u.actual_prices,
+            analysis:        u.analysis,
+          })
+          .eq('id', u.id);
+        if (!e) {
+          resolved++;
+          if (u.sources?.length) {
+            await Promise.allSettled(u.sources.map(src =>
+              supabase.rpc('upsert_source_reputation', { p_source: src, p_correct: u.correct ? 1 : 0 })
+            ));
+          }
+        }
       })
-      .eq('id', u.id);
+    );
+  }
 
-    if (!updateErr) {
-      resolved++;
-      if (u.sources?.length) {
-        await Promise.allSettled(u.sources.map(src =>
-          supabase.rpc('upsert_source_reputation', { p_source: src, p_correct: u.correct ? 1 : 0 })
-        ));
-      }
-    }
-  }));
-
-  return res.status(200).json({ resolved, skipped, total: all.length });
+  return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length });
 }
 
 async function handleGraph(req, res, supabase) {
