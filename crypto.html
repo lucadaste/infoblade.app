@@ -467,6 +467,8 @@
 
     const PRICES_TTL = 2 * 60 * 1000;
 
+    function _ah() { const t = window._auth?.token; return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
+
     async function loadPrices() {
       try {
         const cached = sessionStorage.getItem('ii_crypto_prices_v2');

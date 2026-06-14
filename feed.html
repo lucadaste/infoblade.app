@@ -1028,9 +1028,9 @@
       fetchStockOverallPrediction(ticker, name, groups, mySession, impact);
     }
 
-    async function autoAnalyzeStockGroup(
     function _ah() { const t = window._auth?.token; return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
-group, ticker, name, idx, mySession, impact) {
+
+    async function autoAnalyzeStockGroup(group, ticker, name, idx, mySession, impact) {
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST', headers: _ah(),

@@ -554,9 +554,9 @@
 
     const MARKETS_TTL = 5 * 60 * 1000;
 
-    async function loadMarkets
     function _ah() { const t = window._auth?.token; return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
-(cat, maxDays, minDays = 0) {
+
+    async function loadMarkets(cat, maxDays, minDays = 0) {
       const grid = document.getElementById('market-grid');
       const cacheKey = `ii_markets_v1_${cat}_${maxDays}_${minDays}`;
 
