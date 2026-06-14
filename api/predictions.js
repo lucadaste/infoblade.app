@@ -185,73 +185,153 @@ async function handleSave(req, res, supabase) {
 }
 
 async function handleResolve(req, res, supabase) {
-  const now = new Date().toISOString();
-  const { data: pending, error } = await supabase
+  const nowStr = new Date().toISOString();
+  const nowMs  = Date.now();
+
+  // Fetch ALL unresolved predictions — no filter on validation_date or baseline_prices
+  // so we handle legacy predictions that were saved without those fields.
+  const { data: all, error } = await supabase
     .from('predictions')
-    .select('id, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources')
+    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources')
     .is('correct', null)
-    .not('validation_date', 'is', null)
-    .lte('validation_date', now)
+    .order('created_at', { ascending: true })
     .limit(500);
 
   if (error) return res.status(500).json({ error: error.message });
-  if (!pending?.length) return res.status(200).json({ resolved: 0 });
+  if (!all?.length) return res.status(200).json({ resolved: 0, total: 0 });
 
-  let resolved = 0;
-  for (const pred of pending) {
+  // Determine effective validation date for each prediction (derive if missing)
+  const ready = all
+    .map(p => {
+      let vDate = p.validation_date ? new Date(p.validation_date) : null;
+      if (!vDate && p.created_at) {
+        const days = _parseTimeframeDays(p.analysis?.impact_timeframe);
+        vDate = new Date(new Date(p.created_at).getTime() + days * 86400000);
+      }
+      return { ...p, _vDate: vDate };
+    })
+    .filter(p =>
+      p._vDate && p._vDate.getTime() <= nowMs &&  // timeframe has expired
+      ((p.winner_tickers?.length || 0) + (p.loser_tickers?.length || 0)) > 0
+    );
+
+  if (!ready.length) return res.status(200).json({ resolved: 0, total: all.length, skipped: all.length });
+
+  // ── Build a cache of (ticker, dateKey) → price to avoid duplicate API calls ──
+  const priceCache = new Map(); // key: "TICKER::YYYY-MM-DD"
+
+  async function _cachedPrice(ticker, date) {
+    const key = `${ticker}::${date.toISOString().slice(0, 10)}`;
+    if (priceCache.has(key)) return priceCache.get(key);
+    const p = await _fetchPriceOnDate(ticker, date);
+    priceCache.set(key, p);
+    return p;
+  }
+
+  // Pre-warm cache in parallel for all unique (ticker, baselineDate, validationDate) combos
+  const lookups = new Set();
+  for (const p of ready) {
+    const baseDate = new Date(p.created_at);
+    for (const t of [...(p.winner_tickers || []), ...(p.loser_tickers || [])]) {
+      if (!p.baseline_prices?.[t]) lookups.add(`${t}::${baseDate.toISOString().slice(0, 10)}`);
+      lookups.add(`${t}::${p._vDate.toISOString().slice(0, 10)}`);
+    }
+  }
+
+  await Promise.allSettled(
+    [...lookups].map(key => {
+      const [ticker, dateStr] = key.split('::');
+      if (priceCache.has(key)) return;
+      return _fetchPriceOnDate(ticker, new Date(dateStr)).then(p => priceCache.set(key, p));
+    })
+  );
+
+  // ── Score each prediction ──────────────────────────────────────────────────
+  let resolved = 0, skipped = 0;
+  const updates = [];
+
+  for (const pred of ready) {
     const winners    = (pred.winner_tickers || []).filter(t => /^[A-Z.]{1,7}$/.test(t));
     const losers     = (pred.loser_tickers  || []).filter(t => /^[A-Z.]{1,7}$/.test(t));
     const allTickers = [...new Set([...winners, ...losers])];
-    if (!allTickers.length) continue;
 
-    const baseline     = pred.baseline_prices || {};
-    const currentPrices = await _fetchPrices(allTickers, 8000);
-    const actual        = await _resolveActualPrices(pred, currentPrices);
+    const baseDate = new Date(pred.created_at);
+    const valDate  = pred._vDate;
+
+    // Build baseline: use stored value or fall back to historical price at created_at
+    const baseline = { ...(pred.baseline_prices || {}) };
+    for (const t of allTickers) {
+      if (!baseline[t]) {
+        const hp = priceCache.get(`${t}::${baseDate.toISOString().slice(0, 10)}`);
+        if (hp != null) baseline[t] = hp;
+      }
+    }
+
+    // Actual prices at validation_date
+    const actual = {};
+    for (const t of allTickers) {
+      const hp = priceCache.get(`${t}::${valDate.toISOString().slice(0, 10)}`);
+      if (hp != null) actual[t] = hp;
+    }
 
     const tickerMoves = {};
-    let correctCount = 0, gradedCount = 0;
-
     for (const t of winners) {
-      if (!actual[t] || !baseline[t]) continue;
+      if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
       const pts = _tickerScore(pct, 'bullish');
-      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts };
-      if (pct >= 0.5) correctCount++;
-      gradedCount++;
+      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts, basePrice: baseline[t], actualPrice: actual[t] };
     }
     for (const t of losers) {
-      if (!actual[t] || !baseline[t]) continue;
+      if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
       const pts = _tickerScore(pct, 'bearish');
-      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts };
-      if (pct <= -0.5) correctCount++;
-      gradedCount++;
+      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts, basePrice: baseline[t], actualPrice: actual[t] };
     }
 
-    if (gradedCount === 0) continue;
+    if (!Object.keys(tickerMoves).length) { skipped++; continue; }
+
     const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
     const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
     const correct = accuracyScore > 0;
     const grade   = _letterGrade(accuracyScore);
-    const score   = accuracyScore;
 
+    updates.push({
+      id:              pred.id,
+      correct,
+      validated_at:    nowStr,
+      validation_date: valDate.toISOString(), // persist derived date
+      baseline_prices: baseline,              // persist filled-in baseline
+      actual_prices:   actual,
+      analysis:        { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, ticker_moves: tickerMoves },
+      sources:         pred.sources,
+    });
+  }
+
+  // ── Apply updates in parallel ──────────────────────────────────────────────
+  await Promise.allSettled(updates.map(async u => {
     const { error: updateErr } = await supabase
       .from('predictions')
-      .update({ correct, actual_prices: actual, validated_at: now, analysis: { ...(pred.analysis || {}), grade, score, accuracy_score: score, ticker_moves: tickerMoves } })
-      .eq('id', pred.id);
+      .update({
+        correct:         u.correct,
+        validated_at:    u.validated_at,
+        validation_date: u.validation_date,
+        baseline_prices: u.baseline_prices,
+        actual_prices:   u.actual_prices,
+        analysis:        u.analysis,
+      })
+      .eq('id', u.id);
 
     if (!updateErr) {
       resolved++;
-      const predSources = pred.sources || [];
-      if (predSources.length) {
-        await Promise.allSettled(predSources.map(source =>
-          supabase.rpc('upsert_source_reputation', { p_source: source, p_correct: correct ? 1 : 0 })
+      if (u.sources?.length) {
+        await Promise.allSettled(u.sources.map(src =>
+          supabase.rpc('upsert_source_reputation', { p_source: src, p_correct: u.correct ? 1 : 0 })
         ));
       }
     }
-  }
+  }));
 
-  return res.status(200).json({ resolved });
+  return res.status(200).json({ resolved, skipped, total: all.length });
 }
 
 async function handleGraph(req, res, supabase) {
@@ -286,11 +366,16 @@ async function handleStats(req, res, supabase) {
     } catch (_) {}
   }
 
-  const { count: pending, error: pErr } = await supabase
+  const { count: pendingCount, error: pErr } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true })
     .is('correct', null);
   if (pErr) throw pErr;
+  const pending = pendingCount;
+
+  const { count: totalInDb } = await supabase
+    .from('predictions')
+    .select('id', { count: 'exact', head: true });
 
   const total    = validated?.length ?? 0;
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
@@ -355,10 +440,10 @@ async function handleStats(req, res, supabase) {
     }
   }
   const topTickers = Object.entries(tickerStats)
-    .filter(([, s]) => s.total >= 3)
+    .filter(([, s]) => s.total >= 1)
     .map(([ticker, s]) => ({ ticker, winRate: Math.round(s.wins / s.total * 100), total: s.total }))
-    .sort((a, b) => b.winRate - a.winRate)
-    .slice(0, 10);
+    .sort((a, b) => b.total - a.total || b.winRate - a.winRate)
+    .slice(0, 15);
 
   // Per-section breakdown (Stocks / Crypto / Prediction Markets)
   const bySection = _sectionStats(validated ?? []);
@@ -403,7 +488,7 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, avgScore, pending: pending ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, avgScore, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,

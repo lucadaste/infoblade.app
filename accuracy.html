@@ -252,11 +252,11 @@
       <div id="ticker-table" class="ticker-table">
         <div class="no-data">Loading…</div>
       </div>
-      <p style="font-size:12px;color:var(--muted);margin-top:14px;">Min. 3 predictions to appear.</p>
 
-      <div style="margin-top:32px">
-        <button class="validate-btn" id="validate-btn" style="width:100%;padding:10px">Run validation</button>
-        <span class="validate-status" id="validate-status" style="display:block;margin-top:8px;text-align:center"></span>
+      <!-- Validation status (auto-runs, shown as info not a button) -->
+      <div id="validation-status-box" style="display:none;margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Validation</div>
+        <div id="validate-status" style="font-size:13px;color:var(--ink)">Checking predictions…</div>
       </div>
     </div>
   </div>
@@ -345,8 +345,14 @@
 
   function renderCumulativeChart(cum) {
     const area = document.getElementById('cumulative-chart-area');
-    if (!cum || cum.length < 2) {
-      area.innerHTML = '<div class="chart-empty">Needs 2+ resolved predictions to draw.</div>';
+    if (!cum || cum.length < 1) {
+      area.innerHTML = '<div class="chart-empty">No resolved predictions yet — validation runs automatically.</div>';
+      return;
+    }
+    if (cum.length === 1) {
+      // Only 1 point — show a simple number instead of chart
+      const v = cum[0].cumulative;
+      area.innerHTML = `<div style="font-family:'Share Tech Mono',sans-serif;font-size:28px;font-weight:700;color:${v>=0?'var(--accent)':'var(--red)'};padding:20px 0">${v>=0?'+':''}${v} pts</div><div style="font-size:12px;color:var(--muted)">${cum[0].date} · 1 resolved prediction</div>`;
       return;
     }
     const vals  = cum.map(c => c.cumulative);
@@ -516,7 +522,7 @@
   function renderTickers(topTickers) {
     const el = document.getElementById('ticker-table');
     if (!topTickers || !topTickers.length) {
-      el.innerHTML = '<div class="no-data">Need ≥ 3 predictions per ticker.</div>';
+      el.innerHTML = '<div class="no-data" style="font-size:13px">No resolved predictions yet.</div>';
       return;
     }
     el.innerHTML = topTickers.map(t => `
@@ -530,42 +536,73 @@
 
   let allRecent = [];
 
-  // Run validation button
-  document.getElementById('validate-btn').addEventListener('click', async function () {
-    const btn = document.getElementById('validate-btn');
-    const status = document.getElementById('validate-status');
-    btn.disabled = true;
-    status.textContent = 'Checking…';
-    try {
-      const r = await fetch(window.API_BASE + '/api/predictions?resolve=true');
-      const d = await r.json();
-      const count = d.resolved ?? 0;
-      status.textContent = count > 0 ? `${count} prediction${count > 1 ? 's' : ''} resolved` : 'Nothing new to resolve';
-      if (count > 0) location.reload();
-    } catch (e) {
-      status.textContent = 'Error: ' + e.message;
-    }
-    btn.disabled = false;
-    setTimeout(() => { status.textContent = ''; }, 5000);
-  });
+  // ── Auto-validation: runs on every page load, continues until all resolved ──
+  async function runValidation() {
+    const statusBox = document.getElementById('validation-status-box');
+    const statusEl  = document.getElementById('validate-status');
+    statusBox.style.display = 'block';
+    statusEl.textContent = 'Scanning predictions…';
 
-  // ── Step 1: Load public stats immediately (no auth needed) ──────────────────
-  try {
-    const res  = await fetch(window.API_BASE + '/api/predictions');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    renderStats(data.summary);
-    renderBySection(data.bySection);
-    renderCumulativeChart(data.cumulativeTimeline);
-    renderChart(data.timeline);
-    renderTickers(data.topTickers);
-  } catch (err) {
-    ['stat-accuracy','stat-avg-score','stat-correct'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
-    });
-    document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load data: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
-    document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
+    let totalResolved = 0;
+    let passes = 0;
+    // Run up to 5 passes (in case there are many predictions to process)
+    while (passes < 5) {
+      try {
+        const r = await fetch(window.API_BASE + '/api/predictions?resolve=true');
+        const d = await r.json();
+        const n = d.resolved ?? 0;
+        totalResolved += n;
+        passes++;
+        if (n === 0) break; // nothing left to resolve
+        statusEl.textContent = `Resolved ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''}…`;
+      } catch (_) { break; }
+    }
+
+    if (totalResolved > 0) {
+      statusEl.textContent = `✓ ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''} evaluated`;
+      return true; // stats need reload
+    } else {
+      statusBox.style.display = 'none';
+      return false;
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const res  = await fetch(window.API_BASE + '/api/predictions');
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderStats(data.summary);
+      renderBySection(data.bySection);
+      renderCumulativeChart(data.cumulativeTimeline);
+      renderChart(data.timeline);
+      renderTickers(data.topTickers);
+
+      // Show diagnostic if database has predictions but none are resolved
+      if (data.summary.totalInDb > 0 && data.summary.total === 0) {
+        document.getElementById('validation-status-box').style.display = 'block';
+        document.getElementById('validate-status').textContent =
+          `${data.summary.totalInDb} predictions in database — validating timeframes…`;
+      }
+    } catch (err) {
+      ['stat-accuracy','stat-avg-score','stat-correct'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
+      });
+      document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
+      document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
+    }
+  }
+
+  // ── Step 1: Start validation + load stats in parallel ──────────────────────
+  const [validationDone] = await Promise.all([
+    runValidation(),
+    loadStats(),
+  ]);
+
+  // If validation resolved new predictions, refresh stats
+  if (validationDone) {
+    await loadStats();
   }
 
   // ── Step 2: Wait for REAL auth state, then load personal stats ───────────────

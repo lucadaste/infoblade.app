@@ -3,8 +3,8 @@
   "outputDirectory": "www",
   "crons": [
     {
-      "path": "/api/validate",
-      "schedule": "0 6 * * *"
+      "path": "/api/predictions?resolve=true",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
