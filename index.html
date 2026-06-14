@@ -15,7 +15,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Michroma&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -25,7 +25,7 @@
     html { scroll-behavior: smooth; max-width: 100%; }
     body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); line-height: 1.6; -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
     nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; }
-    .nav-logo { font-family: 'Michroma', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
+    .nav-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
     .nav-logo span { color: var(--accent); }
     .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; margin: 0; justify-content: center; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
@@ -121,7 +121,7 @@
     .platform-header p { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.75; font-weight: 300; }
     .disclaimer { padding: 36px 48px; border-top: 1px solid #1e1e1e; font-size: 12px; color: #555; line-height: 1.8; width: 100%; background: #0a0a0a; box-sizing: border-box; }
     footer { padding: 28px 48px; border-top: 1px solid #1e1e1e; background: #0a0a0a; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .footer-logo { font-family: 'Michroma', sans-serif; font-weight: 700; font-size: 22px; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
+    .footer-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 22px; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
     .footer-logo span { color: var(--accent); }
     footer p { font-size: 13px; color: #444; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -252,7 +252,7 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="#"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink:0;margin-right:12px;"><rect width="24" height="24" fill="white"/><path d="M 11.082,3.852 L 12.000,1.000 L 12.918,3.852 L 14.448,1.276 L 14.708,4.260 L 16.773,2.089 L 16.363,5.057 L 18.858,3.400 L 17.798,6.202 L 20.600,5.142 L 18.943,7.637 L 21.911,7.227 L 19.740,9.292 L 22.724,9.552 L 20.148,11.082 L 23.000,12.000 L 20.148,12.918 L 22.724,14.448 L 19.740,14.708 L 21.911,16.773 L 18.943,16.363 L 20.600,18.858 L 17.798,17.798 L 18.858,20.600 L 16.363,18.943 L 16.773,21.911 L 14.708,19.740 L 14.448,22.724 L 12.918,20.148 L 12.000,23.000 L 11.082,20.148 L 9.552,22.724 L 9.292,19.740 L 7.227,21.911 L 7.637,18.943 L 5.142,20.600 L 6.202,17.798 L 3.400,18.858 L 5.057,16.363 L 2.089,16.773 L 4.260,14.708 L 1.276,14.448 L 3.852,12.918 L 1.000,12.000 L 3.852,11.082 L 1.276,9.552 L 4.260,9.292 L 2.089,7.227 L 5.057,7.637 L 3.400,5.142 L 6.202,6.202 L 5.142,3.400 L 7.637,5.057 L 7.227,2.089 L 9.292,4.260 L 9.552,1.276 Z" fill="#111"/><circle cx="12" cy="12" r="6.4" fill="white"/><circle cx="12" cy="12" r="5.0" fill="#111"/><circle cx="12" cy="12" r="3.4" fill="white"/></svg>info<span>blade</span></a>
+    <a class="nav-logo" href="#"><svg width="33" height="21" viewBox="0 0 24 15" aria-hidden="true" style="flex-shrink:0;margin-right:12px;fill:white;opacity:0.92"><rect x="0.5" y="5.8" width="5.5" height="3.8" rx="1" fill-opacity="0.5"/><rect x="6.2" y="3.5" width="1.6" height="8" rx="0.4"/><path d="M7.8,4.5 L22,4.5 L23.5,7.5 L7.8,10.5 Z"/><path d="M7.8,10.5 L22,7.8 L23.5,7.5" fill="none" stroke="white" stroke-opacity="0.25" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg>info<span>blade</span></a>
     <ul class="nav-links">
       <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">?</span></a></li>
     </ul>
@@ -561,7 +561,7 @@
   </div>
 
   <footer>
-    <div class="footer-logo"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="flex-shrink:0;margin-right:9px;"><rect width="24" height="24" fill="white"/><path d="M 11.082,3.852 L 12.000,1.000 L 12.918,3.852 L 14.448,1.276 L 14.708,4.260 L 16.773,2.089 L 16.363,5.057 L 18.858,3.400 L 17.798,6.202 L 20.600,5.142 L 18.943,7.637 L 21.911,7.227 L 19.740,9.292 L 22.724,9.552 L 20.148,11.082 L 23.000,12.000 L 20.148,12.918 L 22.724,14.448 L 19.740,14.708 L 21.911,16.773 L 18.943,16.363 L 20.600,18.858 L 17.798,17.798 L 18.858,20.600 L 16.363,18.943 L 16.773,21.911 L 14.708,19.740 L 14.448,22.724 L 12.918,20.148 L 12.000,23.000 L 11.082,20.148 L 9.552,22.724 L 9.292,19.740 L 7.227,21.911 L 7.637,18.943 L 5.142,20.600 L 6.202,17.798 L 3.400,18.858 L 5.057,16.363 L 2.089,16.773 L 4.260,14.708 L 1.276,14.448 L 3.852,12.918 L 1.000,12.000 L 3.852,11.082 L 1.276,9.552 L 4.260,9.292 L 2.089,7.227 L 5.057,7.637 L 3.400,5.142 L 6.202,6.202 L 5.142,3.400 L 7.637,5.057 L 7.227,2.089 L 9.292,4.260 L 9.552,1.276 Z" fill="#111"/><circle cx="12" cy="12" r="6.4" fill="white"/><circle cx="12" cy="12" r="5.0" fill="#111"/><circle cx="12" cy="12" r="3.4" fill="white"/></svg>info<span>blade</span></div>
+    <div class="footer-logo"><svg width="33" height="21" viewBox="0 0 24 15" aria-hidden="true" style="flex-shrink:0;margin-right:12px;fill:white;opacity:0.92"><rect x="0.5" y="5.8" width="5.5" height="3.8" rx="1" fill-opacity="0.5"/><rect x="6.2" y="3.5" width="1.6" height="8" rx="0.4"/><path d="M7.8,4.5 L22,4.5 L23.5,7.5 L7.8,10.5 Z"/><path d="M7.8,10.5 L22,7.8 L23.5,7.5" fill="none" stroke="white" stroke-opacity="0.25" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round"/></svg>info<span>blade</span></div>
     <p>© 2026 · Built for curious investors · <a href="/privacy.html" style="color:var(--muted);text-decoration:underline">Privacy Policy</a></p>
   </footer>
 
