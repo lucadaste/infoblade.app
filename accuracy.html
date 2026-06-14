@@ -221,20 +221,22 @@
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
     <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value skeleton" id="stat-avg-score" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">pts per prediction</div></div>
-    <div class="stat-card"><div class="stat-label">Correct / Total</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">validated predictions</div></div>
+    <div class="stat-card"><div class="stat-label">Correct / Total</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub">validated predictions</div></div>
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:60px">&nbsp;</div><div class="stat-sub">still in timeframe</div></div>
   </div>
 
-  <!-- By category -->
-  <div class="section-title" style="margin-bottom:14px">Accuracy by Category</div>
-  <div class="cat-grid" id="cat-grid"><div class="no-data">Loading…</div></div>
+  <!-- Per-section breakdown -->
+  <div class="section-title" style="margin-bottom:14px">Accuracy by Section</div>
+  <div class="cat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:36px" id="section-grid">
+    <div class="cat-card"><div class="no-data">Loading…</div></div>
+  </div>
 
   <div class="cols">
     <div>
       <!-- Cumulative score -->
       <div class="chart-wrap" style="margin-bottom:24px">
         <div class="section-title">Cumulative Accuracy Score</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total of accuracy points across all resolved predictions. Each prediction contributes -100 to +100 pts based on how much tickers moved in the predicted direction.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total of accuracy points. Each resolved prediction contributes -100 to +100 pts based on % return magnitude in the predicted direction.</p>
         <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
       </div>
 
@@ -242,20 +244,6 @@
       <div class="chart-wrap">
         <div class="section-title">Avg Score by Month</div>
         <div id="chart-area"><div class="chart-empty">Loading…</div></div>
-      </div>
-
-      <!-- Recent predictions -->
-      <div class="section-title">Recent Predictions</div>
-      <div class="filter-row">
-        <button class="filter-chip active" data-filter="all">All</button>
-        <button class="filter-chip" data-filter="pending">Pending</button>
-        <button class="filter-chip" data-filter="correct">Correct</button>
-        <button class="filter-chip" data-filter="incorrect">Incorrect</button>
-        <button class="validate-btn" id="validate-btn">Run validation</button>
-        <span class="validate-status" id="validate-status"></span>
-      </div>
-      <div id="pred-list" class="pred-list">
-        <div class="no-data">Loading…</div>
       </div>
     </div>
 
@@ -266,6 +254,22 @@
         <div class="no-data">Loading…</div>
       </div>
       <p style="font-size:12px;color:var(--muted);margin-top:14px;">Min. 3 predictions to appear.</p>
+
+      <div style="margin-top:32px">
+        <button class="validate-btn" id="validate-btn" style="width:100%;padding:10px">Run validation</button>
+        <span class="validate-status" id="validate-status" style="display:block;margin-top:8px;text-align:center"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Personal accuracy section ── -->
+  <div style="border-top:1px solid var(--border);margin-top:48px;padding-top:40px">
+    <div class="section-title" style="margin-bottom:4px">Your Prediction History</div>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Analyses you run are saved and tracked here automatically.</p>
+
+    <div id="personal-section">
+      <!-- Rendered by JS: sign-in prompt or personal stats -->
+      <div class="no-data">Loading…</div>
     </div>
   </div>
 
@@ -376,13 +380,7 @@
     `;
   }
 
-  function renderPredictions(recent) {
-    const el = document.getElementById('pred-list');
-    if (!recent || !recent.length) {
-      el.innerHTML = '<div class="no-data">No predictions logged yet.<br><br>Go to <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>, run an analysis, and come back. Every AI prediction is automatically tracked here.</div>';
-      return;
-    }
-    el.innerHTML = recent.map(p => {
+  function renderPredCard(p) {
       const isPending   = p.correct === null || p.correct === undefined;
       const isCorrect   = p.correct === true;
       const badgeClass  = isCorrect ? 'correct' : !isPending ? 'incorrect' : 'pending';
@@ -429,7 +427,6 @@
           </div>
           <div style="flex-shrink:0">${gradeHtml}</div>
         </div>`;
-    }).join('');
   }
 
   const CAT_LABELS = {
@@ -442,21 +439,82 @@
     'tech': 'Tech (Prediction)'
   };
 
-  function renderByCategory(byCategory) {
-    const el = document.getElementById('cat-grid');
-    if (!byCategory || !byCategory.length) {
-      el.innerHTML = '<div class="no-data">Category breakdown appears after predictions are logged.</div>';
+  function renderBySection(bySection) {
+    const el = document.getElementById('section-grid');
+    if (!bySection || !bySection.length) {
+      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">Section breakdown appears after predictions are logged.</div>';
       return;
     }
-    el.innerHTML = byCategory.map(c => `
+    el.innerHTML = bySection.map(s => {
+      const acc = s.accuracy ?? '--';
+      const scoreSign = s.avgScore != null ? (s.avgScore >= 0 ? '+' : '') : '';
+      const scoreColor = s.avgScore == null ? 'var(--muted)' : s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
+      return `
       <div class="cat-card">
-        <div class="cat-name">${esc(CAT_LABELS[c.category] || c.category)}</div>
-        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${c.accuracy}%"></div></div>
+        <div class="cat-name">${esc(s.label)}</div>
+        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${acc === '--' ? 0 : acc}%"></div></div>
         <div class="cat-stat">
-          <span class="cat-pct">${c.accuracy}%</span>
-          <span class="cat-count">${c.correct}/${c.total}</span>
+          <span class="cat-pct">${acc}${acc !== '--' ? '%' : ''}</span>
+          <span class="cat-count">${s.correct}/${s.total}</span>
         </div>
-      </div>`).join('');
+        ${s.avgScore != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:12px;font-weight:700;color:${scoreColor};margin-top:8px">${scoreSign}${s.avgScore} pts avg</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderPersonalSection(userStats) {
+    const el = document.getElementById('personal-section');
+    if (!userStats) {
+      el.innerHTML = `
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:40px 32px;text-align:center">
+          <div style="font-family:'Share Tech Mono',sans-serif;font-size:18px;font-weight:700;margin-bottom:12px">Sign in to see your history</div>
+          <p style="font-size:14px;color:var(--muted);max-width:400px;margin:0 auto 24px;line-height:1.7">Every analysis you run is automatically logged to your account. Create a free profile to track your personal accuracy over time.</p>
+          <a href="/?modal=signin" style="display:inline-block;background:var(--accent);color:#111;font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:14px;padding:12px 28px;border-radius:6px;text-decoration:none">Sign in / Create profile</a>
+        </div>`;
+      return;
+    }
+
+    const s = userStats.summary;
+    const accColor = s.accuracy == null ? 'var(--ink)' : s.accuracy >= 60 ? 'var(--accent)' : 'var(--red)';
+    const scoreSign = s.avgScore != null ? (s.avgScore >= 0 ? '+' : '') : '';
+    const scoreColor = s.avgScore == null ? 'var(--ink)' : s.avgScore >= 0 ? 'var(--accent)' : 'var(--red)';
+
+    const recentHtml = userStats.recent?.length
+      ? userStats.recent.map(p => renderPredCard(p)).join('')
+      : '<div class="no-data">No predictions yet. Run an analysis on <a href="/feed.html" style="color:var(--accent)">Stock Markets</a> to start tracking.</div>';
+
+    el.innerHTML = `
+      <div class="stats-grid" style="margin-bottom:28px">
+        <div class="stat-card"><div class="stat-label">My Accuracy</div><div class="stat-value" style="color:${accColor}">${s.accuracy != null ? s.accuracy + '%' : '--'}</div><div class="stat-sub">${s.total > 0 ? s.correct + ' of ' + s.total + ' correct' : 'No resolved predictions yet'}</div></div>
+        <div class="stat-card"><div class="stat-label">My Avg Score</div><div class="stat-value" style="color:${scoreColor}">${s.avgScore != null ? scoreSign + s.avgScore : '--'}</div><div class="stat-sub">pts per prediction</div></div>
+        <div class="stat-card"><div class="stat-label">My Total</div><div class="stat-value">${s.total}</div><div class="stat-sub">predictions resolved</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value">${s.pending}</div><div class="stat-sub">still in timeframe</div></div>
+      </div>
+      <div class="section-title" style="margin-bottom:14px">My Recent Predictions</div>
+      <div class="filter-row" id="personal-filters">
+        <button class="filter-chip active" data-pfilter="all">All</button>
+        <button class="filter-chip" data-pfilter="pending">Pending</button>
+        <button class="filter-chip" data-pfilter="correct">Correct</button>
+        <button class="filter-chip" data-pfilter="incorrect">Incorrect</button>
+      </div>
+      <div id="personal-pred-list" class="pred-list">${recentHtml}</div>`;
+
+    // Wire up personal filter chips
+    const allPersonal = userStats.recent || [];
+    el.querySelectorAll('[data-pfilter]').forEach(chip => {
+      chip.addEventListener('click', function() {
+        el.querySelectorAll('[data-pfilter]').forEach(c => c.classList.remove('active'));
+        this.classList.add('active');
+        const f = this.dataset.pfilter;
+        const filtered = f === 'all' ? allPersonal
+          : f === 'pending'   ? allPersonal.filter(p => p.correct === null || p.correct === undefined)
+          : f === 'correct'   ? allPersonal.filter(p => p.correct === true)
+          : allPersonal.filter(p => p.correct === false);
+        document.getElementById('personal-pred-list').innerHTML = filtered.length
+          ? filtered.map(p => renderPredCard(p)).join('')
+          : '<div class="no-data">No predictions match this filter.</div>';
+      });
+    });
   }
 
   function renderTickers(topTickers) {
@@ -475,20 +533,6 @@
   }
 
   let allRecent = [];
-
-  // Filter chips
-  document.querySelectorAll('.filter-chip').forEach(chip => {
-    chip.addEventListener('click', function () {
-      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-      this.classList.add('active');
-      const filter = this.dataset.filter;
-      const filtered = filter === 'all' ? allRecent
-        : filter === 'pending'   ? allRecent.filter(p => p.correct === null || p.correct === undefined)
-        : filter === 'correct'   ? allRecent.filter(p => p.correct === true)
-        : allRecent.filter(p => p.correct === false);
-      renderPredictions(filtered);
-    });
-  });
 
   // Run validation button
   document.getElementById('validate-btn').addEventListener('click', async function () {
@@ -509,17 +553,29 @@
     setTimeout(() => { status.textContent = ''; }, 5000);
   });
 
+  // Wait for auth to resolve before fetching so the token is available
+  await new Promise(resolve => {
+    if (window._auth) { window._auth.onReady(resolve); } else {
+      const t = setInterval(() => { if (window._auth) { clearInterval(t); window._auth.onReady(resolve); } }, 50);
+    }
+  });
+
+  function _predHeaders() {
+    const t = window._auth?.token;
+    return t ? { 'Authorization': 'Bearer ' + t } : {};
+  }
+
   try {
-    const res  = await fetch(window.API_BASE + '/api/predictions');
+    const res  = await fetch(window.API_BASE + '/api/predictions', { headers: _predHeaders() });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     allRecent = data.recent || [];
     renderStats(data.summary);
-    renderByCategory(data.byCategory);
+    renderBySection(data.bySection);
     renderCumulativeChart(data.cumulativeTimeline);
     renderChart(data.timeline);
-    renderPredictions(allRecent);
     renderTickers(data.topTickers);
+    renderPersonalSection(data.userStats ?? null);
 
     // If zero predictions, check DB connectivity and show a helpful message
     if (data.summary.total === 0 && data.summary.pending === 0) {
@@ -553,22 +609,6 @@
 </script>
 <script src="/chat-widget.js"></script>
 <script src="/auth.js"></script>
-<script>
-(function poll() {
-  if (!window._auth) { setTimeout(poll, 100); return; }
-  window._auth.onReady(function(user) {
-    if (!user) {
-      document.getElementById('auth-gate').classList.add('show');
-    }
-  });
-})();
-</script>
-
-<div id="auth-gate">
-  <h2>Account required</h2>
-  <p>Accuracy history is available to infoblade account holders. Create a free profile or sign in to continue.</p>
-  <a href="/?modal=signin" id="auth-gate-btn">Sign in / Create profile</a>
-</div>
 
   <nav class="bottom-nav" aria-label="Mobile navigation">
     <div class="bottom-nav-inner">

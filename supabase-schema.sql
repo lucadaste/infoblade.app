@@ -60,9 +60,12 @@ alter table predictions add column if not exists category text;
 create index if not exists predictions_category_idx on predictions (category);
 
 -- Accuracy score column: signed float -100..+100 derived from % return magnitude.
--- Stored at resolution time; also written into analysis jsonb as accuracy_score.
--- Positive = correct direction, magnitude = how far the ticker moved.
 alter table predictions add column if not exists accuracy_score numeric;
+
+-- user_id: links predictions to Supabase auth users for personal history.
+-- Anonymous predictions (no token) have user_id = NULL and still count toward platform stats.
+alter table predictions add column if not exists user_id uuid references auth.users(id);
+create index if not exists predictions_user_id_idx on predictions (user_id);
 
 -- Atomic upsert for source reputation (called by resolve-predictions.js)
 create or replace function upsert_source_reputation(p_source text, p_correct integer)

@@ -240,7 +240,7 @@ function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Vary', 'Origin');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 }
@@ -1019,6 +1019,16 @@ Respond ONLY with valid JSON, no markdown:
       if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
     }
 
+    // Extract user_id from Bearer token if present (optional — anonymous predictions still tracked)
+    let userId = null;
+    const authHeader = req.headers['authorization'];
+    if (supabase && authHeader?.startsWith('Bearer ')) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+        userId = user?.id ?? null;
+      } catch (_) { /* token invalid or expired — treat as anonymous */ }
+    }
+
     const {
       topic: rawTopic,
       headlines: rawHeadlines,
@@ -1198,6 +1208,7 @@ Respond ONLY with valid JSON, no markdown:
           sources,
           source_grades:   sourceGrades,
           min_grade:       minGrade,
+          user_id:         userId,
         });
       } else {
         console.warn('[analyze POST] Supabase not available — prediction not saved');

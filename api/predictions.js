@@ -12,11 +12,47 @@ function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Vary', 'Origin');
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
+
+// Map prediction categories to the 3 public-facing sections
+const _SECTION_CATS = {
+  stocks:              new Set(['any','technology','macro','energy','financials','precious-metals','real-estate','consumer','healthcare','defense','etfs','stock']),
+  crypto:              new Set(['crypto']),
+  'prediction-markets': new Set(['prediction-markets','politics','sports','entertainment','finance','tech']),
+};
+const _SECTION_LABELS = { stocks: 'Stock Markets', crypto: 'Crypto', 'prediction-markets': 'Prediction Markets' };
+
+function _categoryToSection(cat) {
+  for (const [s, cats] of Object.entries(_SECTION_CATS)) { if (cats.has(cat)) return s; }
+  return 'stocks';
+}
+
+function _sectionStats(preds) {
+  const map = {};
+  for (const p of preds) {
+    const sec = _categoryToSection(p.category || 'any');
+    if (!map[sec]) map[sec] = { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    map[sec].total++;
+    if (p.correct) map[sec].correct++;
+    const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? null;
+    if (s != null) { map[sec].scoreSum += s; map[sec].scoreCount++; }
+  }
+  return Object.entries(_SECTION_LABELS).map(([sec, label]) => {
+    const d = map[sec] || { total: 0, correct: 0, scoreSum: 0, scoreCount: 0 };
+    return {
+      section:  sec,
+      label,
+      total:    d.total,
+      correct:  d.correct,
+      accuracy: d.total > 0 ? Math.round(d.correct / d.total * 100) : null,
+      avgScore: d.scoreCount > 0 ? +(d.scoreSum / d.scoreCount).toFixed(1) : null,
+    };
+  });
+}
 
 function _parseTimeframeDays(str) {
   if (!str) return 7;
@@ -189,6 +225,16 @@ async function handleStats(req, res, supabase) {
     .order('created_at', { ascending: false });
   if (vErr) throw vErr;
 
+  // Resolve user identity if auth token provided
+  let userId = null;
+  const authHeader = req.headers['authorization'];
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
+      userId = user?.id ?? null;
+    } catch (_) {}
+  }
+
   const { count: pending, error: pErr } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true })
@@ -263,9 +309,51 @@ async function handleStats(req, res, supabase) {
     .sort((a, b) => b.winRate - a.winRate)
     .slice(0, 10);
 
+  // Per-section breakdown (Stocks / Crypto / Prediction Markets)
+  const bySection = _sectionStats(validated ?? []);
+
+  // User-specific stats (only when authenticated)
+  let userStats = null;
+  if (userId) {
+    const { data: userPreds, error: uErr } = await supabase
+      .from('predictions')
+      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, category')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (!uErr && userPreds) {
+      const uValidated = userPreds.filter(p => p.correct !== null);
+      const uTotal   = uValidated.length;
+      const uCorrect = uValidated.filter(p => p.correct).length;
+      const uScores  = uValidated.map(p => p.analysis?.accuracy_score ?? p.analysis?.score ?? null).filter(s => s != null);
+      userStats = {
+        summary: {
+          total:    uTotal,
+          correct:  uCorrect,
+          pending:  userPreds.filter(p => p.correct === null).length,
+          accuracy: uTotal > 0 ? Math.round(uCorrect / uTotal * 100) : null,
+          avgScore: uScores.length > 0 ? +(uScores.reduce((a, b) => a + b, 0) / uScores.length).toFixed(1) : null,
+        },
+        bySection: _sectionStats(uValidated),
+        recent: userPreds.map(p => ({
+          id: p.id, topic: p.topic, createdAt: p.created_at,
+          validationDate: p.validation_date, winnerTickers: p.winner_tickers,
+          loserTickers: p.loser_tickers, correct: p.correct,
+          confidence: p.analysis?.confidence || null,
+          impactTimeframe: p.analysis?.impact_timeframe || null,
+          grade: p.analysis?.grade || null,
+          score: p.analysis?.accuracy_score ?? p.analysis?.score ?? null,
+          tickerMoves: p.analysis?.ticker_moves || null,
+          category: p.category,
+        })),
+      };
+    }
+  }
+
   return res.status(200).json({
     summary: { total, correct, incorrect: total - correct, accuracy, avgScore, pending: pending ?? 0 },
-    timeline, cumulativeTimeline, byCategory, topTickers,
+    timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
       validationDate: p.validation_date, winnerTickers: p.winner_tickers,

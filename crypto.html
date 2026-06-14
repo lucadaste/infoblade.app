@@ -654,7 +654,7 @@
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _ah(),
           body: JSON.stringify({
             topic: `Net price direction verdict for ${coin.name} (${coin.symbol}) ${tf.context}. Weigh all credible news sources and commit to a directional call.`,
             headlines: allHeadlines,
@@ -691,7 +691,7 @@
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _ah(),
           body: JSON.stringify({
             topic: `${group.topic}: impact on ${coin.name} (${coin.symbol}) ${tf.context}`,
             headlines: group.headlines || [],
@@ -737,7 +737,7 @@
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: _ah(),
           body: JSON.stringify({
             topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
             headlines: [], sources: [], sourceGrades: {}, minGrade: 'all'
