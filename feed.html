@@ -1529,7 +1529,6 @@
             const card = buildStockModeCard(td, analysis, impact);
             if (skel) { feed.insertBefore(card, skel); skel.remove(); }
             else { feed.appendChild(card); }
-            savePrediction(group.topic, analysis, sector);
             status.textContent = `${doneCount} of ${tickers.length} stocks analyzed...`;
           } catch(err) {
             console.error('Stock analysis failed:', td.ticker, err.message);
@@ -1700,7 +1699,6 @@
             document.getElementById('pre-load').style.display = 'none';
             results.forEach(({ group, analysis }) => {
               feed.appendChild(buildCard(group, analysis, impact));
-              savePrediction(group.topic, analysis, category);
             });
             const cachedCards = [...feed.querySelectorAll('.event-card')];
             cachedCards.sort((a, b) => parseInt(b.dataset.confScore) - parseInt(a.dataset.confScore));
@@ -1766,7 +1764,6 @@
             const card = buildCard(group, analysis, impact);
             if (skel) { feed.insertBefore(card, skel); skel.remove(); }
             else { feed.appendChild(card); }
-            savePrediction(group.topic, analysis, document.getElementById('filter-category')?.value || 'any');
             status.textContent = `${doneCount} of ${groups.length} analyzed, ${shownCount} shown...`;
             if (typeof gtag !== 'undefined') gtag('event', 'analysis_viewed', { topic: group.topic.slice(0, 50), direction: analysis.direction, confidence: getConfScore(analysis.confidence) });
           } catch(err) {
@@ -1835,28 +1832,6 @@
       } finally {
         clearTimeout(t);
       }
-    }
-
-    function savePrediction(topic, analysis, category) {
-      const winners = analysis.winners?.tickers || [];
-      const losers  = analysis.losers?.tickers  || [];
-      if (!winners.length && !losers.length) return;
-      fetch(window.API_BASE + '/api/predictions', {
-        method: 'POST',
-        headers: _ah(),
-        body: JSON.stringify({
-          topic,
-          direction:       analysis.direction,
-          confidence:      analysis.confidence,
-          impactTimeframe: analysis.impact_timeframe,
-          winnerTickers:   winners,
-          loserTickers:    losers,
-          category,
-        }),
-      }).then(r => r.json()).then(d => {
-        if (d.error) console.warn('[ii] save-prediction error:', d.error, topic.slice(0, 50));
-        else if (!d.skipped) console.log('[ii] prediction queued ✓', topic.slice(0, 50));
-      }).catch(e => console.warn('[ii] save-prediction fetch failed:', e.message));
     }
 
     loadWatchlist();

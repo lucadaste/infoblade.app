@@ -62,22 +62,6 @@ function _parseTimeframeDays(str) {
   return 7;
 }
 
-async function _fetchPrices(tickers, timeoutMs = 7000) {
-  if (!tickers.length) return {};
-  try {
-    const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), timeoutMs);
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=regularMarketPrice`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: ctrl.signal });
-    const d = await r.json();
-    const prices = {};
-    for (const q of d?.quoteResponse?.result || []) {
-      if (q.regularMarketPrice) prices[q.symbol] = +q.regularMarketPrice.toFixed(4);
-    }
-    return prices;
-  } catch (_) { return {}; }
-}
-
 // Fetch the FULL daily price history for a ticker over a date range in ONE request.
 // Returns a map of { "YYYY-MM-DD": closePrice } covering all trading days in the range.
 async function _fetchTickerHistory(ticker, startMs, endMs) {
@@ -139,45 +123,6 @@ function _letterGrade(score) {
 }
 
 // ── Route handlers ────────────────────────────────────────────────────────────
-
-async function handleSave(req, res, supabase) {
-  const { topic, direction, confidence, impactTimeframe, winnerTickers, loserTickers, category } = req.body || {};
-  if (!topic?.trim()) return res.status(400).json({ error: 'topic required' });
-
-  const winners = (winnerTickers || []).filter(t => /^[A-Z.]{1,7}$/.test(t)).slice(0, 20);
-  const losers  = (loserTickers  || []).filter(t => /^[A-Z.]{1,7}$/.test(t)).slice(0, 20);
-  if (!winners.length && !losers.length) return res.status(400).json({ error: 'no trackable tickers' });
-
-  const topicTrimmed = topic.trim().slice(0, 300);
-  const twoHoursAgo  = new Date(Date.now() - 7200000).toISOString();
-
-  const { count } = await supabase
-    .from('predictions')
-    .select('id', { count: 'exact', head: true })
-    .eq('topic', topicTrimmed)
-    .gte('created_at', twoHoursAgo);
-  if (count > 0) return res.status(200).json({ ok: true, skipped: true });
-
-  const days           = _parseTimeframeDays(impactTimeframe);
-  const validationDate = new Date(Date.now() + days * 86400000).toISOString();
-  const allTickers     = [...new Set([...winners, ...losers])];
-  const baselinePrices = await _fetchPrices(allTickers, 6000);
-
-  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  const { error } = await supabase.from('predictions').insert({
-    id,
-    topic: topicTrimmed,
-    winner_tickers: winners,
-    loser_tickers:  losers,
-    category:       category || 'any',
-    analysis:       { confidence, impact_timeframe: impactTimeframe, direction },
-    baseline_prices: baselinePrices,
-    validation_date: validationDate,
-  });
-
-  if (error) return res.status(500).json({ error: error.message });
-  return res.status(200).json({ ok: true, id, validationDate });
-}
 
 async function handleResolve(req, res, supabase) {
   const nowStr = new Date().toISOString();
@@ -726,7 +671,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (req.method === 'POST')                    return await handleSave(req, res, supabase);
+    if (req.method === 'POST')                    return res.status(405).json({ error: 'Method not allowed' });
     if (req.query.resolve === 'true')             return await handleResolve(req, res, supabase);
     if (req.query.graph   === 'true')             return await handleGraph(req, res, supabase);
     if (req.method === 'GET')                     return await handleStats(req, res, supabase);

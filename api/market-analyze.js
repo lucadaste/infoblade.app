@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 
 const SOURCE_QUALITY = {
   // Wire / Financial
@@ -113,7 +114,36 @@ export default async function handler(req, res) {
     ? Math.round(rawOdds)
     : undefined;
 
-  const [searchQuery, reputation] = [buildSearchQuery(question), await readReputation(supabase)];
+  // ── Response cache: same question analyzed in the last 15 minutes ──────────
+  // (shorter than analyze.js's 2hr window — PM odds/news move faster)
+  if (supabase) {
+    try {
+      const fifteenMinAgo = new Date(Date.now() - 900000).toISOString();
+      const { data: cached } = await supabase
+        .from('predictions')
+        .select('analysis')
+        .eq('topic', question)
+        .gte('created_at', fifteenMinAgo)
+        .not('analysis', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cached?.analysis?.lean) {
+        return res.status(200).json({ ...cached.analysis, _cached: true });
+      }
+    } catch (_) { /* cache miss — fall through to generation */ }
+  }
+
+  const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
+  const rawCat   = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
+  const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
+
+  const searchQuery = buildSearchQuery(question);
+  const [reputation, contextGraph] = await Promise.all([
+    readReputation(supabase),
+    supabase ? buildContextGraph(supabase, { category }).catch(() => null) : Promise.resolve(null),
+  ]);
+  const trackRecordSection = formatContextForPrompt(contextGraph);
 
   try {
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=en-US&gl=US&ceid=US:en`;
@@ -186,10 +216,12 @@ ${oddsContext}
 
 Recent news (${items.length} articles):
 ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}]`).join('\n')}
-${redditSection}
+${redditSection}${trackRecordSection}
 Weight news sources by grade (High > Medium > Low). Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
+
+TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section above shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
 Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend. Do NOT use em dashes (—) anywhere in your response; use commas, colons, or periods instead.
 
@@ -234,14 +266,11 @@ Respond ONLY with valid JSON, no markdown:
     }
 
     if (supabase && (analysis.lean === 'Yes' || analysis.lean === 'No')) {
-      const rawCat = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
-      const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
-      const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
       const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
       const validationDate = daysLeft != null
         ? new Date(Date.now() + daysLeft * 86400000).toISOString()
         : null;
-      supabase.from('predictions').insert({
+      const { error: insertErr } = await supabase.from('predictions').insert({
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at:          new Date().toISOString(),
         topic:               question,
@@ -258,7 +287,8 @@ Respond ONLY with valid JSON, no markdown:
         loser_tickers:       [],
         correct:             null,
         notes:               null,
-      }).then(() => {}).catch(e => console.error('[market-analyze] save error:', e.message));
+      });
+      if (insertErr) console.error('[market-analyze] save error:', insertErr.message);
     }
 
     return res.status(200).json({ ...analysis, articlesFound: items.length, searchQuery });

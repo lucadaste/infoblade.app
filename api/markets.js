@@ -14,6 +14,24 @@ const ESPORTS_TAGS = new Set([
   'call-of-duty', 'pubg', 'hearthstone', 'world-of-warcraft',
 ]);
 
+// Supernatural / prophecy / troll markets — no real news exists to analyze these,
+// so the AI lean would just be noise. Polymarket doesn't tag these consistently,
+// so we match on title keywords instead.
+const NONSENSE_KEYWORDS = [
+  'jesus christ return', 'second coming of christ', 'second coming of jesus', 'second coming',
+  'rapture', 'antichrist', 'armageddon', 'judgment day', 'doomsday clock',
+  'alien contact', 'aliens land', 'aliens make contact', 'extraterrestrial contact', 'ufo disclosure',
+  'bigfoot', 'loch ness monster', 'nessie spotted',
+  'time travel', 'simulation theory', 'we are in a simulation',
+  'illuminati', 'lizard people', 'flat earth confirmed',
+  'zombie apocalypse',
+];
+
+function _isNonsenseTitle(title) {
+  const t = (title || '').toLowerCase();
+  return NONSENSE_KEYWORDS.some(kw => t.includes(kw));
+}
+
 // Tags are intentionally exclusive — no tag appears in more than one category
 const CATEGORY_TAGS = {
   sports:        ['nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'mma', 'boxing', 'soccer', 'basketball', 'football', 'baseball', 'sports'],
@@ -91,6 +109,7 @@ export default async function handler(req, res) {
       if (!event.active || event.closed || event.archived) return false;
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
       if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
+      if (_isNonsenseTitle(event.title)) return false;
       return targetTags.some(tag => eventTags.includes(tag));
     });
 
@@ -139,33 +158,43 @@ export default async function handler(req, res) {
       };
     }).filter(Boolean).slice(0, 10);
 
-    // Batch AI call: generate a plain-english "what YES means" label for each market
+    // Batch AI call: generate a plain-english "what YES means" label for each market, and
+    // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
+    // Reuses this same call rather than adding a second one — the keyword filter above
+    // catches known phrasings for free; this catches anything new without upkeep.
     try {
       const anthropicKey = process.env.ANTHROPIC_KEY;
       if (anthropicKey && markets.length > 0) {
-        const labelPrompt = `For each prediction market question, write a 3-5 word plain English label describing exactly what the YES outcome means. Be specific — include the name/subject. No punctuation at the end.
+        const labelPrompt = `For each prediction market question below, do two things:
+1. Write a 3-5 word plain English label describing exactly what the YES outcome means. Be specific — include the name/subject. No punctuation at the end.
+2. Set "real" to true if this is a genuine real-world question that news coverage could inform (sports, politics, finance, entertainment, tech, etc.), or false if it's an unfalsifiable, supernatural, mythical, or joke/troll question (e.g. religious prophecy, Bigfoot, simulation theory, aliens) that no real news source could meaningfully analyze.
 
 ${markets.map((m, i) => `${i + 1}. "${m.question}"`).join('\n')}
 
-Respond ONLY with a JSON array of strings in the same order, no markdown:
-["label 1", "label 2", ...]`;
+Respond ONLY with a JSON array of objects in the same order, no markdown:
+[{"label":"label text","real":true}, ...]`;
 
         const labelRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 400, messages: [{ role: 'user', content: labelPrompt }] }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content: labelPrompt }] }),
           signal: AbortSignal.timeout(8000)
         });
         const labelData = await labelRes.json();
         const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
         if (raw) {
-          const labels = JSON.parse(raw);
-          markets.forEach((m, i) => { if (labels[i]) m.yesLabel = String(labels[i]).slice(0, 60); });
+          const parsed = JSON.parse(raw);
+          markets.forEach((m, i) => {
+            if (parsed[i]?.label) m.yesLabel = String(parsed[i].label).slice(0, 60);
+            if (parsed[i]?.real === false) m._nonsense = true;
+          });
         }
       }
-    } catch (_) { /* labels are optional — cards still render without them */ }
+    } catch (_) { /* labels/legitimacy check are optional — cards still render without them */ }
 
-    return res.status(200).json({ markets, category });
+    const finalMarkets = markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
+
+    return res.status(200).json({ markets: finalMarkets, category });
   } catch (err) {
     console.error('[markets]', err.message);
     return res.status(500).json({ error: 'Failed to load markets' });
