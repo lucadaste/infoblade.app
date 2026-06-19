@@ -170,6 +170,12 @@
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+    .lw { display:flex; align-items:center; gap:10px; }
+    .lw-dots { display:flex; gap:4px; flex-shrink:0; }
+    .lw-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:lw-pulse 1.2s ease-in-out infinite; }
+    .lw-dot:nth-child(2) { animation-delay:.2s; } .lw-dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes lw-pulse { 0%,80%,100% { opacity:.2; transform:scale(.75); } 40% { opacity:1; transform:scale(1); } }
+    .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:#666; letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
 
     [data-tip] { position: relative; }
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
@@ -336,6 +342,28 @@
   <script src="/chat-widget.js"></script>
 
   <script>
+    !function(){function s(e){if(e._lw)return;e._lw=1;var m,i=0;try{m=JSON.parse(e.dataset.messages||'[]')}catch(x){m=[]}if(!m.length)return;var t=e.querySelector('.lw-msg');if(!t)return;var tid=setInterval(function(){if(!document.contains(e)){clearInterval(tid);return;}t.style.opacity='0';t.style.transform='translateY(3px)';setTimeout(function(){if(!document.contains(e))return;i=(i+1)%m.length;t.textContent=m[i];t.style.opacity='1';t.style.transform='translateY(0)';},220);},2600);}new MutationObserver(function(ms){ms.forEach(function(mu){mu.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.classList&&n.classList.contains('lw-auto'))s(n);if(n.querySelectorAll)n.querySelectorAll('.lw-auto').forEach(s);})})}).observe(document.body,{childList:true,subtree:true});}();
+
+    function _lw(msgs, pad) {
+      const j = JSON.stringify(msgs).replace(/'/g,'&#39;');
+      return `<div class="lw lw-auto" data-messages='${j}' style="padding:${pad||'20px 0'}"><div class="lw-dots"><span class="lw-dot"></span><span class="lw-dot"></span><span class="lw-dot"></span></div><span class="lw-msg">${msgs[0]}</span></div>`;
+    }
+
+    const LW_CRYPTO_GROUP = [
+      'Pulling CoinDesk, The Block, Decrypt...',
+      'Reading the Fear & Greed Index...',
+      'Scanning r/CryptoCurrency and r/Bitcoin...',
+      'Weighing sources by credibility score...',
+      'Calling direction for this event...',
+      'Calibrating against crypto track record...',
+    ];
+    const LW_CRYPTO_OVERALL = [
+      'Synthesizing all crypto news into one outlook...',
+      'Weighing bullish vs bearish signals...',
+      'Checking historical accuracy for this coin...',
+      'Finalising directional call...',
+    ];
+
     function esc(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -547,10 +575,7 @@
       const content = document.getElementById('ap-content');
       content.innerHTML = `
         <div style="display:flex;flex-direction:column;gap:14px;padding:8px 0">
-          <div class="skel" style="height:90px;border-radius:10px"></div>
-          <div class="skel" style="height:12px;width:180px"></div>
-          <div class="skel" style="height:90px;border-radius:10px"></div>
-          <div class="skel" style="height:90px;border-radius:10px"></div>
+          ${_lw(['Fetching live prices from CoinGecko...','Pulling CoinDesk, The Block, Decrypt...','Checking Fear & Greed Index...','Scanning r/CryptoCurrency for sentiment...','Grouping stories by event type...'],'0')}
         </div>`;
 
       try {
@@ -594,11 +619,7 @@
         emptyEl.className = 'ap-empty';
         emptyEl.innerHTML = `
           <div>No specific news events matched for ${esc(coin.name)} right now. Running general market analysis…</div>
-          <div class="ap-loading group-loading" id="general-loading" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
-            <div class="skel" style="height:26px;width:120px;border-radius:4px"></div>
-            <div class="skel" style="height:14px;width:100%"></div>
-            <div class="skel" style="height:14px;width:78%"></div>
-          </div>
+          <div id="general-loading">${_lw(LW_CRYPTO_GROUP,'14px 0')}</div>
           <div class="deep-result" id="general-result"></div>
         `;
         content.appendChild(emptyEl);
@@ -611,11 +632,7 @@
       overallCard.id = 'overall-card';
       overallCard.innerHTML = `
         <div class="overall-label">Overall Prediction for ${esc(coin.name)}</div>
-        <div class="overall-loading" id="overall-loading" style="display:flex;flex-direction:column;gap:8px;width:100%">
-          <div class="skel" style="height:14px;width:55%"></div>
-          <div class="skel" style="height:14px;width:80%"></div>
-          <div class="skel" style="height:14px;width:40%"></div>
-        </div>
+        <div id="overall-loading">${_lw(LW_CRYPTO_OVERALL,'10px 0')}</div>
         <div id="overall-result"></div>
       `;
       content.appendChild(overallCard);
@@ -634,11 +651,7 @@
         card.innerHTML = `
           <div class="group-topic">${esc(group.topic)}</div>
           <div class="group-meta">${group.totalSources || group.sources?.length || 0} sources · ${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
-          <div class="ap-loading group-loading" id="loading-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
-            <div class="skel" style="height:26px;width:100px;border-radius:4px"></div>
-            <div class="skel" style="height:14px;width:100%"></div>
-            <div class="skel" style="height:14px;width:72%"></div>
-          </div>
+          <div id="loading-${idx}">${_lw(LW_CRYPTO_GROUP,'14px 0')}</div>
           <div class="deep-result" id="result-${idx}"></div>
         `;
         content.appendChild(card);
@@ -721,7 +734,7 @@
           loadDiv.className = 'ap-loading group-loading';
           loadDiv.id = `loading-${idx}`;
           loadDiv.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:14px 0';
-          loadDiv.innerHTML = '<div class="skel" style="height:26px;width:100px;border-radius:4px"></div><div class="skel" style="height:14px;width:100%"></div><div class="skel" style="height:14px;width:72%"></div>';
+          loadDiv.innerHTML = _lw(LW_CRYPTO_GROUP,'14px 0');
           resultEl.innerHTML = '';
           resultEl.parentNode.insertBefore(loadDiv, resultEl);
           autoAnalyzeGroup(group, coin, idx, ++renderSession);

@@ -71,6 +71,12 @@
     .status-bar { padding: 14px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 45px; display: flex; align-items: center; gap: 10px; }
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+    .lw { display:flex; align-items:center; gap:10px; }
+    .lw-dots { display:flex; gap:4px; flex-shrink:0; }
+    .lw-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:lw-pulse 1.2s ease-in-out infinite; }
+    .lw-dot:nth-child(2) { animation-delay:.2s; } .lw-dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes lw-pulse { 0%,80%,100% { opacity:.2; transform:scale(.75); } 40% { opacity:1; transform:scale(1); } }
+    .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:#666; letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
 
     [data-tip] { position: relative; }
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
@@ -288,6 +294,28 @@
   </footer>
 
   <script>
+    !function(){function s(e){if(e._lw)return;e._lw=1;var m,i=0;try{m=JSON.parse(e.dataset.messages||'[]')}catch(x){m=[]}if(!m.length)return;var t=e.querySelector('.lw-msg');if(!t)return;var tid=setInterval(function(){if(!document.contains(e)){clearInterval(tid);return;}t.style.opacity='0';t.style.transform='translateY(3px)';setTimeout(function(){if(!document.contains(e))return;i=(i+1)%m.length;t.textContent=m[i];t.style.opacity='1';t.style.transform='translateY(0)';},220);},2600);}new MutationObserver(function(ms){ms.forEach(function(mu){mu.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.classList&&n.classList.contains('lw-auto'))s(n);if(n.querySelectorAll)n.querySelectorAll('.lw-auto').forEach(s);})})}).observe(document.body,{childList:true,subtree:true});}();
+
+    function _lw(msgs, pad) {
+      const j = JSON.stringify(msgs).replace(/'/g,'&#39;');
+      return `<div class="lw lw-auto" data-messages='${j}' style="padding:${pad||'20px 0'}"><div class="lw-dots"><span class="lw-dot"></span><span class="lw-dot"></span><span class="lw-dot"></span></div><span class="lw-msg">${msgs[0]}</span></div>`;
+    }
+
+    const LW_MARKETS = [
+      'Fetching live Polymarket markets...',
+      'Filtering by volume and activity...',
+      'Sorting by days remaining...',
+      'Loading current market probabilities...',
+    ];
+    const LW_MARKET_ANALYSIS = [
+      'Searching news for this market question...',
+      'Checking Reddit for crowd discussion...',
+      'Weighing sources by credibility score...',
+      'Comparing our read to the crowd odds...',
+      'Generating lean and confidence rating...',
+      'Saving prediction to track record...',
+    ];
+
     function esc(s) {
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -363,47 +391,11 @@
     }
 
     function skeletonCards(n = 4) {
-      return Array.from({length: n}, () => `
-        <div class="skel-card">
-          <div class="skel-header">
-            <div class="skel-title">
-              <div class="skel" style="height:22px;width:85%"></div>
-              <div class="skel" style="height:22px;width:58%"></div>
-            </div>
-            <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-              <div class="skel" style="height:38px;width:64px"></div>
-              <div class="skel" style="height:10px;width:48px"></div>
-            </div>
-          </div>
-          <div class="skel-row">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
-            <div class="skel" style="flex:1;height:14px"></div>
-          </div>
-          <div class="skel-row">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
-            <div class="skel" style="height:22px;width:90px"></div>
-          </div>
-          <div class="skel-row">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0"></div>
-            <div class="skel" style="height:36px;width:110px;border-radius:6px"></div>
-          </div>
-        </div>
-      `).join('');
+      return `<div style="padding:48px 40px 32px">${_lw(LW_MARKETS,'0')}</div>`;
     }
 
     function skeletonAnalysis() {
-      return `
-        <div class="analysis-block" style="gap:10px">
-          <div class="skel" style="height:40px;border-radius:6px"></div>
-          <div style="display:flex;gap:8px">
-            <div class="skel" style="height:26px;width:200px;border-radius:4px"></div>
-            <div class="skel" style="height:26px;width:120px;border-radius:4px"></div>
-          </div>
-          <div class="skel" style="height:14px;width:100%"></div>
-          <div class="skel" style="height:14px;width:88%"></div>
-          <div class="skel" style="height:14px;width:70%"></div>
-        </div>
-      `;
+      return `<div class="analysis-block" style="gap:10px">${_lw(LW_MARKET_ANALYSIS,'12px 0')}</div>`;
     }
 
     function oddsClass(pct) {

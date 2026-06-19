@@ -152,6 +152,12 @@
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+    .lw { display:flex; align-items:center; gap:10px; }
+    .lw-dots { display:flex; gap:4px; flex-shrink:0; }
+    .lw-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:lw-pulse 1.2s ease-in-out infinite; }
+    .lw-dot:nth-child(2) { animation-delay:.2s; } .lw-dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes lw-pulse { 0%,80%,100% { opacity:.2; transform:scale(.75); } 40% { opacity:1; transform:scale(1); } }
+    .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:#666; letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
 
     [data-tip] { position: relative; }
     [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: #1e1e1e; border: 1px solid #2e2e2e; border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: #e8e6e0; line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
@@ -546,40 +552,44 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // ── Loading widget bootstrap ──────────────────────────────────────────────
+    !function(){function s(e){if(e._lw)return;e._lw=1;var m,i=0;try{m=JSON.parse(e.dataset.messages||'[]')}catch(x){m=[]}if(!m.length)return;var t=e.querySelector('.lw-msg');if(!t)return;var tid=setInterval(function(){if(!document.contains(e)){clearInterval(tid);return;}t.style.opacity='0';t.style.transform='translateY(3px)';setTimeout(function(){if(!document.contains(e))return;i=(i+1)%m.length;t.textContent=m[i];t.style.opacity='1';t.style.transform='translateY(0)';},220);},2600);}new MutationObserver(function(ms){ms.forEach(function(mu){mu.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.classList&&n.classList.contains('lw-auto'))s(n);if(n.querySelectorAll)n.querySelectorAll('.lw-auto').forEach(s);})})}).observe(document.body,{childList:true,subtree:true});}();
+
+    function _lw(msgs, pad) {
+      const j = JSON.stringify(msgs).replace(/'/g,'&#39;');
+      return `<div class="lw lw-auto" data-messages='${j}' style="padding:${pad||'20px 0'}"><div class="lw-dots"><span class="lw-dot"></span><span class="lw-dot"></span><span class="lw-dot"></span></div><span class="lw-msg">${msgs[0]}</span></div>`;
+    }
+
+    const LW_SECTOR = [
+      'Pulling feeds from Reuters, Bloomberg, CNBC...',
+      'Searching Google News for market-moving stories...',
+      'Cross-referencing GDELT news index...',
+      'Scanning r/wallstreetbets and r/investing...',
+      'Filtering by source credibility grade...',
+      'Deduplicating stories across sources...',
+      'Grouping headlines into market events...',
+      'Ranking by number of sources covering each...',
+    ];
+    const LW_GROUP = [
+      'Building weighted consensus from sources...',
+      'Checking Polymarket for related prediction bets...',
+      'Identifying winner and loser tickers...',
+      'Calling direction — bullish or bearish...',
+      'Calibrating confidence against our track record...',
+      'Saving prediction to database...',
+    ];
+    const LW_STOCK = [
+      'Fetching news across 12+ sources...',
+      'Pulling Yahoo Finance technical data...',
+      'Checking Polymarket for related bets...',
+      'Scanning r/wallstreetbets for retail sentiment...',
+      'Building weighted source consensus...',
+      'Calling direction — bullish or bearish...',
+      'Calibrating against our track record...',
+    ];
+
     function skeletonEventCards(n = 3) {
-      return Array.from({length: n}, (_, i) => `
-        <div class="skel-event-card" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${i * 80}ms">
-          <div class="skel" style="height:24px;width:72%"></div>
-          <div class="skel" style="height:12px;width:38%;margin-top:10px"></div>
-          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e;margin-top:16px">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
-            <div class="skel" style="flex:1;height:14px"></div>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
-            <div class="skel" style="height:22px;width:88px;border-radius:4px"></div>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
-            <div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">
-              <div class="skel" style="height:22px;width:68px;border-radius:4px"></div>
-              <div class="skel" style="height:22px;width:52px;border-radius:4px"></div>
-              <div class="skel" style="height:22px;width:76px;border-radius:4px"></div>
-            </div>
-          </div>
-          <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
-            <div class="skel" style="width:120px;height:10px;flex-shrink:0;margin-top:3px"></div>
-            <div style="flex:1">
-              <div class="skel" style="height:14px;width:100%;margin-bottom:8px"></div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
-                <div class="skel" style="height:20px;width:44px;border-radius:4px"></div>
-                <div class="skel" style="height:20px;width:40px;border-radius:4px"></div>
-                <div class="skel" style="height:20px;width:52px;border-radius:4px"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
+      return `<div style="padding:48px 40px 32px">${_lw(LW_SECTOR,'0')}<p style="font-size:12px;color:#2e2e2e;margin-top:10px;font-family:'Share Tech Mono',sans-serif">This takes 20–30 seconds on first load</p></div>`;
     }
 
     function _REMOVED_skeletonStockCard(ticker, name, price, changePct, idx) {
@@ -617,26 +627,10 @@
     }
 
     function skeletonCardForGroup(topic, idx) {
-      const safeText = topic.length > 90 ? topic.slice(0, 87) + '…' : topic;
+      const safeText = (topic.length > 90 ? topic.slice(0, 87) + '…' : topic).replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return `<div class="skel-event-card" data-slot-idx="${idx}" style="background:#0a0a0a;border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
-        <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:8px;color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-        <div class="skel" style="height:12px;width:36%;margin-top:8px"></div>
-        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e;margin-top:16px">
-          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
-          <div class="skel" style="flex:1;height:14px"></div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
-          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
-          <div class="skel" style="height:22px;width:80px;border-radius:4px"></div>
-        </div>
-        <div style="display:flex;align-items:flex-start;gap:24px;padding:18px 0;border-top:1px solid #1e1e1e">
-          <div class="skel" style="width:110px;height:10px;flex-shrink:0;margin-top:3px"></div>
-          <div style="flex:1;display:flex;gap:6px;flex-wrap:wrap">
-            <div class="skel" style="height:22px;width:64px;border-radius:4px"></div>
-            <div class="skel" style="height:22px;width:48px;border-radius:4px"></div>
-            <div class="skel" style="height:22px;width:72px;border-radius:4px"></div>
-          </div>
-        </div>
+        <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:4px;color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText}</div>
+        ${_lw(LW_GROUP, '18px 0 4px')}
       </div>`;
     }
 
@@ -938,12 +932,7 @@
     async function fetchStockAnalysis(ticker, name, tickerData) {
       const mySession = ++stockAnalysisSession;
       const content = document.getElementById('sap-content');
-      content.innerHTML = `<div style="display:flex;flex-direction:column;gap:14px;padding:8px 0">
-        <div class="skel" style="height:90px;border-radius:10px"></div>
-        <div class="skel" style="height:12px;width:180px"></div>
-        <div class="skel" style="height:90px;border-radius:10px"></div>
-        <div class="skel" style="height:90px;border-radius:10px"></div>
-      </div>`;
+      content.innerHTML = _lw(LW_STOCK, '32px 0');
       const sector    = stockSector;
       const timeframe = 'today';
       const impact    = stockImpact;
@@ -984,11 +973,7 @@
       if (!groups.length) {
         content.innerHTML = `
           <div style="color:var(--muted);font-size:14px;margin-bottom:16px">No specific news found for ${esc(ticker)}. Running general outlook…</div>
-          <div id="sap-general-loading" style="display:flex;flex-direction:column;gap:8px;padding:8px 0">
-            <div class="skel" style="height:26px;width:120px;border-radius:4px"></div>
-            <div class="skel" style="height:14px;width:100%"></div>
-            <div class="skel" style="height:14px;width:72%"></div>
-          </div>
+          <div id="sap-general-loading">${_lw(LW_STOCK,'14px 0')}</div>
           <div id="sap-general-result"></div>`;
         runGeneralStockAnalysis(ticker, name, mySession, impact);
         return;
@@ -997,11 +982,7 @@
       overallCard.className = 'overall-card';
       overallCard.innerHTML = `
         <div class="overall-label">Overall Prediction · ${esc(name)} (${esc(ticker)})</div>
-        <div id="sap-overall-loading" style="display:flex;flex-direction:column;gap:8px;width:100%">
-          <div class="skel" style="height:14px;width:55%"></div>
-          <div class="skel" style="height:14px;width:80%"></div>
-          <div class="skel" style="height:14px;width:40%"></div>
-        </div>
+        <div id="sap-overall-loading">${_lw(['Synthesizing all news into an overall call...','Weighing bullish vs bearish signals...','Comparing to historical accuracy on this ticker...','Finalising direction and confidence...'],'10px 0')}</div>
         <div id="sap-overall-result"></div>`;
       content.appendChild(overallCard);
       const lbl = document.createElement('div');
@@ -1016,11 +997,7 @@
         card.innerHTML = `
           <div class="group-topic">${esc(group.topic)}</div>
           <div class="group-meta">${(group.sources || []).slice(0,3).map(esc).join(' · ')}</div>
-          <div id="sap-loading-${idx}" style="display:flex;flex-direction:column;gap:8px;padding:14px 0">
-            <div class="skel" style="height:26px;width:100px;border-radius:4px"></div>
-            <div class="skel" style="height:14px;width:100%"></div>
-            <div class="skel" style="height:14px;width:72%"></div>
-          </div>
+          <div id="sap-loading-${idx}">${_lw(LW_GROUP,'14px 0')}</div>
           <div id="sap-result-${idx}"></div>`;
         content.appendChild(card);
         autoAnalyzeStockGroup(group, ticker, name, idx, mySession, impact);
