@@ -388,6 +388,113 @@ async function handleResolve(req, res, supabase) {
     } catch (_) { /* skip on network error, retry next pass */ }
   }
 
+  // ── 8. Retroactive crypto category fix ───────────────────────────────────
+  // Crypto predictions saved before category:'crypto' was added to crypto.html
+  // were stored with category=null. Fix them so they appear under Crypto section stats.
+  {
+    const cryptoRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|crypto(?:currency)?|defi|blockchain|altcoin|coinbase.*price|coin.*price|nft market)\b/i;
+    const { data: uncat } = await supabase
+      .from('predictions')
+      .select('id, topic')
+      .is('category', null)
+      .limit(1000);
+    const cryptoIds = (uncat || []).filter(p => cryptoRx.test(p.topic || '')).map(p => p.id);
+    if (cryptoIds.length) {
+      for (let i = 0; i < cryptoIds.length; i += 50) {
+        await supabase.from('predictions').update({ category: 'crypto' }).in('id', cryptoIds.slice(i, i + 50));
+      }
+    }
+  }
+
+  // ── 9. Retroactive PM grading via Polymarket text search ─────────────────
+  // For PM predictions stored without a market_slug (before we fixed the slug storage),
+  // attempt fuzzy word-overlap matching against recently-closed Polymarket events.
+  {
+    const pmNoSlug = all.filter(p =>
+      (p.lean || p.analysis?.lean) && !p.market_slug && p.correct === null
+    );
+
+    if (pmNoSlug.length > 0) {
+      // Fetch recently closed Polymarket events
+      let closedEvents = [];
+      try {
+        const r = await fetch(
+          'https://gamma-api.polymarket.com/events?closed=true&limit=500&order=end_date&ascending=false',
+          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) }
+        );
+        if (r.ok) closedEvents = await r.json();
+      } catch (_) {}
+
+      const _PM_STOPS = new Set([
+        'will','does','the','this','that','for','with','not','its','has','from',
+        'been','have','which','their','more','most','just','also','over','after',
+        'when','what','who','would','could','should','these','those','they','them',
+        'into','about','before','during','between','going','than','very','too',
+      ]);
+
+      function _pmWordScore(q, title) {
+        const qWords = q.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/)
+          .filter(w => w.length > 2 && !_PM_STOPS.has(w));
+        if (!qWords.length) return 0;
+        const tWords = new Set(title.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/));
+        return qWords.filter(w => tWords.has(w)).length / qWords.length;
+      }
+
+      let pmTextMatched = 0;
+      for (const pred of pmNoSlug) {
+        const question = pred.topic || '';
+        let bestEvent = null, bestScore = 0;
+
+        for (const event of Array.isArray(closedEvents) ? closedEvents : []) {
+          const s = _pmWordScore(question, event.title || '');
+          if (s > bestScore) { bestScore = s; bestEvent = event; }
+        }
+        // Require 55% word overlap to avoid false matches
+        if (bestScore < 0.55 || !bestEvent) continue;
+
+        const market = (bestEvent.markets || [])[0];
+        if (!market?.resolved) continue;
+
+        let prices;
+        try {
+          prices = typeof market.outcomePrices === 'string'
+            ? JSON.parse(market.outcomePrices) : market.outcomePrices;
+        } catch (_) { continue; }
+        if (!Array.isArray(prices) || prices.length < 2) continue;
+
+        const yesPrice = parseFloat(prices[0]);
+        const outcome = yesPrice >= 0.99 ? 'Yes' : yesPrice <= 0.01 ? 'No' : null;
+        if (!outcome) continue;
+
+        const lean      = pred.lean || pred.analysis?.lean;
+        const confStr   = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
+        const correct   = lean === outcome;
+        const baseScore = correct ? 50 : -50;
+        const confBonus = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
+        const accScore  = +(baseScore + (correct ? confBonus : -confBonus)).toFixed(1);
+
+        const { error: pmErr2 } = await supabase
+          .from('predictions')
+          .update({
+            correct:      accScore > 0,
+            validated_at: nowStr,
+            market_slug:  bestEvent.slug || null,
+            analysis: {
+              ...(pred.analysis || {}),
+              grade: _letterGrade(accScore),
+              score: accScore,
+              accuracy_score: accScore,
+              resolved_outcome: outcome,
+              lean_was: lean,
+              text_match_pct: Math.round(bestScore * 100),
+            },
+          })
+          .eq('id', pred.id);
+        if (!pmErr2) { resolved++; pmTextMatched++; }
+      }
+    }
+  }
+
   return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length, pmChecked: pmReady.length });
 }
 
