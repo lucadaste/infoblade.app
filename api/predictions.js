@@ -31,22 +31,23 @@ function _categoryToSection(cat) {
   return 'stocks';
 }
 
-function _sectionStats(preds) {
+function _sectionStats(preds, pendingBySection = {}) {
   const map = {};
   for (const p of preds) {
     const sec = _categoryToSection(p.category || 'any');
-    if (!map[sec]) map[sec] = { weightedCorrect: 0, totalWeight: 0 };
-    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
-    map[sec].totalWeight    += w;
-    if (p.correct) map[sec].weightedCorrect += w;
+    if (!map[sec]) map[sec] = { lenientCorrect: 0, total: 0 };
+    const score = p.analysis?.accuracy_score ?? p.analysis?.score ?? -100;
+    map[sec].total++;
+    if (score > -15) map[sec].lenientCorrect++;
   }
   return Object.entries(_SECTION_LABELS).map(([sec, label]) => {
-    const d = map[sec] || { weightedCorrect: 0, totalWeight: 0 };
+    const d = map[sec] || { lenientCorrect: 0, total: 0 };
     return {
       section:  sec,
       label,
-      total:    d.totalWeight > 0 ? 1 : 0, // presence flag for rendering
-      accuracy: d.totalWeight > 0 ? Math.round(d.weightedCorrect / d.totalWeight * 100) : null,
+      total:    d.total,
+      pending:  pendingBySection[sec] || 0,
+      accuracy: d.total > 0 ? Math.round(d.lenientCorrect / d.total * 100) : null,
     };
   });
 }
@@ -515,8 +516,19 @@ async function handleStats(req, res, supabase) {
     .sort((a, b) => b.winRate - a.winRate || b.total - a.total)
     .slice(0, 15);
 
+  // Pending counts by section (for sections with no resolved data yet)
+  const pendingBySection = {};
+  const { data: pendingAll } = await supabase
+    .from('predictions')
+    .select('id, category, lean')
+    .is('correct', null);
+  for (const p of pendingAll || []) {
+    const sec = (p.lean) ? 'prediction-markets' : _categoryToSection(p.category || 'any');
+    pendingBySection[sec] = (pendingBySection[sec] || 0) + 1;
+  }
+
   // Per-section breakdown (Stocks / Crypto / Prediction Markets)
-  const bySection = _sectionStats(validated ?? []);
+  const bySection = _sectionStats(validated ?? [], pendingBySection);
 
   // User-specific stats (only when authenticated)
   let userStats = null;

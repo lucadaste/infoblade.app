@@ -204,9 +204,9 @@
 
   <!-- Stats -->
   <div class="stats-row" id="stats-row">
-    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
-    <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">&nbsp;</div></div>
-    <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-pending">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div></div>
   </div>
 
   <!-- Per-section breakdown -->
@@ -277,22 +277,16 @@
     acc.style.height = acc.style.width = 'auto';
     const dispAcc = s.displayAccuracy ?? s.accuracy;
     acc.textContent = dispAcc != null ? dispAcc + '%' : '--';
-    document.getElementById('stat-sub-accuracy').textContent =
-      s.total > 0 ? `${s.correct} clearly correct of ${s.total} resolved` : 'No validated predictions yet';
 
     const cr = document.getElementById('stat-correct');
     cr.classList.remove('skeleton');
     cr.style.height = cr.style.width = 'auto';
     cr.textContent = fmt(s.total);
-    document.getElementById('stat-sub-correct').textContent =
-      s.total > 0 ? `${s.correct} correct, ${s.incorrect} incorrect` : 'No validated predictions yet';
 
     const pend = document.getElementById('stat-pending');
     pend.classList.remove('skeleton');
     pend.style.height = pend.style.width = 'auto';
     pend.textContent = fmt(s.pending ?? 0);
-    document.getElementById('stat-sub-pending').textContent =
-      s.pending > 0 ? 'still within timeframe' : 'none pending';
   }
 
   function renderCumulativeChart(cum) {
@@ -431,6 +425,9 @@
       const acc      = hasData ? s.accuracy : null;
       const barW     = hasData ? acc : 0;
       const accColor = hasData ? (acc >= 60 ? 'var(--accent)' : acc >= 40 ? '#ffc832' : 'var(--red)') : 'var(--muted)';
+      const subLabel = hasData
+        ? `${s.total} prediction${s.total !== 1 ? 's' : ''} graded`
+        : (s.pending > 0 ? `${s.pending} pending — none expired yet` : 'no predictions yet');
       return `
         <div class="cat-card">
           <div class="cat-name">${esc(s.label)}</div>
@@ -438,7 +435,7 @@
           <div class="cat-stat">
             <span class="cat-pct" style="color:${accColor}">${hasData ? acc + '%' : '—'}</span>
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">${hasData ? 'confidence-weighted' : 'no resolved predictions yet'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">${subLabel}</div>
         </div>`;
     }).join('');
   }
