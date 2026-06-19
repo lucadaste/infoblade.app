@@ -444,7 +444,7 @@
         const res = await fetch(window.API_BASE + '/api/market-analyze', {
           method: 'POST',
           headers: _ah(),
-          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: document.querySelector('.cat-chip.active')?.textContent?.trim().toLowerCase() || '' })
+          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: document.querySelector('.cat-chip.active')?.textContent?.trim().toLowerCase() || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -479,24 +479,7 @@
         cardEl.appendChild(block);
         btn.textContent = 'Re-analyze';
 
-        if (isFirstAnalysis && (data.lean === 'Yes' || data.lean === 'No')) {
-          fetch(window.API_BASE + '/api/predictions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              type: 'prediction-market',
-              topic: market.question,
-              lean: data.lean,
-              lean_confidence: data.lean_confidence,
-              marketOddsAtTime: market.yesPrice,
-              marketSlug: market.slug,
-              daysLeft: market.daysLeft,
-              signal: data.signal,
-              sources: data.key_sources || [],
-              analysis: { lean: data.lean, lean_confidence: data.lean_confidence, signal: data.signal, reasoning: data.reasoning }
-            })
-          }).catch(() => {});
-        }
+        // Prediction saved server-side by market-analyze.js
       } catch (err) {
         const skelBlock = cardEl.querySelector('.analysis-block');
         if (skelBlock) skelBlock.remove();

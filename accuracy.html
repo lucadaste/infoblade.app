@@ -331,8 +331,6 @@
     const badgeText  = isCorrect ? '✓ Correct' : !isPending ? '✗ Incorrect' : 'Pending';
     const date       = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const validDate  = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
-    const wins       = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">▲ ${esc(t)}</span>`).join('');
-    const loses      = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">▼ ${esc(t)}</span>`).join('');
     const tf         = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
     const conf       = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
 
@@ -343,6 +341,40 @@
            ${scoreVal != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:4px;color:${scoreVal>=0?'var(--accent)':'var(--red)'}">${scoreVal>=0?'+':''}${scoreVal}</div>` : ''}
          </div>`
       : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
+
+    // ── Prediction market card (no tickers — show lean + signal instead) ──
+    const isPM = !p.winnerTickers?.length && !p.loserTickers?.length && (p.lean || p.signal);
+    if (isPM) {
+      const lean = p.lean || p.analysis?.lean;
+      const signal = p.signal || p.analysis?.signal;
+      const resolvedOutcome = p.analysis?.resolved_outcome;
+      const leanColor = lean === 'Yes' ? 'var(--accent)' : lean === 'No' ? 'var(--red)' : 'var(--muted)';
+      const signalColor = signal === 'Aligns with market' ? 'var(--accent)' : signal === 'Contradicts market' ? '#ffc832' : 'var(--muted)';
+      const outcomeHtml = resolvedOutcome
+        ? `<span style="font-size:11px;color:var(--muted)">Resolved: <strong style="color:var(--ink)">${esc(resolvedOutcome)}</strong></span>`
+        : '';
+      return `
+        <div class="pred-card">
+          <div style="flex:1;min-width:0">
+            <div class="pred-topic">${esc(p.topic)}</div>
+            <div class="ticker-moves" style="margin-top:6px">
+              ${lean ? `<span class="tm-chip" style="background:rgba(255,255,255,0.05);border-color:${leanColor};color:${leanColor}">Predicted: ${esc(lean)}</span>` : ''}
+              ${signal ? `<span class="tm-chip" style="background:rgba(255,255,255,0.04);border-color:${signalColor};color:${signalColor}">${esc(signal)}</span>` : ''}
+              ${outcomeHtml}
+            </div>
+            <div class="pred-meta" style="margin-top:8px">
+              <span>${date}</span>
+              ${validDate ? `<span>→ ${validDate}</span>` : ''}
+              ${tf}
+            </div>
+          </div>
+          <div style="flex-shrink:0">${gradeHtml}</div>
+        </div>`;
+    }
+
+    // ── Stock / crypto card (tickers with moves) ──────────────────────────
+    const wins  = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">▲ ${esc(t)}</span>`).join('');
+    const loses = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">▼ ${esc(t)}</span>`).join('');
 
     let movesHtml = '';
     if (p.tickerMoves && Object.keys(p.tickerMoves).length) {

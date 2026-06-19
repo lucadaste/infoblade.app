@@ -233,23 +233,31 @@ Respond ONLY with valid JSON, no markdown:
       return res.status(500).json({ error: 'Analysis service returned invalid data' });
     }
 
-    if (supabase) {
-      const category = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
+    if (supabase && (analysis.lean === 'Yes' || analysis.lean === 'No')) {
+      const rawCat = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
+      const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
+      const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
+      const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
+      const validationDate = daysLeft != null
+        ? new Date(Date.now() + daysLeft * 86400000).toISOString()
+        : null;
       supabase.from('predictions').insert({
-        id: `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-        created_at: new Date().toISOString(),
-        type: 'prediction-markets',
-        topic: question,
-        sources: items.map(i => i.source),
-        lean: analysis.lean || null,
-        lean_confidence: analysis.lean_confidence || null,
+        id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+        created_at:          new Date().toISOString(),
+        topic:               question,
+        sources:             items.map(i => i.source),
+        lean:                analysis.lean,
+        lean_confidence:     analysis.lean_confidence || null,
         market_odds_at_time: currentOdds ?? null,
-        market_slug: req.body?.slug || null,
-        signal: analysis.signal || null,
+        market_slug:         req.body?.slug || null,
+        signal:              analysis.signal || null,
         category,
-        analysis,
-        correct: null,
-        notes: null
+        analysis:            { ...analysis, impact_timeframe: daysLeft ? `${daysLeft} days` : null },
+        validation_date:     validationDate,
+        winner_tickers:      [],
+        loser_tickers:       [],
+        correct:             null,
+        notes:               null,
       }).then(() => {}).catch(e => console.error('[market-analyze] save error:', e.message));
     }
 

@@ -513,12 +513,12 @@
       <div class="preview-card">
         <div class="acc-stats">
           <div class="acc-stat">
-            <div class="acc-stat-val green">71%</div>
+            <div class="acc-stat-val green">83%</div>
             <div class="acc-stat-lbl">Overall accuracy</div>
           </div>
           <div class="acc-stat">
             <div class="acc-stat-val">48</div>
-            <div class="acc-stat-lbl">Predictions logged</div>
+            <div class="acc-stat-lbl">Predictions graded</div>
           </div>
           <div class="acc-stat">
             <div class="acc-stat-val amber">12</div>
@@ -526,32 +526,40 @@
           </div>
         </div>
         <div class="acc-source-row">
-          <div class="acc-source-name">Reuters</div>
-          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-green" style="width:82%"></div></div>
-          <div class="acc-pct">82%</div>
+          <div class="acc-source-name">Stock Markets</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-green" style="width:87%"></div></div>
+          <div class="acc-pct">87%</div>
         </div>
         <div class="acc-source-row">
-          <div class="acc-source-name">Financial Times</div>
-          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-green" style="width:76%"></div></div>
-          <div class="acc-pct">76%</div>
+          <div class="acc-source-name">Crypto</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-green" style="width:81%"></div></div>
+          <div class="acc-pct">81%</div>
         </div>
         <div class="acc-source-row">
-          <div class="acc-source-name">Bloomberg</div>
-          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-green" style="width:71%"></div></div>
-          <div class="acc-pct">71%</div>
+          <div class="acc-source-name">Pred. Markets</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-amber" style="width:64%"></div></div>
+          <div class="acc-pct amber">64%</div>
         </div>
-        <div class="acc-source-row">
-          <div class="acc-source-name">CNBC</div>
-          <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-amber" style="width:58%"></div></div>
-          <div class="acc-pct amber">58%</div>
+        <div style="margin-top:16px;background:#161616;border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nvidia: AI chip export controls impact</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25)">▲ NVDA +9.1%</span>
+              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25)">▲ AMD +6.3%</span>
+            </div>
+          </div>
+          <div style="text-align:center;flex-shrink:0">
+            <div style="font-family:'Share Tech Mono',sans-serif;font-size:20px;font-weight:700;width:38px;height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(0,230,118,0.15);color:#00e676;border:1px solid rgba(0,230,118,0.35)">A</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:3px;color:#00e676">+62</div>
+          </div>
         </div>
       </div>
     </div>
     <div class="split-left">
       <div class="split-label">Accuracy History</div>
       <h2>Every call is on the record</h2>
-      <p>Every analysis we generate becomes a logged prediction across stocks, crypto, and prediction markets: direction called, timeframe, confidence level, and the sources behind it. Each outcome is validated when the window closes.</p>
-      <p>You can see which sources lead to accurate calls and which don't. The AI is only as good as its track record, so we make it public.</p>
+      <p>Every AI prediction is graded A through F: the direction called, the tickers named, and the actual price moves when the timeframe closes. Stocks, crypto, and prediction markets, all in one place.</p>
+      <p>That track record feeds directly back into future predictions — the AI sees its own win rate per ticker and sector, and adjusts its confidence accordingly.</p>
       <a class="btn-outline" href="/accuracy.html">View accuracy history →</a>
     </div>
   </section>

@@ -182,10 +182,10 @@ async function handleResolve(req, res, supabase) {
   const nowStr = new Date().toISOString();
   const nowMs  = Date.now();
 
-  // ── 1. Fetch all unresolved predictions (no filters — handle all legacy data) ──
+  // ── 1. Fetch all unresolved predictions ──────────────────────────────────────
   const { data: all, error } = await supabase
     .from('predictions')
-    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources')
+    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug')
     .is('correct', null)
     .order('created_at', { ascending: true })
     .limit(1000);
@@ -328,7 +328,66 @@ async function handleResolve(req, res, supabase) {
     );
   }
 
-  return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length });
+  // ── 7. Prediction market resolution (Polymarket) ─────────────────────────
+  const pmReady = all.filter(p => {
+    if (p.correct !== null) return false;
+    const lean = p.lean || p.analysis?.lean;
+    if (lean !== 'Yes' && lean !== 'No') return false;
+    const vDate = p.validation_date ? new Date(p.validation_date) : null;
+    const ageMs = nowMs - new Date(p.created_at).getTime();
+    return vDate ? vDate.getTime() <= nowMs : ageMs > 30 * 86400000;
+  });
+
+  for (const pred of pmReady) {
+    const lean     = pred.lean || pred.analysis?.lean;
+    const confStr  = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
+    const slug     = pred.market_slug;
+    if (!slug) continue; // can't look up without a slug
+
+    try {
+      const r = await fetch(
+        `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+      );
+      if (!r.ok) continue;
+      const events = await r.json();
+      const event  = Array.isArray(events) ? events[0] : events;
+      if (!event?.closed) continue;
+      const market = (event.markets || [])[0];
+      if (!market?.resolved) continue;
+
+      let prices;
+      try { prices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices; }
+      catch (_) { continue; }
+      if (!Array.isArray(prices) || prices.length < 2) continue;
+
+      const yesPrice = parseFloat(prices[0]);
+      const outcome  = yesPrice >= 0.99 ? 'Yes' : yesPrice <= 0.01 ? 'No' : null;
+      if (!outcome) continue;
+
+      const leanCorrect = lean === outcome;
+      const baseScore   = leanCorrect ? 50 : -50;
+      const confBonus   = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
+      const accuracyScore = +(baseScore + (leanCorrect ? confBonus : -confBonus)).toFixed(1);
+      const pmGrade     = _letterGrade(accuracyScore);
+
+      const { error: pmErr } = await supabase
+        .from('predictions')
+        .update({
+          correct:      accuracyScore > 0,
+          validated_at: nowStr,
+          analysis:     {
+            ...(pred.analysis || {}),
+            grade: pmGrade, score: accuracyScore, accuracy_score: accuracyScore,
+            resolved_outcome: outcome, lean_was: lean,
+          },
+        })
+        .eq('id', pred.id);
+      if (!pmErr) resolved++;
+    } catch (_) { /* skip on network error, retry next pass */ }
+  }
+
+  return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length, pmChecked: pmReady.length });
 }
 
 async function handleGraph(req, res, supabase) {
@@ -388,7 +447,7 @@ async function handleStats(req, res, supabase) {
 
   const { data: recent, error: rErr } = await supabase
     .from('predictions')
-    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category')
+    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal')
     .order('created_at', { ascending: false })
     .limit(50);
   if (rErr) throw rErr;
@@ -508,6 +567,9 @@ async function handleStats(req, res, supabase) {
       score: p.analysis?.accuracy_score ?? p.analysis?.score ?? null,
       tickerMoves: p.analysis?.ticker_moves || null,
       category: p.category,
+      lean: p.lean || p.analysis?.lean || null,
+      signal: p.signal || p.analysis?.signal || null,
+      analysis: { resolved_outcome: p.analysis?.resolved_outcome || null },
     }))
   });
 }
