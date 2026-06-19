@@ -6,17 +6,39 @@
     'predictions.html': 'prediction-markets',
     'markets.html':     'prediction-markets',
     'crypto.html':      'crypto',
+    'accuracy.html':    'accuracy',
   };
 
   const PAGE_STARTERS = {
-    'stock-markets':     ["What's moving markets today?", "How do confidence stars work?", "Explain the winners/losers logic"],
-    'prediction-markets':["How do I read Polymarket odds?", "What does 65% YES mean?", "Which markets have the most volume?"],
-    'crypto':            ["When is crypto launching?", "What will the crypto section cover?", "How do I track Bitcoin news?"],
+    'stock-markets': [
+      "What does impact timeframe mean?",
+      "How are confidence stars calculated?",
+      "What's moving markets today?",
+    ],
+    'prediction-markets': [
+      "What does 'Contradicts market' signal mean?",
+      "Why only show 20-80% odds?",
+      "How do Polymarket odds work?",
+    ],
+    'crypto': [
+      "What's moving crypto today?",
+      "How does the Fear & Greed Index work?",
+      "How does crypto analysis differ from stocks?",
+    ],
+    'accuracy': [
+      "How is the accuracy % calculated?",
+      "What do the A-F grades mean?",
+      "How does past accuracy improve future predictions?",
+    ],
   };
 
   const page = window.location.pathname.split('/').pop() || '';
   const pageContext = PAGE_CONTEXTS[page] || 'general';
-  const starters = PAGE_STARTERS[pageContext] || ["How does this site work?", "What are prediction markets?", "How is confidence calculated?"];
+  const starters = PAGE_STARTERS[pageContext] || [
+    "How does this site work?",
+    "What's the difference between the three sections?",
+    "How accurate are these predictions?",
+  ];
 
   // ── Styles ────────────────────────────────────────────────────────────────
   const style = document.createElement('style');
