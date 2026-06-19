@@ -195,6 +195,44 @@ function _buildTechnicalSection(snapshot) {
     : '';
 }
 
+// Other unresolved predictions from the last 24h that already called one of these
+// tickers — used so a new topic doesn't silently contradict an active call on the
+// same stock from a different event.
+async function _fetchLiveConflicts(supabase, tickers, topic) {
+  if (!supabase || !tickers.length) return [];
+  try {
+    const sinceIso = new Date(Date.now() - 86400000).toISOString();
+    const orFilter = tickers.flatMap(t => [`winner_tickers.cs.{${t}}`, `loser_tickers.cs.{${t}}`]).join(',');
+    const { data } = await supabase
+      .from('predictions')
+      .select('topic, winner_tickers, loser_tickers, analysis, created_at')
+      .is('correct', null)
+      .neq('topic', topic)
+      .gte('created_at', sinceIso)
+      .or(orFilter)
+      .limit(30);
+    return data || [];
+  } catch (_) { return []; }
+}
+
+function _buildConflictSection(conflicts, candidateTickers) {
+  if (!conflicts.length) return '';
+  const tickerSet = new Set(candidateTickers);
+  const lines = [];
+  for (const c of conflicts) {
+    const hoursAgo = Math.max(1, Math.round((Date.now() - new Date(c.created_at)) / 3600000));
+    const conf = c.analysis?.confidence || 'unknown confidence';
+    for (const t of (c.winner_tickers || [])) {
+      if (tickerSet.has(t)) lines.push(`${t}: currently BULLISH from "${c.topic.slice(0, 80)}" (${conf}, ${hoursAgo}h ago)`);
+    }
+    for (const t of (c.loser_tickers || [])) {
+      if (tickerSet.has(t)) lines.push(`${t}: currently BEARISH from "${c.topic.slice(0, 80)}" (${conf}, ${hoursAgo}h ago)`);
+    }
+  }
+  if (!lines.length) return '';
+  return `\nLIVE CONFLICTING SIGNALS (other active predictions on these tickers from the last 24h):\n${lines.join('\n')}\nIf this new analysis would call any of these same tickers in the OPPOSITE direction, you must explicitly resolve the conflict in your winners/losers explanation: only override an existing call if this event's catalyst is clearly more direct, more immediate, or backed by higher-grade sources than the one above, and state why it overrides the prior signal. If the two catalysts are comparably strong, omit that ticker from winners/losers entirely rather than contradicting an active call without explanation.\n`;
+}
+
 async function _fetchPrices(tickers) {
   const snapshot = await _fetchTickerSnapshot(tickers);
   const prices = {};
@@ -1072,7 +1110,7 @@ Respond ONLY with valid JSON, no markdown:
     try {
       const candidateTickers = _extractTickerCandidates(headlines);
       const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-      const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph] = await Promise.all([
+      const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
         _fetchRelevantMarkets(topic),
         _fetchTickerSnapshot(candidateTickers),
         _fetchRedditSentiment(topic, isCryptoTopic),
@@ -1088,6 +1126,7 @@ Respond ONLY with valid JSON, no markdown:
         supabase
           ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
           : Promise.resolve(null),
+        _fetchLiveConflicts(supabase, candidateTickers, topic),
       ]);
 
       const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
@@ -1113,6 +1152,7 @@ Respond ONLY with valid JSON, no markdown:
         : '';
 
       const trackRecordSection = formatContextForPrompt(contextGraph);
+      const conflictSection = _buildConflictSection(liveConflicts, candidateTickers);
 
       const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
 
@@ -1131,7 +1171,7 @@ Use weighted source consensus to shape the prediction:
 Only include sources that meet the selected factuality threshold for the final prediction.
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${redditSection}${trackRecordSection}
+${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}
 Only use ${thresholdText} for this analysis.
 
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends.
@@ -1149,6 +1189,7 @@ CRITICAL RULES:
 - AVOID CONTRADICTIONS: Each stock should appear in EITHER winners OR losers, never both. If the net effect on a stock is unclear, omit it entirely rather than hedging.
 - For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish vs bearish signals from credible sources and commit to whichever side has more weight. If news is sparse or mixed but one side has ANY edge, pick it. If news doesn't clearly point anywhere, use your knowledge of the sector, macro environment, historical precedent, and the specific event type to make the best educated guess — that IS your job. Reserve "uncertain" ONLY for true deadlock: where both weighted totals are within 5% of each other AND your domain knowledge gives no tiebreaker. "Uncertain" should be rare (under 10% of calls). Do NOT use it to avoid being wrong.
 - TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section above is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
+- CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears above, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
 
 Respond ONLY with valid JSON, no markdown:
 {
