@@ -256,9 +256,7 @@
 
   <p class="disclaimer">
     Predictions are generated algorithmically based on live news headlines and are not financial advice.
-    Accuracy is measured by whether tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
-    A prediction's score combines average directional pts per ticker (−100 to +100) plus a hit-rate bonus (up to ±10 pts) for getting more tickers right.
-    Grades: A ≥ 60, B ≥ 25, C ≥ 0, D ≥ −25, F below that.
+    Each prediction is graded automatically when its timeframe expires — the grade reflects how accurately the called direction matched actual price movement.
     Historical accuracy does not guarantee future performance.
     <br><br><a href="/privacy.html" style="color:var(--muted)">Privacy Policy</a>
   </p>
@@ -321,7 +319,7 @@
       </svg>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
         <span>${cum[0].date}</span>
-        <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;color:${color}">${lastVal >= 0 ? '+' : ''}${lastVal} pts total</span>
+        <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;color:${color}">${lastVal >= 0 ? 'Positive trend' : 'Negative trend'}</span>
         <span>${cum[cum.length-1].date}</span>
       </div>
     `;
@@ -343,12 +341,8 @@
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
     const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:#444;letter-spacing:0.5px;text-transform:uppercase">${catLabel}</span>`;
 
-    const scoreVal = p.score ?? null;
     const gradeHtml = p.grade
-      ? `<div style="text-align:center">
-           <div class="grade-badge grade-${esc(p.grade)}" title="${scoreVal != null ? (scoreVal>=0?'+':'')+scoreVal+' pts' : ''}">${esc(p.grade)}</div>
-           ${scoreVal != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:4px;color:${scoreVal>=0?'var(--accent)':'var(--red)'}">${scoreVal>=0?'+':''}${scoreVal}</div>` : ''}
-         </div>`
+      ? `<div class="grade-badge grade-${esc(p.grade)}">${esc(p.grade)}</div>`
       : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
 
     // ── Prediction market card (no tickers — show lean + signal instead) ──
