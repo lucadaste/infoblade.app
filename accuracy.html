@@ -20,16 +20,15 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --red: #ff5252; }
     html { max-width: 100%; }
-        body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); }
 
-    nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100;  }
+    nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; }
     .nav-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
     .nav-logo span { color: var(--accent); }
     .nav-links { display: flex; gap: 32px; list-style: none; align-items: center; justify-content: center; }
     .nav-links a { font-size: 14px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
     .nav-links a:hover { color: var(--ink); }
     .nav-links a.active { color: var(--accent); font-weight: 600; }
-    .nav-buttons { display: flex; gap: 8px; align-items: center; }
     .nav-right { display: flex; gap: 20px; align-items: center; justify-content: flex-end; grid-column: 3; }
     .nav-cta { background: transparent; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: 1.5px solid var(--accent); text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; flex-shrink: 0; }
     .nav-cta:hover { background: var(--accent); color: #111; }
@@ -45,6 +44,10 @@
     .nav-burger.open span:nth-child(1) { transform: translateY(9.5px) rotate(45deg); }
     .nav-burger.open span:nth-child(2) { opacity: 0; }
     .nav-burger.open span:nth-child(3) { transform: translateY(-9.5px) rotate(-45deg); }
+    #auth-badge { display: none; align-items: center; gap: 8px; }
+    .auth-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: default; }
+    .auth-signout-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: color 0.15s; }
+    .auth-signout-btn:hover { color: var(--ink); }
     @media (max-width: 1200px) {
       nav:not(.bottom-nav) { padding: 12px 16px; gap: 10px; }
       .nav-chat-btn { font-size: 12px; padding: 6px 12px; letter-spacing: 0; }
@@ -57,8 +60,6 @@
       .nav-right { display: flex; justify-content: flex-end; gap: 16px; }
       .nav-burger { display: flex; padding: 10px; }
     }
-    @media (max-width: 480px) { .hero { padding: 16px 16px 14px; } .hero h1 { font-size: clamp(22px, 6vw, 32px); } .hero-sub { font-size: 13px; } .hero-stats { display: none; } }
-    @media (max-width: 768px) { .hero { padding: 32px 24px 24px; } }
 
     .hero { padding: 44px 48px 32px; border-bottom: 1px solid var(--border); }
     .hero-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
@@ -67,32 +68,39 @@
     .hero h1 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 48px); letter-spacing: -1.5px; margin-bottom: 12px; line-height: 1.1; }
     .hero h1 em { font-style: normal; background: var(--accent); color: #111; padding: 1px 8px; }
     .hero-sub { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.7; font-weight: 300; }
-    @media (max-width: 700px) { .hero { padding: 28px 20px 24px; } }
+    @media (max-width: 700px) { .hero { padding: 28px 20px 24px; } .hero h1 { font-size: clamp(22px, 6vw, 32px); } .hero-sub { font-size: 13px; } }
 
     .main { padding: 40px 48px; max-width: 1200px; }
     @media (max-width: 700px) { .main { padding: 24px 20px; } }
 
-    /* Summary stats */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 40px; }
-    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
-    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 28px 24px; }
+    /* Stats row */
+    .stats-row { display: flex; gap: 2px; margin-bottom: 36px; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 24px 28px; flex: 1; }
     .stat-card:first-child { border-radius: 10px 0 0 10px; }
     .stat-card:last-child  { border-radius: 0 10px 10px 0; }
     .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -2px; line-height: 1; }
     .stat-value.green { color: var(--accent); }
     .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-
-    /* Two-column layout */
-    .cols { display: grid; grid-template-columns: 1fr 360px; gap: 32px; }
-    @media (max-width: 960px) { .cols { grid-template-columns: 1fr; } }
+    @media (max-width: 600px) { .stats-row { flex-direction: column; gap: 2px; } .stat-card:first-child { border-radius: 10px 10px 0 0; } .stat-card:last-child { border-radius: 0 0 10px 10px; } }
 
     /* Section header */
     .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 18px; letter-spacing: -0.3px; }
 
-    /* Accuracy chart */
-    .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; margin-bottom: 32px; }
+    /* Section breakdown */
+    .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 36px; }
+    @media (max-width: 600px) { .cat-grid { grid-template-columns: 1fr; } }
+    .cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+    .cat-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
+    .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 3px; margin-bottom: 10px; }
+    .cat-bar-fill { height: 3px; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
+    .cat-stat { display: flex; justify-content: space-between; align-items: baseline; }
+    .cat-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
+
+    /* Charts row */
+    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
+    @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
+    .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
     .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
     .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .chart-bar-outer { width: 100%; background: var(--border); border-radius: 3px 3px 0 0; position: relative; display: flex; align-items: flex-end; }
@@ -102,7 +110,15 @@
     .chart-pct { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
-    /* Recent predictions list */
+    /* Top tickers horizontal bar */
+    .ticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 36px; }
+    .ticker-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 48px; }
+    .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
+    .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
+    .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
+
+    /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
     .pred-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
     .pred-topic { font-size: 14px; font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
@@ -113,72 +129,40 @@
     .pred-ticker.lose { background: rgba(255,82,82,0.10); color: var(--red); border: 1px solid rgba(255,82,82,0.2); }
     .pred-badge { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
     .pred-badge.correct   { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); }
-    .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+    .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red); border: 1px solid rgba(255,82,82,0.25); }
     .pred-badge.pending   { background: rgba(136,136,136,0.12); color: var(--muted); border: 1px solid var(--border); }
     .grade-badge { font-family: 'Share Tech Mono', sans-serif; font-size: 20px; font-weight: 700; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
-    .grade-A { background: rgba(0,230,118,0.15); color: var(--accent);  border: 1px solid rgba(0,230,118,0.35); }
-    .grade-B { background: rgba(0,200,100,0.12); color: #4dd085;        border: 1px solid rgba(0,200,100,0.25); }
-    .grade-C { background: rgba(255,200,50,0.10); color: #ffc832;       border: 1px solid rgba(255,200,50,0.25); }
-    .grade-D { background: rgba(255,140,50,0.10); color: #ff9020;       border: 1px solid rgba(255,140,50,0.25); }
-    .grade-F { background: rgba(255,82,82,0.12);  color: var(--red);    border: 1px solid rgba(255,82,82,0.25); }
+    .grade-A { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.35); }
+    .grade-B { background: rgba(0,200,100,0.12); color: #4dd085; border: 1px solid rgba(0,200,100,0.25); }
+    .grade-C { background: rgba(255,200,50,0.10); color: #ffc832; border: 1px solid rgba(255,200,50,0.25); }
+    .grade-D { background: rgba(255,140,50,0.10); color: #ff9020; border: 1px solid rgba(255,140,50,0.25); }
+    .grade-F { background: rgba(255,82,82,0.12); color: var(--red); border: 1px solid rgba(255,82,82,0.25); }
     .ticker-moves { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .tm-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; }
     .tm-chip.hit  { background: rgba(0,230,118,0.10); color: var(--accent); border: 1px solid rgba(0,230,118,0.2); }
-    .tm-chip.miss { background: rgba(255,82,82,0.08);  color: var(--red);   border: 1px solid rgba(255,82,82,0.18); }
-    .score-line { font-size: 11px; color: var(--muted); margin-top: 6px; }
+    .tm-chip.miss { background: rgba(255,82,82,0.08); color: var(--red); border: 1px solid rgba(255,82,82,0.18); }
 
-    /* Top tickers sidebar */
-    .ticker-table { display: flex; flex-direction: column; gap: 8px; }
-    .ticker-row { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
-    .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
-    .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
-    .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
-    .ticker-count { font-size: 11px; color: var(--muted); min-width: 32px; text-align: right; }
-
-    /* Loading skeleton */
-    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-    .skeleton { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
-
-    .no-data { color: var(--muted); font-size: 14px; padding: 32px 0; text-align: center; }
-    .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
-
-    /* By-category accuracy */
-    .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 36px; }
-    .cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
-    .cat-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
-    .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 3px; margin-bottom: 10px; }
-    .cat-bar-fill { height: 3px; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
-    .cat-stat { display: flex; justify-content: space-between; align-items: baseline; }
-    .cat-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
-    .cat-count { font-size: 11px; color: var(--muted); }
-
-    .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    /* Filter chips */
+    .filter-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
     .filter-chip { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .filter-chip:hover { border-color: var(--ink); color: var(--ink); }
     .filter-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
-    .validate-btn { margin-left: auto; background: none; border: 1px solid var(--border); border-radius: 4px; padding: 6px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-    .validate-btn:hover { border-color: var(--ink); color: var(--ink); }
-    .validate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .validate-status { font-size: 12px; color: var(--muted); }
+
+    /* Validation banner */
+    .val-banner { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .val-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: dot-pulse 2s ease-out infinite; flex-shrink: 0; }
+
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
+    .no-data { color: var(--muted); font-size: 14px; padding: 32px 0; text-align: center; }
+    .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
+
     .disclaimer { font-size: 12px; color: var(--muted); margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--border); line-height: 1.7; }
     .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 1px solid var(--border); z-index: 1000; padding-bottom: env(safe-area-inset-bottom, 0); }
     .bottom-nav-inner { display: flex; height: 56px; }
     .bn-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-decoration: none; color: #555; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.3px; transition: color 0.15s; -webkit-tap-highlight-color: transparent; }
     .bn-item.active { color: var(--accent); }
     @media (max-width: 768px) { .bottom-nav { display: block; } body { padding-bottom: 72px; } }
-    /* Auth gate */
-    #auth-gate { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(17,17,17,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; flex-direction: column; gap: 20px; text-align: center; padding: 24px; }
-    #auth-gate.show { display: flex; }
-    #auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(20px, 4vw, 28px); letter-spacing: -0.5px; }
-    #auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
-    #auth-gate-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
-    #auth-gate-btn:hover { opacity: 0.85; }
-    /* Auth badge in nav */
-    #auth-badge { display: none; align-items: center; gap: 8px; }
-    .auth-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: default; }
-    .auth-signout-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: color 0.15s; }
-    .auth-signout-btn:hover { color: var(--ink); }
   </style>
 </head>
 <body>
@@ -191,14 +175,14 @@
     <li><a href="/markets.html">Prediction Markets</a></li>
     <li><a href="/crypto.html">Crypto Markets</a></li>
     <li><a href="/watchlist.html">Watchlist</a></li>
-      <li><a href="/accuracy.html" class="active">Accuracy History</a></li>
+    <li><a href="/accuracy.html" class="active">Accuracy History</a></li>
   </ul>
   <div class="nav-right">
-  <div class="nav-buttons">
-    <div id="auth-badge"></div>
-    <a class="nav-cta" href="/?modal=signin" id="signup-btn">Let's Begin !</a>
-  </div>
-  <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    <div class="nav-buttons">
+      <div id="auth-badge"></div>
+      <a class="nav-cta" href="/?modal=signin" id="signup-btn">Let's Begin !</a>
+    </div>
+    <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
 <script>
@@ -213,68 +197,69 @@
 <div class="hero">
   <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
   <h1>Our <em>Track Record</em></h1>
-  <p class="hero-sub">Every market prediction this platform makes is logged at the moment it's generated, then automatically validated against real price data when the timeframe expires. No retroactive edits. No cherry-picking.</p>
+  <p class="hero-sub">Every market prediction this platform makes is logged the moment it's generated, then automatically graded against real price data when the timeframe expires. No retroactive edits. No cherry-picking.</p>
 </div>
 
 <div class="main">
+
+  <!-- Validation banner (shown while/after validation runs) -->
+  <div id="val-banner" class="val-banner" style="display:none">
+    <span class="val-dot" id="val-dot"></span>
+    <span id="val-msg">Scanning predictions…</span>
+  </div>
+
   <!-- Stats -->
-  <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);max-width:640px" id="stats-grid">
-    <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
-    <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">&nbsp;</div></div>
+  <div class="stats-row" id="stats-row">
+    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-accuracy">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-correct">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div><div class="stat-sub" id="stat-sub-pending">&nbsp;</div></div>
   </div>
 
   <!-- Per-section breakdown -->
-  <div class="section-title" style="margin-bottom:14px">Accuracy by Section</div>
-  <div class="cat-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:36px" id="section-grid">
-    <div class="cat-card"><div class="no-data">Loading…</div></div>
+  <div class="section-title">Accuracy by Section</div>
+  <div class="cat-grid" id="section-grid">
+    <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
   </div>
 
-  <div class="cols">
-    <div>
-      <!-- Cumulative score -->
-      <div class="chart-wrap" style="margin-bottom:24px">
-        <div class="section-title">Cumulative Accuracy Score</div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence — a 5-star prediction moves the needle 5× more than a 1-star call.</p>
-        <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
-      </div>
-
-      <!-- Accuracy over time -->
-      <div class="chart-wrap">
-        <div class="section-title">Avg Score by Month</div>
-        <div id="chart-area"><div class="chart-empty">Loading…</div></div>
-      </div>
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-wrap">
+      <div class="section-title">Cumulative Score</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence — a 5-star call moves the needle 5× more than a 1-star call.</p>
+      <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
     </div>
-
-    <!-- Sidebar: top tickers -->
-    <div>
-      <div class="section-title">Top Tickers by Win Rate</div>
-      <div id="ticker-table" class="ticker-table">
-        <div class="no-data">Loading…</div>
-      </div>
-
-      <!-- Validation status (auto-runs, shown as info not a button) -->
-      <div id="validation-status-box" style="display:none;margin-top:24px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px">
-        <div style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Validation</div>
-        <div id="validate-status" style="font-size:13px;color:var(--ink)">Checking predictions…</div>
-      </div>
+    <div class="chart-wrap">
+      <div class="section-title">Accuracy by Month</div>
+      <div id="chart-area"><div class="chart-empty">Loading…</div></div>
     </div>
   </div>
 
-  <!-- ── Personal accuracy section ── -->
-  <div style="border-top:1px solid var(--border);margin-top:48px;padding-top:40px">
-    <div class="section-title" style="margin-bottom:4px">Your Prediction History</div>
-    <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Analyses you run are saved and tracked here automatically.</p>
+  <!-- Top tickers -->
+  <div class="section-title">Top Tickers by Win Rate</div>
+  <div id="ticker-grid" class="ticker-grid" style="margin-bottom:36px">
+    <div class="no-data" style="grid-column:1/-1">Loading…</div>
+  </div>
 
-    <div id="personal-section">
-      <!-- Rendered by JS: sign-in prompt or personal stats -->
+  <!-- All predictions -->
+  <div style="border-top:1px solid var(--border);padding-top:32px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div class="section-title" style="margin-bottom:0">All Predictions</div>
+      <div class="filter-row" id="pred-filters" style="margin-bottom:0">
+        <button class="filter-chip active" data-filter="all">All</button>
+        <button class="filter-chip" data-filter="correct">Correct</button>
+        <button class="filter-chip" data-filter="incorrect">Incorrect</button>
+        <button class="filter-chip" data-filter="pending">Pending</button>
+      </div>
+    </div>
+    <div id="all-preds-list" class="pred-list">
       <div class="no-data">Loading…</div>
     </div>
   </div>
 
   <p class="disclaimer">
     Predictions are generated algorithmically based on live news headlines and are not financial advice.
-    Accuracy is measured by whether winner/loser tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
-    A prediction is correct if ≥ 60% of its tickers moved as predicted.
+    Accuracy is measured by whether tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
+    A prediction's score is the average of per-ticker direction scores (−100 to +100 pts each).
     Historical accuracy does not guarantee future performance.
     <br><br><a href="/privacy.html" style="color:var(--muted)">Privacy Policy</a>
   </p>
@@ -292,22 +277,28 @@
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
     acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
+    document.getElementById('stat-sub-accuracy').textContent =
+      s.total > 0 ? `${s.correct} correct of ${s.total} resolved` : 'No validated predictions yet';
 
-    const correct = document.getElementById('stat-correct');
-    correct.classList.remove('skeleton');
-    correct.style.height = correct.style.width = 'auto';
-    correct.textContent = fmt(s.total);
-    const subCorrect = document.getElementById('stat-sub-correct');
-    if (subCorrect) subCorrect.textContent = s.total > 0 ? `${s.correct} correct, ${s.incorrect} incorrect` : 'No validated predictions yet';
+    const cr = document.getElementById('stat-correct');
+    cr.classList.remove('skeleton');
+    cr.style.height = cr.style.width = 'auto';
+    cr.textContent = fmt(s.total);
+    document.getElementById('stat-sub-correct').textContent =
+      s.total > 0 ? `${s.correct} correct, ${s.incorrect} incorrect` : 'No validated predictions yet';
 
-    const sub = document.getElementById('stat-sub-accuracy');
-    sub.textContent = s.total > 0 ? `${s.correct} correct of ${s.total} resolved` : 'No validated predictions yet';
+    const pend = document.getElementById('stat-pending');
+    pend.classList.remove('skeleton');
+    pend.style.height = pend.style.width = 'auto';
+    pend.textContent = fmt(s.pending ?? 0);
+    document.getElementById('stat-sub-pending').textContent =
+      s.pending > 0 ? 'still within timeframe' : 'none pending';
   }
 
   function renderChart(timeline) {
     const area = document.getElementById('chart-area');
     if (!timeline || !timeline.length) {
-      area.innerHTML = '<div class="chart-empty">No validated predictions yet. Check back once timeframes expire.</div>';
+      area.innerHTML = '<div class="chart-empty">No validated predictions yet.</div>';
       return;
     }
     area.innerHTML = `
@@ -325,18 +316,17 @@
             </div>`;
         }).join('')}
       </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:right">${timeline.reduce((a,t)=>a+t.total,0)} validated predictions across ${timeline.length} month${timeline.length===1?'':'s'}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:right">${timeline.reduce((a,t)=>a+t.total,0)} validated across ${timeline.length} month${timeline.length===1?'':'s'}</div>
     `;
   }
 
   function renderCumulativeChart(cum) {
     const area = document.getElementById('cumulative-chart-area');
     if (!cum || cum.length < 1) {
-      area.innerHTML = '<div class="chart-empty">No resolved predictions yet — validation runs automatically.</div>';
+      area.innerHTML = '<div class="chart-empty">No resolved predictions yet.</div>';
       return;
     }
     if (cum.length === 1) {
-      // Only 1 point — show a simple number instead of chart
       const v = cum[0].cumulative;
       area.innerHTML = `<div style="font-family:'Share Tech Mono',sans-serif;font-size:28px;font-weight:700;color:${v>=0?'var(--accent)':'var(--red)'};padding:20px 0">${v>=0?'+':''}${v} pts</div><div style="font-size:12px;color:var(--muted)">${cum[0].date} · 1 resolved prediction</div>`;
       return;
@@ -345,7 +335,7 @@
     const min   = Math.min(0, ...vals);
     const max   = Math.max(0, ...vals);
     const range = max - min || 1;
-    const H = 120, W = 100; // SVG viewBox %
+    const H = 120, W = 100;
     const pts = cum.map((c, i) => {
       const x = (i / (cum.length - 1)) * W;
       const y = H - ((c.cumulative - min) / range) * H;
@@ -369,63 +359,51 @@
   }
 
   function renderPredCard(p) {
-      const isPending   = p.correct === null || p.correct === undefined;
-      const isCorrect   = p.correct === true;
-      const badgeClass  = isCorrect ? 'correct' : !isPending ? 'incorrect' : 'pending';
-      const badgeText   = isCorrect ? '✓ Correct' : !isPending ? '✗ Incorrect' : 'Pending';
-      const date        = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const validDate   = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
-      const wins        = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">▲ ${esc(t)}</span>`).join('');
-      const loses       = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">▼ ${esc(t)}</span>`).join('');
-      const tf          = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
-      const conf        = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
+    const isPending  = p.correct === null || p.correct === undefined;
+    const isCorrect  = p.correct === true;
+    const badgeClass = isCorrect ? 'correct' : !isPending ? 'incorrect' : 'pending';
+    const badgeText  = isCorrect ? '✓ Correct' : !isPending ? '✗ Incorrect' : 'Pending';
+    const date       = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const validDate  = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const wins       = (p.winnerTickers || []).map(t => `<span class="pred-ticker win">▲ ${esc(t)}</span>`).join('');
+    const loses      = (p.loserTickers  || []).map(t => `<span class="pred-ticker lose">▼ ${esc(t)}</span>`).join('');
+    const tf         = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
+    const conf       = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
 
-      // Grade badge (A/B/C/D/F) for resolved predictions
-      const scoreVal = p.score ?? p.accuracy_score ?? null;
-      const gradeHtml = p.grade
-        ? `<div style="text-align:center">
-             <div class="grade-badge grade-${esc(p.grade)}" title="${scoreVal != null ? (scoreVal>=0?'+':'')+scoreVal+' pts' : ''}">${esc(p.grade)}</div>
-             ${scoreVal != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:4px;color:${scoreVal>=0?'var(--accent)':'var(--red)'}">${scoreVal>=0?'+':''}${scoreVal}</div>` : ''}
-           </div>`
-        : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
+    const scoreVal = p.score ?? null;
+    const gradeHtml = p.grade
+      ? `<div style="text-align:center">
+           <div class="grade-badge grade-${esc(p.grade)}" title="${scoreVal != null ? (scoreVal>=0?'+':'')+scoreVal+' pts' : ''}">${esc(p.grade)}</div>
+           ${scoreVal != null ? `<div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:4px;color:${scoreVal>=0?'var(--accent)':'var(--red)'}">${scoreVal>=0?'+':''}${scoreVal}</div>` : ''}
+         </div>`
+      : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
 
-      // Per-ticker actual move chips
-      let movesHtml = '';
-      if (p.tickerMoves && Object.keys(p.tickerMoves).length) {
-        const chips = Object.entries(p.tickerMoves).map(([sym, m]) => {
-          const arrow = m.direction === 'bullish' ? '▲' : '▼';
-          const sign  = m.pct > 0 ? '+' : '';
-          const ptsSign = (m.pts ?? 0) >= 0 ? '+' : '';
-          const ptsTip = m.pts != null ? ` (${ptsSign}${m.pts} pts)` : '';
-          return `<span class="tm-chip ${m.correct ? 'hit' : 'miss'}" title="${m.correct ? 'Correct' : 'Missed'}${ptsTip}">${arrow} ${esc(sym)} ${sign}${m.pct}%</span>`;
-        }).join('');
-        movesHtml = `<div class="ticker-moves">${chips}</div>`;
-      }
+    let movesHtml = '';
+    if (p.tickerMoves && Object.keys(p.tickerMoves).length) {
+      const chips = Object.entries(p.tickerMoves).map(([sym, m]) => {
+        const arrow  = m.direction === 'bullish' ? '▲' : '▼';
+        const sign   = m.pct > 0 ? '+' : '';
+        const ptsSign = (m.pts ?? 0) >= 0 ? '+' : '';
+        const ptsTip  = m.pts != null ? ` (${ptsSign}${m.pts} pts)` : '';
+        return `<span class="tm-chip ${m.correct ? 'hit' : 'miss'}" title="${m.correct ? 'Correct' : 'Missed'}${ptsTip}">${arrow} ${esc(sym)} ${sign}${m.pct}%</span>`;
+      }).join('');
+      movesHtml = `<div class="ticker-moves">${chips}</div>`;
+    }
 
-      return `
-        <div class="pred-card">
-          <div style="flex:1;min-width:0">
-            <div class="pred-topic">${esc(p.topic)}</div>
-            ${movesHtml || `<div class="pred-tickers">${wins}${loses}</div>`}
-            <div class="pred-meta" style="margin-top:8px">
-              <span>${date}</span>
-              ${validDate ? `<span>→ ${validDate}</span>` : ''}
-              ${tf}${conf}
-            </div>
+    return `
+      <div class="pred-card">
+        <div style="flex:1;min-width:0">
+          <div class="pred-topic">${esc(p.topic)}</div>
+          ${movesHtml || `<div class="pred-tickers">${wins}${loses}</div>`}
+          <div class="pred-meta" style="margin-top:8px">
+            <span>${date}</span>
+            ${validDate ? `<span>→ ${validDate}</span>` : ''}
+            ${tf}${conf}
           </div>
-          <div style="flex-shrink:0">${gradeHtml}</div>
-        </div>`;
+        </div>
+        <div style="flex-shrink:0">${gradeHtml}</div>
+      </div>`;
   }
-
-  const CAT_LABELS = {
-    'any': 'General Markets', 'macro': 'Macro / Monetary', 'technology': 'Technology',
-    'energy': 'Energy', 'financials': 'Financials', 'precious-metals': 'Precious Metals',
-    'real-estate': 'Real Estate', 'consumer': 'Consumer / Retail', 'healthcare': 'Healthcare',
-    'defense': 'Defense & Aerospace', 'crypto': 'Crypto', 'stock': 'Individual Stocks',
-    'prediction-markets': 'Prediction Markets', 'sports': 'Sports',
-    'politics': 'Politics', 'finance': 'Finance (Markets)', 'entertainment': 'Entertainment',
-    'tech': 'Tech (Prediction)'
-  };
 
   function renderBySection(bySection) {
     const el = document.getElementById('section-grid');
@@ -434,82 +412,26 @@
       return;
     }
     el.innerHTML = bySection.map(s => {
-      const hasData = s.accuracy != null;
-      const acc     = hasData ? s.accuracy : null;
-      const barW    = hasData ? acc : 0;
+      const hasData  = s.accuracy != null;
+      const acc      = hasData ? s.accuracy : null;
+      const barW     = hasData ? acc : 0;
       const accColor = hasData ? (acc >= 60 ? 'var(--accent)' : acc >= 40 ? '#ffc832' : 'var(--red)') : 'var(--muted)';
       return `
-      <div class="cat-card">
-        <div class="cat-name">${esc(s.label)}</div>
-        <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${barW}%;background:${accColor}"></div></div>
-        <div class="cat-stat">
-          <span class="cat-pct" style="color:${accColor}">${hasData ? acc + '%' : '—'}</span>
-        </div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">${hasData ? 'confidence-weighted' : 'no resolved predictions yet'}</div>
-      </div>`;
+        <div class="cat-card">
+          <div class="cat-name">${esc(s.label)}</div>
+          <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${barW}%;background:${accColor}"></div></div>
+          <div class="cat-stat">
+            <span class="cat-pct" style="color:${accColor}">${hasData ? acc + '%' : '—'}</span>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">${hasData ? 'confidence-weighted' : 'no resolved predictions yet'}</div>
+        </div>`;
     }).join('');
   }
 
-  function renderPersonalSection(userStats) {
-    const el = document.getElementById('personal-section');
-    if (!userStats) {
-      el.innerHTML = `
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:40px 32px;text-align:center">
-          <div style="font-family:'Share Tech Mono',sans-serif;font-size:18px;font-weight:700;margin-bottom:12px">Sign in to see your history</div>
-          <p style="font-size:14px;color:var(--muted);max-width:400px;margin:0 auto 24px;line-height:1.7">Every analysis you run is automatically logged to your account. Create a free profile to track your personal accuracy over time.</p>
-          <a href="/?modal=signin" style="display:inline-block;background:var(--accent);color:#111;font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:14px;padding:12px 28px;border-radius:6px;text-decoration:none">Sign in / Create profile</a>
-        </div>`;
-      return;
-    }
-
-    const s = userStats.summary;
-    const accColor = s.accuracy == null ? 'var(--ink)' : s.accuracy >= 60 ? 'var(--accent)' : 'var(--red)';
-
-    const recentHtml = userStats.recent?.length
-      ? userStats.recent.map(p => renderPredCard(p)).join('')
-      : `<div class="no-data">No predictions tracked to your account yet.<br><br>
-         Run an analysis on <a href="/feed.html" style="color:var(--accent)">Stock Markets</a>,
-         <a href="/crypto.html" style="color:var(--accent)">Crypto</a>, or
-         <a href="/markets.html" style="color:var(--accent)">Prediction Markets</a> —
-         each one gets automatically logged here.</div>`;
-
-    el.innerHTML = `
-      <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:28px">
-        <div class="stat-card" style="border-radius:10px 0 0 10px"><div class="stat-label">My Accuracy</div><div class="stat-value" style="color:${accColor}">${s.accuracy != null ? s.accuracy + '%' : '--'}</div><div class="stat-sub">${s.total > 0 ? s.correct + ' of ' + s.total + ' correct' : 'No resolved predictions yet'}</div></div>
-        <div class="stat-card"><div class="stat-label">Resolved</div><div class="stat-value">${s.total}</div><div class="stat-sub">predictions scored</div></div>
-        <div class="stat-card" style="border-radius:0 10px 10px 0"><div class="stat-label">Awaiting Outcome</div><div class="stat-value">${s.pending}</div><div class="stat-sub">still in timeframe</div></div>
-      </div>
-      <div class="section-title" style="margin-bottom:14px">My Recent Predictions</div>
-      <div class="filter-row" id="personal-filters">
-        <button class="filter-chip active" data-pfilter="all">All</button>
-        <button class="filter-chip" data-pfilter="pending">Pending</button>
-        <button class="filter-chip" data-pfilter="correct">Correct</button>
-        <button class="filter-chip" data-pfilter="incorrect">Incorrect</button>
-      </div>
-      <div id="personal-pred-list" class="pred-list">${recentHtml}</div>`;
-
-    // Wire up personal filter chips
-    const allPersonal = userStats.recent || [];
-    el.querySelectorAll('[data-pfilter]').forEach(chip => {
-      chip.addEventListener('click', function() {
-        el.querySelectorAll('[data-pfilter]').forEach(c => c.classList.remove('active'));
-        this.classList.add('active');
-        const f = this.dataset.pfilter;
-        const filtered = f === 'all' ? allPersonal
-          : f === 'pending'   ? allPersonal.filter(p => p.correct === null || p.correct === undefined)
-          : f === 'correct'   ? allPersonal.filter(p => p.correct === true)
-          : allPersonal.filter(p => p.correct === false);
-        document.getElementById('personal-pred-list').innerHTML = filtered.length
-          ? filtered.map(p => renderPredCard(p)).join('')
-          : '<div class="no-data">No predictions match this filter.</div>';
-      });
-    });
-  }
-
   function renderTickers(topTickers) {
-    const el = document.getElementById('ticker-table');
+    const el = document.getElementById('ticker-grid');
     if (!topTickers || !topTickers.length) {
-      el.innerHTML = '<div class="no-data" style="font-size:13px">No resolved predictions yet.</div>';
+      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">No resolved predictions yet.</div>';
       return;
     }
     el.innerHTML = topTickers.map(t => `
@@ -517,39 +439,72 @@
         <div class="ticker-sym">${t.ticker}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%"></div></div>
         <div class="ticker-pct">${t.winRate}%</div>
-        <div class="ticker-count">${t.total}x</div>
       </div>`).join('');
   }
 
-  let allRecent = [];
+  let _allPreds = [];
 
-  // ── Auto-validation: runs on every page load, continues until all resolved ──
-  async function runValidation() {
-    const statusBox = document.getElementById('validation-status-box');
-    const statusEl  = document.getElementById('validate-status');
-    statusBox.style.display = 'block';
-    statusEl.textContent = 'Scanning predictions…';
+  function renderAllPreds(preds) {
+    _allPreds = preds || [];
+    const el = document.getElementById('all-preds-list');
+    el.innerHTML = _allPreds.length
+      ? _allPreds.map(renderPredCard).join('')
+      : '<div class="no-data">No predictions found.</div>';
+  }
+
+  // Wire up filter chips
+  document.getElementById('pred-filters').addEventListener('click', function(e) {
+    const chip = e.target.closest('[data-filter]');
+    if (!chip) return;
+    this.querySelectorAll('[data-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const f = chip.dataset.filter;
+    const filtered = f === 'all'       ? _allPreds
+      : f === 'pending'                ? _allPreds.filter(p => p.correct === null || p.correct === undefined)
+      : f === 'correct'                ? _allPreds.filter(p => p.correct === true)
+      : _allPreds.filter(p => p.correct === false);
+    const el = document.getElementById('all-preds-list');
+    el.innerHTML = filtered.length
+      ? filtered.map(renderPredCard).join('')
+      : '<div class="no-data">No predictions match this filter.</div>';
+  });
+
+  function showValBanner(msg, spinning) {
+    const banner = document.getElementById('val-banner');
+    const dot    = document.getElementById('val-dot');
+    document.getElementById('val-msg').textContent = msg;
+    banner.style.display = 'flex';
+    dot.style.animation  = spinning ? '' : 'none';
+    dot.style.background = spinning ? 'var(--accent)' : '#555';
+  }
+
+  // ── Validation: run on page load to grade any expired predictions ──
+  async function runValidation(totalInDb, alreadyResolved) {
+    const pending = (totalInDb ?? 0) - (alreadyResolved ?? 0);
+    if (pending <= 0) return false; // nothing to do
+
+    showValBanner(`Grading ${pending} expired prediction${pending !== 1 ? 's' : ''} against historical prices…`, true);
 
     let totalResolved = 0;
-    let passes = 0;
-    // Run up to 5 passes (in case there are many predictions to process)
-    while (passes < 5) {
+    for (let pass = 0; pass < 5; pass++) {
       try {
         const r = await fetch(window.API_BASE + '/api/predictions?resolve=true');
         const d = await r.json();
         const n = d.resolved ?? 0;
         totalResolved += n;
-        passes++;
-        if (n === 0) break; // nothing left to resolve
-        statusEl.textContent = `Resolved ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''}…`;
+        if (n === 0) break;
+        showValBanner(`Graded ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''}…`, true);
       } catch (_) { break; }
     }
 
     if (totalResolved > 0) {
-      statusEl.textContent = `✓ ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''} evaluated`;
-      return true; // stats need reload
+      showValBanner(`✓ ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''} graded`, false);
+      return true;
     } else {
-      statusBox.style.display = 'none';
+      // Couldn't resolve any — show a note but don't hide
+      if (pending > 0) {
+        showValBanner(`${pending} prediction${pending !== 1 ? 's' : ''} pending — price data unavailable or timeframes not yet expired`, false);
+      }
       return false;
     }
   }
@@ -564,82 +519,48 @@
       renderCumulativeChart(data.cumulativeTimeline);
       renderChart(data.timeline);
       renderTickers(data.topTickers);
-
-      // Show diagnostic if database has predictions but none are resolved
-      if (data.summary.totalInDb > 0 && data.summary.total === 0) {
-        document.getElementById('validation-status-box').style.display = 'block';
-        document.getElementById('validate-status').textContent =
-          `${data.summary.totalInDb} predictions in database — validating timeframes…`;
-      }
+      renderAllPreds(data.recent);
+      return data.summary;
     } catch (err) {
-      ['stat-accuracy','stat-correct'].forEach(id => {
+      ['stat-accuracy','stat-correct','stat-pending'].forEach(id => {
         const el = document.getElementById(id);
         if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
       });
-      document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
+      document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
       document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
+      document.getElementById('all-preds-list').innerHTML = `<div class="error-msg">Could not load predictions.</div>`;
+      return null;
     }
   }
 
-  // ── Step 1: Start validation + load stats in parallel ──────────────────────
-  const [validationDone] = await Promise.all([
-    runValidation(),
-    loadStats(),
-  ]);
+  // ── Run: load stats first to know what needs grading, then validate, then refresh ──
+  const summary = await loadStats();
 
-  // If validation resolved new predictions, refresh stats
-  if (validationDone) {
+  const needsRefresh = await runValidation(summary?.totalInDb, summary?.total);
+
+  if (needsRefresh) {
     await loadStats();
-  }
-
-  // ── Step 2: Load personal stats once auth is settled ────────────────────────
-  // auth.js is async and may not finish before this code runs.
-  // Poll until window._auth.sb exists (real Supabase client, not placeholder),
-  // OR up to 5 seconds max, then read user/token directly from window._auth.
-  {
-    let waited = 0;
-    while (!window._auth?.sb && waited < 5000) {
-      await new Promise(r => setTimeout(r, 100));
-      waited += 100;
+    // Update banner to reflect final count
+    const final = await fetch(window.API_BASE + '/api/predictions').then(r => r.json()).catch(() => null);
+    if (final?.summary?.total > 0) {
+      showValBanner(`✓ ${final.summary.total} prediction${final.summary.total !== 1 ? 's' : ''} graded`, false);
     }
-    // Also wait for onAuthStateChange to fire if the initial session was null
-    // but a refresh is in progress (Supabase may update the token asynchronously)
-    if (window._auth?.sb && !window._auth?.user) {
-      await new Promise(r => setTimeout(r, 600));
-    }
-  }
-
-  const _authToken = window._auth?.token ?? null;
-  const _authUser  = window._auth?.user  ?? null;
-
-  if (_authUser && _authToken) {
-    try {
-      const r2 = await fetch(window.API_BASE + '/api/predictions', {
-        headers: { 'Authorization': 'Bearer ' + _authToken }
-      });
-      const d2 = await r2.json();
-      renderPersonalSection(d2.userStats ?? null);
-    } catch (_) {
-      renderPersonalSection(null);
-    }
-  } else {
-    renderPersonalSection(null);
   }
 })();
 </script>
 <script src="/chat-widget.js"></script>
 <script src="/auth.js"></script>
 
-  <nav class="bottom-nav" aria-label="Mobile navigation">
-    <div class="bottom-nav-inner">
-      <a href="/" class="bn-item">Home</a>
-      <a href="/feed.html" class="bn-item">Stocks</a>
-      <a href="/markets.html" class="bn-item">Markets</a>
-      <a href="/crypto.html" class="bn-item">Crypto</a>
-      <a href="/accuracy.html" class="bn-item active">Track Record</a>
-    </div>
-  </nav>
-  <script src="/onboarding.js"></script>
-  <script src="/offline.js"></script>
+<nav class="bottom-nav" aria-label="Mobile navigation">
+  <div class="bottom-nav-inner">
+    <a href="/" class="bn-item">Home</a>
+    <a href="/feed.html" class="bn-item">Stocks</a>
+    <a href="/markets.html" class="bn-item">Markets</a>
+    <a href="/crypto.html" class="bn-item">Crypto</a>
+    <a href="/accuracy.html" class="bn-item active">Track Record</a>
+  </div>
+</nav>
+<script src="/onboarding.js"></script>
+<script src="/offline.js"></script>
 </body>
 </html>

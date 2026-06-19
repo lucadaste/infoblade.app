@@ -92,7 +92,7 @@ async function _fetchTickerHistory(ticker, startMs, endMs) {
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     if (!result) return {};
-    const tss    = result.timestamps    || [];
+    const tss    = result.timestamp || result.timestamps || [];
     const closes = result.indicators?.quote?.[0]?.close || [];
     const map    = {};
     for (let i = 0; i < tss.length; i++) {
@@ -384,9 +384,9 @@ async function handleStats(req, res, supabase) {
 
   const { data: recent, error: rErr } = await supabase
     .from('predictions')
-    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis')
+    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category')
     .order('created_at', { ascending: false })
-    .limit(20);
+    .limit(50);
   if (rErr) throw rErr;
 
   const byMonth = {};
@@ -500,8 +500,10 @@ async function handleStats(req, res, supabase) {
       loserTickers: p.loser_tickers, correct: p.correct,
       confidence: p.analysis?.confidence || null,
       impactTimeframe: p.analysis?.impact_timeframe || null,
-      grade: p.analysis?.grade || null, score: p.analysis?.score ?? null,
+      grade: p.analysis?.grade || null,
+      score: p.analysis?.accuracy_score ?? p.analysis?.score ?? null,
       tickerMoves: p.analysis?.ticker_moves || null,
+      category: p.category,
     }))
   });
 }

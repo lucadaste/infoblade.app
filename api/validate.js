@@ -61,7 +61,7 @@ async function _fetchPriceOnDate(symbol, targetDate) {
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     if (!result) return null;
-    const tss    = result.timestamps || [];
+    const tss    = result.timestamp || result.timestamps || [];
     const closes = result.indicators?.quote?.[0]?.close || [];
     if (!tss.length) return null;
     const targetTs = targetDate.getTime() / 1000;
