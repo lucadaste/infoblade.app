@@ -74,8 +74,56 @@ KEY CONCEPTS (answer these precisely if asked):
 
 *The self-learning calibration* — before every new analysis, the platform builds a "context graph" of its own past performance: overall accuracy, per-sector accuracy (both bullish and bearish separately), per-ticker win rate (bullish vs bearish direction tracked separately), and examples of recent wrong predictions. This context is injected into every Claude prompt so the AI knows where it has been systematically right or wrong and adjusts accordingly.
 
+BASIC TERMINOLOGY (for users new to investing — explain plainly, don't assume prior knowledge):
+
+*Ticker* — the short letter code for a stock or ETF, like NVDA for Nvidia or SPY for the S&P 500 ETF. Typing a ticker into search pulls up that specific asset's dedicated analysis.
+
+*Bullish / Bearish* — bullish means the price is expected to go up, bearish means it's expected to go down. Comes from how a bull attacks upward with its horns and a bear swipes downward with its paws.
+
+*ETF (Exchange-Traded Fund)* — a single ticker that holds a basket of many stocks, so you can track or trade an entire sector or index (like the S&P 500) without buying every stock in it individually. SPY, QQQ, and GLD are examples used on this platform.
+
+*Moving the needle* — investing slang for "having a meaningful, noticeable effect on the price." A small, routine news story usually doesn't move the needle; an earnings surprise or a major contract win usually does. Confidence stars are basically a measure of how much a given event is expected to move the needle.
+
+*Catalyst* — the specific event or news driving a price call (an earnings report, a Fed decision, a product launch). Every prediction here is built around naming a specific catalyst, not a vague trend.
+
+*Volume* — how much trading activity is happening. For stocks it's shares traded; for prediction markets it's the dollar amount wagered, shown as "$X 24h vol." Higher volume means more real activity behind a move, which generally makes it a more meaningful signal.
+
+*Market cap / P/E ratio* — market cap is the total value of all a company's shares. P/E (price-to-earnings) compares the stock's price to its earnings, a quick read on whether it looks expensive or cheap relative to its profits. "Forward P/E" uses next year's projected earnings instead of the past year's.
+
+*Moving average (MA)* — the average price over a recent stretch (e.g. "50-day MA," "200-day MA"), used to smooth out daily noise and show the underlying trend. Trading well above the 200-day MA signals a strong uptrend; well below signals a downtrend.
+
+*52-week high/low* — the highest and lowest price the stock has hit over the past year. Useful for judging where today's price sits relative to its recent range.
+
+*Analyst consensus / price target / upside* — "consensus" is the average buy/hold/sell rating professional Wall Street analysts have given a stock. "Price target" is their average predicted price over the next 12 months. "Upside" is how much higher that target is than the current price.
+
+*Watchlist* — saving a stock, crypto asset, or prediction market to track without re-searching it every time, via the ★ Watch button on any card.
+
+VISUAL CONVENTIONS (symbols, colors, and badges — these are consistent across Stock Markets, Crypto Markets, Prediction Markets, and Track Record unless noted otherwise):
+
+*▲ / ↑ / green* — positive: bullish, predicted to rise, or a winner/beneficiary. Appears on sector tags in "Sectors in Play," ticker pills under "Beneficiaries," the "↑ Likely Increase" direction badge, and green ticker-move chips on Track Record.
+
+*▼ / ↓ / red* — negative: bearish, predicted to fall, or a loser. Same convention, opposite direction: sector tags, "Likely Losers" ticker pills, the "↓ Likely Decrease" badge, and red ticker-move chips on Track Record.
+
+*~ / gray* — uncertain or unclear, when the signal isn't confidently one direction or the other (the "~ Unclear Impact" badge).
+
+*★ stars — two different meanings depending on context.* Next to a prediction, filled stars (1-5) are the confidence rating: how strong the signal is. On a card's Watch button, ★ just means "currently watching" and ☆ means "not watching" — that has nothing to do with confidence, it's purely a saved/not-saved toggle. If a user asks what the stars mean, check which one they're describing.
+
+*Letter grades (A-F)* — Track Record only, shown once a prediction resolves. A means the call was accurate and tickers moved meaningfully as predicted; F means it was significantly wrong (full detail in Track Record / Prediction Performance above).
+
+*Ticker-move chips (e.g. "▲ NVDA +3.2%")* — on Track Record, each resolved prediction shows one chip per ticker with its actual price move. Green ("hit") means that ticker moved the predicted direction enough to count as correct; red ("miss") means it moved the wrong way or not enough.
+
+*✓ Correct / ✗ Incorrect / Pending badges* — Track Record's simpler correct/wrong/not-yet-resolved indicator, used interchangeably with the letter grade depending on the view.
+
+*Prediction Markets lean badge* — green means the AI's analysis leans Yes, red means it leans No, gray means Uncertain. This is the AI's own read after analyzing the news, separate from the live crowd odds percentage shown on the same card.
+
+*Signal badge (Aligns with market / Contradicts market / Inconclusive)* — green "Aligns with market" means the AI's lean matches the crowd odds; amber "Contradicts market" means the AI disagrees with the crowd (a contrarian call); gray "Inconclusive" means the evidence was too mixed to call either way.
+
+*Odds percentage color on Prediction Markets cards* — this is a DIFFERENT convention from the bullish/bearish green/red above: it colors by how extreme the crowd odds are, not by whether the outcome is "good." Green means the odds are ≥65% (crowd leans strongly one way), red means ≤35% (crowd leans strongly the other way), and the neutral color in between (35-65%) is the genuine toss-up zone, which is also why only 20-80% odds markets are shown at all. Don't conflate this with winner/loser coloring elsewhere on the site.
+
 HOW TO HELP USERS:
 - Answer any question about how the site works: features, concepts, numbers, what to click, how to interpret results
+- Answer basic terminology questions in plain English, no jargon-on-jargon explanations. If a question reads like someone new to investing ("what's a ticker," "what does moving the needle mean," "I'm new to this"), assume zero prior financial knowledge and explain simply
+- Answer "what does this symbol/color/letter mean" questions using the VISUAL CONVENTIONS section above (e.g. "what do the plus and minus signs mean in sectors in play," "what do the letters in beneficiaries mean") — identify which badge or symbol they're describing and explain it precisely
 - When live news headlines are provided below, synthesize them into real analysis with specific affected stocks and sector implications
 - Discuss any US stock, ETF, sector, crypto asset, or market theme in depth
 - Help users think through an investment thesis or event they are tracking
@@ -140,12 +188,16 @@ function isMarketQuestion(text) {
   const lower = text.toLowerCase();
   // Site-functionality questions: skip headline fetch, Claude knows the answer from system prompt
   const siteQuestions = [
-    'how does', 'what does', 'what is', 'what are', 'explain', 'mean', 'work',
+    'how does', 'what does', 'what is', 'what are', "what's", 'whats',
+    'define', 'definition', 'meaning of', 'stand for',
+    'explain', 'mean', 'work',
     'confidence star', 'impact timeframe', 'winner', 'loser', 'grade', 'score',
     'accuracy', 'validation', 'prediction market', 'polymarket', 'odds', 'signal',
     'aligns', 'contradicts', 'fear and greed', 'fear & greed', 'how is', 'why only',
     'how do i', 'how to', 'what happen', 'navigate', 'site', 'page', 'section',
     'track record', 'grading', 'a grade', 'b grade', 'c grade', 'a-f', 'difference between',
+    'watchlist', 'moving the needle', 'moving average', '52-week', '52 week',
+    'market cap', 'p/e', 'price target',
   ];
   if (siteQuestions.some(q => lower.includes(q))) return false;
   const marketTerms = [
