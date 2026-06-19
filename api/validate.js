@@ -23,10 +23,10 @@ function _tickerScore(pct, direction) {
 }
 
 function _letterGrade(score) {
-  if (score >= 70)  return 'A';
-  if (score >= 40)  return 'B';
-  if (score >= 5)   return 'C';
-  if (score >= -20) return 'D';
+  if (score >= 60)  return 'A';
+  if (score >= 25)  return 'B';
+  if (score >= 0)   return 'C';
+  if (score >= -25) return 'D';
   return 'F';
 }
 
@@ -197,9 +197,13 @@ export default async function handler(req, res) {
       const gradedCount = Object.keys(tickerMoves).length;
       if (gradedCount === 0) continue;
 
-      // Accuracy score = average of per-ticker point scores (-100 to +100)
-      const tickerScores = Object.values(tickerMoves).map(m => m.pts);
-      const accuracyScore = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+      // Holistic score: avg per-ticker pts + hit-rate bonus (-10 to +10) for getting direction right on more tickers
+      const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
+      const hitCount      = Object.values(tickerMoves).filter(m => m.correct).length;
+      const hitRate       = tickerScores.length > 0 ? hitCount / tickerScores.length : 0;
+      const hitBonus      = +((hitRate - 0.5) * 20).toFixed(1);
+      const avgScore      = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+      const accuracyScore = +(avgScore + hitBonus).toFixed(1);
       const correct = accuracyScore > 0;
       const grade   = _letterGrade(accuracyScore);
       const correctCount = Object.values(tickerMoves).filter(m => m.correct).length;

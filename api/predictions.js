@@ -130,10 +130,10 @@ function _parseConfidenceStars(conf) {
 }
 
 function _letterGrade(score) {
-  if (score >= 70)  return 'A';
-  if (score >= 40)  return 'B';
-  if (score >= 5)   return 'C';
-  if (score >= -20) return 'D';
+  if (score >= 60)  return 'A';
+  if (score >= 25)  return 'B';
+  if (score >= 0)   return 'C';
+  if (score >= -25) return 'D';
   return 'F';
 }
 
@@ -278,10 +278,14 @@ async function handleResolve(req, res, supabase) {
 
     if (!Object.keys(tickerMoves).length) { skipped++; continue; }
 
-    const tickerScores       = Object.values(tickerMoves).map(m => m.pts);
-    const accuracyScore      = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
-    const correct            = accuracyScore > 0;
-    const grade              = _letterGrade(accuracyScore);
+    const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
+    const hitCount      = Object.values(tickerMoves).filter(m => m.correct).length;
+    const hitRate       = tickerScores.length > 0 ? hitCount / tickerScores.length : 0;
+    const hitBonus      = +((hitRate - 0.5) * 20).toFixed(1); // -10 to +10 pts: rewards getting direction right on more tickers
+    const avgScore      = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
+    const accuracyScore = +(avgScore + hitBonus).toFixed(1);
+    const correct       = accuracyScore > 0;
+    const grade         = _letterGrade(accuracyScore);
     const confidence_weight  = _parseConfidenceStars(pred.analysis?.confidence);
 
     updates.push({

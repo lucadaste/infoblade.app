@@ -101,22 +101,16 @@
     .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
     @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
     .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
-    .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
-    .chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .chart-bar-outer { width: 100%; background: var(--border); border-radius: 3px 3px 0 0; position: relative; display: flex; align-items: flex-end; }
-    .chart-bar-inner { width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; transition: height 0.4s ease; }
-    .chart-bar-inner.dim { background: #2a5c3a; }
-    .chart-month { font-size: 10px; color: var(--muted); text-align: center; white-space: nowrap; }
-    .chart-pct { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; color: var(--accent); }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
-    /* Top tickers horizontal bar */
-    .ticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 36px; }
-    .ticker-row { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 48px; }
+    /* Top tickers vertical list (inside chart card) */
+    .ticker-grid-vert { display: flex; flex-direction: column; gap: 8px; }
+    .ticker-row { display: flex; align-items: center; gap: 10px; }
+    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
     .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
     .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
     .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
+    .ticker-count { font-size: 11px; color: var(--muted); min-width: 24px; text-align: right; }
 
     /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
@@ -221,7 +215,7 @@
     <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
   </div>
 
-  <!-- Charts -->
+  <!-- Charts + Top Tickers -->
   <div class="charts-row">
     <div class="chart-wrap">
       <div class="section-title">Cumulative Score</div>
@@ -229,15 +223,11 @@
       <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
     </div>
     <div class="chart-wrap">
-      <div class="section-title">Accuracy by Month</div>
-      <div id="chart-area"><div class="chart-empty">Loading…</div></div>
+      <div class="section-title">Top Tickers by Win Rate</div>
+      <div id="ticker-grid" class="ticker-grid-vert">
+        <div class="no-data">Loading…</div>
+      </div>
     </div>
-  </div>
-
-  <!-- Top tickers -->
-  <div class="section-title">Top Tickers by Win Rate</div>
-  <div id="ticker-grid" class="ticker-grid" style="margin-bottom:36px">
-    <div class="no-data" style="grid-column:1/-1">Loading…</div>
   </div>
 
   <!-- All predictions -->
@@ -259,7 +249,8 @@
   <p class="disclaimer">
     Predictions are generated algorithmically based on live news headlines and are not financial advice.
     Accuracy is measured by whether tickers moved ≥ 0.5% in the predicted direction within the stated timeframe.
-    A prediction's score is the average of per-ticker direction scores (−100 to +100 pts each).
+    A prediction's score combines average directional pts per ticker (−100 to +100) plus a hit-rate bonus (up to ±10 pts) for getting more tickers right.
+    Grades: A ≥ 60, B ≥ 25, C ≥ 0, D ≥ −25, F below that.
     Historical accuracy does not guarantee future performance.
     <br><br><a href="/privacy.html" style="color:var(--muted)">Privacy Policy</a>
   </p>
@@ -293,31 +284,6 @@
     pend.textContent = fmt(s.pending ?? 0);
     document.getElementById('stat-sub-pending').textContent =
       s.pending > 0 ? 'still within timeframe' : 'none pending';
-  }
-
-  function renderChart(timeline) {
-    const area = document.getElementById('chart-area');
-    if (!timeline || !timeline.length) {
-      area.innerHTML = '<div class="chart-empty">No validated predictions yet.</div>';
-      return;
-    }
-    area.innerHTML = `
-      <div class="chart-bars">
-        ${timeline.map(t => {
-          const barH = Math.max(4, Math.round(t.accuracy / 100 * 100));
-          const cls  = t.accuracy >= 60 ? '' : 'dim';
-          return `
-            <div class="chart-col" title="${t.month}: ${t.accuracy}% (${t.correct}/${t.total})">
-              <div class="chart-pct">${t.accuracy}%</div>
-              <div class="chart-bar-outer" style="height:${barH}px">
-                <div class="chart-bar-inner ${cls}" style="height:100%"></div>
-              </div>
-              <div class="chart-month">${t.month.slice(5)}</div>
-            </div>`;
-        }).join('')}
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:12px;text-align:right">${timeline.reduce((a,t)=>a+t.total,0)} validated across ${timeline.length} month${timeline.length===1?'':'s'}</div>
-    `;
   }
 
   function renderCumulativeChart(cum) {
@@ -431,7 +397,7 @@
   function renderTickers(topTickers) {
     const el = document.getElementById('ticker-grid');
     if (!topTickers || !topTickers.length) {
-      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">No resolved predictions yet.</div>';
+      el.innerHTML = '<div class="no-data">No resolved predictions yet.</div>';
       return;
     }
     el.innerHTML = topTickers.map(t => `
@@ -439,6 +405,7 @@
         <div class="ticker-sym">${t.ticker}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%"></div></div>
         <div class="ticker-pct">${t.winRate}%</div>
+        <div class="ticker-count">${t.total}x</div>
       </div>`).join('');
   }
 
@@ -517,7 +484,6 @@
       renderStats(data.summary);
       renderBySection(data.bySection);
       renderCumulativeChart(data.cumulativeTimeline);
-      renderChart(data.timeline);
       renderTickers(data.topTickers);
       renderAllPreds(data.recent);
       return data.summary;
