@@ -43,6 +43,13 @@ const CATEGORY_TAGS = {
 
 const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_TAGS));
 
+function _categoryForTags(eventTags) {
+  for (const [cat, tags] of Object.entries(CATEGORY_TAGS)) {
+    if (tags.some(t => eventTags.includes(t))) return cat;
+  }
+  return null;
+}
+
 function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -86,6 +93,12 @@ export default async function handler(req, res) {
   const allowed = await _checkRateLimit(supabase, ip);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
+  const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
+  const isSearch = rawQuery.length > 0;
+  const searchWords = isSearch
+    ? rawQuery.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1)
+    : [];
+
   const rawCategory = req.query.category;
   const category = VALID_CATEGORIES.has(rawCategory) ? rawCategory : 'sports';
   const daysCap = Math.min(Math.max(parseInt(req.query.maxDays) || 365, 1), 365);
@@ -110,6 +123,10 @@ export default async function handler(req, res) {
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
       if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
       if (_isNonsenseTitle(event.title)) return false;
+      if (isSearch) {
+        const title = (event.title || '').toLowerCase();
+        return searchWords.every(w => title.includes(w));
+      }
       return targetTags.some(tag => eventTags.includes(tag));
     });
 
@@ -134,7 +151,10 @@ export default async function handler(req, res) {
         yesPrice = Math.round(parseFloat(prices[0]) * 100);
       } catch (_) {}
 
-      if (yesPrice === null || yesPrice < 20 || yesPrice > 80) return null;
+      if (yesPrice === null || isNaN(yesPrice)) return null;
+      // Toss-up filter only applies to category browsing — search results show
+      // any matching market regardless of odds, since the user has specific intent.
+      if (!isSearch && (yesPrice < 20 || yesPrice > 80)) return null;
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
@@ -142,6 +162,7 @@ export default async function handler(req, res) {
       const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
       const sportTag  = eventTags.find(t => SPORT_LABELS[t]);
       const sport     = sportTag ? SPORT_LABELS[sportTag] : null;
+      const resultCategory = isSearch ? (_categoryForTags(eventTags) || 'other') : category;
 
       return {
         id: event.id,
@@ -153,10 +174,12 @@ export default async function handler(req, res) {
         volumeTotal,
         daysLeft,
         totalMarkets: ms.length,
-        category,
+        category: resultCategory,
         sport,
       };
-    }).filter(Boolean).slice(0, 10);
+    }).filter(Boolean)
+      .sort((a, b) => b.volume24h - a.volume24h)
+      .slice(0, isSearch ? 20 : 10);
 
     // Batch AI call: generate a plain-english "what YES means" label for each market, and
     // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
@@ -177,7 +200,7 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
         const labelRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 500, messages: [{ role: 'user', content: labelPrompt }] }),
+          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: Math.max(500, markets.length * 45), messages: [{ role: 'user', content: labelPrompt }] }),
           signal: AbortSignal.timeout(8000)
         });
         const labelData = await labelRes.json();
@@ -194,7 +217,9 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
 
     const finalMarkets = markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
 
-    return res.status(200).json({ markets: finalMarkets, category });
+    return res.status(200).json(
+      isSearch ? { markets: finalMarkets, query: rawQuery } : { markets: finalMarkets, category }
+    );
   } catch (err) {
     console.error('[markets]', err.message);
     return res.status(500).json({ error: 'Failed to load markets' });

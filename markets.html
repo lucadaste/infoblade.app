@@ -68,6 +68,14 @@
     .tf-chip:hover { border-color: var(--ink); color: var(--ink); }
     .tf-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); font-weight: 600; }
 
+    .search-box-wrap { position: relative; min-width: 260px; }
+    .search-box { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 34px 9px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--ink); outline: none; transition: border-color 0.15s; }
+    .search-box::placeholder { color: var(--muted); }
+    .search-box:focus { border-color: var(--accent); }
+    .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px; display: none; }
+    .search-clear.visible { display: block; }
+    .search-clear:hover { color: var(--ink); }
+
     .status-bar { padding: 14px 48px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--border); min-height: 45px; display: flex; align-items: center; gap: 10px; }
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skel { background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
@@ -261,6 +269,13 @@
 
   <div class="filters">
     <div class="filter-group">
+      <div class="filter-label">Search</div>
+      <div class="search-box-wrap">
+        <input type="text" id="market-search" class="search-box" placeholder="Search teams, people, politics…" autocomplete="off">
+        <button type="button" id="search-clear" class="search-clear" aria-label="Clear search">✕</button>
+      </div>
+    </div>
+    <div class="filter-group">
       <div class="filter-label">Category</div>
       <div class="cat-chips">
         <button class="cat-chip active" data-cat="sports" onclick="selectCategory('sports', this)">Sports</button>
@@ -436,7 +451,7 @@
         const res = await fetch(window.API_BASE + '/api/market-analyze', {
           method: 'POST',
           headers: _ah(),
-          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: document.querySelector('.cat-chip.active')?.textContent?.trim().toLowerCase() || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null })
+          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: market.category || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
@@ -583,6 +598,7 @@
     }
 
     function selectCategory(cat, chipEl) {
+      clearSearch();
       currentCategory = cat;
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
       chipEl.classList.add('active');
@@ -591,12 +607,119 @@
     }
 
     function selectTimeframe(days, minDays, chipEl) {
+      if (isSearchActive) return; // timeframe doesn't apply to search results
       currentMaxDays = days;
       currentMinDays = minDays;
       document.querySelectorAll('.tf-chip').forEach(c => c.classList.remove('active'));
       chipEl.classList.add('active');
       if (currentCategory) loadMarkets(currentCategory, days, minDays);
     }
+
+    // ── Search ─────────────────────────────────────────────────────
+    let isSearchActive = false;
+    let _searchDebounce = null;
+
+    function clearSearch() {
+      const input = document.getElementById('market-search');
+      input.value = '';
+      document.getElementById('search-clear').classList.remove('visible');
+      isSearchActive = false;
+    }
+
+    async function loadSearchResults(query) {
+      const grid = document.getElementById('market-grid');
+      const cacheKey = `ii_markets_search_v1_${query.toLowerCase()}`;
+
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const { ts, markets } = JSON.parse(cached);
+          if (Date.now() - ts < MARKETS_TTL) {
+            grid.innerHTML = '';
+            markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
+            setStatus(`${markets.length} result${markets.length !== 1 ? 's' : ''} for "${esc(query)}". Click "Analyze news" on any card.`);
+            return;
+          }
+        }
+      } catch(e) {}
+
+      grid.innerHTML = skeletonCards(4);
+      setStatus(`Searching for "${esc(query)}"…`);
+
+      try {
+        const res = await fetch(`/api/markets?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const markets = data.markets || [];
+
+        if (markets.length === 0) {
+          setStatus('');
+          grid.innerHTML = `
+            <div class="empty-state">
+              <h3>No markets found</h3>
+              <p>No active prediction markets matched "${esc(query)}". Try a different spelling or a broader term.</p>
+            </div>`;
+          return;
+        }
+
+        try { sessionStorage.setItem(cacheKey, JSON.stringify({ ts: Date.now(), markets })); } catch(e) {}
+        setStatus(`${markets.length} result${markets.length !== 1 ? 's' : ''} for "${esc(query)}". Click "Analyze news" on any card.`);
+        grid.innerHTML = '';
+        markets.forEach((market, i) => grid.appendChild(buildCard(market, i)));
+      } catch (err) {
+        setStatus('');
+        grid.innerHTML = `
+          <div class="empty-state">
+            <h3>Search failed</h3>
+            <p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p>
+          </div>`;
+      }
+    }
+
+    function _deactivateChips() {
+      document.querySelectorAll('.cat-chip, .tf-chip').forEach(c => c.classList.remove('active'));
+    }
+
+    function _restoreCategoryChips() {
+      const catChip = document.querySelector(`.cat-chip[data-cat="${currentCategory}"]`);
+      if (catChip) catChip.classList.add('active');
+      const tfChip = document.querySelector(`.tf-chip[data-days="${currentMaxDays}"]`);
+      if (tfChip) tfChip.classList.add('active');
+    }
+
+    const searchInput = document.getElementById('market-search');
+    const searchClearBtn = document.getElementById('search-clear');
+
+    searchInput.addEventListener('input', function () {
+      const val = this.value.trim();
+      searchClearBtn.classList.toggle('visible', val.length > 0);
+      clearTimeout(_searchDebounce);
+      if (!val) {
+        isSearchActive = false;
+        _restoreCategoryChips();
+        if (currentCategory) loadMarkets(currentCategory, currentMaxDays, currentMinDays);
+        return;
+      }
+      _searchDebounce = setTimeout(() => {
+        isSearchActive = true;
+        _deactivateChips();
+        loadSearchResults(val);
+      }, 400);
+    });
+
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      clearTimeout(_searchDebounce);
+      const val = this.value.trim();
+      if (val) { isSearchActive = true; _deactivateChips(); loadSearchResults(val); }
+    });
+
+    searchClearBtn.addEventListener('click', function () {
+      clearSearch();
+      _restoreCategoryChips();
+      if (currentCategory) loadMarkets(currentCategory, currentMaxDays, currentMinDays);
+    });
 
     selectCategory('sports', document.querySelector('[data-cat="sports"]'));
   </script>
