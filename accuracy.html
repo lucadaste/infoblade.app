@@ -106,10 +106,10 @@
     /* Top tickers vertical list (inside chart card) */
     .ticker-grid-vert { display: flex; flex-direction: column; gap: 8px; }
     .ticker-row { display: flex; align-items: center; gap: 10px; }
+    .ticker-rank { font-family: 'Share Tech Mono', sans-serif; font-size: 10px; color: #3a3a3a; min-width: 22px; }
     .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
     .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
     .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
-    .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); min-width: 36px; text-align: right; }
     .ticker-count { font-size: 11px; color: var(--muted); min-width: 24px; text-align: right; }
 
     /* Predictions list */
@@ -190,7 +190,7 @@
 
 <div class="hero">
   <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
-  <h1>Our <em>Track Record</em></h1>
+  <h1>Prediction <em>Performance</em></h1>
   <p class="hero-sub">Every market prediction this platform makes is logged the moment it's generated, then automatically graded against real price data when the timeframe expires. The score you see is the score it earned.</p>
 </div>
 
@@ -232,13 +232,21 @@
 
   <!-- All predictions -->
   <div style="border-top:1px solid var(--border);padding-top:32px">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-      <div class="section-title" style="margin-bottom:0">All Predictions</div>
-      <div class="filter-row" id="pred-filters" style="margin-bottom:0">
-        <button class="filter-chip active" data-filter="all">All</button>
-        <button class="filter-chip" data-filter="correct">Correct</button>
-        <button class="filter-chip" data-filter="incorrect">Incorrect</button>
-        <button class="filter-chip" data-filter="pending">Pending</button>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div class="section-title" style="margin-bottom:0;padding-top:4px">All Predictions</div>
+      <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+        <div class="filter-row" id="pred-filters" style="margin-bottom:0">
+          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip" data-filter="correct">Correct</button>
+          <button class="filter-chip" data-filter="incorrect">Incorrect</button>
+          <button class="filter-chip" data-filter="pending">Pending</button>
+        </div>
+        <div class="filter-row" id="cat-filters" style="margin-bottom:0">
+          <button class="filter-chip active" data-catfilter="all">All Types</button>
+          <button class="filter-chip" data-catfilter="stocks">Stocks</button>
+          <button class="filter-chip" data-catfilter="crypto">Crypto</button>
+          <button class="filter-chip" data-catfilter="markets">Markets</button>
+        </div>
       </div>
     </div>
     <div id="all-preds-list" class="pred-list">
@@ -267,9 +275,10 @@
     const acc = document.getElementById('stat-accuracy');
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
-    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
+    const dispAcc = s.displayAccuracy ?? s.accuracy;
+    acc.textContent = dispAcc != null ? dispAcc + '%' : '--';
     document.getElementById('stat-sub-accuracy').textContent =
-      s.total > 0 ? `${s.correct} correct of ${s.total} resolved` : 'No validated predictions yet';
+      s.total > 0 ? `${s.correct} clearly correct of ${s.total} resolved` : 'No validated predictions yet';
 
     const cr = document.getElementById('stat-correct');
     cr.classList.remove('skeleton');
@@ -313,7 +322,7 @@
     area.innerHTML = `
       <svg viewBox="0 0 100 ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
         <line x1="0" y1="${zeroY}" x2="100" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5"/>
-        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="0.8" stroke-linejoin="round" stroke-linecap="round"/>
         <circle cx="${(100).toFixed(1)}" cy="${(H - ((lastVal - min)/range)*H).toFixed(1)}" r="2" fill="${color}"/>
       </svg>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
@@ -332,7 +341,13 @@
     const date       = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const validDate  = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const tf         = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
-    const conf       = p.confidence ? `<span>★ ${esc(p.confidence.split('—')[0].trim())}</span>` : '';
+    // Extract only the star number (1-5) — the full reasoning text must not leak into the card
+    const confStars  = p.confidence ? (String(p.confidence).match(/^\s*([1-5])/)||['',''])[1] : '';
+    const conf       = confStars ? `<span>★ ${confStars}</span>` : '';
+    // Category badge
+    const _CAT_BADGE = { crypto:'Crypto', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
+    const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
+    const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:#444;letter-spacing:0.5px;text-transform:uppercase">${catLabel}</span>`;
 
     const scoreVal = p.score ?? null;
     const gradeHtml = p.grade
@@ -363,6 +378,7 @@
               ${outcomeHtml}
             </div>
             <div class="pred-meta" style="margin-top:8px">
+              ${catBadge}
               <span>${date}</span>
               ${validDate ? `<span>→ ${validDate}</span>` : ''}
               ${tf}
@@ -394,6 +410,7 @@
           <div class="pred-topic">${esc(p.topic)}</div>
           ${movesHtml || `<div class="pred-tickers">${wins}${loses}</div>`}
           <div class="pred-meta" style="margin-top:8px">
+            ${catBadge}
             <span>${date}</span>
             ${validDate ? `<span>→ ${validDate}</span>` : ''}
             ${tf}${conf}
@@ -432,11 +449,11 @@
       el.innerHTML = '<div class="no-data">No resolved predictions yet.</div>';
       return;
     }
-    el.innerHTML = topTickers.map(t => `
+    el.innerHTML = topTickers.map((t, i) => `
       <div class="ticker-row">
+        <div class="ticker-rank">#${i + 1}</div>
         <div class="ticker-sym">${t.ticker}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%"></div></div>
-        <div class="ticker-pct">${t.winRate}%</div>
         <div class="ticker-count">${t.total}x</div>
       </div>`).join('');
   }
@@ -445,27 +462,53 @@
 
   function renderAllPreds(preds) {
     _allPreds = preds || [];
-    const el = document.getElementById('all-preds-list');
-    el.innerHTML = _allPreds.length
-      ? _allPreds.map(renderPredCard).join('')
-      : '<div class="no-data">No predictions found.</div>';
+    _applyFilters();
   }
 
-  // Wire up filter chips
+  // Active filter state
+  let _activeOutcome = 'all', _activeCat = 'all';
+  const _CRYPTO_CATS = new Set(['crypto']);
+  const _MARKET_CATS = new Set(['prediction-markets','politics','sports','entertainment','finance','tech']);
+
+  function _applyFilters() {
+    let preds = _allPreds;
+    if (_activeOutcome !== 'all') {
+      preds = _activeOutcome === 'pending' ? preds.filter(p => p.correct === null || p.correct === undefined)
+            : _activeOutcome === 'correct' ? preds.filter(p => p.correct === true)
+            : preds.filter(p => p.correct === false);
+    }
+    if (_activeCat !== 'all') {
+      preds = preds.filter(p => {
+        const isMarkets = !!(p.lean || p.signal) || _MARKET_CATS.has(p.category);
+        const isCrypto  = _CRYPTO_CATS.has(p.category) && !isMarkets;
+        if (_activeCat === 'markets') return isMarkets;
+        if (_activeCat === 'crypto')  return isCrypto;
+        if (_activeCat === 'stocks')  return !isMarkets && !isCrypto;
+        return true;
+      });
+    }
+    const el = document.getElementById('all-preds-list');
+    el.innerHTML = preds.length
+      ? preds.map(renderPredCard).join('')
+      : '<div class="no-data">No predictions match this filter.</div>';
+  }
+
   document.getElementById('pred-filters').addEventListener('click', function(e) {
     const chip = e.target.closest('[data-filter]');
     if (!chip) return;
     this.querySelectorAll('[data-filter]').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    const f = chip.dataset.filter;
-    const filtered = f === 'all'       ? _allPreds
-      : f === 'pending'                ? _allPreds.filter(p => p.correct === null || p.correct === undefined)
-      : f === 'correct'                ? _allPreds.filter(p => p.correct === true)
-      : _allPreds.filter(p => p.correct === false);
-    const el = document.getElementById('all-preds-list');
-    el.innerHTML = filtered.length
-      ? filtered.map(renderPredCard).join('')
-      : '<div class="no-data">No predictions match this filter.</div>';
+    _activeOutcome = chip.dataset.filter;
+    _applyFilters();
+  });
+
+  document.getElementById('cat-filters').addEventListener('click', function(e) {
+    const chip = e.target.closest('[data-catfilter]');
+    if (!chip) return;
+    this.querySelectorAll('[data-catfilter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    _activeCat = chip.dataset.catfilter;
+    _applyFilters();
   });
 
   function showValBanner(msg, spinning) {

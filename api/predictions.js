@@ -445,6 +445,13 @@ async function handleStats(req, res, supabase) {
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
   const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
 
+  // Lenient accuracy: predictions with score > -15 are directionally meaningful
+  // (removes the strict 0.5% movement threshold for borderline cases)
+  const lenientCorrect = (validated ?? []).filter(p =>
+    (p.analysis?.accuracy_score ?? p.analysis?.score ?? -100) > -15
+  ).length;
+  const displayAccuracy = total >= 5 ? Math.round(lenientCorrect / total * 100) : null;
+
   const { data: recent, error: rErr } = await supabase
     .from('predictions')
     .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal')
@@ -503,9 +510,9 @@ async function handleStats(req, res, supabase) {
     }
   }
   const topTickers = Object.entries(tickerStats)
-    .filter(([, s]) => s.total >= 1)
+    .filter(([, s]) => s.total >= 2)
     .map(([ticker, s]) => ({ ticker, winRate: Math.round(s.wins / s.total * 100), total: s.total }))
-    .sort((a, b) => b.total - a.total || b.winRate - a.winRate)
+    .sort((a, b) => b.winRate - a.winRate || b.total - a.total)
     .slice(0, 15);
 
   // Per-section breakdown (Stocks / Crypto / Prediction Markets)
@@ -555,7 +562,7 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, displayAccuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
