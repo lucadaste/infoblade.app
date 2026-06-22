@@ -12,6 +12,37 @@ const ALIAS_REVERSE  = Object.fromEntries(Object.entries(SYMBOL_ALIASES).map(([k
 function _realSymbol(s) { return SYMBOL_ALIASES[s] || s; }
 function _displaySymbol(s) { return ALIAS_REVERSE[s] || s; }
 
+// CNBC symbol map for index symbols — CNBC's quote service works from cloud IPs
+const CNBC_SYMBOL_MAP = { 'SPX': '.SPX' };
+
+async function _fetchFromCNBC(displaySymbol) {
+  const cnbcSym = CNBC_SYMBOL_MAP[displaySymbol];
+  if (!cnbcSym) return null;
+  try {
+    const url = `https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol?symbols=${encodeURIComponent(cnbcSym)}&requestMethod=itv&noform=1&partnerId=2&fund=1&exthrs=1&output=json&events=1`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const q = data?.FormattedQuoteResult?.FormattedQuote?.[0];
+    if (!q?.last) return null;
+    const price     = parseFloat(String(q.last).replace(/,/g, ''));
+    const changePct = parseFloat(String(q.change_pct || '').replace(/%/g, ''));
+    if (!price) return null;
+    return {
+      price:      +price.toFixed(2),
+      changePct:  !isNaN(changePct) ? +changePct.toFixed(2) : null,
+      week52High: null,
+      week52Low:  null,
+    };
+  } catch (_) { return null; }
+}
+
 // Yahoo Finance crumb cache (survives warm lambda invocations)
 let _crumb = null;
 let _cookie = null;
@@ -157,11 +188,11 @@ async function _fetchPrices(displaySymbols) {
     }
   }
 
-  // Index symbols: v8 chart API first (no crumb, works on weekends),
-  // then Yahoo v7 as fallback for any still missing.
+  // Index symbols: CNBC quote API first (works from cloud IPs, no auth),
+  // then Yahoo v8 chart as fallback, then Yahoo v7 as last resort.
   if (indices.length) {
     await Promise.all(indices.map(async sym => {
-      const data = await _fetchChartFallback(sym);
+      const data = await _fetchFromCNBC(sym) ?? await _fetchChartFallback(sym);
       if (data) map[sym] = data;
     }));
     const missing = indices.filter(s => map[s]?.price == null);
