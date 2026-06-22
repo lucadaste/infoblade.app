@@ -1090,15 +1090,16 @@ Respond ONLY with valid JSON, no markdown:
     if (supabase) {
       try {
         const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
-        const { data: cached } = await supabase
+        const cacheQuery = supabase
           .from('predictions')
           .select('id, analysis, winner_tickers, loser_tickers')
           .eq('topic', topic)
           .gte('created_at', twoHoursAgo)
           .not('analysis', 'is', null)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
+        if (category) cacheQuery.eq('category', category);
+        const { data: cached } = await cacheQuery.maybeSingle();
         if (cached?.analysis?.direction) {
           const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
           const snapshot = cachedTickers.length ? await _fetchTickerSnapshot(cachedTickers) : {};

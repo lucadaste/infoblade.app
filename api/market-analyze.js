@@ -223,6 +223,8 @@ Consider: official statements, confirmed facts, injury reports, results, direct 
 
 TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section above shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
+DIRECTION COMMITMENT: Reserve "Uncertain" only for true deadlock — when credible sources split almost evenly AND crowd odds are within 5% of 50/50 AND your domain knowledge offers no tiebreaker. If the news has ANY directional tilt (even slight), commit to Yes or No with the appropriate confidence level. "Uncertain" should be rare (under 15% of calls). Most questions have a most-likely outcome even with limited information — use your knowledge of the domain, recent trends, and the question context to call it.
+
 Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend. Do NOT use em dashes (—) anywhere in your response; use commas, colons, or periods instead.
 
 Respond ONLY with valid JSON, no markdown:
@@ -265,33 +267,41 @@ Respond ONLY with valid JSON, no markdown:
       return res.status(500).json({ error: 'Analysis service returned invalid data' });
     }
 
-    if (supabase && (analysis.lean === 'Yes' || analysis.lean === 'No')) {
+    const lean = (analysis.lean || '').trim();
+    let predictionSaved = false;
+    let saveError = null;
+    if (supabase && (lean === 'Yes' || lean === 'No')) {
       const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
-      const validationDate = daysLeft != null
-        ? new Date(Date.now() + daysLeft * 86400000).toISOString()
-        : null;
+      // Default 90-day window when market has no explicit end date
+      const validationMs = daysLeft != null ? daysLeft * 86400000 : 90 * 86400000;
+      const validationDate = new Date(Date.now() + validationMs).toISOString();
       const { error: insertErr } = await supabase.from('predictions').insert({
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at:          new Date().toISOString(),
         topic:               question,
         sources:             items.map(i => i.source),
-        lean:                analysis.lean,
-        lean_confidence:     analysis.lean_confidence || null,
+        lean,
+        lean_confidence:     (analysis.lean_confidence || '').trim() || null,
         market_odds_at_time: currentOdds ?? null,
         market_slug:         req.body?.slug || null,
         signal:              analysis.signal || null,
         category,
-        analysis:            { ...analysis, impact_timeframe: daysLeft ? `${daysLeft} days` : null },
+        analysis:            { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null },
         validation_date:     validationDate,
         winner_tickers:      [],
         loser_tickers:       [],
         correct:             null,
         notes:               null,
       });
-      if (insertErr) console.error('[market-analyze] save error:', insertErr.message);
+      if (insertErr) {
+        console.error('[market-analyze] save error:', insertErr.message, insertErr.code);
+        saveError = insertErr.message;
+      } else {
+        predictionSaved = true;
+      }
     }
 
-    return res.status(200).json({ ...analysis, articlesFound: items.length, searchQuery });
+    return res.status(200).json({ ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(saveError ? { _saveError: saveError } : {}) });
   } catch (err) {
     console.error('[market-analyze]', err.message);
     return res.status(500).json({ error: 'Analysis failed' });
