@@ -1180,13 +1180,16 @@ TIMEFRAME LENS: ${timeframeGuidance}
 
 CRITICAL RULES:
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
-- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
+${category === 'crypto-coin'
+  ? `- CRYPTO TICKERS: This is a direct crypto coin analysis. You MUST include the coin being analyzed (e.g., BTC for Bitcoin, ETH for Ethereum, SOL for Solana) as the FIRST ticker in winners (if bullish) or losers (if bearish). Use only the raw coin symbol (BTC, ETH, SOL, DOGE, XRP, ADA, AVAX, LINK, DOT, NEAR, ATOM, etc.). You may also include relevant US-listed stocks or ETFs (MSTR, COIN, IBIT, MARA, RIOT, etc.) after the coin as secondary instruments.
+- Sectors can be crypto-market sectors (Layer 1, DeFi, Exchange, Mining, ETF).`
+  : `- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
-- Sectors should reflect US market sectors only
+- Sectors should reflect US market sectors only`}
 - Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.
-- STOCK SPECIFICITY: Only list a stock if there is a DIRECT, SPECIFIC causal chain between THIS event and that stock's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the stocks with the clearest, most direct exposure.
-- AVOID CONTRADICTIONS: Each stock should appear in EITHER winners OR losers, never both. If the net effect on a stock is unclear, omit it entirely rather than hedging.
+- STOCK SPECIFICITY: Only list a ticker if there is a DIRECT, SPECIFIC causal chain between THIS event and that instrument's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the instruments with the clearest, most direct exposure.
+- AVOID CONTRADICTIONS: Each ticker should appear in EITHER winners OR losers, never both. If the net effect on a ticker is unclear, omit it entirely rather than hedging.
 - For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish vs bearish signals from credible sources and commit to whichever side has more weight. If news is sparse or mixed but one side has ANY edge, pick it. If news doesn't clearly point anywhere, use your knowledge of the sector, macro environment, historical precedent, and the specific event type to make the best educated guess — that IS your job. Reserve "uncertain" ONLY for true deadlock: where both weighted totals are within 5% of each other AND your domain knowledge gives no tiebreaker. "Uncertain" should be rare (under 10% of calls). Do NOT use it to avoid being wrong.
 - TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section above is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
 - CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears above, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
@@ -1197,9 +1200,9 @@ Respond ONLY with valid JSON, no markdown:
   "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
   "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
   "crowd_summary": "1 sentence: what specific outcome the public is leaning toward and why, based on prediction market odds",
-  "sectors": { "positive": ["US sector 1"], "negative": ["US sector 2"], "neutral": [] },
-  "winners": { "explanation": "Why these specific US-listed stocks or ETFs benefit", "tickers": ["TICK1","TICK2"] },
-  "losers":  { "explanation": "Why these specific US-listed stocks or ETFs are hurt",  "tickers": ["TICK3"] },
+  "sectors": { "positive": ["sector 1"], "negative": ["sector 2"], "neutral": [] },
+  "winners": { "explanation": "Why these specific instruments benefit", "tickers": ["TICK1","TICK2"] },
+  "losers":  { "explanation": "Why these specific instruments are hurt",  "tickers": ["TICK3"] },
   "confidence": "4 — specific reason"
 }`;
 

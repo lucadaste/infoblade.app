@@ -62,13 +62,16 @@ function _parseTimeframeDays(str) {
   return 7;
 }
 
+const _COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND','MATIC']);
+
 // Fetch the FULL daily price history for a ticker over a date range in ONE request.
 // Returns a map of { "YYYY-MM-DD": closePrice } covering all trading days in the range.
 async function _fetchTickerHistory(ticker, startMs, endMs) {
   const p1 = Math.floor(startMs / 1000) - 7 * 86400; // 1 week buffer before
   const p2 = Math.floor(endMs   / 1000) + 7 * 86400; // 1 week buffer after
+  const yTicker = _COIN_SYMS.has(ticker) ? `${ticker}-USD` : ticker;
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&period1=${p1}&period2=${p2}`;
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=1d&period1=${p1}&period2=${p2}`;
     const r = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible)', 'Accept': 'application/json' },
       signal: AbortSignal.timeout(12000),
@@ -334,50 +337,26 @@ async function handleResolve(req, res, supabase) {
   }
 
   // ── 8. Retroactive crypto-coin category fix ──────────────────────────────
-  // Predictions from crypto.html are saved with category=null (POST bodies never
-  // included a category). Identify them by coin-only tickers and fix to 'crypto-coin'
-  // so they appear under the Crypto filter — separate from feed.html's crypto-sector
-  // stock predictions which stay as category='crypto' (shown under Stocks).
+  // New predictions from crypto.html are saved with category='crypto-coin'.
+  // Old ones (before the fix) were saved with category=null and no tickers
+  // (if Claude had no ticker candidates). Mark those as 'crypto-coin' via topic regex.
   {
-    const COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND']);
-    const cryptoCoinRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|crypto(?:currency)?|defi|blockchain|altcoin|nft market)\b/i;
+    const cryptoCoinRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|cryptocurrency market outlook|net price direction verdict)\b/i;
 
-    // Fix null-category predictions that came from crypto.html (coin topics)
     const { data: uncat } = await supabase
       .from('predictions')
       .select('id, topic, winner_tickers, loser_tickers')
       .is('category', null)
       .limit(1000);
 
-    const isCoinPred = (p) => {
+    const coinIds = (uncat || []).filter(p => {
       const all = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
-      if (!all.length) return cryptoCoinRx.test(p.topic || '');
-      return all.every(t => COIN_SYMS.has(t.toUpperCase()));
-    };
+      return all.length === 0 && cryptoCoinRx.test(p.topic || '');
+    }).map(p => p.id);
 
-    const coinIds = (uncat || []).filter(isCoinPred).map(p => p.id);
     if (coinIds.length) {
       for (let i = 0; i < coinIds.length; i += 50) {
         await supabase.from('predictions').update({ category: 'crypto-coin' }).in('id', coinIds.slice(i, i + 50));
-      }
-    }
-
-    // Migrate existing category='crypto' predictions that are actually coin predictions
-    // (saved before we differentiated — identified by having only coin-symbol tickers)
-    const { data: oldCrypto } = await supabase
-      .from('predictions')
-      .select('id, winner_tickers, loser_tickers')
-      .eq('category', 'crypto')
-      .limit(1000);
-
-    const migrateIds = (oldCrypto || []).filter(p => {
-      const all = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
-      return all.length > 0 && all.every(t => COIN_SYMS.has(t.toUpperCase()));
-    }).map(p => p.id);
-
-    if (migrateIds.length) {
-      for (let i = 0; i < migrateIds.length; i += 50) {
-        await supabase.from('predictions').update({ category: 'crypto-coin' }).in('id', migrateIds.slice(i, i + 50));
       }
     }
   }

@@ -188,15 +188,15 @@ export default async function handler(req, res) {
       }
     }
 
-    if (items.length < 3 && redditPosts.length === 0) {
+    if (items.length === 0 && redditPosts.length < 3) {
       return res.status(200).json({
         lean: 'Uncertain',
         lean_confidence: 'Low',
-        reasoning: `Only ${items.length} article${items.length === 1 ? '' : 's'} found — not enough coverage to form a reliable lean. The market price is the best available signal.`,
+        reasoning: 'No relevant news or public discussion found for this question. The market odds are the best available signal.',
         key_sources: [],
         signal: 'Inconclusive',
-        signal_detail: 'Insufficient news coverage to compare against the market odds.',
-        articlesFound: items.length,
+        signal_detail: 'No news coverage found to compare against the market odds.',
+        articlesFound: 0,
         searchQuery
       });
     }
