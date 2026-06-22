@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query
@@ -15,6 +16,7 @@ from . import stocktwits as st
 from . import finbert
 from . import scorer
 from . import whitelist
+from . import aggregator
 from .scheduler import create_scheduler
 
 load_dotenv()
@@ -220,4 +222,77 @@ async def get_whitelist(db: AsyncSession = Depends(get_db)):
             }
             for a in accounts
         ],
+    }
+
+
+# ── Step 5: sentiment signal ───────────────────────────────────────────────────
+
+@app.get("/api/sentiment")
+async def get_sentiment(
+    ticker: str = Query(..., min_length=1, max_length=10),
+    window_hours: int = Query(default=48, ge=1, le=168),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Aggregated sentiment signal for a ticker from whitelisted accounts only.
+
+    Query params:
+      ticker       — stock symbol, e.g. AAPL
+      window_hours — how far back to look (default 48h, max 7 days)
+
+    Response:
+      {
+        ticker, signal, confidence, post_count, window_hours,
+        top_accounts: [{username, accuracy_score, post_count, sentiment}],
+        message  // present when data is insufficient
+      }
+    """
+    ticker = ticker.upper()
+    if not ticker.replace(".", "").replace("-", "").isalpha():
+        raise HTTPException(status_code=400, detail="Invalid ticker symbol")
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+
+    # Load whitelisted accounts
+    from .models import WhitelistedAccount
+    wl_result = await db.execute(select(WhitelistedAccount))
+    whitelisted = {a.username: a for a in wl_result.scalars().all()}
+
+    if not whitelisted:
+        result = aggregator._empty(ticker, "Whitelist is empty — accuracy data is still building up")
+    else:
+        # Fetch recent scored posts from whitelisted accounts only
+        stmt = (
+            select(Tweet)
+            .where(
+                and_(
+                    Tweet.ticker == ticker,
+                    Tweet.timestamp >= cutoff,
+                    Tweet.username.in_(list(whitelisted.keys())),
+                    Tweet.finbert_sentiment.is_not(None),
+                )
+            )
+            .order_by(Tweet.timestamp.desc())
+        )
+        posts_result = await db.execute(stmt)
+        posts = posts_result.scalars().all()
+
+        result = aggregator.aggregate(ticker, posts, whitelisted)
+
+    return {
+        "ticker": result.ticker,
+        "signal": result.signal,
+        "confidence": result.confidence,
+        "post_count": result.post_count,
+        "window_hours": window_hours,
+        "top_accounts": [
+            {
+                "username": a.username,
+                "accuracy_score": a.accuracy_score,
+                "post_count": a.post_count,
+                "sentiment": a.sentiment,
+            }
+            for a in result.top_accounts
+        ],
+        **({"message": result.message} if result.message else {}),
     }
