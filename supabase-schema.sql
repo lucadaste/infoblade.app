@@ -78,3 +78,43 @@ begin
         correct  = source_reputation.correct  + p_correct;
 end;
 $$;
+
+-- ── Social Sentiment tables ────────────────────────────────────────────────────
+-- Managed by the Python FastAPI sentiment service; written via service-role key.
+-- The Python service uses SQLAlchemy to create these; this file documents them
+-- for reference and lets you pre-create them in Supabase if preferred.
+
+create table if not exists sentiment_tweets (
+  id                text primary key,
+  username          text not null,
+  text              text not null,
+  ticker            text not null,
+  timestamp         timestamptz not null,
+  native_sentiment  text,            -- 'bullish' | 'bearish' | null (StockTwits tag)
+  finbert_sentiment text,            -- 'positive' | 'negative' | 'neutral'
+  finbert_score     numeric(5,4)     -- 0.0000 – 1.0000 confidence
+);
+
+create index if not exists ix_sentiment_tweets_ticker    on sentiment_tweets (ticker);
+create index if not exists ix_sentiment_tweets_username  on sentiment_tweets (username);
+create index if not exists ix_sentiment_tweets_ticker_ts on sentiment_tweets (ticker, timestamp desc);
+
+create table if not exists account_scores (
+  username       text primary key,
+  total_calls    integer not null default 0,
+  correct_calls  integer not null default 0,
+  accuracy_score numeric(5,4) not null default 0,
+  last_updated   timestamptz not null default now()
+);
+
+create table if not exists whitelisted_accounts (
+  username       text primary key,
+  accuracy_score numeric(5,4) not null,
+  total_calls    integer not null,
+  added_at       timestamptz not null default now()
+);
+
+-- Sentiment tables are written only by the Python service role; no browser access.
+alter table sentiment_tweets      enable row level security;
+alter table account_scores        enable row level security;
+alter table whitelisted_accounts  enable row level security;
