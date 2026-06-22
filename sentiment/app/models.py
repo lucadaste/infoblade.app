@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, DateTime, Text, Index
+from sqlalchemy import Boolean, Column, String, Integer, Float, DateTime, Text, Index
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -14,6 +14,7 @@ class Tweet(Base):
     native_sentiment = Column(String, nullable=True)   # "bullish" | "bearish" | null
     finbert_sentiment = Column(String, nullable=True)  # "positive" | "negative" | "neutral"
     finbert_score = Column(Float, nullable=True)       # 0.0 – 1.0
+    call_correct = Column(Boolean, nullable=True)      # null=not yet evaluated; True/False=outcome
 
     __table_args__ = (
         Index("ix_sentiment_tweets_ticker_ts", "ticker", "timestamp"),

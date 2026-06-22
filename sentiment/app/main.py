@@ -13,6 +13,7 @@ from .database import Base, engine, get_db
 from .models import Tweet
 from . import stocktwits as st
 from . import finbert
+from . import scorer
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
@@ -158,3 +159,17 @@ async def ingest_and_score(
     ingest_result = await ingest_ticker(ticker, pages=pages, db=db)
     score_result = await score_ticker(ticker, limit=pages * 30, db=db)
     return {**ingest_result, **score_result}
+
+
+# ── Step 3: account accuracy scoring ──────────────────────────────────────────
+
+@app.post("/run-accuracy-scoring")
+async def run_accuracy_scoring(db: AsyncSession = Depends(get_db)):
+    """
+    Evaluate high-confidence tweets that are >= 3 days old and haven't been
+    checked yet. Fetches Yahoo Finance prices to determine if the call was
+    correct, then updates account_scores for every affected user.
+    This is safe to call repeatedly — already-evaluated tweets are skipped.
+    """
+    summary = await scorer.run(db)
+    return summary

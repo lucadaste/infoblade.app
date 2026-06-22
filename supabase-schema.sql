@@ -92,7 +92,8 @@ create table if not exists sentiment_tweets (
   timestamp         timestamptz not null,
   native_sentiment  text,            -- 'bullish' | 'bearish' | null (StockTwits tag)
   finbert_sentiment text,            -- 'positive' | 'negative' | 'neutral'
-  finbert_score     numeric(5,4)     -- 0.0000 – 1.0000 confidence
+  finbert_score     numeric(5,4),    -- 0.0000 – 1.0000 confidence
+  call_correct      boolean          -- null=not yet evaluated; true/false=outcome
 );
 
 create index if not exists ix_sentiment_tweets_ticker    on sentiment_tweets (ticker);
