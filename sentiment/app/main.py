@@ -14,6 +14,8 @@ from .models import Tweet
 from . import stocktwits as st
 from . import finbert
 from . import scorer
+from . import whitelist
+from .scheduler import create_scheduler
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
@@ -37,7 +39,15 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, finbert.warmup)
 
+    # Start background scheduler
+    _scheduler = create_scheduler()
+    _scheduler.start()
+    logger.info("Scheduler started — jobs: %s", [j.id for j in _scheduler.get_jobs()])
+
     yield
+
+    _scheduler.shutdown(wait=False)
+    logger.info("Scheduler stopped")
 
 
 app = FastAPI(title="Infoblade Sentiment Service", lifespan=lifespan)
@@ -138,7 +148,6 @@ async def score_ticker(
 
     await db.commit()
 
-    # Count remaining unscored rows for this ticker
     remaining_stmt = select(Tweet).where(
         and_(Tweet.ticker == ticker, Tweet.finbert_sentiment.is_(None))
     )
@@ -169,7 +178,46 @@ async def run_accuracy_scoring(db: AsyncSession = Depends(get_db)):
     Evaluate high-confidence tweets that are >= 3 days old and haven't been
     checked yet. Fetches Yahoo Finance prices to determine if the call was
     correct, then updates account_scores for every affected user.
-    This is safe to call repeatedly — already-evaluated tweets are skipped.
+    Safe to call repeatedly — already-evaluated tweets are skipped.
     """
     summary = await scorer.run(db)
     return summary
+
+
+# ── Step 4: whitelist ─────────────────────────────────────────────────────────
+
+@app.post("/refresh-whitelist")
+async def refresh_whitelist(db: AsyncSession = Depends(get_db)):
+    """
+    Manually trigger a whitelist refresh (the scheduler also runs this weekly).
+    Promotes accounts with accuracy >= threshold and calls >= min_calls;
+    demotes accounts that have fallen below the threshold.
+    """
+    result = await whitelist.refresh(db)
+    return result
+
+
+@app.get("/whitelist")
+async def get_whitelist(db: AsyncSession = Depends(get_db)):
+    """Return the current whitelisted accounts sorted by accuracy descending."""
+    from .models import WhitelistedAccount
+    from sqlalchemy import desc
+
+    stmt = (
+        select(WhitelistedAccount)
+        .order_by(desc(WhitelistedAccount.accuracy_score))
+    )
+    result = await db.execute(stmt)
+    accounts = result.scalars().all()
+    return {
+        "count": len(accounts),
+        "accounts": [
+            {
+                "username": a.username,
+                "accuracy_score": a.accuracy_score,
+                "total_calls": a.total_calls,
+                "added_at": a.added_at.isoformat(),
+            }
+            for a in accounts
+        ],
+    }
