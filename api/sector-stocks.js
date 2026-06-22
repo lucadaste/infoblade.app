@@ -100,15 +100,17 @@ async function _fetchFromYahoo(displaySymbols) {
   return map;
 }
 
-// v8 chart API — no crumb/cookie needed, reliable fallback for index symbols
+// v8 chart API — no crumb/cookie needed, reliable fallback for index symbols.
+// Uses range=5d so weekend/holiday calls still return the last available price.
 async function _fetchChartFallback(displaySymbol) {
   const real = _realSymbol(displaySymbol);
   try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(real)}?interval=1d&range=1d`;
+    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(real)}?interval=1d&range=5d`;
     const res = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'application/json',
+        'Referer': 'https://finance.yahoo.com/',
       },
       signal: AbortSignal.timeout(8000),
     });
@@ -116,12 +118,18 @@ async function _fetchChartFallback(displaySymbol) {
     const data = await res.json();
     const meta = data?.chart?.result?.[0]?.meta;
     if (!meta) return null;
-    const price = meta.regularMarketPrice;
-    const prev  = meta.previousClose ?? meta.chartPreviousClose;
-    const changePct = (price && prev) ? (price - prev) / prev * 100 : null;
+    const price = meta.regularMarketPrice ?? meta.chartPreviousClose;
+    if (!price) return null;
+    // Prefer the pre-computed change percent from Yahoo (accurate across sessions)
+    const changePct = meta.regularMarketChangePercent != null
+      ? meta.regularMarketChangePercent
+      : (() => {
+          const prev = meta.previousClose ?? meta.chartPreviousClose;
+          return (prev && price !== prev) ? (price - prev) / prev * 100 : null;
+        })();
     return {
-      price:      price != null ? +price.toFixed(2)          : null,
-      changePct:  changePct != null ? +changePct.toFixed(2)  : null,
+      price:      +price.toFixed(2),
+      changePct:  changePct != null ? +changePct.toFixed(2) : null,
       week52High: meta.fiftyTwoWeekHigh != null ? +meta.fiftyTwoWeekHigh.toFixed(2) : null,
       week52Low:  meta.fiftyTwoWeekLow  != null ? +meta.fiftyTwoWeekLow.toFixed(2)  : null,
     };
@@ -149,17 +157,19 @@ async function _fetchPrices(displaySymbols) {
     }
   }
 
-  // Index symbols: Yahoo v7, then v8 chart fallback for any still missing
+  // Index symbols: v8 chart API first (no crumb, works on weekends),
+  // then Yahoo v7 as fallback for any still missing.
   if (indices.length) {
-    try {
-      const idxMap = await _fetchFromYahoo(indices);
-      Object.assign(map, idxMap);
-    } catch (_) {}
-    for (const sym of indices) {
-      if (map[sym]?.price == null) {
-        const fallback = await _fetchChartFallback(sym);
-        if (fallback) map[sym] = fallback;
-      }
+    await Promise.all(indices.map(async sym => {
+      const data = await _fetchChartFallback(sym);
+      if (data) map[sym] = data;
+    }));
+    const missing = indices.filter(s => map[s]?.price == null);
+    if (missing.length) {
+      try {
+        const idxMap = await _fetchFromYahoo(missing);
+        Object.assign(map, idxMap);
+      } catch (_) {}
     }
   }
 
