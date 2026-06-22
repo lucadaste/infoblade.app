@@ -337,7 +337,7 @@
     const confStars  = p.confidence ? (String(p.confidence).match(/^\s*([1-5])/)||['',''])[1] : '';
     const conf       = confStars ? `<span>★ ${confStars}</span>` : '';
     // Category badge
-    const _CAT_BADGE = { crypto:'Crypto', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
+    const _CAT_BADGE = { 'crypto-coin':'Crypto', crypto:'Stocks', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
     const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:#444;letter-spacing:0.5px;text-transform:uppercase">${catLabel}</span>`;
 
@@ -460,7 +460,7 @@
   let _activeOutcome = 'all', _activeCat = 'all';
   let _filteredPreds = [], _showCount = 30;
   const _PAGE = 30;
-  const _CRYPTO_CATS = new Set(['crypto']);
+  const _CRYPTO_CATS = new Set(['crypto-coin']);
   const _MARKET_CATS = new Set(['prediction-markets','politics','sports','entertainment','finance','tech']);
 
   function _applyFilters(resetPage = true) {

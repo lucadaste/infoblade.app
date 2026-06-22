@@ -21,7 +21,7 @@ function _setCors(res) {
 // Map prediction categories to the 3 public-facing sections
 const _SECTION_CATS = {
   stocks:              new Set(['any','technology','macro','energy','financials','precious-metals','real-estate','consumer','healthcare','defense','etfs','stock']),
-  crypto:              new Set(['crypto']),
+  crypto:              new Set(['crypto-coin']),
   'prediction-markets': new Set(['prediction-markets','politics','sports','entertainment','finance','tech']),
 };
 const _SECTION_LABELS = { stocks: 'Stock Markets', crypto: 'Crypto', 'prediction-markets': 'Prediction Markets' };
@@ -333,20 +333,51 @@ async function handleResolve(req, res, supabase) {
     } catch (_) { /* skip on network error, retry next pass */ }
   }
 
-  // ── 8. Retroactive crypto category fix ───────────────────────────────────
-  // Crypto predictions saved before category:'crypto' was added to crypto.html
-  // were stored with category=null. Fix them so they appear under Crypto section stats.
+  // ── 8. Retroactive crypto-coin category fix ──────────────────────────────
+  // Predictions from crypto.html are saved with category=null (POST bodies never
+  // included a category). Identify them by coin-only tickers and fix to 'crypto-coin'
+  // so they appear under the Crypto filter — separate from feed.html's crypto-sector
+  // stock predictions which stay as category='crypto' (shown under Stocks).
   {
-    const cryptoRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|crypto(?:currency)?|defi|blockchain|altcoin|coinbase.*price|coin.*price|nft market)\b/i;
+    const COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND']);
+    const cryptoCoinRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|crypto(?:currency)?|defi|blockchain|altcoin|nft market)\b/i;
+
+    // Fix null-category predictions that came from crypto.html (coin topics)
     const { data: uncat } = await supabase
       .from('predictions')
-      .select('id, topic')
+      .select('id, topic, winner_tickers, loser_tickers')
       .is('category', null)
       .limit(1000);
-    const cryptoIds = (uncat || []).filter(p => cryptoRx.test(p.topic || '')).map(p => p.id);
-    if (cryptoIds.length) {
-      for (let i = 0; i < cryptoIds.length; i += 50) {
-        await supabase.from('predictions').update({ category: 'crypto' }).in('id', cryptoIds.slice(i, i + 50));
+
+    const isCoinPred = (p) => {
+      const all = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
+      if (!all.length) return cryptoCoinRx.test(p.topic || '');
+      return all.every(t => COIN_SYMS.has(t.toUpperCase()));
+    };
+
+    const coinIds = (uncat || []).filter(isCoinPred).map(p => p.id);
+    if (coinIds.length) {
+      for (let i = 0; i < coinIds.length; i += 50) {
+        await supabase.from('predictions').update({ category: 'crypto-coin' }).in('id', coinIds.slice(i, i + 50));
+      }
+    }
+
+    // Migrate existing category='crypto' predictions that are actually coin predictions
+    // (saved before we differentiated — identified by having only coin-symbol tickers)
+    const { data: oldCrypto } = await supabase
+      .from('predictions')
+      .select('id, winner_tickers, loser_tickers')
+      .eq('category', 'crypto')
+      .limit(1000);
+
+    const migrateIds = (oldCrypto || []).filter(p => {
+      const all = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
+      return all.length > 0 && all.every(t => COIN_SYMS.has(t.toUpperCase()));
+    }).map(p => p.id);
+
+    if (migrateIds.length) {
+      for (let i = 0; i < migrateIds.length; i += 50) {
+        await supabase.from('predictions').update({ category: 'crypto-coin' }).in('id', migrateIds.slice(i, i + 50));
       }
     }
   }
