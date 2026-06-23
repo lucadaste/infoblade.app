@@ -185,6 +185,28 @@ async def ingest_and_score(
     return {**ingest_result, "scoring": "started in background"}
 
 
+@app.post("/ingest-trending")
+async def ingest_trending(background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+    """
+    Fetch StockTwits trending symbols and ingest posts for all of them.
+    Covers whatever is being discussed right now — no manual ticker list needed.
+    """
+    trending = await st.fetch_trending_symbols(limit=30)
+    base = [t.strip().upper() for t in os.getenv("TRACKED_TICKERS", "").split(",") if t.strip()]
+    all_tickers = list(dict.fromkeys(base + trending))
+
+    results = []
+    for ticker in all_tickers:
+        try:
+            result = await ingest_ticker(ticker, pages=1, db=db)
+            background_tasks.add_task(_background_score, ticker, 30)
+            results.append({"ticker": ticker, "fetched": result["fetched"], "new": result["new"]})
+        except Exception:
+            logger.exception("Failed to ingest %s", ticker)
+
+    return {"tickers_processed": len(all_tickers), "tickers": results}
+
+
 # ── Step 3: account accuracy scoring ──────────────────────────────────────────
 
 @app.post("/run-accuracy-scoring")

@@ -78,6 +78,32 @@ async def fetch_ticker_posts_paginated(ticker: str, pages: int = 3) -> list[dict
     return all_posts
 
 
+async def fetch_trending_symbols(limit: int = 30) -> list[str]:
+    """
+    Fetch currently trending symbols from StockTwits.
+    Returns up to `limit` ticker strings, e.g. ["AAPL", "GME", "NVDA", ...].
+    Covers whatever is being actively discussed — including small caps and
+    obscure tickers — without needing a manually maintained list.
+    """
+    url = f"{_BASE}/trending/symbols.json"
+    params = {**_auth_params()}
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, params=params)
+    except httpx.RequestError as exc:
+        logger.error("StockTwits trending request failed: %s", exc)
+        return []
+
+    if resp.status_code == 200:
+        data = resp.json()
+        symbols = data.get("symbols", [])
+        return [s["symbol"] for s in symbols[:limit] if s.get("symbol")]
+
+    logger.error("StockTwits trending API returned %d", resp.status_code)
+    return []
+
+
 def _parse(messages: list, ticker: str) -> list[dict]:
     posts = []
     for msg in messages:

@@ -23,20 +23,39 @@ from . import scorer, whitelist, stocktwits, finbert
 logger = logging.getLogger(__name__)
 
 
-def _tracked_tickers() -> list[str]:
-    """Tickers to auto-ingest. Configurable via TRACKED_TICKERS env var."""
-    raw = os.getenv("TRACKED_TICKERS", "AAPL,TSLA,NVDA,MSFT,AMZN,GOOGL,META,AMD")
+def _base_tickers() -> list[str]:
+    """Optional fixed tickers from env var (can be empty)."""
+    raw = os.getenv("TRACKED_TICKERS", "")
     return [t.strip().upper() for t in raw.split(",") if t.strip()]
+
+
+async def _all_tickers() -> list[str]:
+    """
+    Combine trending symbols from StockTwits with any base tickers from env.
+    Trending covers everything being discussed right now — large caps, small caps,
+    meme stocks, obscure tickers — without needing a manual list.
+    Falls back to base tickers only if the trending call fails.
+    """
+    trending = await stocktwits.fetch_trending_symbols(limit=30)
+    base = _base_tickers()
+    # Deduplicate while preserving order: base first, then trending additions
+    seen: set[str] = set()
+    combined = []
+    for t in base + trending:
+        if t not in seen:
+            seen.add(t)
+            combined.append(t)
+    return combined or ["AAPL", "TSLA", "NVDA", "MSFT"]  # hard fallback
 
 
 # ── Job implementations ────────────────────────────────────────────────────────
 
 async def _ingest_and_score_job() -> None:
-    """Fetch new posts for all tracked tickers and run FinBERT on unscored ones."""
+    """Fetch new posts for all trending tickers and run FinBERT on unscored ones."""
     from sqlalchemy import and_, select
     from .models import Tweet
 
-    tickers = _tracked_tickers()
+    tickers = await _all_tickers()
     logger.info("Scheduled ingest starting for %d tickers", len(tickers))
 
     async with AsyncSessionLocal() as db:
