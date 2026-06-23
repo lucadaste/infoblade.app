@@ -933,34 +933,16 @@
       const mySession = ++stockAnalysisSession;
       const content = document.getElementById('sap-content');
       content.innerHTML = _lw(LW_STOCK, '32px 0');
-      const sector    = stockSector;
       const timeframe = 'today';
       const impact    = stockImpact;
       try {
-        let groups = null;
-        try {
-          const cacheKey = `ii_feed_v1_${sector}_${timeframe}_${impact}`;
-          const cached = sessionStorage.getItem(cacheKey);
-          if (cached) {
-            const { ts, results } = JSON.parse(cached);
-            if (Date.now() - ts < 10 * 60 * 1000) groups = results.map(r => r.group);
-          }
-        } catch(e) {}
-        if (!groups) {
-          const res = await fetch(`/api/analyze?category=${encodeURIComponent(sector)}&timeframe=${encodeURIComponent(timeframe)}`);
-          if (stockAnalysisSession !== mySession) return;
-          const data = await res.json();
-          if (data.error) throw new Error(data.error);
-          groups = data.groups || [];
-        }
+        const res = await fetch(`/api/analyze?stock=${encodeURIComponent(ticker)}&stockName=${encodeURIComponent(name)}&timeframe=${encodeURIComponent(timeframe)}`);
         if (stockAnalysisSession !== mySession) return;
-        const nameFirst = name.split(' ')[0].toLowerCase();
-        const relevant = groups.filter(g => {
-          const text = [g.topic, ...(g.headlines || [])].join(' ').toLowerCase();
-          return text.includes(ticker.toLowerCase()) || text.includes(nameFirst);
-        });
-        const toAnalyze = relevant.length > 0 ? relevant : groups.slice(0, 5);
-        renderStockGroupsAndAnalyze(ticker, name, toAnalyze, mySession, impact);
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const groups = data.groups || [];
+        if (stockAnalysisSession !== mySession) return;
+        renderStockGroupsAndAnalyze(ticker, name, groups, mySession, impact);
       } catch(err) {
         if (stockAnalysisSession !== mySession) return;
         content.innerHTML = `<div style="color:#ff7070;font-size:13px;padding:16px 0">Failed to load news: ${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>`;
