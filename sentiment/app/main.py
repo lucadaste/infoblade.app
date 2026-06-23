@@ -5,12 +5,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .database import Base, engine, get_db
+from .database import AsyncSessionLocal, Base, engine, get_db
 from .models import Tweet
 from . import stocktwits as st
 from . import finbert
@@ -160,16 +160,29 @@ async def score_ticker(
     return {"ticker": ticker, "scored": len(tweets), "remaining_unscored": remaining}
 
 
+async def _background_score(ticker: str, limit: int) -> None:
+    """Run FinBERT scoring in the background after ingest returns."""
+    try:
+        async with AsyncSessionLocal() as db:
+            await score_ticker(ticker, limit=limit, db=db)
+    except Exception:
+        logger.exception("Background scoring failed for %s", ticker)
+
+
 @app.post("/ingest-and-score/{ticker}")
 async def ingest_and_score(
     ticker: str,
+    background_tasks: BackgroundTasks,
     pages: int = Query(default=1, ge=1, le=5),
     db: AsyncSession = Depends(get_db),
 ):
-    """Convenience endpoint: fetch new posts then immediately score them."""
+    """
+    Fetch new posts then kick off FinBERT scoring as a background task.
+    Returns immediately after ingest; scoring runs in the background.
+    """
     ingest_result = await ingest_ticker(ticker, pages=pages, db=db)
-    score_result = await score_ticker(ticker, limit=pages * 30, db=db)
-    return {**ingest_result, **score_result}
+    background_tasks.add_task(_background_score, ticker, pages * 30)
+    return {**ingest_result, "scoring": "started in background"}
 
 
 # ── Step 3: account accuracy scoring ──────────────────────────────────────────
