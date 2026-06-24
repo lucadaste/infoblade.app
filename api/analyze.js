@@ -1244,7 +1244,7 @@ Respond ONLY with valid JSON, no markdown:
       const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
       const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
 
-      let saveResult = { saved: false };
+      let saveResult = { saved: false, error: supabase ? null : 'supabase_null' };
       if (supabase) {
         saveResult = await _savePrediction(supabase, {
           id:              predictionId,
