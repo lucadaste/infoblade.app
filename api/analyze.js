@@ -1090,7 +1090,9 @@ Respond ONLY with valid JSON, no markdown:
     if (supabase) {
       try {
         const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
-        const cacheQuery = supabase
+        // Supabase builder is immutable — each method returns a new object.
+        // Must reassign to add conditional filters.
+        let cacheQuery = supabase
           .from('predictions')
           .select('id, analysis, winner_tickers, loser_tickers')
           .eq('topic', topic)
@@ -1098,7 +1100,7 @@ Respond ONLY with valid JSON, no markdown:
           .not('analysis', 'is', null)
           .order('created_at', { ascending: false })
           .limit(1);
-        if (category) cacheQuery.eq('category', category);
+        if (category) cacheQuery = cacheQuery.eq('category', category);
         const { data: cached } = await cacheQuery.maybeSingle();
         if (cached?.analysis?.direction) {
           const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
