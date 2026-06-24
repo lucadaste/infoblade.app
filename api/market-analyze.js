@@ -114,6 +114,20 @@ export default async function handler(req, res) {
     ? Math.round(rawOdds)
     : undefined;
 
+  // If market is already trading at extreme odds it's effectively resolved — skip analysis
+  if (currentOdds !== undefined && (currentOdds >= 93 || currentOdds <= 7)) {
+    return res.status(200).json({
+      lean: 'Uncertain',
+      lean_confidence: 'Low',
+      reasoning: `The market is already trading at ${currentOdds}% — the crowd has essentially decided this outcome. There is no meaningful prediction to make.`,
+      key_sources: [],
+      signal: 'Inconclusive',
+      signal_detail: 'Market odds indicate the outcome is already near-certain.',
+      articlesFound: 0,
+      predictionSaved: false,
+    });
+  }
+
   // ── Response cache: same question analyzed in the last 15 minutes ──────────
   // (shorter than analyze.js's 2hr window — PM odds/news move faster)
   if (supabase) {
@@ -219,11 +233,13 @@ ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}]`).jo
 ${redditSection}${trackRecordSection}
 Weight news sources by grade (High > Medium > Low). Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
 
-Consider: official statements, confirmed facts, injury reports, results, direct reporting. If the question may already be resolved, note that.
+Consider: official statements, confirmed facts, injury reports, results, direct reporting.
+
+ALREADY RESOLVED: If the news or your knowledge clearly shows this event has already happened and the outcome is known (a game was played, a vote occurred, an elimination already happened), set lean to "Uncertain" and explain in reasoning that the event is already resolved. Do NOT predict past events. Only predict genuinely uncertain future outcomes.
 
 TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section above shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
-DIRECTION COMMITMENT: Reserve "Uncertain" only for true deadlock — when credible sources split almost evenly AND crowd odds are within 5% of 50/50 AND your domain knowledge offers no tiebreaker. If the news has ANY directional tilt (even slight), commit to Yes or No with the appropriate confidence level. "Uncertain" should be rare (under 15% of calls). Most questions have a most-likely outcome even with limited information — use your knowledge of the domain, recent trends, and the question context to call it.
+DIRECTION COMMITMENT: For genuinely future uncertain events, reserve "Uncertain" only for true deadlock — when credible sources split almost evenly AND crowd odds are within 5% of 50/50 AND your domain knowledge offers no tiebreaker. If the news has ANY directional tilt (even slight), commit to Yes or No. "Uncertain" should be rare for future events.
 
 Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend. Do NOT use em dashes (—) anywhere in your response; use commas, colons, or periods instead.
 

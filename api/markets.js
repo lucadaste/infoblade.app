@@ -152,9 +152,10 @@ export default async function handler(req, res) {
       } catch (_) {}
 
       if (yesPrice === null || isNaN(yesPrice)) return null;
-      // Toss-up filter only applies to category browsing — search results show
-      // any matching market regardless of odds, since the user has specific intent.
-      if (!isSearch && (yesPrice < 20 || yesPrice > 80)) return null;
+      // Toss-up filter: exclude near-certain markets (already resolved or essentially
+      // decided). Search bypasses this since the user has specific intent.
+      // Tighter than 20-80 to avoid markets that have already effectively settled.
+      if (!isSearch && (yesPrice < 15 || yesPrice > 85)) return null;
       const volume24h = Math.round(parseFloat(event.volume24hr || 0));
       const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
