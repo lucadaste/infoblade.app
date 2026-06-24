@@ -1246,7 +1246,7 @@ Respond ONLY with valid JSON, no markdown:
 
       let saveResult = { saved: false, error: supabase ? null : 'supabase_null' };
       if (supabase) {
-        saveResult = await _savePrediction(supabase, {
+        const record = {
           id:              predictionId,
           topic,
           category:        category || null,
@@ -1260,8 +1260,11 @@ Respond ONLY with valid JSON, no markdown:
           sources,
           source_grades:   sourceGrades,
           min_grade:       minGrade,
-          user_id:         userId,
-        });
+        };
+        // user_id requires schema cache reload in Supabase after ALTER TABLE —
+        // only include when set to avoid "column not found" errors in schema cache.
+        if (userId) record.user_id = userId;
+        saveResult = await _savePrediction(supabase, record);
       } else {
         console.warn('[analyze POST] Supabase not available — prediction not saved');
       }
