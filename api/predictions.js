@@ -450,6 +450,20 @@ async function handleResolve(req, res, supabase) {
     }
   }
 
+  // ── Cleanup: delete junk predictions (topic too short to be meaningful) ────
+  try {
+    const { data: junk } = await supabase
+      .from('predictions')
+      .select('id, topic')
+      .filter('topic', 'not.is', null);
+    const junkIds = (junk || []).filter(p => (p.topic || '').trim().length < 15).map(p => p.id);
+    if (junkIds.length) {
+      for (let i = 0; i < junkIds.length; i += 50) {
+        await supabase.from('predictions').delete().in('id', junkIds.slice(i, i + 50));
+      }
+    }
+  } catch (_) {}
+
   return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length, pmChecked: pmReady.length });
 }
 

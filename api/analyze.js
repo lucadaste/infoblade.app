@@ -1087,7 +1087,7 @@ Respond ONLY with valid JSON, no markdown:
     const impactTimeframe = _sanitize(rawTimeframe, 80);
     const category        = _sanitize(rawCategory, 50);
 
-    if (!topic) return res.status(400).json({ error: 'No topic provided' });
+    if (!topic || topic.length < 15) return res.status(400).json({ error: 'Topic too short or missing' });
 
     // ── Response cache: return saved analysis if same topic was generated recently ──
     if (supabase) {
