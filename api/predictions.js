@@ -520,26 +520,37 @@ async function handleStats(req, res, supabase) {
   ).length;
   const displayAccuracy = total >= 5 ? Math.round(lenientCorrect / total * 100) : null;
 
-  // Fetch all resolved predictions (up to 500 covers full history) + recent pending separately
-  // so that filtering "Correct" or "Incorrect" in the UI shows the full dataset, not just
-  // the most recent 50 by creation date (which are almost all pending).
-  const [{ data: resolvedAll, error: rErr }, { data: pendingRecent }] = await Promise.all([
+  // Fetch resolved + pending predictions. Also always include prediction-market
+  // predictions (have lean/signal) so they're never pushed off the list by
+  // high-volume stock/crypto pending predictions.
+  const PRED_SELECT = 'id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal';
+  const [{ data: resolvedAll, error: rErr }, { data: pendingRecent }, { data: pmPreds }] = await Promise.all([
     supabase
       .from('predictions')
-      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal')
+      .select(PRED_SELECT)
       .not('correct', 'is', null)
       .order('created_at', { ascending: false })
       .limit(500),
     supabase
       .from('predictions')
-      .select('id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal')
+      .select(PRED_SELECT)
       .is('correct', null)
       .order('created_at', { ascending: false })
-      .limit(50),
+      .limit(200),
+    supabase
+      .from('predictions')
+      .select(PRED_SELECT)
+      .not('lean', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(100),
   ]);
   if (rErr) throw rErr;
-  // Resolved first (sorted newest-first), then pending at the top since they're active
-  const recent = [...(pendingRecent || []), ...(resolvedAll || [])];
+  // Merge: PM predictions always present, deduped by id, pending first then resolved
+  const seenIds = new Set();
+  const recent = [];
+  for (const p of [...(pmPreds || []), ...(pendingRecent || []), ...(resolvedAll || [])]) {
+    if (!seenIds.has(p.id)) { seenIds.add(p.id); recent.push(p); }
+  }
 
   const byMonth = {};
   for (const p of validated ?? []) {

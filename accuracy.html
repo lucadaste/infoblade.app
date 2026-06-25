@@ -339,7 +339,13 @@
     // Category badge
     const _CAT_BADGE = { 'crypto-coin':'Crypto', crypto:'Stocks', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
-    const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,0.05);color:#444;letter-spacing:0.5px;text-transform:uppercase">${catLabel}</span>`;
+    const _BADGE_STYLE = {
+      'Crypto':  'background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)',
+      'Markets': 'background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3)',
+      'Stocks':  'background:rgba(156,163,175,0.12);color:#9ca3af;border:1px solid rgba(156,163,175,0.25)',
+    };
+    const badgeStyle = _BADGE_STYLE[catLabel] || _BADGE_STYLE['Stocks'];
+    const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:2px 7px;border-radius:4px;${badgeStyle};letter-spacing:0.5px;text-transform:uppercase;font-weight:600">${catLabel}</span>`;
 
     const gradeHtml = p.grade
       ? `<div class="grade-badge grade-${esc(p.grade)}">${esc(p.grade)}</div>`
