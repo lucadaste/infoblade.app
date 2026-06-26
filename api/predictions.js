@@ -278,20 +278,23 @@ async function handleResolve(req, res, supabase) {
   }
 
   // ── 7. Prediction market resolution (Polymarket) ─────────────────────────
+  // Check ALL unresolved PM predictions — Polymarket's closed/resolved flags are
+  // the source of truth. Don't gate on validation_date: markets resolve as soon
+  // as the outcome is known (e.g. MVP awarded before series ends), not on the
+  // scheduled market close date.
   const pmReady = all.filter(p => {
     if (p.correct !== null) return false;
     const lean = p.lean || p.analysis?.lean;
-    if (lean !== 'Yes' && lean !== 'No') return false;
-    const vDate = p.validation_date ? new Date(p.validation_date) : null;
-    const ageMs = nowMs - new Date(p.created_at).getTime();
-    return vDate ? vDate.getTime() <= nowMs : ageMs > 30 * 86400000;
+    return lean === 'Yes' || lean === 'No';
   });
+
+  const pmResolvedIds = new Set(); // track IDs graded in this step so step 9 can skip them
 
   for (const pred of pmReady) {
     const lean     = pred.lean || pred.analysis?.lean;
     const confStr  = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
     const slug     = pred.market_slug;
-    if (!slug) continue; // can't look up without a slug
+    if (!slug) continue; // no slug — handled by step 9 fuzzy matching
 
     try {
       const r = await fetch(
@@ -332,7 +335,7 @@ async function handleResolve(req, res, supabase) {
           },
         })
         .eq('id', pred.id);
-      if (!pmErr) resolved++;
+      if (!pmErr) { resolved++; pmResolvedIds.add(pred.id); }
     } catch (_) { /* skip on network error, retry next pass */ }
   }
 
@@ -362,11 +365,11 @@ async function handleResolve(req, res, supabase) {
   }
 
   // ── 9. Retroactive PM grading via Polymarket text search ─────────────────
-  // For PM predictions stored without a market_slug (before we fixed the slug storage),
-  // attempt fuzzy word-overlap matching against recently-closed Polymarket events.
+  // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
+  // lookup in step 7 failed (stale/wrong slug). Acts as a universal fallback.
   {
     const pmNoSlug = all.filter(p =>
-      (p.lean || p.analysis?.lean) && !p.market_slug && p.correct === null
+      (p.lean || p.analysis?.lean) && p.correct === null && !pmResolvedIds.has(p.id)
     );
 
     if (pmNoSlug.length > 0) {
