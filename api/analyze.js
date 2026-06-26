@@ -58,6 +58,8 @@ function _sanitizeObject(obj, maxKeys = 40, keyMax = 100, valMax = 20) {
   return result;
 }
 
+const _COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND','MATIC','BNB','TRX','TON','RENDER','INJ','WIF','BONK','JUP','PYTH']);
+
 // ── Timeframe parsing ─────────────────────────────────────────────────────────
 function _parseTimeframeDays(str) {
   if (!str) return 30;
@@ -1196,7 +1198,7 @@ TIMEFRAME LENS: ${timeframeGuidance}
 CRITICAL RULES:
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
 ${category === 'crypto-coin'
-  ? `- CRYPTO TICKERS: This is a direct crypto coin analysis. You MUST include the coin being analyzed (e.g., BTC for Bitcoin, ETH for Ethereum, SOL for Solana) as the FIRST ticker in winners (if bullish) or losers (if bearish). Use only the raw coin symbol (BTC, ETH, SOL, DOGE, XRP, ADA, AVAX, LINK, DOT, NEAR, ATOM, etc.). You may also include relevant US-listed stocks or ETFs (MSTR, COIN, IBIT, MARA, RIOT, etc.) after the coin as secondary instruments.
+  ? `- CRYPTO TICKERS: This is a direct crypto coin analysis for ONE specific coin. You MUST include ONLY that single coin symbol (e.g., BTC for Bitcoin, ETH for Ethereum, SOL for Solana) in winners or losers. Do NOT include any US-listed stocks or ETFs (no MSTR, COIN, IBIT, MARA, RIOT, etc.) — only the raw coin symbol itself.
 - Sectors can be crypto-market sectors (Layer 1, DeFi, Exchange, Mining, ETF).`
   : `- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
@@ -1242,8 +1244,9 @@ Respond ONLY with valid JSON, no markdown:
       }
 
       const predictionId    = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-      const winnerTickers   = analysis.winners?.tickers || [];
-      const loserTickers    = analysis.losers?.tickers  || [];
+      const _coinOnly = (tickers) => category === 'crypto-coin' ? tickers.filter(t => _COIN_SYMS.has(t)) : tickers;
+      const winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
+      const loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
       const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
 
       // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
