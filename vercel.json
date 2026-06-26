@@ -1,6 +1,10 @@
 {
   "buildCommand": "bash scripts/build-www.sh",
   "outputDirectory": "www",
+  "redirects": [
+    { "source": "/predictions", "destination": "/accuracy.html", "permanent": true },
+    { "source": "/predictions.html", "destination": "/accuracy.html", "permanent": true }
+  ],
   "functions": {
     "api/predictions.js": { "maxDuration": 60 },
     "api/validate.js":    { "maxDuration": 60 }
