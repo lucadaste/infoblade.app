@@ -62,8 +62,17 @@ function _sanitizeObject(obj, maxKeys = 40, keyMax = 100, valMax = 20) {
 function _parseTimeframeDays(str) {
   if (!str) return 30;
   const s = str.toLowerCase();
-  if (s.includes('48 hour') || (s.includes('2') && s.includes('day'))) return 2;
   const MAX_DAYS = 730;
+  if (s.includes('hour')) {
+    const h = s.match(/(\d+)/);
+    return Math.max(1, Math.round((h ? +h[1] : 24) / 24));
+  }
+  if (s.includes('day')) {
+    const range = s.match(/(\d+)[^\d]+(\d+)\s*day/);
+    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2), MAX_DAYS);
+    const single = s.match(/(\d+)\s*day/);
+    return Math.min(single ? +single[1] : 7, MAX_DAYS);
+  }
   if (s.includes('week')) {
     const range = s.match(/(\d+)[^\d]+(\d+)\s*week/);
     if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 7, MAX_DAYS);
@@ -1254,7 +1263,7 @@ Respond ONLY with valid JSON, no markdown:
           winner_tickers:  winnerTickers,
           loser_tickers:   loserTickers,
           baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
-          validation_date: new Date(Date.now() + _parseTimeframeDays(analysis.impact_timeframe || impactTimeframe) * 86400000).toISOString(),
+          validation_date: new Date(Date.now() + _parseTimeframeDays(category === 'crypto-coin' && impactTimeframe ? impactTimeframe : (analysis.impact_timeframe || impactTimeframe)) * 86400000).toISOString(),
           correct:         null,
           notes:           null,
           sources,

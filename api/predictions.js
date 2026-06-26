@@ -360,31 +360,6 @@ async function handleResolve(req, res, supabase) {
     } catch (_) { /* skip on network error, retry next pass */ }
   }
 
-  // ── 8. Retroactive crypto-coin category fix ──────────────────────────────
-  // New predictions from crypto.html are saved with category='crypto-coin'.
-  // Old ones (before the fix) were saved with category=null and no tickers
-  // (if Claude had no ticker candidates). Mark those as 'crypto-coin' via topic regex.
-  {
-    const cryptoCoinRx = /\b(bitcoin|ethereum|solana|avalanche|cardano|polkadot|dogecoin|ripple|\bbtc\b|\beth\b|\bbnb\b|\bxrp\b|\bsol\b|cryptocurrency market outlook|net price direction verdict)\b/i;
-
-    const { data: uncat } = await supabase
-      .from('predictions')
-      .select('id, topic, winner_tickers, loser_tickers')
-      .is('category', null)
-      .limit(1000);
-
-    const coinIds = (uncat || []).filter(p => {
-      const all = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
-      return all.length === 0 && cryptoCoinRx.test(p.topic || '');
-    }).map(p => p.id);
-
-    if (coinIds.length) {
-      for (let i = 0; i < coinIds.length; i += 50) {
-        await supabase.from('predictions').update({ category: 'crypto-coin' }).in('id', coinIds.slice(i, i + 50));
-      }
-    }
-  }
-
   // ── 9. Retroactive PM grading via Polymarket text search ─────────────────
   // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
   // lookup in step 7 failed (stale/wrong slug). Acts as a universal fallback.

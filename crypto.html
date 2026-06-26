@@ -404,10 +404,10 @@
     ];
 
     const TIMEFRAMES = {
-      '24h': { context: 'over the next 24 hours',  apiParam: 'today'  },
-      '1w':  { context: 'over the next 1-7 days',  apiParam: '7days'  },
-      '1m':  { context: 'over the next 30 days',   apiParam: 'any'    },
-      '3m':  { context: 'over the next 3 months',  apiParam: 'any'    },
+      '24h': { context: 'over the next 24 hours',  apiParam: 'today',  validationTimeframe: '1 day'    },
+      '1w':  { context: 'over the next 1-7 days',  apiParam: '7days',  validationTimeframe: '7 days'   },
+      '1m':  { context: 'over the next 30 days',   apiParam: 'any',    validationTimeframe: '30 days'  },
+      '3m':  { context: 'over the next 3 months',  apiParam: 'any',    validationTimeframe: '90 days'  },
     };
 
     let priceCache = {};
@@ -676,7 +676,8 @@
             sources: allSources,
             sourceGrades: mergedGrades,
             minGrade: 'medium',
-            category: 'crypto-coin'
+            category: 'crypto-coin',
+            timeframe: tf.validationTimeframe
           })
         });
         if (renderSession !== mySession) return;
@@ -714,7 +715,8 @@
             sources: group.sources || [],
             sourceGrades: group.sourceGrades || {},
             minGrade: 'medium',
-            category: 'crypto-coin'
+            category: 'crypto-coin',
+            timeframe: tf.validationTimeframe
           })
         });
         if (renderSession !== mySession) return;
@@ -757,7 +759,8 @@
           headers: _ah(),
           body: JSON.stringify({
             topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
-            headlines: [], sources: [], sourceGrades: {}, minGrade: 'all', category: 'crypto'
+            headlines: [], sources: [], sourceGrades: {}, minGrade: 'all', category: 'crypto-coin',
+            timeframe: tf.validationTimeframe
           })
         });
         if (renderSession !== mySession) return;
