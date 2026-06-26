@@ -305,8 +305,12 @@ async function handleResolve(req, res, supabase) {
       const events = await r.json();
       const event  = Array.isArray(events) ? events[0] : events;
       if (!event?.closed) continue;
-      const market = (event.markets || [])[0];
-      if (!market?.resolved) continue;
+      // Use the highest-volume market as primary (multi-outcome events have many markets)
+      const allMarkets = event.markets || [];
+      const market = allMarkets.length === 1
+        ? allMarkets[0]
+        : [...allMarkets].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
+      if (!market) continue;
 
       let prices;
       try { prices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices; }
@@ -314,7 +318,10 @@ async function handleResolve(req, res, supabase) {
       if (!Array.isArray(prices) || prices.length < 2) continue;
 
       const yesPrice = parseFloat(prices[0]);
-      const outcome  = yesPrice >= 0.99 ? 'Yes' : yesPrice <= 0.01 ? 'No' : null;
+      // Accept official resolution (99%) OR overwhelmingly clear closed-market prices (97%).
+      // Polymarket often delays formal resolution days after the outcome is determined;
+      // prices at 97%+ on a closed market are effectively certain.
+      const outcome  = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
       if (!outcome) continue;
 
       const leanCorrect = lean === outcome;
@@ -326,12 +333,14 @@ async function handleResolve(req, res, supabase) {
       const { error: pmErr } = await supabase
         .from('predictions')
         .update({
-          correct:      accuracyScore > 0,
-          validated_at: nowStr,
-          analysis:     {
+          correct:         accuracyScore > 0,
+          validated_at:    nowStr,
+          validation_date: nowStr, // stamp actual grade time, not stale market close date
+          analysis:        {
             ...(pred.analysis || {}),
             grade: pmGrade, score: accuracyScore, accuracy_score: accuracyScore,
             resolved_outcome: outcome, lean_was: lean,
+            officially_resolved: market.resolved ?? false,
           },
         })
         .eq('id', pred.id);
@@ -373,11 +382,14 @@ async function handleResolve(req, res, supabase) {
     );
 
     if (pmNoSlug.length > 0) {
-      // Fetch recently closed Polymarket events
+      // Fetch recently closed Polymarket events (recent 12 months).
+      // The plain closed=true endpoint only returns old 2021-2023 data; end_date_min
+      // is required to get recent markets.
+      const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
       let closedEvents = [];
       try {
         const r = await fetch(
-          'https://gamma-api.polymarket.com/events?closed=true&limit=500&order=end_date&ascending=false',
+          `https://gamma-api.polymarket.com/events?closed=true&limit=500&end_date_min=${oneYearAgo}`,
           { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) }
         );
         if (r.ok) closedEvents = await r.json();
@@ -410,8 +422,11 @@ async function handleResolve(req, res, supabase) {
         // Require 55% word overlap to avoid false matches
         if (bestScore < 0.55 || !bestEvent) continue;
 
-        const market = (bestEvent.markets || [])[0];
-        if (!market?.resolved) continue;
+        const allMkts = bestEvent.markets || [];
+        const market = allMkts.length === 1
+          ? allMkts[0]
+          : [...allMkts].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
+        if (!market) continue;
 
         let prices;
         try {
@@ -421,7 +436,7 @@ async function handleResolve(req, res, supabase) {
         if (!Array.isArray(prices) || prices.length < 2) continue;
 
         const yesPrice = parseFloat(prices[0]);
-        const outcome = yesPrice >= 0.99 ? 'Yes' : yesPrice <= 0.01 ? 'No' : null;
+        const outcome = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
         if (!outcome) continue;
 
         const lean      = pred.lean || pred.analysis?.lean;
@@ -434,9 +449,10 @@ async function handleResolve(req, res, supabase) {
         const { error: pmErr2 } = await supabase
           .from('predictions')
           .update({
-            correct:      accScore > 0,
-            validated_at: nowStr,
-            market_slug:  bestEvent.slug || null,
+            correct:         accScore > 0,
+            validated_at:    nowStr,
+            validation_date: nowStr,
+            market_slug:     bestEvent.slug || null,
             analysis: {
               ...(pred.analysis || {}),
               grade: _letterGrade(accScore),
