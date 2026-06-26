@@ -389,7 +389,27 @@ async function handleResolve(req, res, supabase) {
     }
   }
 
-  // ── 9. Retroactive PM grading via Polymarket text search ─────────────────
+  // ── 9. Delete crypto sub-event predictions saved before skipSave fix ────────
+  // autoAnalyzeGroup topics follow the pattern "…: impact on CoinName (SYM) over the next…"
+  // These were saved without skipSave:true before the fix; delete them so only
+  // the overall prediction per coin appears in the history.
+  {
+    const subEventRx = /: impact on [A-Z][a-zA-Z\s]+ \([A-Z]+\) over the next/i;
+    const { data: subEvents } = await supabase
+      .from('predictions')
+      .select('id, topic')
+      .eq('category', 'crypto-coin')
+      .limit(500);
+
+    const toDelete = (subEvents || []).filter(p => subEventRx.test(p.topic || '')).map(p => p.id);
+    if (toDelete.length) {
+      for (let i = 0; i < toDelete.length; i += 50) {
+        await supabase.from('predictions').delete().in('id', toDelete.slice(i, i + 50));
+      }
+    }
+  }
+
+  // ── 10. Retroactive PM grading via Polymarket text search ─────────────────
   // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
   // lookup in step 7 failed (stale/wrong slug). Acts as a universal fallback.
   {
