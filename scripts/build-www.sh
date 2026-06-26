@@ -13,6 +13,7 @@ mkdir -p "$WWW"
 cp "$ROOT"/*.html "$WWW"/
 
 # Client-side JS (not the api/ server routes)
+cp "$ROOT/shared.css"     "$WWW/"
 cp "$ROOT/api-base.js"    "$WWW/"
 cp "$ROOT/offline.js"     "$WWW/"
 cp "$ROOT/onboarding.js"  "$WWW/"
