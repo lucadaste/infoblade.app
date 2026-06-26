@@ -360,6 +360,35 @@ async function handleResolve(req, res, supabase) {
     } catch (_) { /* skip on network error, retry next pass */ }
   }
 
+  // ── 8. Clean up stock tickers from crypto-coin predictions ───────────────
+  // Existing records stored before the single-coin rule had MSTR, IBIT, MARA,
+  // RIOT, COIN, etc. mixed in alongside the coin. Strip them so only the coin
+  // symbol remains in winner_tickers, loser_tickers, and baseline_prices.
+  {
+    const { data: cryptoPreds } = await supabase
+      .from('predictions')
+      .select('id, winner_tickers, loser_tickers, baseline_prices')
+      .eq('category', 'crypto-coin')
+      .limit(500);
+
+    for (const p of cryptoPreds || []) {
+      const cleanWinners = (p.winner_tickers || []).filter(t => _COIN_SYMS.has(t));
+      const cleanLosers  = (p.loser_tickers  || []).filter(t => _COIN_SYMS.has(t));
+      const winnersClean = cleanWinners.length === (p.winner_tickers || []).length;
+      const losersClean  = cleanLosers.length  === (p.loser_tickers  || []).length;
+      if (winnersClean && losersClean) continue;
+
+      const cleanPrices = Object.fromEntries(
+        Object.entries(p.baseline_prices || {}).filter(([k]) => _COIN_SYMS.has(k))
+      );
+      await supabase.from('predictions').update({
+        winner_tickers:  cleanWinners,
+        loser_tickers:   cleanLosers,
+        baseline_prices: cleanPrices,
+      }).eq('id', p.id);
+    }
+  }
+
   // ── 9. Retroactive PM grading via Polymarket text search ─────────────────
   // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
   // lookup in step 7 failed (stale/wrong slug). Acts as a universal fallback.
