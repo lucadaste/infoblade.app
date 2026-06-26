@@ -545,12 +545,13 @@ async function handleStats(req, res, supabase) {
       .limit(100),
   ]);
   if (rErr) throw rErr;
-  // Merge: PM predictions always present, deduped by id, pending first then resolved
+  // Merge all three lists, dedupe by id, then sort newest-first
   const seenIds = new Set();
   const recent = [];
   for (const p of [...(pmPreds || []), ...(pendingRecent || []), ...(resolvedAll || [])]) {
     if (!seenIds.has(p.id)) { seenIds.add(p.id); recent.push(p); }
   }
+  recent.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
 
   const byMonth = {};
   for (const p of validated ?? []) {
