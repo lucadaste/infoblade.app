@@ -866,47 +866,6 @@ Respond ONLY with valid JSON, no markdown:
   return res.status(200).json({ graded, checked: pending.length, results });
 }
 
-// ── Admin fix: one-time grade corrections ─────────────────────────────────────
-
-async function handleAdminFix(req, res, supabase) {
-  if (req.method !== 'POST') return res.status(405).end();
-  // Simple token check — hardcoded for one-time use, removed after corrections applied
-  if (req.headers.authorization !== 'Bearer grade-fix-jun2026') return res.status(401).end();
-
-  const corrections = req.body?.corrections;
-  if (!Array.isArray(corrections)) return res.status(400).json({ error: 'corrections array required' });
-
-  const nowStr = new Date().toISOString();
-  const results = [];
-
-  for (const c of corrections) {
-    const { id, correct, score, grade, outcome, lean_was } = c;
-    if (!id || score == null) { results.push({ id, status: 'skipped' }); continue; }
-
-    const { data: existing } = await supabase.from('predictions').select('analysis').eq('id', id).maybeSingle();
-    const { error } = await supabase
-      .from('predictions')
-      .update({
-        correct,
-        validated_at: nowStr,
-        analysis: {
-          ...(existing?.analysis || {}),
-          grade,
-          score,
-          accuracy_score: score,
-          resolved_outcome: outcome,
-          lean_was,
-          graded_by: 'admin-fix',
-        },
-      })
-      .eq('id', id);
-
-    results.push({ id, status: error ? 'error' : 'updated', error: error?.message });
-  }
-
-  return res.status(200).json({ results });
-}
-
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -919,7 +878,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (req.query['admin-fix']  === 'true')          return await handleAdminFix(req, res, supabase);
     if (req.method === 'POST')                       return res.status(405).json({ error: 'Method not allowed' });
     if (req.query.resolve      === 'true')           return await handleResolve(req, res, supabase);
     if (req.query['news-grade'] === 'true')          return await handleNewsGrade(req, res, supabase);
