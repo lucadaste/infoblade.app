@@ -117,6 +117,18 @@ function _parseConfidenceStars(conf) {
   return m ? parseInt(m[1]) : 3;
 }
 
+// PM prediction grade/score/weight helpers.
+// Grade is binary (A=correct, F=incorrect) — confidence doesn't change the letter.
+// Weight (1/3/5) flows into the accuracy average: a less-confident correct call
+// moves the needle less than a high-confidence one.
+function _pmScore(correct)    { return correct ? 65 : -65; }
+function _pmGrade(correct)    { return correct ? 'A' : 'F'; }
+function _pmWeight(confStr)   {
+  if (confStr === 'High')   return 5;
+  if (confStr === 'Medium') return 3;
+  return 1;
+}
+
 function _letterGrade(score) {
   if (score >= 60)  return 'A';
   if (score >= 25)  return 'B';
@@ -324,21 +336,21 @@ async function handleResolve(req, res, supabase) {
       const outcome  = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
       if (!outcome) continue;
 
-      const leanCorrect = lean === outcome;
-      const baseScore   = leanCorrect ? 50 : -50;
-      const confBonus   = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
-      const accuracyScore = +(baseScore + (leanCorrect ? confBonus : -confBonus)).toFixed(1);
-      const pmGrade     = _letterGrade(accuracyScore);
+      const leanCorrect   = lean === outcome;
+      const accuracyScore = _pmScore(leanCorrect);
+      const pmGrade       = _pmGrade(leanCorrect);
+      const confWeight    = _pmWeight(confStr);
 
       const { error: pmErr } = await supabase
         .from('predictions')
         .update({
-          correct:         accuracyScore > 0,
+          correct:         leanCorrect,
           validated_at:    nowStr,
-          validation_date: nowStr, // stamp actual grade time, not stale market close date
+          validation_date: nowStr,
           analysis:        {
             ...(pred.analysis || {}),
             grade: pmGrade, score: accuracyScore, accuracy_score: accuracyScore,
+            confidence_weight: confWeight,
             resolved_outcome: outcome, lean_was: lean,
             officially_resolved: market.resolved ?? false,
           },
@@ -439,25 +451,25 @@ async function handleResolve(req, res, supabase) {
         const outcome = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
         if (!outcome) continue;
 
-        const lean      = pred.lean || pred.analysis?.lean;
-        const confStr   = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
-        const correct   = lean === outcome;
-        const baseScore = correct ? 50 : -50;
-        const confBonus = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
-        const accScore  = +(baseScore + (correct ? confBonus : -confBonus)).toFixed(1);
+        const lean        = pred.lean || pred.analysis?.lean;
+        const confStr     = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
+        const leanCorrect = lean === outcome;
+        const accScore    = _pmScore(leanCorrect);
+        const confWeight  = _pmWeight(confStr);
 
         const { error: pmErr2 } = await supabase
           .from('predictions')
           .update({
-            correct:         accScore > 0,
+            correct:         leanCorrect,
             validated_at:    nowStr,
             validation_date: nowStr,
             market_slug:     bestEvent.slug || null,
             analysis: {
               ...(pred.analysis || {}),
-              grade: _letterGrade(accScore),
+              grade: _pmGrade(leanCorrect),
               score: accScore,
               accuracy_score: accScore,
+              confidence_weight: confWeight,
               resolved_outcome: outcome,
               lean_was: lean,
               text_match_pct: Math.round(bestScore * 100),
@@ -737,8 +749,26 @@ async function handleNewsGrade(req, res, supabase) {
     const topic = pred.topic || '';
     if (topic.length < 5) continue;
 
+    // If we have a market slug, fetch the actual Polymarket market question so we know
+    // exactly what YES and NO mean. Without this, "Cavaliers vs. Knicks" is ambiguous.
+    let marketQuestion = topic;
+    if (pred.market_slug) {
+      try {
+        const pr = await fetch(
+          `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(pred.market_slug)}`,
+          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
+        );
+        if (pr.ok) {
+          const pEvents = await pr.json();
+          const pEvent  = Array.isArray(pEvents) ? pEvents[0] : pEvents;
+          const mkt     = (pEvent?.markets || [])[0];
+          if (mkt?.question) marketQuestion = mkt.question; // e.g. "Will the Cavaliers win Game 3?"
+        }
+      } catch (_) {}
+    }
+
     // Build search query: strip leading "Will" and trailing "?" then take first 8 words
-    const stripped  = topic.replace(/^Will\s+/i, '').replace(/\?$/, '').trim();
+    const stripped  = marketQuestion.replace(/^Will\s+/i, '').replace(/\?$/, '').trim();
     const searchQ   = stripped.split(/\s+/).slice(0, 8).join(' ');
 
     try {
@@ -765,12 +795,16 @@ async function handleNewsGrade(req, res, supabase) {
 
       if (articles.length < 2) continue; // not enough signal
 
-      const prompt = `Today is ${nowStr.slice(0, 10)}. A prediction was logged: "${topic}" (predicted: ${pred.lean})
+      const yesDefinition = marketQuestion !== topic
+        ? `\nIMPORTANT: The exact Polymarket question is: "${marketQuestion}"\nYES means that specific question resolves true. NO means it resolves false.`
+        : '';
+
+      const prompt = `Today is ${nowStr.slice(0, 10)}. A prediction market was analyzed: "${topic}" (AI predicted: ${pred.lean})${yesDefinition}
 
 Recent news (${articles.length} articles):
 ${articles.map(a => `- ${a}`).join('\n')}
 
-Has this prediction's outcome been definitively determined? Answer YES only if news explicitly confirms the event occurred (game played, award announced, series over, etc.). Do NOT speculate.
+Has the outcome been definitively determined? YES only if news explicitly confirms the event occurred. Map the real-world result to YES or NO using the exact market question above. Do NOT speculate.
 
 Respond ONLY with valid JSON, no markdown:
 {"outcome_known":true/false,"outcome":"Yes"/"No"/null,"confidence":"High"/"Medium"/"Low","confirmed_date":"YYYY-MM-DD"/null,"reasoning":"one sentence"}`;
@@ -791,14 +825,12 @@ Respond ONLY with valid JSON, no markdown:
       if (!assessment.outcome_known || (assessment.outcome !== 'Yes' && assessment.outcome !== 'No')) continue;
       if (assessment.confidence === 'Low') continue; // require at least Medium confidence
 
-      const lean      = pred.lean;
-      const correct   = lean === assessment.outcome;
-      const confStr   = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
-      const baseScore = correct ? 50 : -50;
-      const confBonus = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
-      const accScore  = +(baseScore + (correct ? confBonus : -confBonus)).toFixed(1);
+      const lean        = pred.lean;
+      const leanCorrect = lean === assessment.outcome;
+      const confStr     = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
+      const accScore    = _pmScore(leanCorrect);
+      const confWeight  = _pmWeight(confStr);
 
-      // Use the date Claude identified as when the outcome was confirmed, falling back to now
       let confirmedDate = nowStr;
       if (assessment.confirmed_date) {
         try { confirmedDate = new Date(assessment.confirmed_date).toISOString(); } catch (_) {}
@@ -807,14 +839,15 @@ Respond ONLY with valid JSON, no markdown:
       const { error: updateErr } = await supabase
         .from('predictions')
         .update({
-          correct:         accScore > 0,
+          correct:         leanCorrect,
           validated_at:    nowStr,
           validation_date: confirmedDate,
           analysis: {
             ...(pred.analysis || {}),
-            grade:             _letterGrade(accScore),
+            grade:             _pmGrade(leanCorrect),
             score:             accScore,
             accuracy_score:    accScore,
+            confidence_weight: confWeight,
             resolved_outcome:  assessment.outcome,
             lean_was:          lean,
             graded_by:         'news-scan',
@@ -833,6 +866,47 @@ Respond ONLY with valid JSON, no markdown:
   return res.status(200).json({ graded, checked: pending.length, results });
 }
 
+// ── Admin fix: one-time grade corrections ─────────────────────────────────────
+
+async function handleAdminFix(req, res, supabase) {
+  if (req.method !== 'POST') return res.status(405).end();
+  // Simple token check — hardcoded for one-time use, removed after corrections applied
+  if (req.headers.authorization !== 'Bearer grade-fix-jun2026') return res.status(401).end();
+
+  const corrections = req.body?.corrections;
+  if (!Array.isArray(corrections)) return res.status(400).json({ error: 'corrections array required' });
+
+  const nowStr = new Date().toISOString();
+  const results = [];
+
+  for (const c of corrections) {
+    const { id, correct, score, grade, outcome, lean_was } = c;
+    if (!id || score == null) { results.push({ id, status: 'skipped' }); continue; }
+
+    const { data: existing } = await supabase.from('predictions').select('analysis').eq('id', id).maybeSingle();
+    const { error } = await supabase
+      .from('predictions')
+      .update({
+        correct,
+        validated_at: nowStr,
+        analysis: {
+          ...(existing?.analysis || {}),
+          grade,
+          score,
+          accuracy_score: score,
+          resolved_outcome: outcome,
+          lean_was,
+          graded_by: 'admin-fix',
+        },
+      })
+      .eq('id', id);
+
+    results.push({ id, status: error ? 'error' : 'updated', error: error?.message });
+  }
+
+  return res.status(200).json({ results });
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -845,11 +919,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (req.method === 'POST')                      return res.status(405).json({ error: 'Method not allowed' });
-    if (req.query.resolve     === 'true')           return await handleResolve(req, res, supabase);
-    if (req.query['news-grade'] === 'true')         return await handleNewsGrade(req, res, supabase);
-    if (req.query.graph       === 'true')           return await handleGraph(req, res, supabase);
-    if (req.method === 'GET')                       return await handleStats(req, res, supabase);
+    if (req.query['admin-fix']  === 'true')          return await handleAdminFix(req, res, supabase);
+    if (req.method === 'POST')                       return res.status(405).json({ error: 'Method not allowed' });
+    if (req.query.resolve      === 'true')           return await handleResolve(req, res, supabase);
+    if (req.query['news-grade'] === 'true')          return await handleNewsGrade(req, res, supabase);
+    if (req.query.graph        === 'true')           return await handleGraph(req, res, supabase);
+    if (req.method === 'GET')                        return await handleStats(req, res, supabase);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('[predictions]', err.message);
