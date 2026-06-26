@@ -716,7 +716,8 @@
             sourceGrades: group.sourceGrades || {},
             minGrade: 'medium',
             category: 'crypto-coin',
-            timeframe: tf.validationTimeframe
+            timeframe: tf.validationTimeframe,
+            skipSave: true
           })
         });
         if (renderSession !== mySession) return;

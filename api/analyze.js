@@ -1088,7 +1088,8 @@ Respond ONLY with valid JSON, no markdown:
       sourceGrades: rawSourceGrades = {},
       minGrade = 'medium',
       impactTimeframe: rawTimeframe,
-      category: rawCategory = ''
+      category: rawCategory = '',
+      skipSave = false
     } = req.body || {};
 
     const topic           = _sanitize(rawTopic, 300);
@@ -1257,7 +1258,7 @@ Respond ONLY with valid JSON, no markdown:
       const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
 
       let saveResult = { saved: false, error: supabase ? null : 'supabase_null' };
-      if (supabase) {
+      if (supabase && !skipSave) {
         const record = {
           id:              predictionId,
           topic,
