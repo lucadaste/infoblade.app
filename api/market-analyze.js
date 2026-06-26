@@ -288,9 +288,13 @@ Respond ONLY with valid JSON, no markdown:
     let saveError = null;
     if (supabase && (lean === 'Yes' || lean === 'No')) {
       const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
-      // Default 90-day window when market has no explicit end date
-      const validationMs = daysLeft != null ? daysLeft * 86400000 : 90 * 86400000;
-      const validationDate = new Date(Date.now() + validationMs).toISOString();
+      // Only set a validation_date when Polymarket provided an actual end date.
+      // Without a real end date, leave null — news-grade scan will stamp the date
+      // once the outcome is confirmed. A made-up date causes misleading "Jul 12"-style
+      // display before grading.
+      const validationDate = daysLeft != null
+        ? new Date(Date.now() + daysLeft * 86400000).toISOString()
+        : null;
       const { error: insertErr } = await supabase.from('predictions').insert({
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at:          new Date().toISOString(),

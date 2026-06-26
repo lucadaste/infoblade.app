@@ -368,7 +368,7 @@
             <div class="pred-meta" style="margin-top:8px">
               ${catBadge}
               <span>${date}</span>
-              ${validDate ? `<span>→ ${validDate}</span>` : ''}
+              ${!isPending && validDate ? `<span>→ ${validDate}</span>` : ''}
               ${tf}
             </div>
           </div>

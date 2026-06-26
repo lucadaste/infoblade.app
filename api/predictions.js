@@ -705,6 +705,134 @@ async function handleStats(req, res, supabase) {
   });
 }
 
+// ── News-grade: daily news scan to grade pending PM predictions ───────────────
+// Runs as a daily cron; grades predictions whose outcomes can be confirmed from
+// recent news, independent of Polymarket resolution timing.
+
+async function handleNewsGrade(req, res, supabase) {
+  const nowStr = new Date().toISOString();
+  const nowMs  = Date.now();
+
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
+  if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'Missing ANTHROPIC_KEY' });
+
+  // Fetch pending PM predictions at least 1 day old (avoid grading same-day predictions)
+  const oneDayAgo = new Date(nowMs - 86400000).toISOString();
+  const { data: pending, error } = await supabase
+    .from('predictions')
+    .select('id, topic, created_at, lean, lean_confidence, analysis, market_slug, category')
+    .is('correct', null)
+    .not('lean', 'is', null)
+    .lt('created_at', oneDayAgo)
+    .order('created_at', { ascending: true })
+    .limit(25); // cap per run to control Claude API cost
+
+  if (error) return res.status(500).json({ error: error.message });
+  if (!pending?.length) return res.status(200).json({ graded: 0, checked: 0 });
+
+  let graded = 0;
+  const results = [];
+
+  for (const pred of pending) {
+    const topic = pred.topic || '';
+    if (topic.length < 5) continue;
+
+    // Build search query: strip leading "Will" and trailing "?" then take first 8 words
+    const stripped  = topic.replace(/^Will\s+/i, '').replace(/\?$/, '').trim();
+    const searchQ   = stripped.split(/\s+/).slice(0, 8).join(' ');
+
+    try {
+      const rssUrl  = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQ + ' result')}&hl=en-US&gl=US&ceid=US:en`;
+      const rssRes  = await fetch(rssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
+      if (!rssRes.ok) continue;
+      const rssText = await rssRes.text();
+
+      const articles = [];
+      for (const m of [...rssText.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 12)) {
+        const item       = m[1];
+        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
+        const srcMatch   = item.match(/<source[^>]*>(.*?)<\/source>/);
+        const dateMatch  = item.match(/<pubDate>(.*?)<\/pubDate>/);
+        if (!titleMatch) continue;
+        const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
+        if (title.length < 10) continue;
+        let dateLabel = '';
+        if (dateMatch?.[1]) {
+          try { dateLabel = ` [${new Date(dateMatch[1]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}]`; } catch (_) {}
+        }
+        articles.push(`"${title}" — ${(srcMatch?.[1] || 'Unknown').replace(/<[^>]*>/g, '').trim()}${dateLabel}`);
+      }
+
+      if (articles.length < 2) continue; // not enough signal
+
+      const prompt = `Today is ${nowStr.slice(0, 10)}. A prediction was logged: "${topic}" (predicted: ${pred.lean})
+
+Recent news (${articles.length} articles):
+${articles.map(a => `- ${a}`).join('\n')}
+
+Has this prediction's outcome been definitively determined? Answer YES only if news explicitly confirms the event occurred (game played, award announced, series over, etc.). Do NOT speculate.
+
+Respond ONLY with valid JSON, no markdown:
+{"outcome_known":true/false,"outcome":"Yes"/"No"/null,"confidence":"High"/"Medium"/"Low","confirmed_date":"YYYY-MM-DD"/null,"reasoning":"one sentence"}`;
+
+      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+        body:    JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 150, messages: [{ role: 'user', content: prompt }] }),
+        signal:  AbortSignal.timeout(15000),
+      });
+      const apiData = await apiRes.json();
+      if (apiData.error) continue;
+
+      let assessment;
+      try { assessment = JSON.parse(apiData.content[0].text.replace(/```json|```/g, '').trim()); }
+      catch (_) { continue; }
+
+      if (!assessment.outcome_known || (assessment.outcome !== 'Yes' && assessment.outcome !== 'No')) continue;
+      if (assessment.confidence === 'Low') continue; // require at least Medium confidence
+
+      const lean      = pred.lean;
+      const correct   = lean === assessment.outcome;
+      const confStr   = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
+      const baseScore = correct ? 50 : -50;
+      const confBonus = confStr === 'High' ? 15 : confStr === 'Medium' ? 7 : 0;
+      const accScore  = +(baseScore + (correct ? confBonus : -confBonus)).toFixed(1);
+
+      // Use the date Claude identified as when the outcome was confirmed, falling back to now
+      let confirmedDate = nowStr;
+      if (assessment.confirmed_date) {
+        try { confirmedDate = new Date(assessment.confirmed_date).toISOString(); } catch (_) {}
+      }
+
+      const { error: updateErr } = await supabase
+        .from('predictions')
+        .update({
+          correct:         accScore > 0,
+          validated_at:    nowStr,
+          validation_date: confirmedDate,
+          analysis: {
+            ...(pred.analysis || {}),
+            grade:             _letterGrade(accScore),
+            score:             accScore,
+            accuracy_score:    accScore,
+            resolved_outcome:  assessment.outcome,
+            lean_was:          lean,
+            graded_by:         'news-scan',
+            grading_reasoning: assessment.reasoning || null,
+          },
+        })
+        .eq('id', pred.id);
+
+      if (!updateErr) {
+        graded++;
+        results.push({ id: pred.id, topic: pred.topic, lean, outcome: assessment.outcome, correct });
+      }
+    } catch (_) { /* skip on error, retry tomorrow */ }
+  }
+
+  return res.status(200).json({ graded, checked: pending.length, results });
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -717,10 +845,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (req.method === 'POST')                    return res.status(405).json({ error: 'Method not allowed' });
-    if (req.query.resolve === 'true')             return await handleResolve(req, res, supabase);
-    if (req.query.graph   === 'true')             return await handleGraph(req, res, supabase);
-    if (req.method === 'GET')                     return await handleStats(req, res, supabase);
+    if (req.method === 'POST')                      return res.status(405).json({ error: 'Method not allowed' });
+    if (req.query.resolve     === 'true')           return await handleResolve(req, res, supabase);
+    if (req.query['news-grade'] === 'true')         return await handleNewsGrade(req, res, supabase);
+    if (req.query.graph       === 'true')           return await handleGraph(req, res, supabase);
+    if (req.method === 'GET')                       return await handleStats(req, res, supabase);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
     console.error('[predictions]', err.message);

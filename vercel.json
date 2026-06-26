@@ -9,6 +9,10 @@
     {
       "path": "/api/predictions?resolve=true",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/predictions?news-grade=true",
+      "schedule": "0 10 * * *"
     }
   ]
 }
