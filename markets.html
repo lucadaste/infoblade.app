@@ -529,9 +529,13 @@
       } catch (err) {
         setStatus('');
         grid.innerHTML = `
-          <div class="empty-state">
-            <h3>Could not load markets</h3>
-            <p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p>
+          <div class="page-error">
+            <div class="page-error-icon">&#9888;</div>
+            <div class="page-error-body">
+              <div class="page-error-title">Could not load markets</div>
+              <div class="page-error-msg">${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</div>
+              <button class="page-error-retry" onclick="loadMarkets(currentCategory,currentMaxDays,currentMinDays)">Retry</button>
+            </div>
           </div>`;
       }
     }

@@ -1474,7 +1474,16 @@
         feed.querySelectorAll('.skel-stock-card').forEach(s => s.remove());
         loader.classList.remove('active');
         feedPending.classList.remove('active');
-        status.textContent = 'Error: ' + err.message;
+        status.textContent = '';
+        feed.innerHTML = `
+          <div class="page-error">
+            <div class="page-error-icon">&#9888;</div>
+            <div class="page-error-body">
+              <div class="page-error-title">Could not load feed</div>
+              <div class="page-error-msg">${esc(err.message || 'Something went wrong. Check your connection and try again.')}</div>
+              <button class="page-error-retry" onclick="document.getElementById('btn-load').click()">Retry</button>
+            </div>
+          </div>`;
       }
 
       btn.disabled = false;

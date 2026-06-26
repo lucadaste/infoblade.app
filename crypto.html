@@ -458,8 +458,18 @@
         renderGrid();
         if (result.fearGreed) renderFearGreed(result.fearGreed);
         try { sessionStorage.setItem('ii_crypto_prices_v2', JSON.stringify({ ts: Date.now(), prices, fearGreed: result.fearGreed || null })); } catch(e) {}
-      } catch (_) {
-        renderGrid();
+      } catch (err) {
+        document.getElementById('coin-grid').innerHTML = `
+          <div style="grid-column:1/-1">
+            <div class="page-error">
+              <div class="page-error-icon">&#9888;</div>
+              <div class="page-error-body">
+                <div class="page-error-title">Could not load prices</div>
+                <div class="page-error-msg">Live crypto prices are unavailable right now. Check your connection or try again in a moment.</div>
+                <button class="page-error-retry" onclick="location.reload()">Retry</button>
+              </div>
+            </div>
+          </div>`;
       }
     }
 
