@@ -658,6 +658,13 @@ async function handleStats(req, res, supabase) {
   // Per-section breakdown (Stocks / Crypto / Prediction Markets)
   const bySection = _sectionStats(validated ?? [], pendingBySection);
 
+  const _filterTickers = (tickers, category) =>
+    category === 'crypto-coin' ? (tickers || []).filter(t => _COIN_SYMS.has(t)) : (tickers || []);
+  const _filterMoves = (moves, category) =>
+    category === 'crypto-coin' && moves
+      ? Object.fromEntries(Object.entries(moves).filter(([k]) => _COIN_SYMS.has(k)))
+      : moves || null;
+
   // User-specific stats (only when authenticated)
   let userStats = null;
   if (userId) {
@@ -688,13 +695,15 @@ async function handleStats(req, res, supabase) {
         bySection: _sectionStats(uValidated),
         recent: userPreds.map(p => ({
           id: p.id, topic: p.topic, createdAt: p.created_at,
-          validationDate: p.validation_date, winnerTickers: p.winner_tickers,
-          loserTickers: p.loser_tickers, correct: p.correct,
+          validationDate: p.validation_date,
+          winnerTickers: _filterTickers(p.winner_tickers, p.category),
+          loserTickers:  _filterTickers(p.loser_tickers,  p.category),
+          correct: p.correct,
           confidence: p.analysis?.confidence || null,
           impactTimeframe: p.analysis?.impact_timeframe || null,
           grade: p.analysis?.grade || null,
           score: p.analysis?.accuracy_score ?? p.analysis?.score ?? null,
-          tickerMoves: p.analysis?.ticker_moves || null,
+          tickerMoves: _filterMoves(p.analysis?.ticker_moves, p.category),
           category: p.category,
         })),
       };
@@ -706,13 +715,15 @@ async function handleStats(req, res, supabase) {
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
-      validationDate: p.validation_date, winnerTickers: p.winner_tickers,
-      loserTickers: p.loser_tickers, correct: p.correct,
+      validationDate: p.validation_date,
+      winnerTickers: _filterTickers(p.winner_tickers, p.category),
+      loserTickers:  _filterTickers(p.loser_tickers,  p.category),
+      correct: p.correct,
       confidence: p.analysis?.confidence || null,
       impactTimeframe: p.analysis?.impact_timeframe || null,
       grade: p.analysis?.grade || null,
       score: p.analysis?.accuracy_score ?? p.analysis?.score ?? null,
-      tickerMoves: p.analysis?.ticker_moves || null,
+      tickerMoves: _filterMoves(p.analysis?.ticker_moves, p.category),
       category: p.category,
       lean: p.lean || p.analysis?.lean || null,
       signal: p.signal || p.analysis?.signal || null,
