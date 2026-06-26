@@ -615,7 +615,7 @@
             sourceGrades: mergedGrades,
             minGrade: 'medium',
             category: 'crypto-coin',
-            timeframe: tf.validationTimeframe
+            impactTimeframe: tf.validationTimeframe
           })
         });
         if (renderSession !== mySession) return;
@@ -654,7 +654,7 @@
             sourceGrades: group.sourceGrades || {},
             minGrade: 'medium',
             category: 'crypto-coin',
-            timeframe: tf.validationTimeframe,
+            impactTimeframe: tf.validationTimeframe,
             skipSave: true
           })
         });
@@ -699,7 +699,7 @@
           body: JSON.stringify({
             topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
             headlines: [], sources: [], sourceGrades: {}, minGrade: 'all', category: 'crypto-coin',
-            timeframe: tf.validationTimeframe
+            impactTimeframe: tf.validationTimeframe
           })
         });
         if (renderSession !== mySession) return;

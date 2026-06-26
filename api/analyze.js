@@ -161,7 +161,9 @@ async function _fetchTickerSnapshot(tickers) {
       'recommendationKey','targetMeanPrice',
       'trailingPE','forwardPE','marketCap'
     ].join(',');
-    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}&fields=${fields}`;
+    // Crypto tickers need the -USD suffix on Yahoo Finance; map back to raw symbol in result
+    const yahooSymbols = tickers.map(t => _COIN_SYMS.has(t) ? `${t}-USD` : t);
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSymbols.join(',')}&fields=${fields}`;
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
     clearTimeout(timer);
     const data = await res.json();
@@ -169,10 +171,12 @@ async function _fetchTickerSnapshot(tickers) {
     for (const q of data?.quoteResponse?.result || []) {
       if (!q.regularMarketPrice) continue;
       const price = q.regularMarketPrice;
+      // Strip -USD suffix so snapshot is keyed by the raw symbol (BTC not BTC-USD)
+      const sym = q.symbol.replace(/-USD$/, '');
       const vs50  = q.fiftyDayAverage    ? +((price / q.fiftyDayAverage    - 1) * 100).toFixed(1) : null;
       const vs200 = q.twoHundredDayAverage ? +((price / q.twoHundredDayAverage - 1) * 100).toFixed(1) : null;
       const upside = q.targetMeanPrice   ? +((q.targetMeanPrice / price - 1) * 100).toFixed(1) : null;
-      snapshot[q.symbol] = {
+      snapshot[sym] = {
         price,
         changePct:  q.regularMarketChangePercent ? +q.regularMarketChangePercent.toFixed(2) : null,
         vs50dma:    vs50,
