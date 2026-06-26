@@ -63,6 +63,11 @@ footer p { font-size: 13px; color: var(--muted); }
   .nav-burger { display: flex; padding: 10px; }
 }
 
+@media (max-width: 900px) {
+  .hero { padding: 28px 24px 20px; }
+  footer { padding: 20px 24px; }
+}
+
 /* ── Scroll-to-top & Bottom Nav ───────────────────────────────────────────── */
 #scroll-top { position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; background: var(--card); border: 1px solid var(--border); border-radius: 50%; color: var(--muted); font-size: 20px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.2s, border-color 0.15s, color 0.15s; z-index: 900; display: flex; align-items: center; justify-content: center; }
 #scroll-top.visible { opacity: 1; pointer-events: auto; }
