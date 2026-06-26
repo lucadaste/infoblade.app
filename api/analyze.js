@@ -894,7 +894,8 @@ Respond ONLY with valid JSON, no markdown:
         return items;
       }
 
-      const sectorTimespanHours = timeframe === 'today' ? 48 : timeframe === '3days' ? 72 : 168;
+      // For crypto always fetch 7 days so we have a full pool; timeframe filter is applied after
+      const sectorTimespanHours = category === 'crypto' ? 168 : (timeframe === 'today' ? 48 : timeframe === '3days' ? 72 : 168);
       const [googleResults, directResults, fearGreed, gdeltItems, tavilyItems, newsApiItems] = await Promise.all([
         Promise.allSettled(googleUrls.map(url => fetchWithTimeout(url, 8000))),
         Promise.allSettled(directFeeds.map(f => fetchWithTimeout(f.url, 5000).then(r => ({ res: r, source: f.source })))),
@@ -920,7 +921,7 @@ Respond ONLY with valid JSON, no markdown:
       }
 
       if (timeframe && timeframe !== 'any') {
-        rawItems = rawItems.filter(a => {
+        const withinWindow = rawItems.filter(a => {
           if (!a.date) return true;
           const days = (new Date() - new Date(a.date)) / 86400000;
           if (timeframe === 'today'  && days > 2) return false;
@@ -928,6 +929,8 @@ Respond ONLY with valid JSON, no markdown:
           if (timeframe === '7days'  && days > 7) return false;
           return true;
         });
+        // For crypto: fall back to the full 7-day pool when the preferred window is too thin
+        rawItems = (category === 'crypto' && withinWindow.length < 5) ? rawItems : withinWindow;
       }
       if (category !== 'crypto') rawItems = rawItems.filter(a => !indianKeywords.some(k => a.title.toLowerCase().includes(k)));
       if (selectedGrade !== 'all') rawItems = rawItems.filter(a => gradeScores[a.grade.toLowerCase()] >= threshold);
