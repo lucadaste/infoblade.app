@@ -1254,7 +1254,10 @@ Respond ONLY with valid JSON, no markdown:
       }
 
       const predictionId    = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-      const _coinOnly = (tickers) => category === 'crypto-coin' ? tickers.filter(t => _COIN_SYMS.has(t)) : tickers;
+      // Normalize to uppercase first so 'eth'/'doge' from Claude still matches _COIN_SYMS
+      const _coinOnly = (tickers) => category === 'crypto-coin'
+        ? tickers.map(t => String(t).toUpperCase()).filter(t => _COIN_SYMS.has(t))
+        : tickers;
       const winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
       const loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
       const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];

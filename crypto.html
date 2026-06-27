@@ -631,6 +631,8 @@
         if (renderSession !== mySession) return;
         const d = await res.json();
         if (d.error) throw new Error(d.error);
+        if (!d.predictionSaved) console.warn('[crypto] overall prediction NOT saved:', d._saveError, 'coin:', coin.symbol);
+        else console.log('[crypto] overall prediction saved:', d.predictionId, 'coin:', coin.symbol);
         const loadingEl = document.getElementById('overall-loading');
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById('overall-result');
@@ -715,6 +717,8 @@
         if (renderSession !== mySession) return;
         const d = await res.json();
         if (d.error) throw new Error(d.error);
+        if (!d.predictionSaved) console.warn('[crypto] general analysis NOT saved:', d._saveError, 'coin:', coin.symbol);
+        else console.log('[crypto] general analysis saved:', d.predictionId, 'coin:', coin.symbol);
         const loadingEl = document.getElementById('general-loading');
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById('general-result');
