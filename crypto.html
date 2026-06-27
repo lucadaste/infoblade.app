@@ -632,7 +632,7 @@
         const d = await res.json();
         if (d.error) throw new Error(d.error);
         if (!d.predictionSaved) console.warn('[crypto] overall prediction NOT saved:', d._saveError, 'coin:', coin.symbol);
-        else console.log('[crypto] overall prediction saved:', d.predictionId, 'coin:', coin.symbol);
+        else console.log('[crypto] overall prediction saved:', d.predictionId, 'coin:', coin.symbol, d._cached ? '(cached)' : '(new)');
         const loadingEl = document.getElementById('overall-loading');
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById('overall-result');
@@ -643,7 +643,8 @@
           : dir === 'bearish'
           ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
           : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
-        resultEl.innerHTML = `${dirBadge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
+        const saveNote = !d.predictionSaved ? `<div style="font-size:11px;color:#f55;margin-top:6px">⚠ Prediction not saved: ${esc(d._saveError||'unknown error')}</div>` : '';
+        resultEl.innerHTML = `${dirBadge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>${saveNote}`;
       } catch (err) {
         if (renderSession !== mySession) return;
         const loadingEl = document.getElementById('overall-loading');
@@ -718,12 +719,18 @@
         const d = await res.json();
         if (d.error) throw new Error(d.error);
         if (!d.predictionSaved) console.warn('[crypto] general analysis NOT saved:', d._saveError, 'coin:', coin.symbol);
-        else console.log('[crypto] general analysis saved:', d.predictionId, 'coin:', coin.symbol);
+        else console.log('[crypto] general analysis saved:', d.predictionId, 'coin:', coin.symbol, d._cached ? '(cached)' : '(new)');
         const loadingEl = document.getElementById('general-loading');
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById('general-result');
         if (!resultEl) return;
         renderResult(resultEl, d);
+        if (!d.predictionSaved) {
+          const note = document.createElement('div');
+          note.style.cssText = 'font-size:11px;color:#f55;margin-top:6px';
+          note.textContent = `⚠ Prediction not saved: ${d._saveError || 'unknown error'}`;
+          resultEl.appendChild(note);
+        }
       } catch (err) {
         if (renderSession !== mySession) return;
         const loadingEl = document.getElementById('general-loading');

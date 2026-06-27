@@ -6,6 +6,7 @@
     { "source": "/predictions.html", "destination": "/accuracy.html", "permanent": true }
   ],
   "functions": {
+    "api/analyze.js":     { "maxDuration": 60 },
     "api/predictions.js": { "maxDuration": 60 },
     "api/validate.js":    { "maxDuration": 60 }
   },
