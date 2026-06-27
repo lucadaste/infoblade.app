@@ -1073,8 +1073,10 @@ Respond ONLY with valid JSON, no markdown:
     let supabase = null;
     try { supabase = _getSupabase(); } catch (_) { /* Supabase not configured — skip rate limiting and persistence */ }
 
-    if (supabase) {
-      const allowed = await _checkRateLimit(supabase, ip, 20);
+    // skipSave requests (display-only analysis cards) don't persist — don't count against save limit
+    const isSkipSave = !!(req.body?.skipSave);
+    if (supabase && !isSkipSave) {
+      const allowed = await _checkRateLimit(supabase, ip, 60);
       if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
     }
 
@@ -1096,8 +1098,8 @@ Respond ONLY with valid JSON, no markdown:
       minGrade = 'medium',
       impactTimeframe: rawTimeframe,
       category: rawCategory = '',
-      skipSave = false
     } = req.body || {};
+    const skipSave = isSkipSave; // already read above before body destructure
 
     const topic           = _sanitize(rawTopic, 300);
     const headlines       = _sanitizeArray(rawHeadlines);
