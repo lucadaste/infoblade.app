@@ -37,32 +37,38 @@
     _readyCallbacks = [];
   }
 
-  function _noop() { return Promise.resolve({ errors: [{ message: 'Auth unavailable' }] }); }
+  function _noop() { return Promise.reject(new Error('Auth unavailable — please reload the page.')); }
   async function _noopToken() { return null; }
   function _noopReady(fn) { fn(null); }
 
   // Load Clerk JS from CDN
-  if (!window.Clerk) {
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
+  try {
+    if (!window.Clerk) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load Clerk script from CDN'));
+        document.head.appendChild(s);
+      });
+    }
+  } catch (err) {
+    console.error('[auth.js] Clerk script load failed:', err);
   }
 
   let clerk = null;
   try {
     const r = await fetch((window.API_BASE || '') + '/api/config');
-    if (r.ok) {
-      const { clerkPublishableKey } = await r.json();
-      if (clerkPublishableKey) {
-        clerk = new window.Clerk(clerkPublishableKey);
-        await clerk.load();
-      }
-    }
-  } catch (_) {}
+    if (!r.ok) throw new Error('/api/config returned ' + r.status);
+    const { clerkPublishableKey, error } = await r.json();
+    if (error) throw new Error('/api/config error: ' + error);
+    if (!clerkPublishableKey) throw new Error('/api/config did not return a clerkPublishableKey');
+    if (!window.Clerk) throw new Error('window.Clerk is not defined — CDN script did not load');
+    clerk = new window.Clerk(clerkPublishableKey);
+    await clerk.load();
+  } catch (err) {
+    console.error('[auth.js] Clerk initialization failed:', err);
+  }
 
   if (!clerk) {
     window._auth = {

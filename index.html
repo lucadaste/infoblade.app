@@ -711,7 +711,7 @@
         _openTab('verify');
       } catch (err) {
         this.disabled = false; this.textContent = 'Create Account';
-        _setMsg(err?.errors?.[0]?.message || 'Could not create account.', 'error');
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Could not create account.', 'error');
       }
     });
 
@@ -728,7 +728,7 @@
         _clearMsg();
       } catch (err) {
         this.disabled = false; this.textContent = 'Verify';
-        _setMsg(err?.errors?.[0]?.message || 'Invalid or expired code.', 'error');
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
     });
 
@@ -747,7 +747,7 @@
         _clearMsg();
       } catch (err) {
         this.disabled = false; this.textContent = 'Sign In';
-        _setMsg(err?.errors?.[0]?.message || 'Invalid email or password.', 'error');
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid email or password.', 'error');
       }
     });
 
@@ -778,7 +778,7 @@
         _openTab('newpass');
       } catch (err) {
         this.disabled = false; this.textContent = 'Send Reset Link';
-        _setMsg(err?.errors?.[0]?.message || 'Could not send reset code.', 'error');
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Could not send reset code.', 'error');
       }
     });
 
@@ -798,7 +798,7 @@
         setTimeout(function(){ overlay.classList.remove('open'); _openTab('signin'); }, 1500);
       } catch (err) {
         this.disabled = false; this.textContent = 'Set New Password';
-        _setMsg(err?.errors?.[0]?.message || 'Invalid or expired code.', 'error');
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
     });
 
