@@ -1093,6 +1093,7 @@ Respond ONLY with valid JSON, no markdown:
       minGrade = 'medium',
       impactTimeframe: rawTimeframe,
       category: rawCategory = '',
+      coinSymbol: rawCoinSymbol = '',
     } = req.body || {};
     const skipSave = isSkipSave; // already read above before body destructure
 
@@ -1102,6 +1103,7 @@ Respond ONLY with valid JSON, no markdown:
     const sourceGrades    = _sanitizeObject(rawSourceGrades);
     const impactTimeframe = _sanitize(rawTimeframe, 80);
     const category        = _sanitize(rawCategory, 50);
+    const coinSymbol      = _sanitize(rawCoinSymbol, 10).toUpperCase();
 
     if (!topic || topic.length < 15) return res.status(400).json({ error: 'Topic too short or missing' });
 
@@ -1253,8 +1255,18 @@ Respond ONLY with valid JSON, no markdown:
       const _coinOnly = (tickers) => category === 'crypto-coin'
         ? tickers.map(t => String(t).toUpperCase()).filter(t => _COIN_SYMS.has(t))
         : tickers;
-      const winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
-      const loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
+      let winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
+      let loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
+
+      if (category === 'crypto-coin') {
+        // Every crypto-coin prediction is about exactly one coin: the one the client is
+        // viewing. Trust that explicit symbol over Claude's free-text winners/losers lists
+        // so a prediction never silently drops out of grading (empty tickers) because the
+        // model phrased/omitted the symbol differently, and so it can never span >1 coin.
+        const coin = _COIN_SYMS.has(coinSymbol) ? coinSymbol : (winnerTickers[0] || loserTickers[0] || null);
+        winnerTickers = coin && analysis.direction === 'bullish' ? [coin] : [];
+        loserTickers  = coin && analysis.direction === 'bearish' ? [coin] : [];
+      }
       const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
 
       // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
