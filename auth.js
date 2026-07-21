@@ -41,8 +41,21 @@
   async function _noopToken() { return null; }
   function _noopReady(fn) { fn(null); }
 
-  // Load Clerk JS from CDN
+  let clerk = null;
   try {
+    // Fetch the publishable key BEFORE loading the Clerk CDN bundle — this specific
+    // build (clerk.browser.js) reads the key from window.__clerk_publishable_key
+    // (or a data-clerk-publishable-key script attribute) at load time and
+    // self-constructs window.Clerk as a ready instance; it throws if the key
+    // isn't already set when the script executes.
+    const r = await fetch((window.API_BASE || '') + '/api/config');
+    if (!r.ok) throw new Error('/api/config returned ' + r.status);
+    const { clerkPublishableKey, error } = await r.json();
+    if (error) throw new Error('/api/config error: ' + error);
+    if (!clerkPublishableKey) throw new Error('/api/config did not return a clerkPublishableKey');
+
+    window.__clerk_publishable_key = clerkPublishableKey;
+
     if (!window.Clerk) {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
@@ -52,19 +65,9 @@
         document.head.appendChild(s);
       });
     }
-  } catch (err) {
-    console.error('[auth.js] Clerk script load failed:', err);
-  }
 
-  let clerk = null;
-  try {
-    const r = await fetch((window.API_BASE || '') + '/api/config');
-    if (!r.ok) throw new Error('/api/config returned ' + r.status);
-    const { clerkPublishableKey, error } = await r.json();
-    if (error) throw new Error('/api/config error: ' + error);
-    if (!clerkPublishableKey) throw new Error('/api/config did not return a clerkPublishableKey');
     if (!window.Clerk) throw new Error('window.Clerk is not defined — CDN script did not load');
-    clerk = new window.Clerk(clerkPublishableKey);
+    clerk = window.Clerk;
     await clerk.load();
   } catch (err) {
     console.error('[auth.js] Clerk initialization failed:', err);
