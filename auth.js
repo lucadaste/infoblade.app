@@ -159,7 +159,7 @@
     if (user) {
       // Show avatar badge with dropdown
       if (badge) {
-        const initials = (user.email || '').slice(0, 2).toUpperCase();
+        const initials = (user.name || user.email || '?').slice(0, 1).toUpperCase();
         badge.innerHTML = `
           <div class="auth-avatar-wrap">
             <span class="auth-avatar" id="auth-avatar" title="${user.email}">${initials}</span>
