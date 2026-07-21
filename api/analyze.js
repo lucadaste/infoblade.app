@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
+import { getClerkUser } from '../lib/auth.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -1081,14 +1082,8 @@ Respond ONLY with valid JSON, no markdown:
     }
 
     // Extract user_id from Bearer token if present (optional — anonymous predictions still tracked)
-    let userId = null;
-    const authHeader = req.headers['authorization'];
-    if (supabase && authHeader?.startsWith('Bearer ')) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
-        userId = user?.id ?? null;
-      } catch (_) { /* token invalid or expired — treat as anonymous */ }
-    }
+    const clerkUser = await getClerkUser(req);
+    const userId = clerkUser?.id ?? null;
 
     const {
       topic: rawTopic,

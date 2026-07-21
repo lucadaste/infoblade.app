@@ -436,7 +436,7 @@
     if (!text || busy) return;
 
     // Auth gate — require sign-in
-    const token = window._auth?.token;
+    const token = await window._auth?.getToken();
     if (!token) {
       addMsg('assistant', '**AI Chat requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click **Let\'s Begin !** in the top-right corner to get started.');
       inp.value = '';

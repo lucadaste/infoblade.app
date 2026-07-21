@@ -389,7 +389,7 @@
       try {
         const res = await fetch(window.API_BASE + '/api/market-analyze', {
           method: 'POST',
-          headers: _ah(),
+          headers: await _ah(),
           body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: market.category || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null })
         });
         const data = await res.json();
@@ -483,7 +483,7 @@
 
     const MARKETS_TTL = 5 * 60 * 1000;
 
-    function _ah() { const t = window._auth?.token; return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
+    async function _ah() { const t = await window._auth?.getToken(); return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
 
     async function loadMarkets(cat, maxDays, minDays = 0) {
       const grid = document.getElementById('market-grid');

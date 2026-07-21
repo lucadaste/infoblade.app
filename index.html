@@ -580,6 +580,10 @@
       <!-- Sign-up form -->
       <div id="form-signup">
         <div class="modal-field">
+          <label>Name</label>
+          <input type="text" id="signup-name" placeholder="Your name" autocomplete="name" />
+        </div>
+        <div class="modal-field">
           <label>Email</label>
           <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email" />
         </div>
@@ -591,6 +595,17 @@
           </div>
         </div>
         <button class="modal-submit" id="btn-signup">Create Account</button>
+      </div>
+
+      <!-- Email verification code (shown right after signup) -->
+      <div id="form-verify" style="display:none">
+        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Verify your email</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the 6-digit code we sent to your email.</p>
+        <div class="modal-field">
+          <label>Code</label>
+          <input type="text" id="verify-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+        </div>
+        <button class="modal-submit" id="btn-verify">Verify</button>
       </div>
 
       <!-- Sign-in form -->
@@ -622,14 +637,18 @@
         <p class="modal-footer-note" style="margin-top:16px"><a href="#" id="reset-back-btn">← Back to sign in</a></p>
       </div>
 
-      <!-- New password form (shown after clicking reset email link) -->
+      <!-- New password form (shown after requesting a reset code) -->
       <div id="form-newpass" style="display:none">
         <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Set new password</h2>
-        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Choose a new password for your account.</p>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the code we emailed you and choose a new password.</p>
+        <div class="modal-field">
+          <label>Code</label>
+          <input type="text" id="newpass-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+        </div>
         <div class="modal-field">
           <label>New Password</label>
           <div class="pass-wrap">
-            <input type="password" id="newpass-input" placeholder="New password (min. 6 chars)" autocomplete="new-password" />
+            <input type="password" id="newpass-input" placeholder="New password (min. 8 chars)" autocomplete="new-password" />
             <button type="button" class="pass-eye" onclick="_togglePass('newpass-input',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
         </div>
@@ -647,7 +666,7 @@
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   }
   function _openTab(tab) {
-    ['signup','signin','reset','newpass'].forEach(function(t) {
+    ['signup','signin','verify','reset','newpass'].forEach(function(t) {
       var el = document.getElementById('form-' + t);
       if (el) el.style.display = (t === tab) ? '' : 'none';
     });
@@ -677,17 +696,40 @@
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });
 
     document.getElementById('btn-signup').addEventListener('click', async function(){
+      var name  = document.getElementById('signup-name').value.trim();
       var email = document.getElementById('signup-email').value.trim();
       var pass  = document.getElementById('signup-pass').value;
-      if (!email || !pass) return _setMsg('Please fill in all fields.', 'error');
-      if (pass.length < 6) return _setMsg('Password must be at least 6 characters.', 'error');
+      if (!name || !email || !pass) return _setMsg('Please fill in all fields.', 'error');
+      if (pass.length < 8) return _setMsg('Password must be at least 8 characters.', 'error');
       this.disabled = true; this.textContent = 'Creating…';
       var auth = window._auth;
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Create Account'; return; }
-      var { error } = await auth.signUp(email, pass);
-      this.disabled = false; this.textContent = 'Create Account';
-      if (error) return _setMsg(error.message, 'error');
-      _setMsg('Account created! You can now sign in.', 'success');
+      try {
+        await auth.signUp(name, email, pass);
+        this.disabled = false; this.textContent = 'Create Account';
+        _clearMsg();
+        _openTab('verify');
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Create Account';
+        _setMsg(err?.errors?.[0]?.message || 'Could not create account.', 'error');
+      }
+    });
+
+    document.getElementById('btn-verify').addEventListener('click', async function(){
+      var code = document.getElementById('verify-code').value.trim();
+      if (!code) return _setMsg('Please enter the code.', 'error');
+      this.disabled = true; this.textContent = 'Verifying…';
+      var auth = window._auth;
+      try {
+        var result = await auth.confirmSignUp(code);
+        this.disabled = false; this.textContent = 'Verify';
+        if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
+        overlay.classList.remove('open');
+        _clearMsg();
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Verify';
+        _setMsg(err?.errors?.[0]?.message || 'Invalid or expired code.', 'error');
+      }
     });
 
     document.getElementById('btn-signin').addEventListener('click', async function(){
@@ -697,11 +739,16 @@
       this.disabled = true; this.textContent = 'Signing in…';
       var auth = window._auth;
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Sign In'; return; }
-      var { error } = await auth.signIn(email, pass);
-      this.disabled = false; this.textContent = 'Sign In';
-      if (error) return _setMsg(error.message, 'error');
-      overlay.classList.remove('open');
-      _clearMsg();
+      try {
+        var result = await auth.signIn(email, pass);
+        this.disabled = false; this.textContent = 'Sign In';
+        if (result.status !== 'complete') return _setMsg('Additional verification required.', 'error');
+        overlay.classList.remove('open');
+        _clearMsg();
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Sign In';
+        _setMsg(err?.errors?.[0]?.message || 'Invalid email or password.', 'error');
+      }
     });
 
     // Forgot password link
@@ -722,32 +769,37 @@
       var email = document.getElementById('reset-email').value.trim();
       if (!email) return _setMsg('Please enter your email.', 'error');
       this.disabled = true; this.textContent = 'Sending…';
-      var sb = window._auth?.sb;
-      if (!sb) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Send Reset Link'; return; }
-      var { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/' });
-      this.disabled = false; this.textContent = 'Send Reset Link';
-      if (error) return _setMsg(error.message, 'error');
-      _setMsg('Reset link sent! Check your inbox.', 'success');
+      var auth = window._auth;
+      if (!auth) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Send Reset Link'; return; }
+      try {
+        await auth.requestPasswordReset(email);
+        this.disabled = false; this.textContent = 'Send Reset Link';
+        _clearMsg();
+        _openTab('newpass');
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Send Reset Link';
+        _setMsg(err?.errors?.[0]?.message || 'Could not send reset code.', 'error');
+      }
     });
 
     document.getElementById('btn-newpass').addEventListener('click', async function() {
+      var code = document.getElementById('newpass-code').value.trim();
       var pass = document.getElementById('newpass-input').value;
-      if (!pass || pass.length < 6) return _setMsg('Password must be at least 6 characters.', 'error');
+      if (!code) return _setMsg('Please enter the code.', 'error');
+      if (!pass || pass.length < 8) return _setMsg('Password must be at least 8 characters.', 'error');
       this.disabled = true; this.textContent = 'Saving…';
-      var sb = window._auth?.sb;
-      if (!sb) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Set New Password'; return; }
-      var { error } = await sb.auth.updateUser({ password: pass });
-      this.disabled = false; this.textContent = 'Set New Password';
-      if (error) return _setMsg(error.message, 'error');
-      _setMsg('Password updated! You\'re now signed in.', 'success');
-      setTimeout(function(){ overlay.classList.remove('open'); _openTab('signin'); }, 1500);
-    });
-
-    // Open new-password form automatically when user arrives via a reset link
-    document.addEventListener('ii-password-recovery', function() {
-      overlay.classList.add('open');
-      _openTab('newpass');
-      setTimeout(function(){ document.getElementById('newpass-input')?.focus(); }, 80);
+      var auth = window._auth;
+      if (!auth) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Set New Password'; return; }
+      try {
+        var result = await auth.confirmPasswordReset(code, pass);
+        this.disabled = false; this.textContent = 'Set New Password';
+        if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
+        _setMsg('Password updated! You\'re now signed in.', 'success');
+        setTimeout(function(){ overlay.classList.remove('open'); _openTab('signin'); }, 1500);
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Set New Password';
+        _setMsg(err?.errors?.[0]?.message || 'Invalid or expired code.', 'error');
+      }
     });
 
     // Check URL param ?modal=signin

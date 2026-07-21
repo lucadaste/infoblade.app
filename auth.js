@@ -2,7 +2,6 @@
   let _readyCallbacks = [];
   let _ready = false;
   let _currentUser = null;
-  let _currentToken = null;
 
   // Inject styles for auth badge dropdown
   const _styleEl = document.createElement('style');
@@ -34,65 +33,118 @@
 
   function _fireReady() {
     _ready = true;
-    _readyCallbacks.forEach(fn => fn(_currentUser, _currentToken));
+    _readyCallbacks.forEach(fn => fn(_currentUser));
     _readyCallbacks = [];
   }
 
-  function _noop() { return Promise.resolve({ error: { message: 'Auth unavailable' } }); }
-  function _noopReady(fn) { fn(null, null); }
+  function _noop() { return Promise.resolve({ errors: [{ message: 'Auth unavailable' }] }); }
+  async function _noopToken() { return null; }
+  function _noopReady(fn) { fn(null); }
 
-  // Load Supabase JS from CDN
-  if (!window.supabase) {
+  // Load Clerk JS from CDN
+  if (!window.Clerk) {
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
       s.onload = resolve;
       s.onerror = reject;
       document.head.appendChild(s);
     });
   }
 
-  let sb = null;
+  let clerk = null;
   try {
     const r = await fetch((window.API_BASE || '') + '/api/config');
     if (r.ok) {
-      const { url, anonKey } = await r.json();
-      sb = window.supabase.createClient(url, anonKey);
+      const { clerkPublishableKey } = await r.json();
+      if (clerkPublishableKey) {
+        clerk = new window.Clerk(clerkPublishableKey);
+        await clerk.load();
+      }
     }
   } catch (_) {}
 
-  if (!sb) {
-    window._auth = { user: null, token: null, sb: null, signUp: _noop, signIn: _noop, signOut: _noop, onReady: _noopReady };
+  if (!clerk) {
+    window._auth = {
+      user: null, clerk: null,
+      getToken: _noopToken,
+      signUp: _noop, confirmSignUp: _noop, signIn: _noop, signOut: _noop,
+      requestPasswordReset: _noop, confirmPasswordReset: _noop,
+      onReady: _noopReady,
+    };
     _fireReady();
     return;
   }
 
-  async function signUp(email, password) {
-    return sb.auth.signUp({ email, password });
+  function _normalizeUser(u) {
+    if (!u) return null;
+    return {
+      id: u.id,
+      email: u.primaryEmailAddress?.emailAddress || '',
+      name: u.unsafeMetadata?.fullName || u.firstName || '',
+    };
+  }
+
+  async function signUp(name, email, password) {
+    const su = await clerk.client.signUp.create({
+      emailAddress: email,
+      password,
+      unsafeMetadata: { fullName: name },
+    });
+    await su.prepareEmailAddressVerification({ strategy: 'email_code' });
+    return su;
+  }
+
+  async function confirmSignUp(code) {
+    const su = clerk.client.signUp;
+    const result = await su.attemptEmailAddressVerification({ code });
+    if (result.status === 'complete') {
+      await clerk.setActive({ session: result.createdSessionId });
+    }
+    return result;
   }
 
   async function signIn(email, password) {
-    return sb.auth.signInWithPassword({ email, password });
+    const si = await clerk.client.signIn.create({ identifier: email, password });
+    if (si.status === 'complete') {
+      await clerk.setActive({ session: si.createdSessionId });
+    }
+    return si;
   }
 
   async function signOut() {
-    await sb.auth.signOut();
+    await clerk.signOut();
+  }
+
+  async function requestPasswordReset(email) {
+    return clerk.client.signIn.create({ identifier: email, strategy: 'reset_password_email_code' });
+  }
+
+  async function confirmPasswordReset(code, newPassword) {
+    const si = clerk.client.signIn;
+    const result = await si.attemptFirstFactor({ strategy: 'reset_password_email_code', code, password: newPassword });
+    if (result.status === 'complete') {
+      await clerk.setActive({ session: result.createdSessionId });
+    }
+    return result;
+  }
+
+  async function getToken() {
+    return clerk.session ? await clerk.session.getToken() : null;
   }
 
   function onReady(fn) {
-    if (_ready) { fn(_currentUser, _currentToken); return; }
+    if (_ready) { fn(_currentUser); return; }
     _readyCallbacks.push(fn);
   }
 
   let _dropdownCloseHandler = null;
 
-  function _updateUI(user, token) {
+  function _updateUI(user) {
     _currentUser = user;
-    _currentToken = token;
-    if (window._auth) { window._auth.user = user; window._auth.token = token; }
+    if (window._auth) window._auth.user = user;
 
     const badge   = document.getElementById('auth-badge');
-    const chatBtn = document.querySelector('.nav-chat-btn');
     const ctaBtn  = document.getElementById('signup-btn');
 
     if (user) {
@@ -132,17 +184,18 @@
   }
 
   // Initialize
-  const { data: { session } } = await sb.auth.getSession();
-  _currentUser  = session?.user  ?? null;
-  _currentToken = session?.access_token ?? null;
-  window._auth  = { user: _currentUser, token: _currentToken, sb, signUp, signIn, signOut, onReady };
-  _updateUI(_currentUser, _currentToken);
+  _currentUser = _normalizeUser(clerk.user);
+  window._auth = {
+    user: _currentUser, clerk,
+    getToken,
+    signUp, confirmSignUp, signIn, signOut,
+    requestPasswordReset, confirmPasswordReset,
+    onReady,
+  };
+  _updateUI(_currentUser);
 
-  sb.auth.onAuthStateChange((_event, session) => {
-    _updateUI(session?.user ?? null, session?.access_token ?? null);
-    if (_event === 'PASSWORD_RECOVERY') {
-      document.dispatchEvent(new CustomEvent('ii-password-recovery'));
-    }
+  clerk.addListener(({ user }) => {
+    _updateUI(_normalizeUser(user));
   });
 
   _fireReady();

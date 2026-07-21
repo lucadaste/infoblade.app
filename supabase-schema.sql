@@ -62,10 +62,20 @@ create index if not exists predictions_category_idx on predictions (category);
 -- Accuracy score column: signed float -100..+100 derived from % return magnitude.
 alter table predictions add column if not exists accuracy_score numeric;
 
--- user_id: links predictions to Supabase auth users for personal history.
+-- user_id: links predictions to Clerk user IDs (text, e.g. "user_xxx") for personal history.
 -- Anonymous predictions (no token) have user_id = NULL and still count toward platform stats.
-alter table predictions add column if not exists user_id uuid references auth.users(id);
+alter table predictions drop column if exists user_id;
+alter table predictions add column user_id text;
 create index if not exists predictions_user_id_idx on predictions (user_id);
+
+-- IMPORTANT (manual step, not managed by this file): the watchlists, crypto_watchlists,
+-- and market_watchlists tables used by api/user-watchlist.js are not defined here — they
+-- must exist directly in the Supabase dashboard. Their user_id columns need the same
+-- uuid -> text change applied via the Supabase SQL editor, e.g.:
+--   alter table watchlists drop column if exists user_id;
+--   alter table watchlists add column user_id text;
+-- (repeat for crypto_watchlists, market_watchlists). Do this before deploying the
+-- Clerk-based api/user-watchlist.js, or watchlist writes will fail on a type mismatch.
 
 -- Atomic upsert for source reputation (called by resolve-predictions.js)
 create or replace function upsert_source_reputation(p_source text, p_correct integer)

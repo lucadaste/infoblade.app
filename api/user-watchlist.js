@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getClerkUser } from '../lib/auth.js';
 
 function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
@@ -11,21 +12,11 @@ function _getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 }
 
-async function _getUser(req) {
-  const auth = req.headers['authorization'] || '';
-  const token = auth.replace(/^Bearer\s+/i, '').trim();
-  if (!token) return null;
-  const sb = _getSupabase();
-  const { data: { user }, error } = await sb.auth.getUser(token);
-  if (error || !user) return null;
-  return user;
-}
-
 export default async function handler(req, res) {
   _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const user = await _getUser(req);
+  const user = await getClerkUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
   const sb = _getSupabase();

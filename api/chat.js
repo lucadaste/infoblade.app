@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForChat } from '../lib/context-graph.js';
+import { getClerkUser } from '../lib/auth.js';
 
 // Module-level headline cache — shared across warm invocations, 5-min TTL
 const _headlineCache = new Map();
@@ -224,14 +225,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // Require authenticated user
-  const authHeader = req.headers['authorization'] || '';
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!token) return res.status(401).json({ error: 'Sign in to use AI Chat.' });
+  const user = await getClerkUser(req);
+  if (!user) return res.status(401).json({ error: 'Sign in to use AI Chat.' });
   const supabase = _getSupabase();
-  if (supabase) {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return res.status(401).json({ error: 'Sign in to use AI Chat.' });
-  }
 
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
   const allowed = await _checkRateLimit(supabase, ip);

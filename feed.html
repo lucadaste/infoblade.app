@@ -920,12 +920,12 @@
       fetchStockOverallPrediction(ticker, name, groups, mySession, impact);
     }
 
-    function _ah() { const t = window._auth?.token; return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
+    async function _ah() { const t = await window._auth?.getToken(); return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' }; }
 
     async function autoAnalyzeStockGroup(group, ticker, name, idx, mySession, impact) {
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
-          method: 'POST', headers: _ah(),
+          method: 'POST', headers: await _ah(),
           body: JSON.stringify({
             topic: `${group.topic}: impact on ${name} (${ticker}) over ${impact}`,
             headlines: group.headlines || [], sources: group.sources || [],
@@ -954,7 +954,7 @@
       const allSources   = [...new Set(groups.flatMap(g => g.sources || []))].slice(0,15);
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
-          method: 'POST', headers: _ah(),
+          method: 'POST', headers: await _ah(),
           body: JSON.stringify({
             topic: `Net price direction for ${name} (${ticker}) over ${impact}. Weigh all news and commit to a directional call.`,
             headlines: allHeadlines, sources: allSources,
@@ -997,7 +997,7 @@
       if (!el) return;
       try {
         const res = await fetch(window.API_BASE + '/api/market-analyze', {
-          method: 'POST', headers: _ah(),
+          method: 'POST', headers: await _ah(),
           body: JSON.stringify({ question: `Will ${name} (${ticker}) stock price rise over the next ${impact}?` })
         });
         if (stockAnalysisSession !== mySession) return;
@@ -1026,7 +1026,7 @@
     async function runGeneralStockAnalysis(ticker, name, mySession, impact) {
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
-          method: 'POST', headers: _ah(),
+          method: 'POST', headers: await _ah(),
           body: JSON.stringify({
             topic: `${name} (${ticker}) stock market outlook over ${impact}`,
             headlines: [], sources: [],
@@ -1539,7 +1539,7 @@
         (async () => {
           try {
             const res = await fetch(window.API_BASE + '/api/analyze', {
-              method: 'POST', headers: _ah(),
+              method: 'POST', headers: await _ah(),
               body: JSON.stringify({
                 topic: `Net price direction for ${stockName} (${ticker}) over ${impact}. Commit to a directional call.`,
                 headlines: allHeadlines, sources: allSources,
@@ -1568,7 +1568,7 @@
         ...groups.map(async (group, idx) => {
           try {
             const res = await fetch(window.API_BASE + '/api/analyze', {
-              method: 'POST', headers: _ah(),
+              method: 'POST', headers: await _ah(),
               body: JSON.stringify({
                 topic: `${group.topic}: impact on ${stockName} (${ticker}) over ${impact}`,
                 headlines: group.headlines || [], sources: group.sources || [],
@@ -1735,7 +1735,7 @@
       try {
         const res = await fetch(window.API_BASE + '/api/analyze', {
           method: 'POST',
-          headers: _ah(),
+          headers: await _ah(),
           body: JSON.stringify({
             topic: group.topic,
             headlines: group.headlines,

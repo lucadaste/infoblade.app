@@ -480,7 +480,7 @@
     poll();
 
     async function _api(method, type, body) {
-      const token = window._auth?.token;
+      const token = await window._auth?.getToken();
       if (!token) return null;
       try {
         const r = await fetch((window.API_BASE || '') + '/api/user-watchlist?type=' + type, {
@@ -511,7 +511,7 @@
     window.saveWL = function (w) {
       var old = getWL();
       _origSaveWL(w);
-      if (!window._auth?.token) return;
+      if (!window._auth?.user) return;
       var oldSet = new Set([...(old.sectors || []).map(s => 'SECTOR:' + s), ...(old.tickers || [])]);
       var newSet = new Set([...(w.sectors || []).map(s => 'SECTOR:' + s), ...(w.tickers || [])]);
       newSet.forEach(sym => { if (!oldSet.has(sym)) _api('POST', 'stocks', { symbol: sym }); });
@@ -523,7 +523,7 @@
     window.saveCryptoWL = function (c) {
       var old = getCryptoWL();
       _origSaveCrypto(c);
-      if (!window._auth?.token) return;
+      if (!window._auth?.user) return;
       var oldSet = new Set(old), newSet = new Set(c);
       newSet.forEach(sym => { if (!oldSet.has(sym)) _api('POST', 'crypto', { symbol: sym }); });
       oldSet.forEach(sym => { if (!newSet.has(sym)) _api('DELETE', 'crypto', { symbol: sym }); });

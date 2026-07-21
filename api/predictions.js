@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph } from '../lib/context-graph.js';
+import { getClerkUser } from '../lib/auth.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -536,14 +537,8 @@ async function handleStats(req, res, supabase) {
   if (vErr) throw vErr;
 
   // Resolve user identity if auth token provided
-  let userId = null;
-  const authHeader = req.headers['authorization'];
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.slice(7));
-      userId = user?.id ?? null;
-    } catch (_) {}
-  }
+  const clerkUser = await getClerkUser(req);
+  const userId = clerkUser?.id ?? null;
 
   const { count: pendingCount, error: pErr } = await supabase
     .from('predictions')
