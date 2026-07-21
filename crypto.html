@@ -217,9 +217,9 @@
     </div>
     <div class="fg-widget" id="fg-widget" style="display:none">
       <div class="fg-label-row">
-        <div class="fg-label">Fear &amp; Greed</div>
+        <div class="fg-label">Sentiment</div>
         <div class="fg-hint">?
-          <div class="fg-hint-popup">A score from 0-100 measuring overall crypto market sentiment. <strong style="color:var(--neg)">0-25 = Extreme Fear</strong> (panic selling), <strong style="color:#c87d00">26-49 = Fear</strong>, <strong style="color:#c87d00">50-74 = Greed</strong>, <strong style="color:var(--pos)">75-100 = Extreme Greed</strong> (euphoric buying). Extreme fear can signal a buying opportunity; extreme greed may mean a correction is near.</div>
+          <div class="fg-hint-popup">A score from 0-100 measuring overall crypto market sentiment. <strong style="color:var(--neg)">0-33 = Bearish</strong> (risk-off, selling pressure), <strong style="color:#c87d00">34-66 = Uncertain</strong>, <strong style="color:var(--pos)">67-100 = Bullish</strong> (risk-on, buying pressure). Deep bearish readings can signal a buying opportunity; strong bullish readings may mean a correction is near.</div>
         </div>
       </div>
       <div class="fg-number" id="fg-number">--</div>
@@ -475,10 +475,11 @@
 
     function renderFearGreed(d) {
       const v = parseInt(d.value);
-      const color = v >= 60 ? 'var(--pos)' : v <= 40 ? 'var(--neg)' : '#c87d00';
+      const label = v <= 33 ? 'Bearish' : v <= 66 ? 'Uncertain' : 'Bullish';
+      const color = v <= 33 ? 'var(--neg)' : v <= 66 ? '#c87d00' : 'var(--pos)';
       document.getElementById('fg-number').textContent = v;
       document.getElementById('fg-number').style.color = color;
-      document.getElementById('fg-class').textContent = d.value_classification;
+      document.getElementById('fg-class').textContent = label;
       document.getElementById('fg-class').style.color = color;
       document.getElementById('fg-fill').style.width = v + '%';
       document.getElementById('fg-fill').style.background = color;
