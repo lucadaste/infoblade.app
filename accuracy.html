@@ -222,8 +222,7 @@
     const acc = document.getElementById('stat-accuracy');
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
-    const dispAcc = s.displayAccuracy ?? s.accuracy;
-    acc.textContent = dispAcc != null ? dispAcc + '%' : '--';
+    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
 
     const cr = document.getElementById('stat-correct');
     cr.classList.remove('skeleton');
@@ -290,12 +289,14 @@
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
     const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);letter-spacing:0.5px;text-transform:uppercase;font-weight:600">${catLabel}</span>`;
 
-    const gradeHtml = p.grade
-      ? `<div class="grade-badge grade-${esc(p.grade)}">${esc(p.grade)}</div>`
-      : `<span class="pred-badge ${badgeClass}">${badgeText}</span>`;
-
     // ── Prediction market card (no tickers — show lean + signal instead) ──
     const isPM = !p.winnerTickers?.length && !p.loserTickers?.length && (p.lean || p.signal);
+    const gradeTitle = isPM
+      ? 'Graded on whether the call was directionally correct'
+      : 'Graded on the size of the price move in the predicted direction';
+    const gradeHtml = p.grade
+      ? `<div class="grade-badge grade-${esc(p.grade)}" title="${esc(gradeTitle)}">${esc(p.grade)}</div>`
+      : `<span class="pred-badge ${badgeClass}" title="${esc(gradeTitle)}">${badgeText}</span>`;
     if (isPM) {
       const lean = p.lean || p.analysis?.lean;
       const signal = p.signal || p.analysis?.signal;

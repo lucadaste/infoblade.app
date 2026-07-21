@@ -742,7 +742,15 @@
       try {
         var result = await auth.signIn(email, pass);
         this.disabled = false; this.textContent = 'Sign In';
-        if (result.status !== 'complete') return _setMsg('Additional verification required.', 'error');
+        if (result.status !== 'complete') {
+          console.log('[signin debug] status:', result.status, 'firstFactors:', result.supportedFirstFactors, 'secondFactors:', result.supportedSecondFactors);
+          var next = (result.status === 'needs_second_factor' && result.supportedSecondFactors && result.supportedSecondFactors[0])
+            ? result.supportedSecondFactors[0].strategy
+            : (result.status === 'needs_first_factor' && result.supportedFirstFactors && result.supportedFirstFactors[0])
+              ? result.supportedFirstFactors[0].strategy
+              : null;
+          return _setMsg('Additional verification required (' + result.status + (next ? ', ' + next : '') + '). Check console for details.', 'error');
+        }
         overlay.classList.remove('open');
         _clearMsg();
       } catch (err) {

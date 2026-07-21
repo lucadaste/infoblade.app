@@ -122,7 +122,20 @@ function _parseConfidenceStars(conf) {
 // Grade is binary (A=correct, F=incorrect) — confidence doesn't change the letter.
 // Weight (1/3/5) flows into the accuracy average: a less-confident correct call
 // moves the needle less than a high-confidence one.
-function _pmScore(correct)    { return correct ? 65 : -65; }
+// Score rewards being right against the crowd: a correct call on a market that
+// was already at 85% consensus is a much weaker demonstration of skill than a
+// correct call on a market at 15%. Wrong calls stay flat — the crowd's
+// confidence doesn't make a wrong call any less wrong.
+function _pmScore(correct, lean, marketOddsAtTime) {
+  if (!correct) return -65;
+  if (marketOddsAtTime == null || !lean) return 65; // no odds captured — flat fallback
+  const pSide = lean === 'Yes' ? marketOddsAtTime : (100 - marketOddsAtTime);
+  // Markets surfaced on the platform are pre-filtered to roughly 15-85% Yes
+  // (api/markets.js). Map 85 (pure consensus) -> 65, 15 (max contrarian
+  // within that band) -> 100; values outside the band still clamp to [65,100].
+  const edgeFraction = Math.max(0, Math.min(1, (85 - pSide) / 70));
+  return +(65 + edgeFraction * 35).toFixed(1);
+}
 function _pmGrade(correct)    { return correct ? 'A' : 'F'; }
 function _pmWeight(confStr)   {
   if (confStr === 'High')   return 5;
@@ -147,7 +160,7 @@ async function handleResolve(req, res, supabase) {
   // ── 1. Fetch all unresolved predictions ──────────────────────────────────────
   const { data: all, error } = await supabase
     .from('predictions')
-    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug')
+    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug, market_odds_at_time')
     .is('correct', null)
     .order('created_at', { ascending: true })
     .limit(1000);
@@ -229,13 +242,13 @@ async function handleResolve(req, res, supabase) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
       const pts = _tickerScore(pct, 'bullish');
-      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 0.5, pts, basePrice: baseline[t], actualPrice: actual[t] };
+      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 2, pts, basePrice: baseline[t], actualPrice: actual[t] };
     }
     for (const t of losers) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
       const pts = _tickerScore(pct, 'bearish');
-      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -0.5, pts, basePrice: baseline[t], actualPrice: actual[t] };
+      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -2, pts, basePrice: baseline[t], actualPrice: actual[t] };
     }
 
     if (!Object.keys(tickerMoves).length) { skipped++; continue; }
@@ -341,7 +354,7 @@ async function handleResolve(req, res, supabase) {
       if (!outcome) continue;
 
       const leanCorrect   = lean === outcome;
-      const accuracyScore = _pmScore(leanCorrect);
+      const accuracyScore = _pmScore(leanCorrect, lean, pred.market_odds_at_time);
       const pmGrade       = _pmGrade(leanCorrect);
       const confWeight    = _pmWeight(confStr);
 
@@ -445,22 +458,34 @@ async function handleResolve(req, res, supabase) {
       function _pmWordScore(q, title) {
         const qWords = q.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/)
           .filter(w => w.length > 2 && !_PM_STOPS.has(w));
-        if (!qWords.length) return 0;
+        if (!qWords.length) return { score: 0, matched: 0 };
         const tWords = new Set(title.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/));
-        return qWords.filter(w => tWords.has(w)).length / qWords.length;
+        const matched = qWords.filter(w => tWords.has(w)).length;
+        return { score: matched / qWords.length, matched };
       }
 
       let pmTextMatched = 0;
       for (const pred of pmNoSlug) {
         const question = pred.topic || '';
-        let bestEvent = null, bestScore = 0;
+        let bestEvent = null, bestScore = 0, bestMatched = 0, secondBestScore = 0;
 
         for (const event of Array.isArray(closedEvents) ? closedEvents : []) {
-          const s = _pmWordScore(question, event.title || '');
-          if (s > bestScore) { bestScore = s; bestEvent = event; }
+          const { score: s, matched } = _pmWordScore(question, event.title || '');
+          if (s > bestScore) {
+            secondBestScore = bestScore;
+            bestScore = s; bestEvent = event; bestMatched = matched;
+          } else if (s > secondBestScore) {
+            secondBestScore = s;
+          }
         }
-        // Require 55% word overlap to avoid false matches
-        if (bestScore < 0.55 || !bestEvent) continue;
+        // Require strong, unambiguous word overlap before trusting a text match: at least
+        // 70% of significant words (up from 55%, which let generic questions sharing only
+        // "world"/"win"/"2026"-type words cross-match unrelated events), at least 3 matched
+        // words (so a 70% match on a 3-word query isn't just 2 words), and a clear lead over
+        // the next-best candidate (so two near-duplicate events, e.g. per-country markets in
+        // the same event group, don't get resolved by a coin flip).
+        if (bestScore < 0.7 || bestMatched < 3 || !bestEvent) continue;
+        if (bestScore - secondBestScore < 0.15) continue;
 
         const allMkts = bestEvent.markets || [];
         const market = allMkts.length === 1
@@ -483,7 +508,7 @@ async function handleResolve(req, res, supabase) {
         const lean        = pred.lean || pred.analysis?.lean;
         const confStr     = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
         const leanCorrect = lean === outcome;
-        const accScore    = _pmScore(leanCorrect);
+        const accScore    = _pmScore(leanCorrect, lean, pred.market_odds_at_time);
         const confWeight  = _pmWeight(confStr);
 
         const { error: pmErr2 } = await supabase
@@ -566,13 +591,6 @@ async function handleStats(req, res, supabase) {
   }
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
   const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
-
-  // Lenient accuracy: predictions with score > -15 are directionally meaningful
-  // (removes the strict 0.5% movement threshold for borderline cases)
-  const lenientCorrect = (validated ?? []).filter(p =>
-    (p.analysis?.accuracy_score ?? p.analysis?.score ?? -100) > -15
-  ).length;
-  const displayAccuracy = total >= 5 ? Math.round(lenientCorrect / total * 100) : null;
 
   // Fetch resolved + pending predictions. Also always include prediction-market
   // predictions (have lean/signal) so they're never pushed off the list by
@@ -730,7 +748,7 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, displayAccuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
@@ -766,7 +784,7 @@ async function handleNewsGrade(req, res, supabase) {
   const oneDayAgo = new Date(nowMs - 86400000).toISOString();
   const { data: pending, error } = await supabase
     .from('predictions')
-    .select('id, topic, created_at, lean, lean_confidence, analysis, market_slug, category')
+    .select('id, topic, created_at, lean, lean_confidence, analysis, market_slug, category, market_odds_at_time')
     .is('correct', null)
     .not('lean', 'is', null)
     .lt('created_at', oneDayAgo)
@@ -862,7 +880,7 @@ Respond ONLY with valid JSON, no markdown:
       const lean        = pred.lean;
       const leanCorrect = lean === assessment.outcome;
       const confStr     = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
-      const accScore    = _pmScore(leanCorrect);
+      const accScore    = _pmScore(leanCorrect, lean, pred.market_odds_at_time);
       const confWeight  = _pmWeight(confStr);
 
       let confirmedDate = nowStr;
