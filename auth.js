@@ -115,6 +115,10 @@
   }
 
   if (!clerk) {
+    // Auth state is unknown — reveal the signup CTA rather than leaving it
+    // hidden forever (it defaults to display:none in HTML to avoid a flash
+    // for logged-in users while Clerk loads).
+    document.getElementById('signup-btn')?.style.removeProperty('display');
     window._auth = {
       user: null, clerk: null,
       getToken: _noopToken,
