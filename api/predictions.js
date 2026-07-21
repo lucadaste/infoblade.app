@@ -330,10 +330,13 @@ async function handleResolve(req, res, supabase) {
       catch (_) { continue; }
       if (!Array.isArray(prices) || prices.length < 2) continue;
 
+      // Require the oracle to have actually finalized the outcome. `event.closed` only
+      // means trading halted — it flips true before resolution, and a closed-but-unresolved
+      // market's price can still be a stale/interim read, not the true outcome. Trusting a
+      // 97%+ price on a merely-closed market caused a false grade in production.
+      if (market.umaResolutionStatus !== 'resolved') continue;
+
       const yesPrice = parseFloat(prices[0]);
-      // Accept official resolution (99%) OR overwhelmingly clear closed-market prices (97%).
-      // Polymarket often delays formal resolution days after the outcome is determined;
-      // prices at 97%+ on a closed market are effectively certain.
       const outcome  = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
       if (!outcome) continue;
 
@@ -471,6 +474,7 @@ async function handleResolve(req, res, supabase) {
             ? JSON.parse(market.outcomePrices) : market.outcomePrices;
         } catch (_) { continue; }
         if (!Array.isArray(prices) || prices.length < 2) continue;
+        if (market.umaResolutionStatus !== 'resolved') continue;
 
         const yesPrice = parseFloat(prices[0]);
         const outcome = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
