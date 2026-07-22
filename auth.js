@@ -221,6 +221,13 @@
           <div class="ii-acct-field"><input type="text" id="ii-acct-name" /></div>
           <button class="ii-acct-btn" id="ii-acct-save-name">Save Name</button>
 
+          <div id="ii-acct-reverify" style="display:none">
+            <h3>Confirm It's You</h3>
+            <p style="font-size:12px;color:#999;margin-bottom:12px">For your security, please re-enter your password to continue.</p>
+            <div class="ii-acct-field"><input type="password" id="ii-acct-reverify-pass" placeholder="Your password" /></div>
+            <button class="ii-acct-btn" id="ii-acct-reverify-submit">Confirm</button>
+          </div>
+
           <h3>Email</h3>
           <div id="ii-acct-email-view">
             <div class="ii-acct-field"><input type="email" id="ii-acct-email" /></div>
@@ -255,6 +262,74 @@
       el.textContent = ''; el.className = 'ii-acct-msg';
     }
 
+    // Clerk requires "reverification" (re-proving identity within the last
+    // ~10 min) before sensitive actions like changing a password or deleting
+    // the account. When an action is blocked by this, prompt for the
+    // password inline, verify the session, then let the caller retry once.
+    function _isReverificationError(err) {
+      const msg = err?.errors?.[0]?.message || err?.message || '';
+      const code = err?.errors?.[0]?.code || '';
+      return /reverif/i.test(msg) || /reverif/i.test(code);
+    }
+
+    let _reverifyResolve = null;
+    const reverifyBox = document.getElementById('ii-acct-reverify');
+    function _requestReverification() {
+      return new Promise((resolve) => {
+        _reverifyResolve = resolve;
+        document.getElementById('ii-acct-reverify-pass').value = '';
+        reverifyBox.style.display = '';
+        setTimeout(() => document.getElementById('ii-acct-reverify-pass').focus(), 50);
+      });
+    }
+
+    document.getElementById('ii-acct-reverify-submit').addEventListener('click', async function () {
+      const password = document.getElementById('ii-acct-reverify-pass').value;
+      if (!password) return setMsg('Please enter your password.', 'error');
+      this.disabled = true;
+      try {
+        let sv = await clerk.session.startVerification({ level: 'first_factor' });
+        if (sv.status !== 'complete') {
+          sv = await clerk.session.attemptFirstFactorVerification({ strategy: 'password', password });
+        }
+        this.disabled = false;
+        if (sv.status === 'complete') {
+          reverifyBox.style.display = 'none';
+          clearMsg();
+          const resolve = _reverifyResolve; _reverifyResolve = null;
+          if (resolve) resolve(true);
+        } else {
+          // Wrong password — leave the prompt open and _reverifyResolve intact
+          // so the user can retry instead of silently failing the action.
+          setMsg('Incorrect password.', 'error');
+          document.getElementById('ii-acct-reverify-pass').value = '';
+        }
+      } catch (err) {
+        this.disabled = false;
+        setMsg(err?.errors?.[0]?.message || err?.message || 'Incorrect password.', 'error');
+      }
+    });
+
+    // Cancel a pending reverification if the user closes the modal instead
+    // of completing it — otherwise the original action's promise hangs forever.
+    document.getElementById('ii-acct-close').addEventListener('click', () => {
+      if (_reverifyResolve) { const r = _reverifyResolve; _reverifyResolve = null; r(false); }
+      reverifyBox.style.display = 'none';
+    });
+
+    // Runs fn(); if it fails specifically because reverification is needed,
+    // prompts for the password inline and retries fn() once.
+    async function _withReverification(fn) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (!_isReverificationError(err)) throw err;
+        const ok = await _requestReverification();
+        if (!ok) throw err;
+        return await fn();
+      }
+    }
+
     document.getElementById('ii-acct-save-name').addEventListener('click', async function () {
       const name = document.getElementById('ii-acct-name').value.trim();
       if (!name) return setMsg('Name cannot be empty.', 'error');
@@ -275,7 +350,7 @@
       if (!email) return setMsg('Please enter an email.', 'error');
       this.disabled = true;
       try {
-        _pendingEmail = await clerk.user.createEmailAddress({ email });
+        _pendingEmail = await _withReverification(() => clerk.user.createEmailAddress({ email }));
         await _pendingEmail.prepareVerification({ strategy: 'email_code' });
         document.getElementById('ii-acct-email-view').style.display = 'none';
         document.getElementById('ii-acct-email-verify').style.display = '';
@@ -317,7 +392,7 @@
       if (newPassword.length < 8) return setMsg('New password must be at least 8 characters.', 'error');
       this.disabled = true;
       try {
-        await clerk.user.updatePassword({ currentPassword, newPassword });
+        await _withReverification(() => clerk.user.updatePassword({ currentPassword, newPassword }));
         document.getElementById('ii-acct-curpass').value = '';
         document.getElementById('ii-acct-newpass').value = '';
         setMsg('Password updated.', 'success');
@@ -331,7 +406,7 @@
       if (!confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) return;
       this.disabled = true;
       try {
-        await clerk.user.delete();
+        await _withReverification(() => clerk.user.delete());
         window.location.href = '/';
       } catch (err) {
         setMsg(err?.errors?.[0]?.message || err?.message || 'Could not delete account.', 'error');
@@ -346,6 +421,7 @@
       document.getElementById('ii-acct-email-view').style.display = '';
       document.getElementById('ii-acct-curpass').value = '';
       document.getElementById('ii-acct-newpass').value = '';
+      reverifyBox.style.display = 'none';
       clearMsg();
       overlay.classList.add('open');
     };
