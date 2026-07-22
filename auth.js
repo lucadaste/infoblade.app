@@ -217,16 +217,23 @@
           <h2>Your Account</h2>
           <div id="ii-acct-msg" class="ii-acct-msg"></div>
 
+          <div id="ii-acct-reverify" style="display:none">
+            <h3 style="margin-top:0">Confirm It's You</h3>
+            <div id="ii-acct-reverify-pass-view">
+              <p style="font-size:12px;color:#999;margin-bottom:12px">For your security, please re-enter your password to continue.</p>
+              <div class="ii-acct-field"><input type="password" id="ii-acct-reverify-pass" placeholder="Your password" /></div>
+              <button class="ii-acct-btn" id="ii-acct-reverify-submit">Confirm</button>
+            </div>
+            <div id="ii-acct-reverify-code-view" style="display:none">
+              <p style="font-size:12px;color:#999;margin-bottom:12px">Enter the code we emailed you to continue.</p>
+              <div class="ii-acct-field"><input type="text" id="ii-acct-reverify-code" placeholder="123456" inputmode="numeric" maxlength="6" /></div>
+              <button class="ii-acct-btn" id="ii-acct-reverify-code-submit">Verify</button>
+            </div>
+          </div>
+
           <h3>Name</h3>
           <div class="ii-acct-field"><input type="text" id="ii-acct-name" /></div>
           <button class="ii-acct-btn" id="ii-acct-save-name">Save Name</button>
-
-          <div id="ii-acct-reverify" style="display:none">
-            <h3>Confirm It's You</h3>
-            <p style="font-size:12px;color:#999;margin-bottom:12px">For your security, please re-enter your password to continue.</p>
-            <div class="ii-acct-field"><input type="password" id="ii-acct-reverify-pass" placeholder="Your password" /></div>
-            <button class="ii-acct-btn" id="ii-acct-reverify-submit">Confirm</button>
-          </div>
 
           <h3>Email</h3>
           <div id="ii-acct-email-view">
@@ -273,14 +280,64 @@
     }
 
     let _reverifyResolve = null;
+    let _reverifySecondFactorStrategy = null;
     const reverifyBox = document.getElementById('ii-acct-reverify');
+    const reverifyPassView = document.getElementById('ii-acct-reverify-pass-view');
+    const reverifyCodeView = document.getElementById('ii-acct-reverify-code-view');
+
+    function _showReverifyPassStep() {
+      reverifyCodeView.style.display = 'none';
+      reverifyPassView.style.display = '';
+      document.getElementById('ii-acct-reverify-pass').value = '';
+      reverifyBox.style.display = '';
+      document.querySelector('.ii-acct-card').scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => document.getElementById('ii-acct-reverify-pass').focus(), 50);
+    }
+
+    function _showReverifyCodeStep() {
+      reverifyPassView.style.display = 'none';
+      reverifyCodeView.style.display = '';
+      document.getElementById('ii-acct-reverify-code').value = '';
+      document.querySelector('.ii-acct-card').scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => document.getElementById('ii-acct-reverify-code').focus(), 50);
+    }
+
     function _requestReverification() {
       return new Promise((resolve) => {
         _reverifyResolve = resolve;
-        document.getElementById('ii-acct-reverify-pass').value = '';
-        reverifyBox.style.display = '';
-        setTimeout(() => document.getElementById('ii-acct-reverify-pass').focus(), 50);
+        _showReverifyPassStep();
       });
+    }
+
+    // A verification attempt can resolve immediately, ask for a second
+    // factor (e.g. email_code), or reject the factor just submitted.
+    async function _advanceReverification(sv) {
+      console.log('[reverify] status:', sv.status, sv);
+      if (sv.status === 'complete') {
+        reverifyBox.style.display = 'none';
+        clearMsg();
+        const resolve = _reverifyResolve; _reverifyResolve = null;
+        if (resolve) resolve(true);
+        return;
+      }
+      if (sv.status === 'needs_second_factor') {
+        if (reverifyCodeView.style.display !== 'none') {
+          // Already on the code step — this status means the code we just
+          // submitted was wrong, not that we need to (re)send a new one.
+          setMsg('Invalid code. Please try again.', 'error');
+          return;
+        }
+        const factor = sv.supportedSecondFactors && sv.supportedSecondFactors[0];
+        _reverifySecondFactorStrategy = (factor && factor.strategy) || 'email_code';
+        try { await clerk.session.prepareSecondFactorVerification({ strategy: _reverifySecondFactorStrategy }); }
+        catch (e) { console.warn('[reverify] prepareSecondFactorVerification failed:', e); }
+        _showReverifyCodeStep();
+        return;
+      }
+      // Wrong password/code, or an unhandled status — leave the prompt open
+      // and _reverifyResolve intact so the user can retry instead of the
+      // action silently failing.
+      setMsg('Incorrect password. Please try again.', 'error');
     }
 
     document.getElementById('ii-acct-reverify-submit').addEventListener('click', async function () {
@@ -288,25 +345,29 @@
       if (!password) return setMsg('Please enter your password.', 'error');
       this.disabled = true;
       try {
-        let sv = await clerk.session.startVerification({ level: 'first_factor' });
+        let sv = await clerk.session.startVerification({ level: 'multi_factor' });
         if (sv.status !== 'complete') {
           sv = await clerk.session.attemptFirstFactorVerification({ strategy: 'password', password });
         }
         this.disabled = false;
-        if (sv.status === 'complete') {
-          reverifyBox.style.display = 'none';
-          clearMsg();
-          const resolve = _reverifyResolve; _reverifyResolve = null;
-          if (resolve) resolve(true);
-        } else {
-          // Wrong password — leave the prompt open and _reverifyResolve intact
-          // so the user can retry instead of silently failing the action.
-          setMsg('Incorrect password.', 'error');
-          document.getElementById('ii-acct-reverify-pass').value = '';
-        }
+        await _advanceReverification(sv);
       } catch (err) {
         this.disabled = false;
         setMsg(err?.errors?.[0]?.message || err?.message || 'Incorrect password.', 'error');
+      }
+    });
+
+    document.getElementById('ii-acct-reverify-code-submit').addEventListener('click', async function () {
+      const code = document.getElementById('ii-acct-reverify-code').value.trim();
+      if (!code) return setMsg('Please enter the code.', 'error');
+      this.disabled = true;
+      try {
+        const sv = await clerk.session.attemptSecondFactorVerification({ strategy: _reverifySecondFactorStrategy, code });
+        this.disabled = false;
+        await _advanceReverification(sv);
+      } catch (err) {
+        this.disabled = false;
+        setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
     });
 
