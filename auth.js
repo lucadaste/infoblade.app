@@ -124,6 +124,7 @@
       getToken: _noopToken,
       signUp: _noop, confirmSignUp: _noop, signIn: _noop, signOut: _noop,
       requestPasswordReset: _noop, confirmPasswordReset: _noop,
+      prepareSignInSecondFactor: _noop, attemptSignInSecondFactor: _noop,
       onReady: _noopReady,
     };
     _fireReady();
@@ -164,6 +165,19 @@
       await clerk.setActive({ session: si.createdSessionId });
     }
     return si;
+  }
+
+  async function prepareSignInSecondFactor(strategy) {
+    return clerk.client.signIn.prepareSecondFactor({ strategy });
+  }
+
+  async function attemptSignInSecondFactor(strategy, code) {
+    const si = clerk.client.signIn;
+    const result = await si.attemptSecondFactor({ strategy, code });
+    if (result.status === 'complete') {
+      await clerk.setActive({ session: result.createdSessionId });
+    }
+    return result;
   }
 
   async function signOut() {
@@ -394,6 +408,7 @@
     user: _currentUser, clerk,
     getToken,
     signUp, confirmSignUp, signIn, signOut,
+    prepareSignInSecondFactor, attemptSignInSecondFactor,
     requestPasswordReset, confirmPasswordReset,
     onReady,
   };

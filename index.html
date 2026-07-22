@@ -625,6 +625,17 @@
         <p class="modal-footer-note" style="margin-top:14px"><a href="#" id="forgot-link">Forgot password?</a></p>
       </form>
 
+      <!-- Sign-in second-factor verification (shown if the account requires it) -->
+      <div id="form-signin2fa" style="display:none">
+        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Verify your identity</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the code we emailed you to finish signing in.</p>
+        <div class="modal-field">
+          <label>Code</label>
+          <input type="text" id="signin2fa-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+        </div>
+        <button class="modal-submit" id="btn-signin2fa">Verify</button>
+      </div>
+
       <!-- Reset password form -->
       <form id="form-reset" onsubmit="return false" style="display:none">
         <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Reset password</h2>
@@ -666,7 +677,7 @@
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   }
   function _openTab(tab) {
-    ['signup','signin','verify','reset','newpass'].forEach(function(t) {
+    ['signup','signin','signin2fa','verify','reset','newpass'].forEach(function(t) {
       var el = document.getElementById('form-' + t);
       if (el) el.style.display = (t === tab) ? '' : 'none';
     });
@@ -690,6 +701,7 @@
   }
   (function(){
     var overlay = document.getElementById('signup-modal');
+    var _signin2faStrategy = null;
     document.getElementById('signup-btn').addEventListener('click', function(e){ e.preventDefault(); _openTab('signup'); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); });
     document.getElementById('modal-close').addEventListener('click', function(){ overlay.classList.remove('open'); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
@@ -742,13 +754,19 @@
       try {
         var result = await auth.signIn(email, pass);
         this.disabled = false; this.textContent = 'Sign In';
+        if (result.status === 'needs_second_factor') {
+          var factor = result.supportedSecondFactors && result.supportedSecondFactors[0];
+          _signin2faStrategy = (factor && factor.strategy) || 'email_code';
+          try { await auth.prepareSignInSecondFactor(_signin2faStrategy); } catch (e) { console.warn('[signin] prepareSecondFactor failed:', e); }
+          _openTab('signin2fa');
+          setTimeout(function(){ document.getElementById('signin2fa-code').focus(); }, 80);
+          return;
+        }
         if (result.status !== 'complete') {
           console.log('[signin debug] status:', result.status, 'firstFactors:', result.supportedFirstFactors, 'secondFactors:', result.supportedSecondFactors);
-          var next = (result.status === 'needs_second_factor' && result.supportedSecondFactors && result.supportedSecondFactors[0])
-            ? result.supportedSecondFactors[0].strategy
-            : (result.status === 'needs_first_factor' && result.supportedFirstFactors && result.supportedFirstFactors[0])
-              ? result.supportedFirstFactors[0].strategy
-              : null;
+          var next = (result.status === 'needs_first_factor' && result.supportedFirstFactors && result.supportedFirstFactors[0])
+            ? result.supportedFirstFactors[0].strategy
+            : null;
           return _setMsg('Additional verification required (' + result.status + (next ? ', ' + next : '') + '). Check console for details.', 'error');
         }
         overlay.classList.remove('open');
@@ -756,6 +774,24 @@
       } catch (err) {
         this.disabled = false; this.textContent = 'Sign In';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid email or password.', 'error');
+      }
+    });
+
+    document.getElementById('btn-signin2fa').addEventListener('click', async function(){
+      var code = document.getElementById('signin2fa-code').value.trim();
+      if (!code) return _setMsg('Please enter the code.', 'error');
+      this.disabled = true; this.textContent = 'Verifying…';
+      var auth = window._auth;
+      if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Verify'; return; }
+      try {
+        var result = await auth.attemptSignInSecondFactor(_signin2faStrategy, code);
+        this.disabled = false; this.textContent = 'Verify';
+        if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
+        overlay.classList.remove('open');
+        _clearMsg();
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Verify';
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
     });
 
