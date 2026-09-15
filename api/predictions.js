@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
+import { SECTION_CATS as _SECTION_CATS, SECTION_LABELS as _SECTION_LABELS, categoryToSection as _categoryToSection } from '../lib/prediction-sections.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -19,19 +20,6 @@ function _setCors(res) {
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
-
-// Map prediction categories to the 3 public-facing sections
-const _SECTION_CATS = {
-  stocks:              new Set(['any','technology','macro','energy','financials','precious-metals','real-estate','consumer','healthcare','defense','etfs','stock']),
-  crypto:              new Set(['crypto-coin']),
-  'prediction-markets': new Set(['prediction-markets','politics','sports','entertainment','finance','tech']),
-};
-const _SECTION_LABELS = { stocks: 'Stock Markets', crypto: 'Crypto', 'prediction-markets': 'Prediction Markets' };
-
-function _categoryToSection(cat) {
-  for (const [s, cats] of Object.entries(_SECTION_CATS)) { if (cats.has(cat)) return s; }
-  return 'stocks';
-}
 
 function _sectionStats(preds, pendingBySection = {}) {
   const map = {};

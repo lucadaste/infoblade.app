@@ -83,6 +83,129 @@ async function _checkRateLimit(supabase, ip) {
   } catch (_) { return false; }
 }
 
+// ── Core fetch+filter pipeline ─────────────────────────────────────────────────
+// Shared by the GET handler (real user browsing) and the baseline generator cron
+// (api/generate-baseline.js), which calls this directly in-process to source
+// candidate markets without re-implementing the nonsense/esports filtering and
+// odds-band logic. `opts.isSearch`/`opts.searchWords` are only meaningful when a
+// caller is doing a text search (the HTTP handler); the generator always omits them.
+export async function fetchCategoryMarkets(category, opts = {}) {
+  const { isSearch = false, searchWords = [], daysCap = 365, daysMin = 0 } = opts;
+  const targetTags = CATEGORY_TAGS[category];
+
+  const now = new Date();
+  const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
+  const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
+
+  const polyUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
+
+  const polyRes = await fetch(
+    polyUrl,
+    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
+  );
+  const events = await polyRes.json();
+  const filtered = (Array.isArray(events) ? events : []).filter(event => {
+    if (!event.active || event.closed || event.archived) return false;
+    const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
+    if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
+    if (_isNonsenseTitle(event.title)) return false;
+    if (isSearch) {
+      const title = (event.title || '').toLowerCase();
+      return searchWords.every(w => title.includes(w));
+    }
+    return targetTags.some(tag => eventTags.includes(tag));
+  });
+
+  const markets = filtered.map(event => {
+    const ms = event.markets || [];
+    const primary = ms.length === 1
+      ? ms[0]
+      : [...ms].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
+
+    if (!primary) return null;
+
+    const endDate = primary.endDate || event.endDate || null;
+    const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
+
+    if (daysLeft !== null && (daysLeft > daysCap || daysLeft < daysMin)) return null;
+
+    let yesPrice = null;
+    try {
+      const prices = typeof primary.outcomePrices === 'string'
+        ? JSON.parse(primary.outcomePrices)
+        : primary.outcomePrices;
+      yesPrice = Math.round(parseFloat(prices[0]) * 100);
+    } catch (_) {}
+
+    if (yesPrice === null || isNaN(yesPrice)) return null;
+    // Toss-up filter: exclude near-certain markets (already resolved or essentially
+    // decided). Search bypasses this since the user has specific intent.
+    // Tighter than 20-80 to avoid markets that have already effectively settled.
+    if (!isSearch && (yesPrice < 15 || yesPrice > 85)) return null;
+    const volume24h = Math.round(parseFloat(event.volume24hr || 0));
+    const volumeTotal = Math.round(parseFloat(event.volume || 0));
+
+    // Detect sport from Polymarket event tags
+    const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
+    const sportTag  = eventTags.find(t => SPORT_LABELS[t]);
+    const sport     = sportTag ? SPORT_LABELS[sportTag] : null;
+    const resultCategory = isSearch ? (_categoryForTags(eventTags) || 'other') : category;
+
+    return {
+      id: event.id,
+      slug: event.slug,
+      title: String(event.title || '').slice(0, 300),
+      question: String(primary.question || event.title || '').slice(0, 300),
+      yesPrice,
+      volume24h,
+      volumeTotal,
+      daysLeft,
+      totalMarkets: ms.length,
+      category: resultCategory,
+      sport,
+    };
+  }).filter(Boolean)
+    .sort((a, b) => b.volume24h - a.volume24h)
+    .slice(0, isSearch ? 20 : 10);
+
+  // Batch AI call: generate a plain-english "what YES means" label for each market, and
+  // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
+  // Reuses this same call rather than adding a second one — the keyword filter above
+  // catches known phrasings for free; this catches anything new without upkeep.
+  try {
+    const anthropicKey = process.env.ANTHROPIC_KEY;
+    if (anthropicKey && markets.length > 0) {
+      const labelPrompt = `For each prediction market question below, do two things:
+1. Write a 3-5 word plain English label describing exactly what the YES outcome means. Be specific — include the name/subject. No punctuation at the end.
+2. Set "real" to true if this is a genuine real-world question that news coverage could inform (sports, politics, finance, entertainment, tech, etc.), or false if it's an unfalsifiable, supernatural, mythical, or joke/troll question (e.g. religious prophecy, Bigfoot, simulation theory, aliens) that no real news source could meaningfully analyze.
+
+${markets.map((m, i) => `${i + 1}. "${m.question}"`).join('\n')}
+
+Respond ONLY with a JSON array of objects in the same order, no markdown:
+[{"label":"label text","real":true}, ...]`;
+
+      const labelRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: Math.max(500, markets.length * 45), messages: [{ role: 'user', content: labelPrompt }] }),
+        signal: AbortSignal.timeout(8000)
+      });
+      const labelData = await labelRes.json();
+      const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        markets.forEach((m, i) => {
+          if (parsed[i]?.label) m.yesLabel = String(parsed[i].label).slice(0, 60);
+          if (parsed[i]?.real === false) m._nonsense = true;
+        });
+      }
+    }
+  } catch (_) { /* labels/legitimacy check are optional — cards still render without them */ }
+
+  const finalMarkets = markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
+  return finalMarkets;
+}
+
 export default async function handler(req, res) {
   _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -104,120 +227,8 @@ export default async function handler(req, res) {
   const daysCap = Math.min(Math.max(parseInt(req.query.maxDays) || 365, 1), 365);
   const daysMin = Math.min(Math.max(parseInt(req.query.minDays) || 0, 0), daysCap);
 
-  const targetTags = CATEGORY_TAGS[category];
-
   try {
-    const now = new Date();
-    const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
-    const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
-
-    const polyUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
-
-    const polyRes = await fetch(
-      polyUrl,
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
-    );
-    const events = await polyRes.json();
-    const filtered = (Array.isArray(events) ? events : []).filter(event => {
-      if (!event.active || event.closed || event.archived) return false;
-      const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-      if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
-      if (_isNonsenseTitle(event.title)) return false;
-      if (isSearch) {
-        const title = (event.title || '').toLowerCase();
-        return searchWords.every(w => title.includes(w));
-      }
-      return targetTags.some(tag => eventTags.includes(tag));
-    });
-
-    const markets = filtered.map(event => {
-      const ms = event.markets || [];
-      const primary = ms.length === 1
-        ? ms[0]
-        : [...ms].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
-
-      if (!primary) return null;
-
-      const endDate = primary.endDate || event.endDate || null;
-      const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
-
-      if (daysLeft !== null && (daysLeft > daysCap || daysLeft < daysMin)) return null;
-
-      let yesPrice = null;
-      try {
-        const prices = typeof primary.outcomePrices === 'string'
-          ? JSON.parse(primary.outcomePrices)
-          : primary.outcomePrices;
-        yesPrice = Math.round(parseFloat(prices[0]) * 100);
-      } catch (_) {}
-
-      if (yesPrice === null || isNaN(yesPrice)) return null;
-      // Toss-up filter: exclude near-certain markets (already resolved or essentially
-      // decided). Search bypasses this since the user has specific intent.
-      // Tighter than 20-80 to avoid markets that have already effectively settled.
-      if (!isSearch && (yesPrice < 15 || yesPrice > 85)) return null;
-      const volume24h = Math.round(parseFloat(event.volume24hr || 0));
-      const volumeTotal = Math.round(parseFloat(event.volume || 0));
-
-      // Detect sport from Polymarket event tags
-      const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-      const sportTag  = eventTags.find(t => SPORT_LABELS[t]);
-      const sport     = sportTag ? SPORT_LABELS[sportTag] : null;
-      const resultCategory = isSearch ? (_categoryForTags(eventTags) || 'other') : category;
-
-      return {
-        id: event.id,
-        slug: event.slug,
-        title: String(event.title || '').slice(0, 300),
-        question: String(primary.question || event.title || '').slice(0, 300),
-        yesPrice,
-        volume24h,
-        volumeTotal,
-        daysLeft,
-        totalMarkets: ms.length,
-        category: resultCategory,
-        sport,
-      };
-    }).filter(Boolean)
-      .sort((a, b) => b.volume24h - a.volume24h)
-      .slice(0, isSearch ? 20 : 10);
-
-    // Batch AI call: generate a plain-english "what YES means" label for each market, and
-    // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
-    // Reuses this same call rather than adding a second one — the keyword filter above
-    // catches known phrasings for free; this catches anything new without upkeep.
-    try {
-      const anthropicKey = process.env.ANTHROPIC_KEY;
-      if (anthropicKey && markets.length > 0) {
-        const labelPrompt = `For each prediction market question below, do two things:
-1. Write a 3-5 word plain English label describing exactly what the YES outcome means. Be specific — include the name/subject. No punctuation at the end.
-2. Set "real" to true if this is a genuine real-world question that news coverage could inform (sports, politics, finance, entertainment, tech, etc.), or false if it's an unfalsifiable, supernatural, mythical, or joke/troll question (e.g. religious prophecy, Bigfoot, simulation theory, aliens) that no real news source could meaningfully analyze.
-
-${markets.map((m, i) => `${i + 1}. "${m.question}"`).join('\n')}
-
-Respond ONLY with a JSON array of objects in the same order, no markdown:
-[{"label":"label text","real":true}, ...]`;
-
-        const labelRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: Math.max(500, markets.length * 45), messages: [{ role: 'user', content: labelPrompt }] }),
-          signal: AbortSignal.timeout(8000)
-        });
-        const labelData = await labelRes.json();
-        const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          markets.forEach((m, i) => {
-            if (parsed[i]?.label) m.yesLabel = String(parsed[i].label).slice(0, 60);
-            if (parsed[i]?.real === false) m._nonsense = true;
-          });
-        }
-      }
-    } catch (_) { /* labels/legitimacy check are optional — cards still render without them */ }
-
-    const finalMarkets = markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
-
+    const finalMarkets = await fetchCategoryMarkets(category, { isSearch, searchWords, daysCap, daysMin });
     return res.status(200).json(
       isSearch ? { markets: finalMarkets, query: rawQuery } : { markets: finalMarkets, category }
     );

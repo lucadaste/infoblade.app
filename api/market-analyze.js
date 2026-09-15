@@ -93,30 +93,20 @@ async function readReputation(supabase) {
   } catch (_) { return {}; }
 }
 
-export default async function handler(req, res) {
-  _setCors(res);
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const supabase = _getSupabase();
-  const allowed = await _checkRateLimit(supabase, ip);
-  if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
-
-  const rawQuestion = req.body?.question;
-  const rawOdds = req.body?.currentOdds;
-  const rawCategory = typeof req.body?.marketCategory === 'string' ? req.body.marketCategory : '';
-
-  const question = _sanitize(rawQuestion, 300);
-  if (!question) return res.status(400).json({ error: 'No question provided' });
-
-  const currentOdds = (typeof rawOdds === 'number' && rawOdds >= 0 && rawOdds <= 100)
-    ? Math.round(rawOdds)
-    : undefined;
-
+// ── Core single-market analyze-and-save pipeline ───────────────────────────────
+// Shared by the POST handler (real user-triggered analysis) and the baseline
+// generator cron (api/generate-baseline.js), which calls this directly in-process.
+// Callers are expected to have already sanitized `question` etc. Returns either
+// the success payload or { error, status } for the caller to translate to HTTP.
+export async function runMarketAnalysis({
+  supabase, question, currentOdds, marketCategory = '', slug = null,
+  daysLeft = null, baselineGenerated = false,
+}) {
   // If market is already trading at extreme odds it's effectively resolved — skip analysis
   if (currentOdds !== undefined && (currentOdds >= 93 || currentOdds <= 7)) {
-    return res.status(200).json({
+    return {
       lean: 'Uncertain',
       lean_confidence: 'Low',
       reasoning: `The market is already trading at ${currentOdds}% — the crowd has essentially decided this outcome. There is no meaningful prediction to make.`,
@@ -125,7 +115,7 @@ export default async function handler(req, res) {
       signal_detail: 'Market odds indicate the outcome is already near-certain.',
       articlesFound: 0,
       predictionSaved: false,
-    });
+    };
   }
 
   // ── Response cache: same question analyzed in the last 15 minutes ──────────
@@ -143,13 +133,12 @@ export default async function handler(req, res) {
         .limit(1)
         .maybeSingle();
       if (cached?.analysis?.lean) {
-        return res.status(200).json({ ...cached.analysis, _cached: true });
+        return { ...cached.analysis, _cached: true };
       }
     } catch (_) { /* cache miss — fall through to generation */ }
   }
 
-  const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
-  const rawCat   = rawCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
+  const rawCat   = marketCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
   const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
 
   const searchQuery = buildSearchQuery(question);
@@ -203,7 +192,7 @@ export default async function handler(req, res) {
     }
 
     if (items.length === 0 && redditPosts.length < 3) {
-      return res.status(200).json({
+      return {
         lean: 'Uncertain',
         lean_confidence: 'Low',
         reasoning: 'No relevant news or public discussion found for this question. The market odds are the best available signal.',
@@ -212,7 +201,7 @@ export default async function handler(req, res) {
         signal_detail: 'No news coverage found to compare against the market odds.',
         articlesFound: 0,
         searchQuery
-      });
+      };
     }
 
     const oddsContext = currentOdds !== undefined
@@ -271,8 +260,8 @@ Respond ONLY with valid JSON, no markdown:
 
     const data = await apiRes.json();
     if (data.error) {
-      console.error('[market-analyze] Anthropic error:', data.error.message);
-      return res.status(500).json({ error: 'Analysis failed' });
+      console.error('[runMarketAnalysis] Anthropic error:', data.error.message);
+      return { error: 'Analysis failed', status: 500 };
     }
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
@@ -280,14 +269,13 @@ Respond ONLY with valid JSON, no markdown:
     try {
       analysis = JSON.parse(raw);
     } catch (_) {
-      return res.status(500).json({ error: 'Analysis service returned invalid data' });
+      return { error: 'Analysis service returned invalid data', status: 500 };
     }
 
     const lean = (analysis.lean || '').trim();
     let predictionSaved = false;
     let saveError = null;
     if (supabase && (lean === 'Yes' || lean === 'No')) {
-      const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
       // Only set a validation_date when Polymarket provided an actual end date.
       // Without a real end date, leave null — news-grade scan will stamp the date
       // once the outcome is confirmed. A made-up date causes misleading "Jul 12"-style
@@ -295,6 +283,8 @@ Respond ONLY with valid JSON, no markdown:
       const validationDate = daysLeft != null
         ? new Date(Date.now() + daysLeft * 86400000).toISOString()
         : null;
+      const savedAnalysis = { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null };
+      if (baselineGenerated) savedAnalysis.baseline_generated = true;
       const { error: insertErr } = await supabase.from('predictions').insert({
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at:          new Date().toISOString(),
@@ -303,10 +293,10 @@ Respond ONLY with valid JSON, no markdown:
         lean,
         lean_confidence:     (analysis.lean_confidence || '').trim() || null,
         market_odds_at_time: currentOdds ?? null,
-        market_slug:         req.body?.slug || null,
+        market_slug:         slug || null,
         signal:              analysis.signal || null,
         category,
-        analysis:            { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null },
+        analysis:            savedAnalysis,
         validation_date:     validationDate,
         winner_tickers:      [],
         loser_tickers:       [],
@@ -314,16 +304,45 @@ Respond ONLY with valid JSON, no markdown:
         notes:               null,
       });
       if (insertErr) {
-        console.error('[market-analyze] save error:', insertErr.message, insertErr.code);
+        console.error('[runMarketAnalysis] save error:', insertErr.message, insertErr.code);
         saveError = insertErr.message;
       } else {
         predictionSaved = true;
       }
     }
 
-    return res.status(200).json({ ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(saveError ? { _saveError: saveError } : {}) });
+    return { ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(saveError ? { _saveError: saveError } : {}) };
   } catch (err) {
-    console.error('[market-analyze]', err.message);
-    return res.status(500).json({ error: 'Analysis failed' });
+    console.error('[runMarketAnalysis]', err.message);
+    return { error: 'Analysis failed', status: 500 };
   }
+}
+
+export default async function handler(req, res) {
+  _setCors(res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+  const supabase = _getSupabase();
+  const allowed = await _checkRateLimit(supabase, ip);
+  if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+
+  const rawQuestion = req.body?.question;
+  const rawOdds = req.body?.currentOdds;
+  const rawCategory = typeof req.body?.marketCategory === 'string' ? req.body.marketCategory : '';
+
+  const question = _sanitize(rawQuestion, 300);
+  if (!question) return res.status(400).json({ error: 'No question provided' });
+
+  const currentOdds = (typeof rawOdds === 'number' && rawOdds >= 0 && rawOdds <= 100)
+    ? Math.round(rawOdds)
+    : undefined;
+
+  const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
+  const slug     = req.body?.slug || null;
+
+  const result = await runMarketAnalysis({ supabase, question, currentOdds, marketCategory: rawCategory, slug, daysLeft });
+  if (result?.error) return res.status(result.status || 500).json({ error: result.error });
+  return res.status(200).json(result);
 }

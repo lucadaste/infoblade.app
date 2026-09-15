@@ -293,6 +293,328 @@ async function _savePrediction(supabase, record) {
   return { saved: true };
 }
 
+// ── Source quality / consensus helpers (module scope so runAnalysis can use
+// them outside the request-handler closure, same as the GET grouping path) ────
+const sourceQualityMap = {
+  // Tier: High — wire services, major financial press
+  'Reuters': 'High', 'Associated Press': 'High', 'Bloomberg': 'High',
+  'Financial Times': 'High', 'The Wall Street Journal': 'High', 'The Economist': 'High',
+  'BBC': 'High', 'NPR': 'High', 'CNBC': 'High', 'Wall Street Journal': 'High',
+  'AP': 'High', 'White House': 'High', 'Politico': 'High', 'Barron\'s': 'High',
+  'S&P Global': 'High', 'Moody\'s': 'High', 'Fitch': 'High',
+  // Tier: Medium — established financial & tech media
+  'The Hill': 'Medium', 'Business Insider': 'Medium',
+  'MarketWatch': 'Medium', 'Yahoo Finance': 'Medium', 'CNN': 'Medium',
+  'The Guardian': 'Medium', 'NBC News': 'Medium', 'CBS News': 'Medium',
+  'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
+  'Axios': 'Medium', 'Bloomberg Opinion': 'Medium',
+  // Financial analysis & stock news
+  'Benzinga': 'Medium', 'InvestorPlace': 'Medium', 'The Motley Fool': 'Medium',
+  'Motley Fool': 'Medium', 'Zacks': 'Medium', 'TheStreet': 'Medium',
+  'Investopedia': 'Medium', 'Nasdaq': 'Medium', 'Barchart': 'Medium',
+  'TipRanks': 'Medium', 'Seeking Alpha': 'Medium', 'Stock Analysis': 'Medium',
+  'Stock Titan': 'Medium', 'StocksToTrade': 'Medium', 'Quiver Quantitative': 'Medium',
+  'Traders Union': 'Medium', 'AlphaStreet': 'Medium', 'Finbold': 'Medium',
+  'GuruFocus': 'Medium', '24/7 Wall St': 'Medium', 'Simply Wall St': 'Medium',
+  'Proactive Investors': 'Medium', 'GlobeNewswire': 'Medium', 'PR Newswire': 'Medium',
+  'Business Wire': 'Medium', 'Globe Newswire': 'Medium',
+  // Tech media
+  'TechCrunch': 'Medium', 'The Verge': 'Medium', 'Wired': 'Medium',
+  'VentureBeat': 'Medium', 'Ars Technica': 'Medium', 'MIT Technology Review': 'Medium',
+  '9to5Mac': 'Medium', 'MacRumors': 'Medium', 'AppleInsider': 'Medium',
+  'Android Authority': 'Medium', 'ZDNet': 'Medium', 'CNET': 'Medium',
+  'Tom\'s Hardware': 'Medium', 'AnandTech': 'Medium', 'PCMag': 'Medium',
+  'Engadget': 'Medium', 'TechStock²': 'Medium',
+  // Crypto
+  'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
+  'Forkast': 'Medium', 'CoinPost': 'Medium', 'Cointelegraph': 'Low',
+  // Low-credibility
+  'Fox News': 'Low', 'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
+  'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
+  // Reddit
+  'Reddit r/wallstreetbets': 'Low', 'Reddit r/investing': 'Low', 'Reddit r/stocks': 'Low',
+  'Reddit r/options': 'Low', 'Reddit r/StockMarket': 'Low',
+  'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
+  'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low',
+};
+const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
+const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
+
+function normalizeSourceName(source) {
+  return source
+    .replace(/\s*\(.*?\)/g, '').replace(/[""'']/g, '')
+    .replace(/\b(news|tv|online|magazine|channel)\b/gi, '')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ').trim().toLowerCase();
+}
+function getSourceGrade(source) {
+  const normalized = normalizeSourceName(source);
+  for (const key of Object.keys(sourceQualityMap)) {
+    if (normalized.includes(key.toLowerCase())) return sourceQualityMap[key];
+  }
+  return 'Unknown';
+}
+
+function getEffectiveWeight(source, grade, reputation) {
+  const base = gradeWeights[grade] ?? 0.2;
+  const stats = reputation?.[source];
+  if (!stats || stats.attempts < 30) return base;
+  const accuracy = stats.correct / stats.attempts;
+  const ramp = Math.min((stats.attempts - 30) / 30, 1.0);
+  const multiplier = Math.max(0.5, Math.min(1.5, 0.4 + accuracy));
+  return base * (1.0 + (multiplier - 1.0) * ramp);
+}
+
+const STOPWORDS = new Set([
+  'the','and','for','with','that','this','from','after','over','under','into','between','about','before',
+  'are','was','were','will','have','has','had','not','but','when','where','which','their','they','them','its','also',
+  'more','than','same','new','market','industry','companies','company','stock','stocks','price','prices',
+  'rise','fall','up','down','higher','lower','gain','gains','loss','losses','on','in','of','to','a','an','as','is'
+]);
+
+function tokenizeHeadline(text) {
+  return text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOPWORDS.has(w));
+}
+function weightedTokenCounts(items, reputation = {}) {
+  const counts = {};
+  items.forEach(({ headline, grade, source }) => {
+    const weight = getEffectiveWeight(source || '', grade, reputation);
+    new Set(tokenizeHeadline(headline)).forEach(token => { counts[token] = (counts[token] || 0) + weight; });
+  });
+  return counts;
+}
+function topTokens(counts, limit = 5) {
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([t]) => t);
+}
+function buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation = {} }) {
+  const minScore = gradeScores[minGrade] ?? gradeScores.medium;
+  const records = sources.map((source, idx) => ({ source, headline: headlines[idx] || '', grade: sourceGrades?.[source] || getSourceGrade(source) }));
+  const passing = records.filter(r => gradeScores[r.grade.toLowerCase()] >= minScore);
+  const high = passing.filter(r => r.grade === 'High');
+  const medium = passing.filter(r => r.grade === 'Medium');
+  const overall  = topTokens(weightedTokenCounts(passing, reputation));
+  const highTop  = topTokens(weightedTokenCounts(high, reputation));
+  const medTop   = topTokens(weightedTokenCounts(medium, reputation));
+  const pieces = [];
+  if (highTop.length)  pieces.push(`High-grade sources focus on ${highTop.join(', ')}`);
+  if (medTop.length)   pieces.push(`Medium-grade sources add emphasis on ${medTop.join(', ')}`);
+  if (overall.length)  pieces.push(`Weighted consensus among passing sources highlights ${overall.join(', ')}`);
+  return pieces.length ? pieces.join('. ') + '.' : 'No strong consensus found among passing sources.';
+}
+
+// ── Core analyze-and-save pipeline ─────────────────────────────────────────────
+// Shared by the POST handler (real user/API-triggered analysis) and the baseline
+// generator cron (api/generate-baseline.js), which calls this directly in-process
+// instead of round-tripping through HTTP. Callers are expected to have already
+// sanitized/validated `topic` etc. — this function trusts its inputs.
+// Returns either the success payload (same shape the HTTP handler used to return
+// inline) or { error, status } for the caller to translate into an HTTP response.
+export async function runAnalysis({
+  supabase, topic, headlines, sources, sourceGrades, minGrade = 'medium',
+  impactTimeframe, category = '', coinSymbol = '', userId = null,
+  skipSave = false, baselineGenerated = false,
+}) {
+  // ── Response cache: return saved analysis if same topic was generated recently ──
+  if (supabase) {
+    try {
+      const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
+      // Supabase builder is immutable — each method returns a new object.
+      // Must reassign to add conditional filters.
+      let cacheQuery = supabase
+        .from('predictions')
+        .select('id, analysis, winner_tickers, loser_tickers')
+        .eq('topic', topic)
+        .gte('created_at', twoHoursAgo)
+        .not('analysis', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (category) cacheQuery = cacheQuery.eq('category', category);
+      const { data: cached } = await cacheQuery.maybeSingle();
+      if (cached?.analysis?.direction) {
+        const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
+        const snapshot = cachedTickers.length ? await _fetchTickerSnapshot(cachedTickers) : {};
+        return { ...cached.analysis, predictionId: cached.id, predictionSaved: true, technicalSnapshot: snapshot, sources, _cached: true };
+      }
+    } catch (_) { /* cache miss — fall through to generation */ }
+  }
+
+  try {
+    const candidateTickers = _extractTickerCandidates(headlines);
+    const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
+    const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
+      _fetchRelevantMarkets(topic),
+      _fetchTickerSnapshot(candidateTickers),
+      _fetchRedditSentiment(topic, isCryptoTopic),
+      supabase
+        ? supabase.from('source_reputation').select('source, attempts, correct')
+            .then(({ data }) => {
+              const map = {};
+              for (const row of data || []) map[row.source] = { attempts: row.attempts, correct: row.correct };
+              return map;
+            })
+            .catch(() => ({}))
+        : Promise.resolve({}),
+      supabase
+        ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
+        : Promise.resolve(null),
+      _fetchLiveConflicts(supabase, candidateTickers, topic),
+    ]);
+
+    const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
+    const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
+
+    const _tfDays = _parseTimeframeDays(impactTimeframe || '1 month');
+    const timeframeGuidance = _tfDays <= 7
+      ? `SHORT-TERM LENS (${impactTimeframe || '1 week'}): Weight recent momentum and breaking news most heavily. Immediate catalysts, technicals, and short-term sentiment dominate at this horizon. Macro trends are secondary unless they are themselves the catalyst.`
+      : _tfDays <= 45
+      ? `MEDIUM-TERM LENS (${impactTimeframe || '1 month'}): Weigh upcoming earnings cycles, guidance revisions, and confirmed trend shifts. Analyst ratings, sector rotation signals, and macro momentum all matter alongside the recent news.`
+      : _tfDays <= 100
+      ? `MEDIUM-LONG LENS (${impactTimeframe || '3 months'}): Analyst price targets, sector cycle position, and recurring macro headwinds or tailwinds carry more weight than day-to-day news. Recent headlines are context, not the primary driver. Consider whether the current trend is early or late-cycle.`
+      : `LONG-TERM LENS (${impactTimeframe || '6 months'}): Structural forces dominate over this horizon. Weight analyst consensus price targets, secular growth or decline themes, competitive positioning, and macro cycles above short-term news noise. Explicitly note that recent news is only one input, and that longer-term fundamentals and industry trends should anchor your call.`;
+
+    const marketsSection = relevantMarkets.length
+      ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence.\n`
+      : '';
+
+    const technicalSection = _buildTechnicalSection(technicalSnapshot);
+
+    const redditSection = redditPosts.length
+      ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
+      : '';
+
+    const trackRecordSection = formatContextForPrompt(contextGraph);
+    const conflictSection = _buildConflictSection(liveConflicts, candidateTickers);
+
+    const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
+
+Topic: "${topic}"
+
+Headlines from ${sources.length} sources:
+${headlines.map(h => `- ${h}`).join('\n')}
+
+Sources and factuality grades:
+${sources.map(name => `- ${name}: ${sourceGrades?.[name] || 'Unknown'}`).join('\n')}
+
+Use weighted source consensus to shape the prediction:
+- High-grade sources carry weight 1.0
+- Medium-grade sources carry weight 0.7
+- Low-grade sources carry weight 0.4
+Only include sources that meet the selected factuality threshold for the final prediction.
+
+Consensus summary: ${consensus}
+${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}
+Only use ${thresholdText} for this analysis.
+
+Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends.
+
+TIMEFRAME LENS: ${timeframeGuidance}
+
+CRITICAL RULES:
+- Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
+${category === 'crypto-coin'
+  ? `- CRYPTO TICKERS: This is a direct crypto coin analysis for ONE specific coin. You MUST include ONLY that single coin symbol (e.g., BTC for Bitcoin, ETH for Ethereum, SOL for Solana) in winners or losers. Do NOT include any US-listed stocks or ETFs (no MSTR, COIN, IBIT, MARA, RIOT, etc.) — only the raw coin symbol itself.
+- Sectors can be crypto-market sectors (Layer 1, DeFi, Exchange, Mining, ETF).`
+  : `- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
+- No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
+- Foreign companies that trade as ADRs in the US may use their US ADR ticker
+- Sectors should reflect US market sectors only`}
+- Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.
+- STOCK SPECIFICITY: Only list a ticker if there is a DIRECT, SPECIFIC causal chain between THIS event and that instrument's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the instruments with the clearest, most direct exposure.
+- AVOID CONTRADICTIONS: Each ticker should appear in EITHER winners OR losers, never both. If the net effect on a ticker is unclear, omit it entirely rather than hedging.
+- BASE RATE CALIBRATION: Before committing to a direction, anchor on historical base rates. Broad US equity indices (S&P 500, QQQ, Dow, Russell 2000, broad market ETFs like SPY/QQQ/IWM) rise in roughly 70% of 1-month periods and ~75% of 3-month periods. For a BEARISH call on a broad index over any multi-week or monthly horizon, you need a compelling case backed by multiple high-grade sources: confirmed or imminent recession signals, sustained unexpected Fed tightening, financial system stress, or a specific policy shock. Mildly negative news, geopolitical uncertainty, or a single bad data point is NOT sufficient to override the base-rate prior. If the evidence is mixed or ambiguous for a broad index, the probability-weighted call is UP. Apply the same logic for individual sector ETFs (XLK, XLE, etc.) — single-sector headwinds must be severe and clear-cut to justify a bearish 1-month call. Individual stocks have no such base-rate protection — use standard evidence weighting.
+- For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish vs bearish signals from credible sources and commit to whichever side has more weight. If news is sparse or mixed but one side has ANY edge, pick it. If news doesn't clearly point anywhere, use your knowledge of the sector, macro environment, historical precedent, and the specific event type to make the best educated guess — that IS your job. Reserve "uncertain" ONLY for true deadlock: where both weighted totals are within 5% of each other AND your domain knowledge gives no tiebreaker. "Uncertain" should be rare (under 10% of calls). Do NOT use it to avoid being wrong.
+- TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section above is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
+- CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears above, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "direction": "bullish" or "bearish" or "uncertain" — commit to a direction. If news is thin or mixed, use your sector/macro expertise to call the most likely outcome. "uncertain" only if weighted signals are within 5% of a tie AND domain knowledge offers no resolution.,
+  "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
+  "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
+  "crowd_summary": "1 sentence: what specific outcome the public is leaning toward and why, based on prediction market odds",
+  "sectors": { "positive": ["sector 1"], "negative": ["sector 2"], "neutral": [] },
+  "winners": { "explanation": "Why these specific instruments benefit", "tickers": ["TICK1","TICK2"] },
+  "losers":  { "explanation": "Why these specific instruments are hurt",  "tickers": ["TICK3"] },
+  "confidence": "4 — specific reason"
+}`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+
+    const data = await response.json();
+    if (data.error) {
+      console.error('[runAnalysis] Anthropic error:', data.error.message);
+      return { error: 'Analysis service unavailable', status: 500 };
+    }
+
+    let analysis;
+    try {
+      analysis = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+    } catch (_) {
+      return { error: 'Analysis service returned invalid data', status: 500 };
+    }
+
+    const predictionId    = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    // Normalize to uppercase first so 'eth'/'doge' from Claude still matches _COIN_SYMS
+    const _coinOnly = (tickers) => category === 'crypto-coin'
+      ? tickers.map(t => String(t).toUpperCase()).filter(t => _COIN_SYMS.has(t))
+      : tickers;
+    let winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
+    let loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
+
+    if (category === 'crypto-coin') {
+      // Every crypto-coin prediction is about exactly one coin: the one the client is
+      // viewing. Trust that explicit symbol over Claude's free-text winners/losers lists
+      // so a prediction never silently drops out of grading (empty tickers) because the
+      // model phrased/omitted the symbol differently, and so it can never span >1 coin.
+      const coin = _COIN_SYMS.has(coinSymbol) ? coinSymbol : (winnerTickers[0] || loserTickers[0] || null);
+      winnerTickers = coin && analysis.direction === 'bullish' ? [coin] : [];
+      loserTickers  = coin && analysis.direction === 'bearish' ? [coin] : [];
+    }
+    const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
+
+    // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
+    // Must resolve before saving so baseline_prices is complete — validate.js
+    // skips predictions with an empty baseline_prices object.
+    const missingTickers = allTickers.filter(t => !technicalSnapshot[t]);
+    const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
+    const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
+
+    let saveResult = { saved: false, error: supabase ? null : 'supabase_null' };
+    if (supabase && !skipSave) {
+      const record = {
+        id:              predictionId,
+        topic,
+        category:        category || null,
+        analysis:        baselineGenerated ? { ...analysis, baseline_generated: true } : analysis,
+        winner_tickers:  winnerTickers,
+        loser_tickers:   loserTickers,
+        baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
+        validation_date: new Date(Date.now() + _parseTimeframeDays(category === 'crypto-coin' && impactTimeframe ? impactTimeframe : (analysis.impact_timeframe || impactTimeframe)) * 86400000).toISOString(),
+        correct:         null,
+        notes:           null,
+        sources,
+        source_grades:   sourceGrades,
+        min_grade:       minGrade,
+      };
+      // user_id requires schema cache reload in Supabase after ALTER TABLE —
+      // only include when set to avoid "column not found" errors in schema cache.
+      if (userId) record.user_id = userId;
+      saveResult = await _savePrediction(supabase, record);
+    } else if (!supabase) {
+      console.warn('[runAnalysis] Supabase not available — prediction not saved');
+    }
+
+    return { ...analysis, predictionId, predictionSaved: saveResult.saved, _saveError: saveResult.error || null, technicalSnapshot: fullSnapshot, sources };
+
+  } catch (err) {
+    console.error('[runAnalysis]', err.message);
+    return { error: 'Analysis failed', status: 500 };
+  }
+}
+
 // ── CORS helper ───────────────────────────────────────────────────────────────
 function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
@@ -381,112 +703,6 @@ async function _fetchCryptoFearGreed() {
 export default async function handler(req, res) {
   _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  const sourceQualityMap = {
-    // Tier: High — wire services, major financial press
-    'Reuters': 'High', 'Associated Press': 'High', 'Bloomberg': 'High',
-    'Financial Times': 'High', 'The Wall Street Journal': 'High', 'The Economist': 'High',
-    'BBC': 'High', 'NPR': 'High', 'CNBC': 'High', 'Wall Street Journal': 'High',
-    'AP': 'High', 'White House': 'High', 'Politico': 'High', 'Barron\'s': 'High',
-    'S&P Global': 'High', 'Moody\'s': 'High', 'Fitch': 'High',
-    // Tier: Medium — established financial & tech media
-    'The Hill': 'Medium', 'Business Insider': 'Medium',
-    'MarketWatch': 'Medium', 'Yahoo Finance': 'Medium', 'CNN': 'Medium',
-    'The Guardian': 'Medium', 'NBC News': 'Medium', 'CBS News': 'Medium',
-    'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
-    'Axios': 'Medium', 'Bloomberg Opinion': 'Medium',
-    // Financial analysis & stock news
-    'Benzinga': 'Medium', 'InvestorPlace': 'Medium', 'The Motley Fool': 'Medium',
-    'Motley Fool': 'Medium', 'Zacks': 'Medium', 'TheStreet': 'Medium',
-    'Investopedia': 'Medium', 'Nasdaq': 'Medium', 'Barchart': 'Medium',
-    'TipRanks': 'Medium', 'Seeking Alpha': 'Medium', 'Stock Analysis': 'Medium',
-    'Stock Titan': 'Medium', 'StocksToTrade': 'Medium', 'Quiver Quantitative': 'Medium',
-    'Traders Union': 'Medium', 'AlphaStreet': 'Medium', 'Finbold': 'Medium',
-    'GuruFocus': 'Medium', '24/7 Wall St': 'Medium', 'Simply Wall St': 'Medium',
-    'Proactive Investors': 'Medium', 'GlobeNewswire': 'Medium', 'PR Newswire': 'Medium',
-    'Business Wire': 'Medium', 'Globe Newswire': 'Medium',
-    // Tech media
-    'TechCrunch': 'Medium', 'The Verge': 'Medium', 'Wired': 'Medium',
-    'VentureBeat': 'Medium', 'Ars Technica': 'Medium', 'MIT Technology Review': 'Medium',
-    '9to5Mac': 'Medium', 'MacRumors': 'Medium', 'AppleInsider': 'Medium',
-    'Android Authority': 'Medium', 'ZDNet': 'Medium', 'CNET': 'Medium',
-    'Tom\'s Hardware': 'Medium', 'AnandTech': 'Medium', 'PCMag': 'Medium',
-    'Engadget': 'Medium', 'TechStock²': 'Medium',
-    // Crypto
-    'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
-    'Forkast': 'Medium', 'CoinPost': 'Medium', 'Cointelegraph': 'Low',
-    // Low-credibility
-    'Fox News': 'Low', 'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
-    'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
-    // Reddit
-    'Reddit r/wallstreetbets': 'Low', 'Reddit r/investing': 'Low', 'Reddit r/stocks': 'Low',
-    'Reddit r/options': 'Low', 'Reddit r/StockMarket': 'Low',
-    'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
-    'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low',
-  };
-  const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
-  const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
-
-  function normalizeSourceName(source) {
-    return source
-      .replace(/\s*\(.*?\)/g, '').replace(/[""'']/g, '')
-      .replace(/\b(news|tv|online|magazine|channel)\b/gi, '')
-      .replace(/[^a-zA-Z0-9 ]/g, ' ').trim().toLowerCase();
-  }
-  function getSourceGrade(source) {
-    const normalized = normalizeSourceName(source);
-    for (const key of Object.keys(sourceQualityMap)) {
-      if (normalized.includes(key.toLowerCase())) return sourceQualityMap[key];
-    }
-    return 'Unknown';
-  }
-
-  function getEffectiveWeight(source, grade, reputation) {
-    const base = gradeWeights[grade] ?? 0.2;
-    const stats = reputation?.[source];
-    if (!stats || stats.attempts < 30) return base;
-    const accuracy = stats.correct / stats.attempts;
-    const ramp = Math.min((stats.attempts - 30) / 30, 1.0);
-    const multiplier = Math.max(0.5, Math.min(1.5, 0.4 + accuracy));
-    return base * (1.0 + (multiplier - 1.0) * ramp);
-  }
-
-  const STOPWORDS = new Set([
-    'the','and','for','with','that','this','from','after','over','under','into','between','about','before',
-    'are','was','were','will','have','has','had','not','but','when','where','which','their','they','them','its','also',
-    'more','than','same','new','market','industry','companies','company','stock','stocks','price','prices',
-    'rise','fall','up','down','higher','lower','gain','gains','loss','losses','on','in','of','to','a','an','as','is'
-  ]);
-
-  function tokenizeHeadline(text) {
-    return text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 3 && !STOPWORDS.has(w));
-  }
-  function weightedTokenCounts(items, reputation = {}) {
-    const counts = {};
-    items.forEach(({ headline, grade, source }) => {
-      const weight = getEffectiveWeight(source || '', grade, reputation);
-      new Set(tokenizeHeadline(headline)).forEach(token => { counts[token] = (counts[token] || 0) + weight; });
-    });
-    return counts;
-  }
-  function topTokens(counts, limit = 5) {
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([t]) => t);
-  }
-  function buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation = {} }) {
-    const minScore = gradeScores[minGrade] ?? gradeScores.medium;
-    const records = sources.map((source, idx) => ({ source, headline: headlines[idx] || '', grade: sourceGrades?.[source] || getSourceGrade(source) }));
-    const passing = records.filter(r => gradeScores[r.grade.toLowerCase()] >= minScore);
-    const high = passing.filter(r => r.grade === 'High');
-    const medium = passing.filter(r => r.grade === 'Medium');
-    const overall  = topTokens(weightedTokenCounts(passing, reputation));
-    const highTop  = topTokens(weightedTokenCounts(high, reputation));
-    const medTop   = topTokens(weightedTokenCounts(medium, reputation));
-    const pieces = [];
-    if (highTop.length)  pieces.push(`High-grade sources focus on ${highTop.join(', ')}`);
-    if (medTop.length)   pieces.push(`Medium-grade sources add emphasis on ${medTop.join(', ')}`);
-    if (overall.length)  pieces.push(`Weighted consensus among passing sources highlights ${overall.join(', ')}`);
-    return pieces.length ? pieces.join('. ') + '.' : 'No strong consensus found among passing sources.';
-  }
 
   // ── GET: fetch & group news ───────────────────────────────────────────────
   if (req.method === 'GET') {
@@ -1108,206 +1324,9 @@ Respond ONLY with valid JSON, no markdown:
 
     if (!topic || topic.length < 15) return res.status(400).json({ error: 'Topic too short or missing' });
 
-    // ── Response cache: return saved analysis if same topic was generated recently ──
-    if (supabase) {
-      try {
-        const twoHoursAgo = new Date(Date.now() - 7200000).toISOString();
-        // Supabase builder is immutable — each method returns a new object.
-        // Must reassign to add conditional filters.
-        let cacheQuery = supabase
-          .from('predictions')
-          .select('id, analysis, winner_tickers, loser_tickers')
-          .eq('topic', topic)
-          .gte('created_at', twoHoursAgo)
-          .not('analysis', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        if (category) cacheQuery = cacheQuery.eq('category', category);
-        const { data: cached } = await cacheQuery.maybeSingle();
-        if (cached?.analysis?.direction) {
-          const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
-          const snapshot = cachedTickers.length ? await _fetchTickerSnapshot(cachedTickers) : {};
-          return res.status(200).json({ ...cached.analysis, predictionId: cached.id, predictionSaved: true, technicalSnapshot: snapshot, sources, _cached: true });
-        }
-      } catch (_) { /* cache miss — fall through to generation */ }
-    }
-
-    try {
-      const candidateTickers = _extractTickerCandidates(headlines);
-      const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-      const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
-        _fetchRelevantMarkets(topic),
-        _fetchTickerSnapshot(candidateTickers),
-        _fetchRedditSentiment(topic, isCryptoTopic),
-        supabase
-          ? supabase.from('source_reputation').select('source, attempts, correct')
-              .then(({ data }) => {
-                const map = {};
-                for (const row of data || []) map[row.source] = { attempts: row.attempts, correct: row.correct };
-                return map;
-              })
-              .catch(() => ({}))
-          : Promise.resolve({}),
-        supabase
-          ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
-          : Promise.resolve(null),
-        _fetchLiveConflicts(supabase, candidateTickers, topic),
-      ]);
-
-      const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
-      const consensus = buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation });
-
-      const _tfDays = _parseTimeframeDays(impactTimeframe || '1 month');
-      const timeframeGuidance = _tfDays <= 7
-        ? `SHORT-TERM LENS (${impactTimeframe || '1 week'}): Weight recent momentum and breaking news most heavily. Immediate catalysts, technicals, and short-term sentiment dominate at this horizon. Macro trends are secondary unless they are themselves the catalyst.`
-        : _tfDays <= 45
-        ? `MEDIUM-TERM LENS (${impactTimeframe || '1 month'}): Weigh upcoming earnings cycles, guidance revisions, and confirmed trend shifts. Analyst ratings, sector rotation signals, and macro momentum all matter alongside the recent news.`
-        : _tfDays <= 100
-        ? `MEDIUM-LONG LENS (${impactTimeframe || '3 months'}): Analyst price targets, sector cycle position, and recurring macro headwinds or tailwinds carry more weight than day-to-day news. Recent headlines are context, not the primary driver. Consider whether the current trend is early or late-cycle.`
-        : `LONG-TERM LENS (${impactTimeframe || '6 months'}): Structural forces dominate over this horizon. Weight analyst consensus price targets, secular growth or decline themes, competitive positioning, and macro cycles above short-term news noise. Explicitly note that recent news is only one input, and that longer-term fundamentals and industry trends should anchor your call.`;
-
-      const marketsSection = relevantMarkets.length
-        ? `\nRelated prediction market odds (Polymarket, live):\n${relevantMarkets.map(m => `- "${m.question}": ${m.yesPrice}% YES ($${Math.round(m.volume24h / 1000)}K 24h vol)`).join('\n')}\nThese represent crowd consensus on related outcomes — use them to calibrate your confidence.\n`
-        : '';
-
-      const technicalSection = _buildTechnicalSection(technicalSnapshot);
-
-      const redditSection = redditPosts.length
-        ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
-        : '';
-
-      const trackRecordSection = formatContextForPrompt(contextGraph);
-      const conflictSection = _buildConflictSection(liveConflicts, candidateTickers);
-
-      const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
-
-Topic: "${topic}"
-
-Headlines from ${sources.length} sources:
-${headlines.map(h => `- ${h}`).join('\n')}
-
-Sources and factuality grades:
-${sources.map(name => `- ${name}: ${sourceGrades?.[name] || 'Unknown'}`).join('\n')}
-
-Use weighted source consensus to shape the prediction:
-- High-grade sources carry weight 1.0
-- Medium-grade sources carry weight 0.7
-- Low-grade sources carry weight 0.4
-Only include sources that meet the selected factuality threshold for the final prediction.
-
-Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}
-Only use ${thresholdText} for this analysis.
-
-Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends.
-
-TIMEFRAME LENS: ${timeframeGuidance}
-
-CRITICAL RULES:
-- Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
-${category === 'crypto-coin'
-  ? `- CRYPTO TICKERS: This is a direct crypto coin analysis for ONE specific coin. You MUST include ONLY that single coin symbol (e.g., BTC for Bitcoin, ETH for Ethereum, SOL for Solana) in winners or losers. Do NOT include any US-listed stocks or ETFs (no MSTR, COIN, IBIT, MARA, RIOT, etc.) — only the raw coin symbol itself.
-- Sectors can be crypto-market sectors (Layer 1, DeFi, Exchange, Mining, ETF).`
-  : `- Beneficiaries and losers must ONLY reference stocks ETFs or bonds traded on US exchanges (NYSE NASDAQ CBOE)
-- No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
-- Foreign companies that trade as ADRs in the US may use their US ADR ticker
-- Sectors should reflect US market sectors only`}
-- Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.
-- STOCK SPECIFICITY: Only list a ticker if there is a DIRECT, SPECIFIC causal chain between THIS event and that instrument's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the instruments with the clearest, most direct exposure.
-- AVOID CONTRADICTIONS: Each ticker should appear in EITHER winners OR losers, never both. If the net effect on a ticker is unclear, omit it entirely rather than hedging.
-- BASE RATE CALIBRATION: Before committing to a direction, anchor on historical base rates. Broad US equity indices (S&P 500, QQQ, Dow, Russell 2000, broad market ETFs like SPY/QQQ/IWM) rise in roughly 70% of 1-month periods and ~75% of 3-month periods. For a BEARISH call on a broad index over any multi-week or monthly horizon, you need a compelling case backed by multiple high-grade sources: confirmed or imminent recession signals, sustained unexpected Fed tightening, financial system stress, or a specific policy shock. Mildly negative news, geopolitical uncertainty, or a single bad data point is NOT sufficient to override the base-rate prior. If the evidence is mixed or ambiguous for a broad index, the probability-weighted call is UP. Apply the same logic for individual sector ETFs (XLK, XLE, etc.) — single-sector headwinds must be severe and clear-cut to justify a bearish 1-month call. Individual stocks have no such base-rate protection — use standard evidence weighting.
-- For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish vs bearish signals from credible sources and commit to whichever side has more weight. If news is sparse or mixed but one side has ANY edge, pick it. If news doesn't clearly point anywhere, use your knowledge of the sector, macro environment, historical precedent, and the specific event type to make the best educated guess — that IS your job. Reserve "uncertain" ONLY for true deadlock: where both weighted totals are within 5% of each other AND your domain knowledge gives no tiebreaker. "Uncertain" should be rare (under 10% of calls). Do NOT use it to avoid being wrong.
-- TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section above is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
-- CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears above, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "direction": "bullish" or "bearish" or "uncertain" — commit to a direction. If news is thin or mixed, use your sector/macro expertise to call the most likely outcome. "uncertain" only if weighted signals are within 5% of a tie AND domain knowledge offers no resolution.,
-  "why_it_matters": "2-3 sentences on specific economic significance with concrete numbers where possible",
-  "impact_timeframe": "Specific timeframe e.g. Immediate within 48 hours or Over the next 2-4 weeks",
-  "crowd_summary": "1 sentence: what specific outcome the public is leaning toward and why, based on prediction market odds",
-  "sectors": { "positive": ["sector 1"], "negative": ["sector 2"], "neutral": [] },
-  "winners": { "explanation": "Why these specific instruments benefit", "tickers": ["TICK1","TICK2"] },
-  "losers":  { "explanation": "Why these specific instruments are hurt",  "tickers": ["TICK3"] },
-  "confidence": "4 — specific reason"
-}`;
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-      });
-
-      const data = await response.json();
-      if (data.error) {
-        console.error('[analyze POST] Anthropic error:', data.error.message);
-        return res.status(500).json({ error: 'Analysis service unavailable' });
-      }
-
-      let analysis;
-      try {
-        analysis = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
-      } catch (_) {
-        return res.status(500).json({ error: 'Analysis service returned invalid data' });
-      }
-
-      const predictionId    = `pred_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-      // Normalize to uppercase first so 'eth'/'doge' from Claude still matches _COIN_SYMS
-      const _coinOnly = (tickers) => category === 'crypto-coin'
-        ? tickers.map(t => String(t).toUpperCase()).filter(t => _COIN_SYMS.has(t))
-        : tickers;
-      let winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
-      let loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
-
-      if (category === 'crypto-coin') {
-        // Every crypto-coin prediction is about exactly one coin: the one the client is
-        // viewing. Trust that explicit symbol over Claude's free-text winners/losers lists
-        // so a prediction never silently drops out of grading (empty tickers) because the
-        // model phrased/omitted the symbol differently, and so it can never span >1 coin.
-        const coin = _COIN_SYMS.has(coinSymbol) ? coinSymbol : (winnerTickers[0] || loserTickers[0] || null);
-        winnerTickers = coin && analysis.direction === 'bullish' ? [coin] : [];
-        loserTickers  = coin && analysis.direction === 'bearish' ? [coin] : [];
-      }
-      const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
-
-      // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
-      // Must resolve before saving so baseline_prices is complete — validate.js
-      // skips predictions with an empty baseline_prices object.
-      const missingTickers = allTickers.filter(t => !technicalSnapshot[t]);
-      const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
-      const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };
-
-      let saveResult = { saved: false, error: supabase ? null : 'supabase_null' };
-      if (supabase && !skipSave) {
-        const record = {
-          id:              predictionId,
-          topic,
-          category:        category || null,
-          analysis,
-          winner_tickers:  winnerTickers,
-          loser_tickers:   loserTickers,
-          baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
-          validation_date: new Date(Date.now() + _parseTimeframeDays(category === 'crypto-coin' && impactTimeframe ? impactTimeframe : (analysis.impact_timeframe || impactTimeframe)) * 86400000).toISOString(),
-          correct:         null,
-          notes:           null,
-          sources,
-          source_grades:   sourceGrades,
-          min_grade:       minGrade,
-        };
-        // user_id requires schema cache reload in Supabase after ALTER TABLE —
-        // only include when set to avoid "column not found" errors in schema cache.
-        if (userId) record.user_id = userId;
-        saveResult = await _savePrediction(supabase, record);
-      } else {
-        console.warn('[analyze POST] Supabase not available — prediction not saved');
-      }
-
-      return res.status(200).json({ ...analysis, predictionId, predictionSaved: saveResult.saved, _saveError: saveResult.error || null, technicalSnapshot: fullSnapshot, sources });
-
-    } catch (err) {
-      console.error('[analyze POST]', err.message);
-      return res.status(500).json({ error: 'Analysis failed' });
-    }
+    const result = await runAnalysis({ supabase, topic, headlines, sources, sourceGrades, minGrade, impactTimeframe, category, coinSymbol, userId, skipSave });
+    if (result?.error) return res.status(result.status || 500).json({ error: result.error });
+    return res.status(200).json(result);
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

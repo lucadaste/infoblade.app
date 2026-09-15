@@ -257,26 +257,29 @@ async function _fetchPopularityRanking() {
   }
 }
 
+// Exported so api/generate-baseline.js (the daily baseline generator) can pull
+// the same 'any'-sector candidate pool feed.html's ticker list is built from,
+// instead of keeping a second, driftable copy.
+export const SECTOR_STOCKS = {
+  'any':           ['SPX','SPY','QQQ','IWM','DIA','AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AVGO','ORCL','AMD','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','SNOW','PLTR','UBER','JPM','BAC','GS','MS','V','MA','WFC','AXP','BLK','C','SCHW','UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','ISRG','XOM','CVX','COP','OXY','SLB','WMT','COST','MCD','SBUX','NKE','TGT','HD','KO','PEP','PG','LULU','NFLX','DIS','SPOT','CMCSA','T','VZ','SNAP','GE','CAT','RTX','LMT','BA','NOC','HON','DE','SHOP','MELI','SQ','ABNB','RBLX','PINS','COIN','MSTR','MARA','RIOT','GLD','SLV','TLT','XLE','XLF','XLK','XLV','IBIT','GDX','VNQ','HYG'],
+  'technology':    ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','AMD','AVGO','ORCL','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','PLTR','SNOW'],
+  'macro':         ['TLT','GLD','HYG','UUP','BND','SHY','IEF','LQD'],
+  'energy':        ['XOM','CVX','COP','OXY','SLB','XLE','HAL','MRO','PSX','VLO'],
+  'financials':    ['JPM','GS','BAC','MS','V','MA','WFC','AXP','BLK','C','SCHW','USB','PNC'],
+  'precious-metals':['GLD','SLV','GDX','GDXJ','NEM','GOLD','WPM','AEM','FNV'],
+  'real-estate':   ['VNQ','AMT','PLD','EQIX','PSA','SPG','AVB','DLR','O','SBAC'],
+  'consumer':      ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
+  'healthcare':    ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
+  'defense':       ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
+  'etfs':          ['SPX','SPY','QQQ','IWM','DIA','VTI','GLD','SLV','GDX','TLT','SHY','HYG','LQD','XLE','XLF','XLK','XLV','XLI','IBIT','VNQ'],
+};
+
 export default async function handler(req, res) {
   _setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).end();
 
   const sector = req.query.sector || 'any';
-
-  const SECTOR_STOCKS = {
-    'any':           ['SPX','SPY','QQQ','IWM','DIA','AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AVGO','ORCL','AMD','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','SNOW','PLTR','UBER','JPM','BAC','GS','MS','V','MA','WFC','AXP','BLK','C','SCHW','UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','ISRG','XOM','CVX','COP','OXY','SLB','WMT','COST','MCD','SBUX','NKE','TGT','HD','KO','PEP','PG','LULU','NFLX','DIS','SPOT','CMCSA','T','VZ','SNAP','GE','CAT','RTX','LMT','BA','NOC','HON','DE','SHOP','MELI','SQ','ABNB','RBLX','PINS','COIN','MSTR','MARA','RIOT','GLD','SLV','TLT','XLE','XLF','XLK','XLV','IBIT','GDX','VNQ','HYG'],
-    'technology':    ['AAPL','MSFT','NVDA','GOOGL','META','AMZN','AMD','AVGO','ORCL','CRM','INTC','QCOM','AMAT','MU','NOW','PANW','INTU','ADBE','PLTR','SNOW'],
-    'macro':         ['TLT','GLD','HYG','UUP','BND','SHY','IEF','LQD'],
-    'energy':        ['XOM','CVX','COP','OXY','SLB','XLE','HAL','MRO','PSX','VLO'],
-    'financials':    ['JPM','GS','BAC','MS','V','MA','WFC','AXP','BLK','C','SCHW','USB','PNC'],
-    'precious-metals':['GLD','SLV','GDX','GDXJ','NEM','GOLD','WPM','AEM','FNV'],
-    'real-estate':   ['VNQ','AMT','PLD','EQIX','PSA','SPG','AVB','DLR','O','SBAC'],
-    'consumer':      ['WMT','COST','AMZN','TGT','NKE','MCD','SBUX','PG','KO','PEP','LULU','HD','LOW'],
-    'healthcare':    ['UNH','LLY','JNJ','ABBV','PFE','MRK','TMO','AMGN','GILD','CVS','ISRG','DHR'],
-    'defense':       ['LMT','RTX','NOC','GD','BA','HII','LHX','LDOS','CACI','KTOS'],
-    'etfs':          ['SPX','SPY','QQQ','IWM','DIA','VTI','GLD','SLV','GDX','TLT','SHY','HYG','LQD','XLE','XLF','XLK','XLV','XLI','IBIT','VNQ'],
-  };
 
   const baseSymbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
   let finalSymbols = baseSymbols;
