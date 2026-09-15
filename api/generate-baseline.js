@@ -16,7 +16,7 @@ import { categoryToSection } from '../lib/prediction-sections.js';
 // simply skipped for the rest of the day — never padded to force the target.
 
 const DAILY_TARGET = parseInt(process.env.BASELINE_DAILY_TARGET, 10) || 50;
-const BATCH_SIZE    = parseInt(process.env.BASELINE_BATCH_SIZE, 10) || 5;
+const BATCH_SIZE    = parseInt(process.env.BASELINE_BATCH_SIZE, 10) || 3;
 const CONCURRENCY    = 3;
 const BASELINE_TIMEFRAME = '7 days'; // short horizon so baseline predictions start grading within a week
 
@@ -187,25 +187,28 @@ export default async function handler(req, res) {
   try {
     const { counts, coveredTickers, coveredCoins, coveredSlugs } = await _todaysBaselineState(supabase);
 
-    const summary = { target: DAILY_TARGET, before: counts, sections: {} };
+    const met = { attempted: 0, saved: 0, note: 'target already met today' };
 
-    if (counts.stocks < DAILY_TARGET) {
-      summary.sections.stocks = await _generateStocks(supabase, DAILY_TARGET - counts.stocks, coveredTickers);
-    } else {
-      summary.sections.stocks = { attempted: 0, saved: 0, note: 'target already met today' };
-    }
+    // Run all 3 sections concurrently — sequentially, each section's Claude
+    // calls alone can approach the 60s function budget, and three in a row
+    // reliably blew through it (504 FUNCTION_INVOCATION_TIMEOUT in practice).
+    const [stocks, crypto, predictionMarkets] = await Promise.all([
+      counts.stocks < DAILY_TARGET
+        ? _generateStocks(supabase, DAILY_TARGET - counts.stocks, coveredTickers)
+        : Promise.resolve(met),
+      counts.crypto < DAILY_TARGET
+        ? _generateCrypto(supabase, DAILY_TARGET - counts.crypto, coveredCoins)
+        : Promise.resolve(met),
+      counts['prediction-markets'] < DAILY_TARGET
+        ? _generatePredictionMarkets(supabase, DAILY_TARGET - counts['prediction-markets'], coveredSlugs)
+        : Promise.resolve(met),
+    ]);
 
-    if (counts.crypto < DAILY_TARGET) {
-      summary.sections.crypto = await _generateCrypto(supabase, DAILY_TARGET - counts.crypto, coveredCoins);
-    } else {
-      summary.sections.crypto = { attempted: 0, saved: 0, note: 'target already met today' };
-    }
-
-    if (counts['prediction-markets'] < DAILY_TARGET) {
-      summary.sections['prediction-markets'] = await _generatePredictionMarkets(supabase, DAILY_TARGET - counts['prediction-markets'], coveredSlugs);
-    } else {
-      summary.sections['prediction-markets'] = { attempted: 0, saved: 0, note: 'target already met today' };
-    }
+    const summary = {
+      target: DAILY_TARGET,
+      before: counts,
+      sections: { stocks, crypto, 'prediction-markets': predictionMarkets },
+    };
 
     return res.status(200).json(summary);
   } catch (err) {
