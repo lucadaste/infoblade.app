@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
+import { COIN_SYMS } from '../lib/coin-symbols.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -59,7 +60,7 @@ function _sanitizeObject(obj, maxKeys = 40, keyMax = 100, valMax = 20) {
   return result;
 }
 
-const _COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND','MATIC','BNB','TRX','TON','RENDER','INJ','WIF','BONK','JUP','PYTH']);
+const _COIN_SYMS = COIN_SYMS;
 
 // ── Timeframe parsing ─────────────────────────────────────────────────────────
 function _parseTimeframeDays(str) {

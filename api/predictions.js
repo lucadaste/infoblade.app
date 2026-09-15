@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
+import { COIN_SYMS } from '../lib/coin-symbols.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -63,7 +64,7 @@ function _parseTimeframeDays(str) {
   return 7;
 }
 
-const _COIN_SYMS = new Set(['BTC','ETH','SOL','DOGE','XRP','AVAX','SHIB','LINK','POL','ADA','DOT','NEAR','ATOM','XLM','LTC','ALGO','UNI','AAVE','MKR','GRT','FIL','HBAR','ETC','BCH','OP','ARB','SUI','APT','PEPE','BAT','MANA','SAND','MATIC']);
+const _COIN_SYMS = COIN_SYMS;
 
 // Fetch the FULL daily price history for a ticker over a date range in ONE request.
 // Returns a map of { "YYYY-MM-DD": closePrice } covering all trading days in the range.
