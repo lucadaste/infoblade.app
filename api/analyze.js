@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
+import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -62,35 +63,6 @@ function _sanitizeObject(obj, maxKeys = 40, keyMax = 100, valMax = 20) {
 
 const _COIN_SYMS = COIN_SYMS;
 
-// ── Timeframe parsing ─────────────────────────────────────────────────────────
-function _parseTimeframeDays(str) {
-  if (!str) return 30;
-  const s = str.toLowerCase();
-  const MAX_DAYS = 730;
-  if (s.includes('hour')) {
-    const h = s.match(/(\d+)/);
-    return Math.max(1, Math.round((h ? +h[1] : 24) / 24));
-  }
-  if (s.includes('day')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*day/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2), MAX_DAYS);
-    const single = s.match(/(\d+)\s*day/);
-    return Math.min(single ? +single[1] : 7, MAX_DAYS);
-  }
-  if (s.includes('week')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*week/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 7, MAX_DAYS);
-    const single = s.match(/(\d+)\s*week/);
-    return Math.min(single ? +single[1] * 7 : 14, MAX_DAYS);
-  }
-  if (s.includes('month')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*month/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 30, MAX_DAYS);
-    const single = s.match(/(\d+)\s*month/);
-    return Math.min(single ? +single[1] * 30 : 30, MAX_DAYS);
-  }
-  return 30;
-}
 
 // ── Polymarket ────────────────────────────────────────────────────────────────
 const _PM_STOPWORDS = new Set([

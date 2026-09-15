@@ -153,7 +153,7 @@
 
   <!-- Stats -->
   <div class="stats-row" id="stats-row">
-    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div id="stat-accuracy-ci" style="font-size:11px;color:var(--muted);margin-top:4px"></div></div>
     <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div></div>
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div></div>
   </div>
@@ -180,6 +180,15 @@
       <div id="ticker-grid" class="ticker-grid-vert">
         <div class="no-data">Loading…</div>
       </div>
+    </div>
+  </div>
+
+  <!-- Calibration: does a higher confidence rating actually mean higher realized accuracy? -->
+  <div style="margin-bottom:32px">
+    <div class="section-title">Calibration: Confidence vs. Realized Accuracy</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Each bar is the actual correct-rate for predictions made at that confidence level. A well-calibrated system's bars rise left to right.</p>
+    <div class="cat-grid" id="calibration-grid">
+      <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
     </div>
   </div>
 
@@ -227,6 +236,14 @@
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
     acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
+
+    const accCI = document.getElementById('stat-accuracy-ci');
+    if (s.accuracyCI && s.total > 0) {
+      const margin = Math.round((s.accuracyCI.upper - s.accuracyCI.lower) / 2);
+      accCI.textContent = `±${margin}% (n=${s.total}, 95% CI)`;
+    } else {
+      accCI.textContent = '';
+    }
 
     const cr = document.getElementById('stat-correct');
     cr.classList.remove('skeleton');
@@ -379,8 +396,9 @@
       const acc      = hasData ? s.accuracy : null;
       const barW     = hasData ? acc : 0;
       const accColor = hasData ? (acc >= 60 ? 'var(--accent)' : acc >= 40 ? '#ffc832' : 'var(--red)') : 'var(--muted)';
+      const ciLabel = hasData && s.accuracyCI ? ` (±${Math.round((s.accuracyCI.upper - s.accuracyCI.lower) / 2)}%)` : '';
       const subLabel = hasData
-        ? `${s.total} prediction${s.total !== 1 ? 's' : ''} graded`
+        ? `${s.total} prediction${s.total !== 1 ? 's' : ''} graded${ciLabel}`
         : (s.pending > 0 ? `${s.pending} pending — none expired yet` : 'no predictions yet');
       return `
         <div class="cat-card">
@@ -390,6 +408,34 @@
             <span class="cat-pct" style="color:${accColor}">${hasData ? acc + '%' : '—'}</span>
           </div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">${subLabel}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderCalibration(calibration) {
+    const el = document.getElementById('calibration-grid');
+    if (!calibration || !calibration.length) {
+      el.innerHTML = '<div class="no-data" style="grid-column:1/-1">Calibration data appears after predictions are resolved.</div>';
+      return;
+    }
+    el.innerHTML = calibration.map(b => {
+      const stars = '★'.repeat(b.confidence) + '☆'.repeat(5 - b.confidence);
+      if (!b.sufficient) {
+        return `
+          <div class="cat-card">
+            <div class="cat-name">${stars}</div>
+            <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:0%"></div></div>
+            <div class="cat-stat"><span class="cat-pct" style="color:var(--muted)">—</span></div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} — insufficient data (need 10+)</div>
+          </div>`;
+      }
+      const accColor = b.realizedAccuracy >= 60 ? 'var(--accent)' : b.realizedAccuracy >= 40 ? '#ffc832' : 'var(--red)';
+      return `
+        <div class="cat-card">
+          <div class="cat-name">${stars}</div>
+          <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${b.realizedAccuracy}%;background:${accColor}"></div></div>
+          <div class="cat-stat"><span class="cat-pct" style="color:${accColor}">${b.realizedAccuracy}%</span></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} graded</div>
         </div>`;
     }).join('');
   }
@@ -510,6 +556,7 @@
       renderBySection(data.bySection);
       renderCumulativeChart(data.cumulativeTimeline);
       renderTickers(data.topTickers);
+      renderCalibration(data.calibration);
       renderAllPreds(data.recent);
       return data.summary;
     } catch (err) {

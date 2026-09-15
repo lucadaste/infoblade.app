@@ -4,6 +4,9 @@ import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { SECTION_CATS as _SECTION_CATS, SECTION_LABELS as _SECTION_LABELS, categoryToSection as _categoryToSection } from '../lib/prediction-sections.js';
 import { computeAccuracyScore, SCORING_VERSION } from '../lib/scoring.js';
+import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
+import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
+import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -50,24 +53,19 @@ function _sectionStats(preds, pendingBySection = {}) {
   }
   return Object.entries(_SECTION_LABELS).map(([sec, label]) => {
     const d = map[sec] || { correct: 0, total: 0 };
+    const ci = d.total > 0 ? wilsonInterval(d.correct, d.total) : null;
     return {
       section:  sec,
       label,
       total:    d.total,
       pending:  pendingBySection[sec] || 0,
       accuracy: d.total > 0 ? Math.round(d.correct / d.total * 100) : null,
+      // 95% Wilson score interval — n (`total`) is small for some sections
+      // (Crypto, Prediction Markets), where a bare percentage overstates
+      // precision. null until there's at least one resolved prediction.
+      accuracyCI: ci ? { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) } : null,
     };
   });
-}
-
-function _parseTimeframeDays(str) {
-  if (!str) return 7;
-  const s = str.toLowerCase();
-  const n = parseInt((s.match(/(\d+)/) || [])[1] || '1', 10);
-  if (s.includes('day'))   return Math.min(n, 30);
-  if (s.includes('week'))  return Math.min(n * 7, 90);
-  if (s.includes('month')) return Math.min(n * 30, 365);
-  return 7;
 }
 
 const _COIN_SYMS = COIN_SYMS;
@@ -224,6 +222,9 @@ async function handleResolve(req, res, supabase) {
     if (createdMs < minMs) minMs = createdMs;
     if (p._vDate.getTime() > maxMs) maxMs = p._vDate.getTime();
   }
+  // Alpha-adjusted scoring (lib/scoring.js) needs each benchmark's own price
+  // history over the same window — see lib/benchmarks.js.
+  for (const b of ALL_BENCHMARKS) uniqueTickers.add(b);
 
   // ── 4. ONE history fetch per ticker covering the full date range ───────────
   //    Batched in groups of 5 to avoid Yahoo Finance rate limiting.
@@ -267,22 +268,45 @@ async function handleResolve(req, res, supabase) {
       }
     }
 
+    // Benchmark return over the SAME window, for alpha adjustment. Computed
+    // fresh from history (not the ticker's own possibly-stored baseline) so
+    // it's on equal footing regardless of where the ticker's baseline came
+    // from. Missing/unavailable benchmark data just means no adjustment —
+    // computeAccuracyScore falls back to the raw return automatically.
+    const _benchmarkPctCache = {};
+    function benchmarkPctFor(benchTicker) {
+      if (!benchTicker || !histories[benchTicker]) return null;
+      if (benchTicker in _benchmarkPctCache) return _benchmarkPctCache[benchTicker];
+      const bBase = _priceOnDate(histories[benchTicker], createdDate);
+      const bAct  = _priceOnDate(histories[benchTicker], valDate);
+      const result = (bBase != null && bAct != null) ? (bAct - bBase) / bBase * 100 : null;
+      _benchmarkPctCache[benchTicker] = result;
+      return result;
+    }
+
     const rawMoves = {};
     for (const t of winners) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      rawMoves[t] = { pct, direction: 'bullish', basePrice: baseline[t], actualPrice: actual[t] };
+      const benchPct = benchmarkPctFor(benchmarkFor(t, _COIN_SYMS.has(t)));
+      const alphaPct = benchPct != null ? +(pct - benchPct).toFixed(2) : undefined;
+      rawMoves[t] = { pct, alphaPct, direction: 'bullish', basePrice: baseline[t], actualPrice: actual[t] };
     }
     for (const t of losers) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      rawMoves[t] = { pct, direction: 'bearish', basePrice: baseline[t], actualPrice: actual[t] };
+      const benchPct = benchmarkPctFor(benchmarkFor(t, _COIN_SYMS.has(t)));
+      const alphaPct = benchPct != null ? +(pct - benchPct).toFixed(2) : undefined;
+      rawMoves[t] = { pct, alphaPct, direction: 'bearish', basePrice: baseline[t], actualPrice: actual[t] };
     }
 
     const result = computeAccuracyScore(rawMoves);
     if (!result) { skipped++; continue; }
 
-    const { tickerMoves, accuracyScore, correct, outcome, grade } = result;
+    const {
+      tickerMoves, accuracyScore, correct, outcome, grade,
+      rawAccuracyScore, rawCorrect, rawGrade,
+    } = result;
     const confidence_weight  = _parseConfidenceStars(pred.analysis?.confidence);
 
     updates.push({
@@ -291,7 +315,14 @@ async function handleResolve(req, res, supabase) {
       validation_date: valDate.toISOString(),
       baseline_prices: baseline,
       actual_prices:   actual,
-      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, outcome, scoring_version: SCORING_VERSION, confidence_weight, ticker_moves: tickerMoves },
+      analysis: {
+        ...(pred.analysis || {}),
+        grade, score: accuracyScore, accuracy_score: accuracyScore, outcome,
+        // Pre-alpha-adjustment score, kept for reference/comparison — NOT
+        // used for `correct`/grade, which are alpha-based (see lib/scoring.js).
+        raw_accuracy_score: rawAccuracyScore, raw_correct: rawCorrect, raw_grade: rawGrade,
+        scoring_version: SCORING_VERSION, confidence_weight, ticker_moves: tickerMoves,
+      },
       sources: pred.sources,
     });
   }
@@ -632,6 +663,14 @@ async function handleStats(req, res, supabase) {
   }
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
   const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
+  // 95% Wilson interval around the headline number, using the resolved
+  // prediction count as n — a ballpark uncertainty band ("83% ± 10%
+  // (n=48)" reads very differently from a bare "83%").
+  let accuracyCI = null;
+  if (total > 0) {
+    const ci = wilsonIntervalFromP((accuracy ?? 0) / 100, total);
+    accuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
+  }
 
   // Fetch resolved + pending predictions. Also always include prediction-market
   // predictions (have lean/signal) so they're never pushed off the list by
@@ -716,10 +755,22 @@ async function handleStats(req, res, supabase) {
       if (p.correct) tickerStats[t].wins++;
     }
   }
+  // Minimum n=5 before a ticker is eligible for the leaderboard at all (a
+  // 1/1 or 2/2 "100% win rate" is statistically meaningless but visually
+  // reads as a strong claim). Sorted by Wilson-lower-bound, not raw win
+  // rate, so a small sample at a high raw rate (5/5) doesn't automatically
+  // outrank a much larger sample at a slightly lower rate (40/50) that's
+  // actually stronger evidence.
+  const TOP_TICKERS_MIN_N = 5;
   const topTickers = Object.entries(tickerStats)
-    .filter(([, s]) => s.total >= 2)
-    .map(([ticker, s]) => ({ ticker, winRate: Math.round(s.wins / s.total * 100), total: s.total }))
-    .sort((a, b) => b.winRate - a.winRate || b.total - a.total)
+    .filter(([, s]) => s.total >= TOP_TICKERS_MIN_N)
+    .map(([ticker, s]) => ({
+      ticker,
+      winRate: Math.round(s.wins / s.total * 100),
+      total: s.total,
+      wilsonLower: wilsonLowerBound(s.wins, s.total),
+    }))
+    .sort((a, b) => b.wilsonLower - a.wilsonLower || b.total - a.total)
     .slice(0, 15);
 
   // Pending counts by section (for sections with no resolved data yet)
@@ -735,6 +786,30 @@ async function handleStats(req, res, supabase) {
 
   // Per-section breakdown (Stocks / Crypto / Prediction Markets)
   const bySection = _sectionStats(validated ?? [], pendingBySection);
+
+  // Calibration: does a higher confidence star rating actually correlate
+  // with a higher realized correct-rate? Uses the same canonical `correct`
+  // field as everything else. Buckets under MIN_CALIBRATION_N are flagged
+  // insufficient rather than shown as a misleading point estimate.
+  const MIN_CALIBRATION_N = 10;
+  const calibrationBuckets = {};
+  for (const p of validated ?? []) {
+    const stars = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+    const bucket = Math.min(5, Math.max(1, Math.round(stars)));
+    if (!calibrationBuckets[bucket]) calibrationBuckets[bucket] = { n: 0, correct: 0 };
+    calibrationBuckets[bucket].n++;
+    if (p.correct) calibrationBuckets[bucket].correct++;
+  }
+  const calibration = [1, 2, 3, 4, 5].map(confidence => {
+    const b = calibrationBuckets[confidence] || { n: 0, correct: 0 };
+    const sufficient = b.n >= MIN_CALIBRATION_N;
+    return {
+      confidence,
+      n: b.n,
+      realizedAccuracy: sufficient ? Math.round(b.correct / b.n * 100) : null,
+      sufficient,
+    };
+  });
 
   const _filterTickers = (tickers, category) =>
     category === 'crypto-coin' ? (tickers || []).filter(t => _COIN_SYMS.has(t)) : (tickers || []);
@@ -789,8 +864,8 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
-    timeline, cumulativeTimeline, bySection, byCategory, topTickers,
+    summary: { total, correct, incorrect: total - correct, accuracy, accuracyCI, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
+    timeline, cumulativeTimeline, bySection, byCategory, topTickers, calibration,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
       validationDate: p.validation_date,
