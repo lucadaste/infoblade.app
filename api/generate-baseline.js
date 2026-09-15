@@ -18,9 +18,28 @@ import { categoryToSection } from '../lib/prediction-sections.js';
 const DAILY_TARGET = parseInt(process.env.BASELINE_DAILY_TARGET, 10) || 50;
 const BATCH_SIZE    = parseInt(process.env.BASELINE_BATCH_SIZE, 10) || 3;
 const CONCURRENCY    = 3;
-const BASELINE_TIMEFRAME = '7 days'; // short horizon so baseline predictions start grading within a week
 
 const PM_CATEGORIES = ['sports', 'politics', 'finance', 'entertainment', 'tech'];
+
+// Same 4 horizons crypto.html's timeframe picker offers, weighted toward
+// shorter ones: graded results (and the dashboard) fill in sooner, while
+// longer horizons still get picked occasionally for realistic variety.
+const TIMEFRAMES = [
+  { context: 'over the next 24 hours', validationTimeframe: '1 day',   weight: 0.4 },
+  { context: 'over the next 1-7 days', validationTimeframe: '7 days',  weight: 0.3 },
+  { context: 'over the next 30 days',  validationTimeframe: '30 days', weight: 0.2 },
+  { context: 'over the next 3 months', validationTimeframe: '90 days', weight: 0.1 },
+];
+
+function _pickTimeframe() {
+  const r = Math.random();
+  let cum = 0;
+  for (const tf of TIMEFRAMES) {
+    cum += tf.weight;
+    if (r < cum) return tf;
+  }
+  return TIMEFRAMES[TIMEFRAMES.length - 1];
+}
 
 // A few index/ETF tickers in SECTOR_STOCKS['any'] aren't in SEC's company list.
 const STOCK_NAME_FALLBACKS = {
@@ -109,11 +128,12 @@ async function _generateStocks(supabase, remaining, coveredTickers) {
   const names = await _getStockNames();
   const results = await _runBatch(candidates, CONCURRENCY, async ticker => {
     const name = names[ticker] || ticker;
+    const tf = _pickTimeframe();
     return runAnalysis({
       supabase,
-      topic: `${name} (${ticker}) stock market outlook over the next 7 days`,
+      topic: `${name} (${ticker}) stock market outlook ${tf.context}`,
       headlines: [], sources: [], sourceGrades: {}, minGrade: 'all',
-      category: 'any', impactTimeframe: BASELINE_TIMEFRAME,
+      category: 'any', impactTimeframe: tf.validationTimeframe,
       baselineGenerated: true,
     });
   });
@@ -126,11 +146,12 @@ async function _generateCrypto(supabase, remaining, coveredCoins) {
   if (!candidates.length) return { attempted: 0, saved: 0 };
 
   const results = await _runBatch(candidates, CONCURRENCY, async coin => {
+    const tf = _pickTimeframe();
     return runAnalysis({
       supabase,
-      topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook over the next 7 days`,
+      topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
       headlines: [], sources: [], sourceGrades: {}, minGrade: 'all',
-      category: 'crypto-coin', coinSymbol: coin.symbol, impactTimeframe: BASELINE_TIMEFRAME,
+      category: 'crypto-coin', coinSymbol: coin.symbol, impactTimeframe: tf.validationTimeframe,
       baselineGenerated: true,
     });
   });
