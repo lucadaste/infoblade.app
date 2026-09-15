@@ -8,8 +8,7 @@
   "functions": {
     "api/analyze.js":           { "maxDuration": 60 },
     "api/predictions.js":       { "maxDuration": 60 },
-    "api/validate.js":          { "maxDuration": 60 },
-    "api/generate-baseline.js": { "maxDuration": 60 }
+    "api/generate-baseline.js": { "maxDuration": 120 }
   },
   "crons": [
     {

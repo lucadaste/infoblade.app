@@ -3,6 +3,7 @@ import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { SECTION_CATS as _SECTION_CATS, SECTION_LABELS as _SECTION_LABELS, categoryToSection as _categoryToSection } from '../lib/prediction-sections.js';
+import { computeAccuracyScore, SCORING_VERSION } from '../lib/scoring.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -19,25 +20,42 @@ function _setCors(res) {
   res.setHeader('Vary', 'Origin');
 }
 
+// Grading (resolve / news-grade) writes to the DB and spends LLM/external-API
+// budget, so it must not be publicly triggerable. Vercel automatically sends
+// `Authorization: Bearer $CRON_SECRET` on its own cron-triggered requests
+// when CRON_SECRET is set — no vercel.json change needed for that path. The
+// `x-cron-secret` header / `secret` query param exist only for manual/admin
+// triggering (e.g. via curl), same as api/validate.js used to support.
+function _isAuthorizedForGrading(req) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return false;
+  const authHeader  = req.headers['authorization'];
+  const manualToken = req.headers['x-cron-secret'] || req.query.secret;
+  return authHeader === `Bearer ${cronSecret}` || manualToken === cronSecret;
+}
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 function _sectionStats(preds, pendingBySection = {}) {
   const map = {};
   for (const p of preds) {
     const sec = _categoryToSection(p.category || 'any');
-    if (!map[sec]) map[sec] = { lenientCorrect: 0, total: 0 };
-    const score = p.analysis?.accuracy_score ?? p.analysis?.score ?? -100;
+    if (!map[sec]) map[sec] = { correct: 0, total: 0 };
     map[sec].total++;
-    if (score > -15) map[sec].lenientCorrect++;
+    // Uses the same `correct` boolean as every other accuracy number on the
+    // page — this used to be an independent "lenient" score > -15 threshold
+    // that could show a different percentage than everywhere else for the
+    // same underlying predictions.
+    if (p.correct) map[sec].correct++;
   }
   return Object.entries(_SECTION_LABELS).map(([sec, label]) => {
-    const d = map[sec] || { lenientCorrect: 0, total: 0 };
+    const d = map[sec] || { correct: 0, total: 0 };
     return {
       section:  sec,
       label,
       total:    d.total,
       pending:  pendingBySection[sec] || 0,
-      accuracy: d.total > 0 ? Math.round(d.lenientCorrect / d.total * 100) : null,
+      accuracy: d.total > 0 ? Math.round(d.correct / d.total * 100) : null,
     };
   });
 }
@@ -70,8 +88,14 @@ async function _fetchTickerHistory(ticker, startMs, endMs) {
     const d = await r.json();
     const result = d?.chart?.result?.[0];
     if (!result) return {};
-    const tss    = result.timestamp || result.timestamps || [];
-    const closes = result.indicators?.quote?.[0]?.close || [];
+    const tss = result.timestamp || result.timestamps || [];
+    // Prefer adjusted close: raw close shows a stock split or ex-dividend date
+    // as a fake large price move, which would corrupt pct_return-based scoring
+    // for any ticker with a split/big dividend during the prediction window.
+    // Yahoo's v8 chart endpoint returns `indicators.adjclose` alongside `quote`
+    // for interval=1d requests; fall back to raw close if it's ever absent.
+    const closes = result.indicators?.adjclose?.[0]?.adjclose
+                || result.indicators?.quote?.[0]?.close || [];
     const map    = {};
     for (let i = 0; i < tss.length; i++) {
       if (closes[i] == null) continue;
@@ -93,11 +117,6 @@ function _priceOnDate(historyMap, targetDate) {
     if (diff < bestDiff) { bestDiff = diff; best = k; }
   }
   return bestDiff <= 7 * 86400000 ? historyMap[best] : null;
-}
-
-function _tickerScore(pct, direction) {
-  const signed = direction === 'bullish' ? pct : -pct;
-  return +(Math.max(-100, Math.min(100, signed * 10)).toFixed(1));
 }
 
 // Parse confidence stars (1-5) from stored string e.g. "4 — strong signal"
@@ -132,14 +151,6 @@ function _pmWeight(confStr)   {
   return 1;
 }
 
-function _letterGrade(score) {
-  if (score >= 60)  return 'A';
-  if (score >= 25)  return 'B';
-  if (score >= 0)   return 'C';
-  if (score >= -25) return 'D';
-  return 'F';
-}
-
 // ── Route handlers ────────────────────────────────────────────────────────────
 
 async function handleResolve(req, res, supabase) {
@@ -149,7 +160,7 @@ async function handleResolve(req, res, supabase) {
   // ── 1. Fetch all unresolved predictions ──────────────────────────────────────
   const { data: all, error } = await supabase
     .from('predictions')
-    .select('id, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug, market_odds_at_time')
+    .select('id, topic, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug, market_odds_at_time, status, retry_count')
     .is('correct', null)
     .order('created_at', { ascending: true })
     .limit(1000);
@@ -158,8 +169,11 @@ async function handleResolve(req, res, supabase) {
   if (!all?.length) return res.status(200).json({ resolved: 0, total: 0 });
 
   // ── 2. Derive effective validation date for each; keep only expired ones ───
+  // (status === 'failed' rows are permanently excluded here — they've already
+  // exhausted MAX_RESOLVE_RETRIES and are surfaced in handleStats instead.)
   const ready = [];
   for (const p of all) {
+    if (p.status === 'failed') continue;
     if (!p.winner_tickers?.length && !p.loser_tickers?.length) continue;
     let vDate = p.validation_date ? new Date(p.validation_date) : null;
     if (!vDate && p.created_at) {
@@ -172,10 +186,37 @@ async function handleResolve(req, res, supabase) {
 
   if (!ready.length) return res.status(200).json({ resolved: 0, total: all.length, pending: all.length });
 
+  // ── 2.5. Atomically claim the ready rows before spending API budget on them ──
+  // Guards against a slow resolve run overlapping the next scheduled one (or a
+  // manual trigger overlapping the cron): each UPDATE's WHERE clause only
+  // matches rows still in 'pending' (or stuck 'resolving' past the stale
+  // cutoff), so a row already claimed by a concurrent run won't be re-claimed
+  // here — Postgres serializes the two UPDATEs and the loser's WHERE simply
+  // stops matching. Only rows actually returned by the UPDATE are graded.
+  const STALE_MS = 15 * 60 * 1000;
+  const staleCutoff = new Date(nowMs - STALE_MS).toISOString();
+  const readyIds = ready.map(p => p.id);
+  const claimed = new Set();
+  for (let i = 0; i < readyIds.length; i += 200) {
+    const chunk = readyIds.slice(i, i + 200);
+    const { data: claimedRows, error: claimErr } = await supabase
+      .from('predictions')
+      .update({ status: 'resolving', resolving_since: nowStr })
+      .in('id', chunk)
+      .or(`status.eq.pending,and(status.eq.resolving,resolving_since.lt.${staleCutoff})`)
+      .select('id');
+    if (claimErr) continue; // best-effort; unclaimed rows just get skipped below
+    for (const r of claimedRows || []) claimed.add(r.id);
+  }
+  const claimedReady = ready.filter(p => claimed.has(p.id));
+  if (!claimedReady.length) {
+    return res.status(200).json({ resolved: 0, total: all.length, ready: ready.length, claimed: 0 });
+  }
+
   // ── 3. Collect unique tickers and the overall date range ──────────────────
   const uniqueTickers = new Set();
   let minMs = nowMs, maxMs = 0;
-  for (const p of ready) {
+  for (const p of claimedReady) {
     for (const t of [...(p.winner_tickers || []), ...(p.loser_tickers || [])]) {
       if (/^[A-Z^.]{1,7}$/.test(t)) uniqueTickers.add(t);
     }
@@ -200,7 +241,7 @@ async function handleResolve(req, res, supabase) {
   const updates = [];
   let skipped = 0;
 
-  for (const pred of ready) {
+  for (const pred of claimedReady) {
     const winners    = (pred.winner_tickers || []).filter(t => histories[t]);
     const losers     = (pred.loser_tickers  || []).filter(t => histories[t]);
     if (!winners.length && !losers.length) { skipped++; continue; }
@@ -226,30 +267,22 @@ async function handleResolve(req, res, supabase) {
       }
     }
 
-    const tickerMoves = {};
+    const rawMoves = {};
     for (const t of winners) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const pts = _tickerScore(pct, 'bullish');
-      tickerMoves[t] = { pct, direction: 'bullish', correct: pct >= 2, pts, basePrice: baseline[t], actualPrice: actual[t] };
+      rawMoves[t] = { pct, direction: 'bullish', basePrice: baseline[t], actualPrice: actual[t] };
     }
     for (const t of losers) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const pts = _tickerScore(pct, 'bearish');
-      tickerMoves[t] = { pct, direction: 'bearish', correct: pct <= -2, pts, basePrice: baseline[t], actualPrice: actual[t] };
+      rawMoves[t] = { pct, direction: 'bearish', basePrice: baseline[t], actualPrice: actual[t] };
     }
 
-    if (!Object.keys(tickerMoves).length) { skipped++; continue; }
+    const result = computeAccuracyScore(rawMoves);
+    if (!result) { skipped++; continue; }
 
-    const tickerScores  = Object.values(tickerMoves).map(m => m.pts);
-    const hitCount      = Object.values(tickerMoves).filter(m => m.correct).length;
-    const hitRate       = tickerScores.length > 0 ? hitCount / tickerScores.length : 0;
-    const hitBonus      = +((hitRate - 0.5) * 20).toFixed(1); // -10 to +10 pts: rewards getting direction right on more tickers
-    const avgScore      = +(tickerScores.reduce((a, b) => a + b, 0) / tickerScores.length).toFixed(1);
-    const accuracyScore = +(avgScore + hitBonus).toFixed(1);
-    const correct       = accuracyScore > 0;
-    const grade         = _letterGrade(accuracyScore);
+    const { tickerMoves, accuracyScore, correct, outcome, grade } = result;
     const confidence_weight  = _parseConfidenceStars(pred.analysis?.confidence);
 
     updates.push({
@@ -258,7 +291,7 @@ async function handleResolve(req, res, supabase) {
       validation_date: valDate.toISOString(),
       baseline_prices: baseline,
       actual_prices:   actual,
-      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, confidence_weight, ticker_moves: tickerMoves },
+      analysis: { ...(pred.analysis || {}), grade, score: accuracyScore, accuracy_score: accuracyScore, outcome, scoring_version: SCORING_VERSION, confidence_weight, ticker_moves: tickerMoves },
       sources: pred.sources,
     });
   }
@@ -278,6 +311,7 @@ async function handleResolve(req, res, supabase) {
             baseline_prices: u.baseline_prices,
             actual_prices:   u.actual_prices,
             analysis:        u.analysis,
+            status:          'resolved',
           })
           .eq('id', u.id);
         if (!e) {
@@ -290,6 +324,35 @@ async function handleResolve(req, res, supabase) {
         }
       })
     );
+  }
+
+  // Release the claim on claimed-but-skipped rows (no gradeable price data
+  // this run — e.g. Yahoo Finance fetch failures, which are swallowed to {}
+  // by _fetchTickerHistory) so they go back to 'pending' and get retried next
+  // pass instead of sitting stuck in 'resolving'. Past MAX_RESOLVE_RETRIES
+  // consecutive failures, mark 'failed' instead so a permanently-unfetchable
+  // ticker (delisted, bad symbol, etc.) doesn't retry forever unnoticed —
+  // handleStats surfaces the failed count.
+  const MAX_RESOLVE_RETRIES = 5;
+  const gradedIds = new Set(updates.map(u => u.id));
+  const toRelease = claimedReady.filter(p => !gradedIds.has(p.id));
+  for (const p of toRelease) {
+    const nextRetryCount = (p.retry_count || 0) + 1;
+    const willFail = nextRetryCount >= MAX_RESOLVE_RETRIES;
+    if (willFail) {
+      console.error('[predictions/resolve] giving up on prediction after repeated price-data failures', {
+        id: p.id, topic: p.topic, winnerTickers: p.winner_tickers, loserTickers: p.loser_tickers,
+        retryCount: nextRetryCount, timestamp: nowStr,
+      });
+    }
+    await supabase
+      .from('predictions')
+      .update({
+        status: willFail ? 'failed' : 'pending',
+        resolving_since: null,
+        retry_count: nextRetryCount,
+      })
+      .eq('id', p.id);
   }
 
   // ── 7. Prediction market resolution (Polymarket) ─────────────────────────
@@ -395,25 +458,11 @@ async function handleResolve(req, res, supabase) {
     }
   }
 
-  // ── 9. Delete crypto sub-event predictions saved before skipSave fix ────────
-  // autoAnalyzeGroup topics follow the pattern "…: impact on CoinName (SYM) over the next…"
-  // These were saved without skipSave:true before the fix; delete them so only
-  // the overall prediction per coin appears in the history.
-  {
-    const subEventRx = /: impact on [A-Z][a-zA-Z\s]+ \([A-Z]+\) over the next/i;
-    const { data: subEvents } = await supabase
-      .from('predictions')
-      .select('id, topic')
-      .eq('category', 'crypto-coin')
-      .limit(500);
-
-    const toDelete = (subEvents || []).filter(p => subEventRx.test(p.topic || '')).map(p => p.id);
-    if (toDelete.length) {
-      for (let i = 0; i < toDelete.length; i += 50) {
-        await supabase.from('predictions').delete().in('id', toDelete.slice(i, i + 50));
-      }
-    }
-  }
+  // Step 9 (crypto sub-event cleanup, matching predictions saved before the
+  // skipSave fix by regex against `topic`) used to run here on every resolve
+  // pass — cron AND every page load. An unconditional regex delete with no
+  // audit trail on a hot path is too risky; it's now a manual, dry-run-by-
+  // default script: scripts/cleanup-topics.js.
 
   // ── 10. Retroactive PM grading via Polymarket text search ─────────────────
   // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
@@ -524,11 +573,6 @@ async function handleResolve(req, res, supabase) {
     }
   }
 
-  // ── One-time cleanup: delete junk 'x' predictions from diagnostic test ─────
-  try {
-    await supabase.from('predictions').delete().eq('topic', 'x');
-  } catch (_) {}
-
   return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length, pmChecked: pmReady.length });
 }
 
@@ -568,6 +612,14 @@ async function handleStats(req, res, supabase) {
   const { count: totalInDb } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true });
+
+  // Predictions that exhausted MAX_RESOLVE_RETRIES in handleResolve (price
+  // data unavailable, e.g. a delisted/bad ticker symbol) — surfaced so they
+  // aren't just silently invisible pending-forever rows.
+  const { count: failedCount } = await supabase
+    .from('predictions')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'failed');
 
   const total = validated?.length ?? 0;
 
@@ -737,7 +789,7 @@ async function handleStats(req, res, supabase) {
   }
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
@@ -920,8 +972,11 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'POST')                       return res.status(405).json({ error: 'Method not allowed' });
-    if (req.query.resolve      === 'true')           return await handleResolve(req, res, supabase);
-    if (req.query['news-grade'] === 'true')          return await handleNewsGrade(req, res, supabase);
+    if (req.query.resolve === 'true' || req.query['news-grade'] === 'true') {
+      if (!_isAuthorizedForGrading(req)) return res.status(401).json({ error: 'Unauthorized' });
+      if (req.query.resolve === 'true')              return await handleResolve(req, res, supabase);
+      return await handleNewsGrade(req, res, supabase);
+    }
     if (req.query.graph        === 'true')           return await handleGraph(req, res, supabase);
     if (req.method === 'GET')                        return await handleStats(req, res, supabase);
     return res.status(405).json({ error: 'Method not allowed' });

@@ -158,6 +158,10 @@
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div></div>
   </div>
 
+  <!-- Shown only when > 0: predictions that couldn't be graded after repeated
+       price-data failures (see MAX_RESOLVE_RETRIES in api/predictions.js) -->
+  <div id="stat-failed-note" style="display:none;font-size:12px;color:var(--muted);margin:-10px 0 20px"></div>
+
   <!-- Per-section breakdown -->
   <div class="section-title">Accuracy by Section</div>
   <div class="cat-grid" id="section-grid">
@@ -233,6 +237,12 @@
     pend.classList.remove('skeleton');
     pend.style.height = pend.style.width = 'auto';
     pend.textContent = fmt(s.pending ?? 0);
+
+    const failedNote = document.getElementById('stat-failed-note');
+    if (s.failed > 0) {
+      failedNote.style.display = 'block';
+      failedNote.textContent = `${fmt(s.failed)} prediction${s.failed !== 1 ? 's' : ''} couldn't be graded (price data unavailable) and won't be retried further.`;
+    }
   }
 
   function renderCumulativeChart(cum) {
@@ -481,35 +491,14 @@
     dot.style.background = spinning ? 'var(--accent)' : '#555';
   }
 
-  // ── Validation: run on page load to grade any expired predictions ──
-  async function runValidation(totalInDb, alreadyResolved) {
+  // ── Pending note: grading itself now only runs via the authenticated cron
+  // (see api/predictions.js). This just reports current DB state, it never
+  // triggers a resolve pass — that used to fire up to 5x per page load with
+  // no auth, which is what we're avoiding.
+  function showPendingNote(totalInDb, alreadyResolved) {
     const pending = (totalInDb ?? 0) - (alreadyResolved ?? 0);
-    if (pending <= 0) return false; // nothing to do
-
-    showValBanner(`Grading ${pending} expired prediction${pending !== 1 ? 's' : ''} against historical prices…`, true);
-
-    let totalResolved = 0;
-    for (let pass = 0; pass < 5; pass++) {
-      try {
-        const r = await fetch(window.API_BASE + '/api/predictions?resolve=true');
-        const d = await r.json();
-        const n = d.resolved ?? 0;
-        totalResolved += n;
-        if (n === 0) break;
-        showValBanner(`Graded ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''}…`, true);
-      } catch (_) { break; }
-    }
-
-    if (totalResolved > 0) {
-      showValBanner(`✓ ${totalResolved} prediction${totalResolved !== 1 ? 's' : ''} graded`, false);
-      return true;
-    } else {
-      // Couldn't resolve any — show a note but don't hide
-      if (pending > 0) {
-        showValBanner(`${pending} prediction${pending !== 1 ? 's' : ''} pending — price data unavailable or timeframes not yet expired`, false);
-      }
-      return false;
-    }
+    if (pending <= 0) return;
+    showValBanner(`${pending} prediction${pending !== 1 ? 's' : ''} pending — graded automatically every 6 hours`, false);
   }
 
   async function loadStats() {
@@ -535,19 +524,9 @@
     }
   }
 
-  // ── Run: load stats first to know what needs grading, then validate, then refresh ──
+  // ── Run: load stats, then just report pending count (no client-triggered grading) ──
   const summary = await loadStats();
-
-  const needsRefresh = await runValidation(summary?.totalInDb, summary?.total);
-
-  if (needsRefresh) {
-    await loadStats();
-    // Update banner to reflect final count
-    const final = await fetch(window.API_BASE + '/api/predictions').then(r => r.json()).catch(() => null);
-    if (final?.summary?.total > 0) {
-      showValBanner(`✓ ${final.summary.total} prediction${final.summary.total !== 1 ? 's' : ''} graded`, false);
-    }
-  }
+  showPendingNote(summary?.totalInDb, summary?.total);
 })();
 </script>
 <script src="/chat-widget.js"></script>

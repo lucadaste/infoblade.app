@@ -62,6 +62,23 @@ create index if not exists predictions_category_idx on predictions (category);
 -- Accuracy score column: signed float -100..+100 derived from % return magnitude.
 alter table predictions add column if not exists accuracy_score numeric;
 
+-- Claim/lock columns for the ticker-based resolve pass in api/predictions.js
+-- (handleResolve). Without these, two overlapping resolve runs (e.g. a slow
+-- cron run overlapping the next scheduled one) could both grade the same
+-- prediction and double-increment source_reputation via upsert_source_reputation.
+-- 'resolving' rows older than 15 minutes are treated as stale (crashed
+-- mid-run) and become reclaimable — see _claimReadyPredictions in
+-- api/predictions.js.
+-- status: 'pending' | 'resolving' | 'resolved' | 'failed'. 'failed' means
+-- price data was unavailable for retry_count consecutive resolve passes
+-- (see MAX_RESOLVE_RETRIES in api/predictions.js) — distinct from 'pending'
+-- so these predictions stop being retried forever but stay visibly flagged
+-- (surfaced in handleStats) rather than silently never resolving.
+alter table predictions add column if not exists status text not null default 'pending';
+alter table predictions add column if not exists resolving_since timestamptz;
+alter table predictions add column if not exists retry_count integer not null default 0;
+create index if not exists predictions_status_idx on predictions (status);
+
 -- user_id: links predictions to Clerk user IDs (text, e.g. "user_xxx") for personal history.
 -- Anonymous predictions (no token) have user_id = NULL and still count toward platform stats.
 alter table predictions drop column if exists user_id;

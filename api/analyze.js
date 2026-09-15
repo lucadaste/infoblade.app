@@ -576,8 +576,9 @@ Respond ONLY with valid JSON, no markdown:
     const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
 
     // Fetch snapshot for any tickers Claude identified that weren't pre-fetched.
-    // Must resolve before saving so baseline_prices is complete — validate.js
-    // skips predictions with an empty baseline_prices object.
+    // Must resolve before saving so baseline_prices is complete — handleResolve
+    // in api/predictions.js falls back to a history lookup when baseline_prices
+    // is missing a ticker, but a fully-populated baseline here avoids that.
     const missingTickers = allTickers.filter(t => !technicalSnapshot[t]);
     const extraSnapshot  = missingTickers.length ? await _fetchTickerSnapshot(missingTickers) : {};
     const fullSnapshot   = { ...technicalSnapshot, ...extraSnapshot };

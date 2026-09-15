@@ -1,3 +1,12 @@
+// DEPRECATED — moved out of api/ on 2026-09-15 and renamed with a
+// .deprecated extension so it can never be picked up as a live Vercel
+// function again. Superseded by handleResolve in api/predictions.js.
+//
+// Kept for reference only: it independently re-implemented the same
+// ticker-based accuracy scoring with a DIFFERENT hit threshold (>= 0.5%
+// here vs. >= 2% in the live resolver) and was reachable via a separate
+// auth path (VALIDATE_SECRET). If this is ever revived, first check it
+// against lib/scoring.js — do not let it re-diverge.
 import { createClient } from '@supabase/supabase-js';
 
 function _getSupabase() {
