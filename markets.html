@@ -390,7 +390,7 @@
         const res = await fetch(window.API_BASE + '/api/market-analyze', {
           method: 'POST',
           headers: await _ah(),
-          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: market.category || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null })
+          body: JSON.stringify({ question: market.question, currentOdds: market.yesPrice, marketCategory: market.category || '', slug: market.slug || null, daysLeft: market.daysLeft ?? null, sport: market.sport || null })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);

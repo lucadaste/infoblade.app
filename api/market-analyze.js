@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
+import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBucket, fetchLegacyGeneric, SOURCING_VERSION } from '../lib/market-source-profiles.js';
 
 const SOURCE_QUALITY = {
   // Wire / Financial
@@ -65,7 +66,7 @@ function _sanitize(str, maxLen = 300) {
   return str.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, maxLen);
 }
 
-function getSourceGrade(source) {
+export function getSourceGrade(source) {
   const norm = source.toLowerCase();
   for (const key of Object.keys(SOURCE_QUALITY)) {
     if (norm.includes(key.toLowerCase())) return SOURCE_QUALITY[key];
@@ -95,6 +96,68 @@ async function readReputation(supabase) {
 
 const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech']);
 
+// ── Source-type reward loop helpers ─────────────────────────────────────────
+// Resolve Claude's cited `key_sources` (outlet names) back to the sourceType tag
+// each fetcher assigned (see lib/market-source-profiles.js), same substring-match
+// style as getSourceGrade. Only types Claude actually cited get stored — not
+// everything fetched — so the reward loop reflects what influenced the call.
+function _resolveSourceTypes(citedSources, sourceTypeMap) {
+  const types = {};
+  for (const cited of citedSources || []) {
+    const norm = (cited || '').toLowerCase();
+    for (const [source, type] of Object.entries(sourceTypeMap)) {
+      if (norm.includes(source.toLowerCase()) || source.toLowerCase().includes(norm)) {
+        types[type] = true;
+        break;
+      }
+    }
+  }
+  return Object.keys(types).length ? types : null;
+}
+
+// Same cited-sources resolution as _resolveSourceTypes, but for coverage volume —
+// takes the highest volume among cited sources as this prediction's bucket, since a
+// call that leaned on even one heavily-covered story is a call shaped by that volume,
+// regardless of what else was in the (mostly lower-volume) surrounding item list.
+function _resolveVolumeBucket(citedSources, sourceVolumeMap) {
+  let maxVolume = null;
+  for (const cited of citedSources || []) {
+    const norm = (cited || '').toLowerCase();
+    for (const [source, volume] of Object.entries(sourceVolumeMap)) {
+      if (norm.includes(source.toLowerCase()) || source.toLowerCase().includes(norm)) {
+        if (maxVolume == null || volume > maxVolume) maxVolume = volume;
+        break;
+      }
+    }
+  }
+  return volumeBucket(maxVolume);
+}
+
+// Contrarian = the lean went against the market's own recent odds movement, using
+// our own prior snapshots of this slug as the momentum proxy (the only odds-history
+// data on hand without a new API call — see plan for the CLOB price-history upgrade path).
+async function _computeOddsMomentum(supabase, slug, currentOdds) {
+  if (!supabase || !slug || currentOdds == null) return { direction: 'unknown', delta: null, priorOdds: null, priorRecordedAt: null };
+  try {
+    const { data: prior } = await supabase
+      .from('predictions')
+      .select('market_odds_at_time, created_at')
+      .eq('market_slug', slug)
+      .not('market_odds_at_time', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!prior) return { direction: 'unknown', delta: null, priorOdds: null, priorRecordedAt: null };
+    const delta = currentOdds - prior.market_odds_at_time;
+    const direction = delta > 2 ? 'up' : delta < -2 ? 'down' : 'flat';
+    return { direction, delta, priorOdds: prior.market_odds_at_time, priorRecordedAt: prior.created_at };
+  } catch (_) { return { direction: 'unknown', delta: null, priorOdds: null, priorRecordedAt: null }; }
+}
+function _isContrarian(lean, direction) {
+  if (direction === 'unknown') return null;
+  return (lean === 'Yes' && direction === 'down') || (lean === 'No' && direction === 'up');
+}
+
 // ── Core single-market analyze-and-save pipeline ───────────────────────────────
 // Shared by the POST handler (real user-triggered analysis) and the baseline
 // generator cron (api/generate-baseline.js), which calls this directly in-process.
@@ -102,7 +165,7 @@ const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech
 // the success payload or { error, status } for the caller to translate to HTTP.
 export async function runMarketAnalysis({
   supabase, question, currentOdds, marketCategory = '', slug = null,
-  daysLeft = null, baselineGenerated = false,
+  daysLeft = null, baselineGenerated = false, sport = null,
 }) {
   // If market is already trading at extreme odds it's effectively resolved — skip analysis
   if (currentOdds !== undefined && (currentOdds >= 93 || currentOdds <= 7)) {
@@ -140,8 +203,8 @@ export async function runMarketAnalysis({
 
   const rawCat   = marketCategory.toLowerCase().replace(/[^a-z0-9\-]/g, '').slice(0, 50) || null;
   const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
+  const rawSport = typeof sport === 'string' ? sport.replace(/[^a-zA-Z]/g, '').slice(0, 20) : null;
 
-  const searchQuery = buildSearchQuery(question);
   const [reputation, contextGraph] = await Promise.all([
     readReputation(supabase),
     supabase ? buildContextGraph(supabase, { category }).catch(() => null) : Promise.resolve(null),
@@ -149,49 +212,78 @@ export async function runMarketAnalysis({
   const trackRecordSection = formatContextForPrompt(contextGraph);
 
   try {
-    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(searchQuery)}&hl=en-US&gl=US&ceid=US:en`;
-    const redditUrl = `https://www.reddit.com/search.rss?q=${encodeURIComponent(searchQuery)}&sort=relevance&t=week&limit=10`;
+    const profile = CATEGORY_SOURCE_PROFILES[category];
+    let items = [];           // class: 'news' — shown in "Recent news"
+    let redditPosts = [];     // class: 'reddit' — shown in "Public sentiment"
+    let structuredItems = []; // class: 'structured' — shown in "Official/structured data"
+    let searchQuery;
+    let leanNote = '';
+    let sourceTypeMap = {};   // source name -> sourceType, for reward-loop tagging at save time
+    let sourceVolumeMap = {}; // source name -> coverageVolume, for reward-loop tagging at save time
 
-    const [rssRes, redditRes] = await Promise.all([
-      fetch(rssUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }),
-      fetch(redditUrl, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) }).catch(() => null)
-    ]);
+    if (profile) {
+      const entities = profile.buildQuery(question, rawSport);
+      searchQuery = entities.rawQuery;
 
-    const rssText = await rssRes.text();
-    const redditText = redditRes ? await redditRes.text().catch(() => '') : '';
+      const results = await Promise.allSettled(profile.fetchers.map(f => f(question, entities)));
+      let fetched = [];
+      for (const r of results) if (r.status === 'fulfilled') fetched.push(...r.value);
 
-    const items = [];
-    const matches = [...rssText.matchAll(/<item>([\s\S]*?)<\/item>/g)];
-    for (const match of matches.slice(0, 15)) {
-      const item = match[1];
-      const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
-      const sourceMatch = item.match(/<source[^>]*>(.*?)<\/source>/);
-      if (!titleMatch) continue;
-      const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
-      const source = sourceMatch ? sourceMatch[1].replace(/<[^>]*>/g, '').trim() : 'Unknown';
-      if (title.length > 10) {
-        const grade = getSourceGrade(source);
-        const rep = reputation[source];
+      // Relevance filter: for broadly-fetched news items, keep only ones mentioning an
+      // extracted entity. Structured/ESPN-team-filtered items are already targeted upstream.
+      const keywords = [
+        ...(entities.teams || []).map(t => t.full),
+        ...(entities.players || []),
+        ...(entities.entities || []),
+      ].filter(Boolean);
+      if (keywords.length) {
+        fetched = fetched.filter(i =>
+          i.class !== 'news' ||
+          i.sourceType === 'beat_reporter_news' ||
+          keywords.some(k => i.title.toLowerCase().includes(k.toLowerCase()))
+        );
+      }
+
+      fetched = fetched.map(i => ({ ...i, grade: i.grade || getSourceGrade(i.source) }));
+      const allocated = allocateBudget(fetched);
+      for (const i of allocated) {
+        if (i.sourceType) sourceTypeMap[i.source] = i.sourceType;
+        if (i.coverageVolume) sourceVolumeMap[i.source] = Math.max(sourceVolumeMap[i.source] || 0, i.coverageVolume);
+      }
+
+      structuredItems = allocated.filter(i => i.class === 'structured');
+      items = allocated.filter(i => i.class === 'news').map(i => {
+        const rep = reputation[i.source];
         const empirical = rep && rep.attempts >= 10
           ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
           : '';
-        items.push({ title, source, grade, empirical });
+        return { title: i.title, source: i.source, grade: i.grade, empirical, coverageVolume: i.coverageVolume || 1 };
+      });
+      redditPosts = allocated.filter(i => i.class === 'reddit').map(i => i.title);
+
+      if (category === 'politics') {
+        const note = politicalLeanNote(allocated.filter(i => i.class === 'news'));
+        if (note) leanNote = `\n${note}\n`;
       }
+    } else {
+      // Fallback for unrecognized/'prediction-markets' category — original generic
+      // behavior, delegated to fetchLegacyGeneric (lib/market-source-profiles.js) so
+      // this stays the single source of truth scripts/compare-token-usage.js measures
+      // against, instead of a second inline copy that could silently drift out of sync.
+      const legacy = await fetchLegacyGeneric(question);
+      searchQuery = legacy.searchQuery;
+      redditPosts = legacy.redditPosts;
+      items = legacy.items.map(i => {
+        const grade = getSourceGrade(i.source);
+        const rep = reputation[i.source];
+        const empirical = rep && rep.attempts >= 10
+          ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
+          : '';
+        return { title: i.title, source: i.source, grade, empirical };
+      });
     }
 
-    const redditPosts = [];
-    if (redditText) {
-      for (const match of [...redditText.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, 8)) {
-        const item = match[1];
-        const titleMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || item.match(/<title>(.*?)<\/title>/);
-        if (titleMatch) {
-          const title = titleMatch[1].replace(/<[^>]*>/g, '').trim();
-          if (title.length > 10) redditPosts.push(title);
-        }
-      }
-    }
-
-    if (items.length === 0 && redditPosts.length < 3) {
+    if (items.length === 0 && redditPosts.length < 3 && structuredItems.length === 0) {
       return {
         lean: 'Uncertain',
         lean_confidence: 'Low',
@@ -212,15 +304,19 @@ export async function runMarketAnalysis({
       ? `\nPublic sentiment on Reddit (${redditPosts.length} posts):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis is what regular people are actively discussing — factor it in as a crowd sentiment signal, especially for questions driven by public opinion.\n`
       : '';
 
+    const structuredSection = structuredItems.length
+      ? `\nOfficial/structured data (${structuredItems.length} items — filings, rosters, bills, disclosures):\n${structuredItems.map(i => `- [${i.sourceType}] ${i.title}`).join('\n')}\n`
+      : '';
+
     const prompt = `You are helping everyday users understand a prediction market question using recent news and public sentiment.
 
 Market question: "${question}"
 ${oddsContext}
 
 Recent news (${items.length} articles):
-${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}]`).join('\n')}
-${redditSection}${trackRecordSection}
-Weight news sources by grade (High > Medium > Low). Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
+${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
+${structuredSection}${redditSection}${leanNote}${trackRecordSection}
+Weight news sources by grade (High > Medium > Low). Treat official/structured data (filings, rosters, bills, disclosures) as a stronger factual signal than ordinary news when both are present. "Nx coverage" means N outlets ran essentially the same story — high coverage volume can mean the news is well-confirmed, but it can also mean the market has already priced in a widely-known story, so don't automatically treat heavy coverage as a bigger edge than a single high-grade or official source. Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting.
 
@@ -285,6 +381,16 @@ Respond ONLY with valid JSON, no markdown:
         : null;
       const savedAnalysis = { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null };
       if (baselineGenerated) savedAnalysis.baseline_generated = true;
+      // Tag which sourcing methodology produced this row — see SOURCING_VERSION in
+      // lib/market-source-profiles.js. Only set when the category-aware profile path
+      // actually ran; absence marks a row as generated by the old generic fallback.
+      if (profile) savedAnalysis.sourcing_version = SOURCING_VERSION;
+
+      const momentum = await _computeOddsMomentum(supabase, slug, currentOdds ?? null);
+      const contrarian = _isContrarian(lean, momentum.direction);
+      const sourceTypes = _resolveSourceTypes(analysis.key_sources, sourceTypeMap);
+      const coverageVolumeBucket = _resolveVolumeBucket(analysis.key_sources, sourceVolumeMap);
+
       const { error: insertErr } = await supabase.from('predictions').insert({
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
         created_at:          new Date().toISOString(),
@@ -302,6 +408,10 @@ Respond ONLY with valid JSON, no markdown:
         loser_tickers:       [],
         correct:             null,
         notes:               null,
+        source_types:        sourceTypes,
+        contrarian,
+        odds_momentum_at_time: momentum,
+        coverage_volume_bucket: coverageVolumeBucket,
       });
       if (insertErr) {
         console.error('[runMarketAnalysis] save error:', insertErr.message, insertErr.code);
@@ -341,8 +451,9 @@ export default async function handler(req, res) {
 
   const daysLeft = typeof req.body?.daysLeft === 'number' ? req.body.daysLeft : null;
   const slug     = req.body?.slug || null;
+  const sport    = typeof req.body?.sport === 'string' ? _sanitize(req.body.sport, 20) : null;
 
-  const result = await runMarketAnalysis({ supabase, question, currentOdds, marketCategory: rawCategory, slug, daysLeft });
+  const result = await runMarketAnalysis({ supabase, question, currentOdds, marketCategory: rawCategory, slug, daysLeft, sport });
   if (result?.error) return res.status(result.status || 500).json({ error: result.error });
   return res.status(200).json(result);
 }

@@ -146,3 +146,25 @@ create table if not exists whitelisted_accounts (
 alter table sentiment_tweets      enable row level security;
 alter table account_scores        enable row level security;
 alter table whitelisted_accounts  enable row level security;
+
+-- ── Source-type reward loop (prediction-markets category-aware sourcing) ──────
+-- Tracks which source TYPE (e.g. "espn_stats", "lineup_data", "reddit_sentiment",
+-- "sec_filing") an analysis actually cited, and whether the call went against the
+-- market's own recent odds movement ("contrarian"). lib/context-graph.js aggregates
+-- these per category once enough graded predictions exist, and feeds the result back
+-- into future market-analyze.js prompts so source types with a real track record of
+-- being right — especially on contrarian calls — get weighted more than ones that
+-- don't. See lib/market-source-profiles.js for where source_type is assigned per fetcher.
+alter table predictions add column if not exists source_types jsonb;
+alter table predictions add column if not exists contrarian boolean;
+alter table predictions add column if not exists odds_momentum_at_time jsonb;
+create index if not exists predictions_market_slug_idx on predictions (market_slug);
+
+-- coverage_volume_bucket: 'low' | 'medium' | 'high' — how many raw (pre-dedup) items
+-- shared the dedupe key of whichever cited source most influenced this prediction (see
+-- dedupeItems/volumeBucket in lib/market-source-profiles.js). Tracks whether leaning on
+-- heavily-covered/consensus stories correlates with better or worse calls per category —
+-- a widely-covered story might be well-confirmed, or might already be priced into the
+-- market's odds; the reward loop (coverageVolumeAccuracy in lib/context-graph.js)
+-- measures this empirically per category instead of assuming an answer.
+alter table predictions add column if not exists coverage_volume_bucket text;
