@@ -3,7 +3,7 @@ import { runAnalysis } from './analyze.js';
 import { runMarketAnalysis } from './market-analyze.js';
 import { fetchCategoryMarkets } from './markets.js';
 import { SECTOR_STOCKS } from './sector-stocks.js';
-import { COIN_INFO } from '../lib/coin-symbols.js';
+import { COIN_INFO, CORE_COINS } from '../lib/coin-symbols.js';
 import { categoryToSection } from '../lib/prediction-sections.js';
 
 // ── Daily baseline prediction generator ────────────────────────────────────────
@@ -142,7 +142,12 @@ async function _generateStocks(supabase, remaining, coveredTickers) {
 }
 
 async function _generateCrypto(supabase, remaining, coveredCoins) {
-  const candidates = COIN_INFO.filter(c => !coveredCoins.has(c.symbol)).slice(0, Math.min(remaining, BATCH_SIZE));
+  // Core coins (deep markets, steady coverage — see lib/coin-symbols.js) go first,
+  // so they're never crowded out by the long tail if a run's budget is tight.
+  const candidates = COIN_INFO
+    .filter(c => !coveredCoins.has(c.symbol))
+    .sort((a, b) => (CORE_COINS.has(b.symbol) ? 1 : 0) - (CORE_COINS.has(a.symbol) ? 1 : 0))
+    .slice(0, Math.min(remaining, BATCH_SIZE));
   if (!candidates.length) return { attempted: 0, saved: 0 };
 
   const results = await _runBatch(candidates, CONCURRENCY, async coin => {

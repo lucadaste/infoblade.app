@@ -104,6 +104,8 @@
     .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
     .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
     .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
+    .dir-no-signal{ background: rgba(255,178,54,0.10);  color: #ffb236; border: 1px solid rgba(255,178,54,0.28); }
+    .no-signal-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 8px; }
 
     .group-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
     .group-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
@@ -214,6 +216,7 @@
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
       <h1>Crypto markets</h1>
       <p class="hero-sub">Browse assets with live prices. Select any coin to pull global news analysis.</p>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:8px;max-width:560px">Major coins (Bitcoin, Ethereum, Solana, and other deep, liquid markets) get a confident directional call whenever the news supports one. Thinner, more sentiment-driven coins sometimes don't have enough reliable signal for a real prediction — when that's the case, we'll say so instead of guessing.</p>
     </div>
     <div class="fg-widget" id="fg-widget" style="display:none">
       <div class="fg-label-row">
@@ -639,13 +642,25 @@
         if (loadingEl) loadingEl.remove();
         const resultEl = document.getElementById('overall-result');
         if (!resultEl) return;
+        const saveNote = !d.predictionSaved ? `<div style="font-size:11px;color:#f55;margin-top:6px">⚠ Prediction not saved: ${esc(d._saveError||'unknown error')}</div>` : '';
+
+        if (d.no_signal) {
+          // This coin genuinely doesn't have enough reliable signal right now (thin,
+          // sentiment-driven trading and/or no source clears even a Low factuality
+          // grade) — show that honestly instead of forcing a directional pick.
+          resultEl.innerHTML = `
+            <span class="dir-badge dir-no-signal">⚠ No Confident Call</span>
+            <div class="no-signal-note">${esc(coin.name)} doesn't have enough reliable signal for a confident prediction right now — its price moves on thin, sentiment-driven trading that current news sourcing can't speak to with any real confidence. Rather than force a call, we're being upfront about it.</div>
+            ${saveNote}`;
+          return;
+        }
+
         const dir = (d.direction || '').toLowerCase();
         const dirBadge = dir === 'bullish'
           ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
           : dir === 'bearish'
           ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
           : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
-        const saveNote = !d.predictionSaved ? `<div style="font-size:11px;color:#f55;margin-top:6px">⚠ Prediction not saved: ${esc(d._saveError||'unknown error')}</div>` : '';
         resultEl.innerHTML = `${dirBadge}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>${saveNote}`;
       } catch (err) {
         if (renderSession !== mySession) return;
@@ -749,7 +764,9 @@
       const losers  = d.losers?.tickers  || [];
       const hasEquities = winners.length || losers.length;
       const dir = (d.direction || '').toLowerCase();
-      const dirBadge = dir === 'bullish'
+      const dirBadge = d.no_signal
+        ? `<span class="dir-badge dir-no-signal">⚠ No Confident Call</span>`
+        : dir === 'bullish'
         ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
         : dir === 'bearish'
         ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`

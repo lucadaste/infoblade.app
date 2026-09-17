@@ -7,6 +7,7 @@ import { computeAccuracyScore, SCORING_VERSION } from '../lib/scoring.js';
 import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
+import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 
 function _getSupabase() {
   const url = process.env.SUPABASE_URL;
@@ -115,13 +116,6 @@ function _priceOnDate(historyMap, targetDate) {
     if (diff < bestDiff) { bestDiff = diff; best = k; }
   }
   return bestDiff <= 7 * 86400000 ? historyMap[best] : null;
-}
-
-// Parse confidence stars (1-5) from stored string e.g. "4 — strong signal"
-function _parseConfidenceStars(conf) {
-  if (!conf) return 3;
-  const m = String(conf).match(/^\s*([1-5])/);
-  return m ? parseInt(m[1]) : 3;
 }
 
 // PM prediction grade/score/weight helpers.

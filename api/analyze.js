@@ -3,6 +3,7 @@ import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
+import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -550,6 +551,20 @@ Respond ONLY with valid JSON, no markdown:
       const coin = _COIN_SYMS.has(coinSymbol) ? coinSymbol : (winnerTickers[0] || loserTickers[0] || null);
       winnerTickers = coin && analysis.direction === 'bullish' ? [coin] : [];
       loserTickers  = coin && analysis.direction === 'bearish' ? [coin] : [];
+
+      // Some coins (thin volume, meme-driven, sentiment-not-news) genuinely don't have
+      // enough reliable signal for a real directional call, regardless of what Claude's
+      // free-text "direction" says. 1-star confidence (per the rubric above: "no source
+      // meets even a Low-grade threshold, or the link is speculative extrapolation") is
+      // the honest tell for that — rather than publish a forced bullish/bearish pick
+      // anyway, drop the tickers so it's never graded as a real prediction (handleResolve
+      // in api/predictions.js already skips rows with no winner/loser tickers), and flag
+      // it so the UI can show that honestly instead of a directional badge.
+      if (_parseConfidenceStars(analysis.confidence) <= 1) {
+        winnerTickers = [];
+        loserTickers  = [];
+        analysis.no_signal = true;
+      }
     }
     const allTickers      = [...new Set([...winnerTickers, ...loserTickers])];
 
