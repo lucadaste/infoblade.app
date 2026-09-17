@@ -79,6 +79,12 @@
     .btn-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
     .sport-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25); color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px 3px 8px; border-radius: 20px; margin-bottom: 8px; }
+    .live-badge { display: inline-flex; align-items: center; gap: 5px; background: rgba(200,64,64,0.12); border: 1px solid rgba(200,64,64,0.3); color: #c84040; font-family: 'Share Tech Mono', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 3px 10px 3px 8px; border-radius: 20px; margin-bottom: 8px; margin-left: 6px; }
+    .live-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #c84040; animation: livePulse 1.4s ease-in-out infinite; }
+    @keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .live-score-row { font-size: 13px; color: #ddd; padding: 8px 12px; background: rgba(200,64,64,0.06); border: 1px solid rgba(200,64,64,0.15); border-radius: 6px; margin-top: 8px; }
+    .historical-situation { font-size: 13px; color: #aaa; padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid #1e1e1e; }
+    .historical-situation strong { color: var(--ink); font-weight: 700; }
     .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
     .market-question { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
     .odds-block { flex-shrink: 0; text-align: right; }
@@ -409,6 +415,7 @@
         const block = document.createElement('div');
         block.className = 'analysis-block';
         block.innerHTML = `
+          ${data.liveGame && data.liveGame.state === 'in' ? `<div class="live-score-row">🔴 LIVE: ${esc(data.liveGame.awayTeam)} ${data.liveGame.awayScore} at ${esc(data.liveGame.homeTeam)} ${data.liveGame.homeScore}${data.liveGame.period ? ` — Period ${data.liveGame.period}` : ''}${data.liveGame.clock ? `, ${esc(data.liveGame.clock)}` : ''}</div>` : ''}
           <div class="public-lean">${data.crowd_summary ? esc(data.crowd_summary) : `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
           <div class="analysis-header">
             <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)}, ${esc(data.lean_confidence)} confidence</span>
@@ -416,6 +423,7 @@
           </div>
           <div class="analysis-reasoning">${esc(data.reasoning)}</div>
           ${data.signal_detail ? `<div class="analysis-signal-detail">${esc(data.signal_detail)}</div>` : ''}
+          ${data.historicalSituation ? `<div class="historical-situation">📊 In <strong>${data.historicalSituation.sampleSize}</strong> historical games with a similar score and time situation, the trailing team came back to win <strong>${data.historicalSituation.trailingTeamWinRate}%</strong> of the time.</div>` : ''}
           ${data.key_sources?.length ? `
             <button class="ar-sources-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><i class="toggle-arrow">›</i> ${data.key_sources.length} source${data.key_sources.length !== 1 ? 's' : ''}</button>
             <div class="ar-sources-list">${data.key_sources.map(s => `<span class="ar-source-item">${esc(s)}</span>`).join('')}</div>
@@ -468,6 +476,7 @@
           <div class="chain-label">Closes</div>
           <div class="chain-content"><span class="impact-badge">${esc(closesText)}</span></div>
         </div>
+        <div class="live-status-slot"></div>
         ${market.totalMarkets > 1 ? `<div class="chain-row"><div class="chain-label">Markets</div><div class="chain-content">${market.totalMarkets} related markets in this event</div></div>` : ''}
         <div class="chain-row">
           <div class="chain-label"></div>
@@ -478,7 +487,32 @@
         </div>
       `;
 
+      if (market.sport === 'NFL' || market.sport === 'NBA') checkLiveStatus(market, card);
+
       return card;
+    }
+
+    // Lightweight, no-LLM live-game lookup (api/live-game.js) — only for the
+    // leagues lib/espn-live.js supports so far (NFL/NBA). Injects a LIVE badge
+    // + current score onto the card without waiting for/triggering a full
+    // "Analyze news" call. Fails silently — the badge is a nice-to-have.
+    async function checkLiveStatus(market, card) {
+      try {
+        const params = new URLSearchParams({ question: market.question, sport: market.sport });
+        if (market.daysLeft != null) params.set('daysLeft', market.daysLeft);
+        const res = await fetch(`/api/live-game?${params}`);
+        const data = await res.json();
+        if (!data.found || data.state !== 'in') return;
+
+        const questionEl = card.querySelector('.market-question');
+        if (questionEl && !questionEl.querySelector('.live-badge')) {
+          questionEl.insertAdjacentHTML('afterbegin', `<span class="live-badge">Live</span>`);
+        }
+        const slot = card.querySelector('.live-status-slot');
+        if (slot) {
+          slot.innerHTML = `<div class="chain-row"><div class="chain-label">Live score</div><div class="chain-content">${esc(data.awayTeam)} ${data.awayScore} at ${esc(data.homeTeam)} ${data.homeScore}${data.period ? ` — Period ${data.period}` : ''}${data.clock ? `, ${esc(data.clock)}` : ''}</div></div>`;
+        }
+      } catch (_) { /* badge is optional, fail silently */ }
     }
 
     const MARKETS_TTL = 5 * 60 * 1000;

@@ -87,32 +87,47 @@ async function _checkRateLimit(supabase, ip) {
 // Shared by the GET handler (real user browsing) and the baseline generator cron
 // (api/generate-baseline.js), which calls this directly in-process to source
 // candidate markets without re-implementing the nonsense/esports filtering and
-// odds-band logic. `opts.isSearch`/`opts.searchWords` are only meaningful when a
+// odds-band logic. `opts.isSearch`/`opts.rawQuery` are only meaningful when a
 // caller is doing a text search (the HTTP handler); the generator always omits them.
 export async function fetchCategoryMarkets(category, opts = {}) {
-  const { isSearch = false, searchWords = [], daysCap = 365, daysMin = 0 } = opts;
+  const { isSearch = false, rawQuery = '', daysCap = 365, daysMin = 0 } = opts;
   const targetTags = CATEGORY_TAGS[category];
 
   const now = new Date();
-  const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
-  const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
 
-  const polyUrl = `https://gamma-api.polymarket.com/events?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
+  let events;
+  if (isSearch) {
+    // Full-corpus text search (not volume-ranked/top-N) so any active Polymarket
+    // event can be found regardless of how much volume it's trading — the
+    // browse path below only ever sees the top ~100 markets by 24h volume.
+    const searchUrl = `https://gamma-api.polymarket.com/public-search?q=${encodeURIComponent(rawQuery)}&active=true&closed=false&limit_per_type=50`;
+    const searchRes = await fetch(
+      searchUrl,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
+    );
+    const searchData = await searchRes.json();
+    events = Array.isArray(searchData.events) ? searchData.events : [];
+  } else {
+    const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
+    const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
+    // /events is deprecated (sunset 2026-05-01) in favor of /events/keyset — same
+    // response shape, just cursor-paginated instead of offset-paginated.
+    const polyUrl = `https://gamma-api.polymarket.com/events/keyset?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
 
-  const polyRes = await fetch(
-    polyUrl,
-    { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
-  );
-  const events = await polyRes.json();
-  const filtered = (Array.isArray(events) ? events : []).filter(event => {
+    const polyRes = await fetch(
+      polyUrl,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
+    );
+    const data = await polyRes.json();
+    events = Array.isArray(data.events) ? data.events : [];
+  }
+
+  const filtered = events.filter(event => {
     if (!event.active || event.closed || event.archived) return false;
     const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
     if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
     if (_isNonsenseTitle(event.title)) return false;
-    if (isSearch) {
-      const title = (event.title || '').toLowerCase();
-      return searchWords.every(w => title.includes(w));
-    }
+    if (isSearch) return true; // relevance already handled by public-search
     return targetTags.some(tag => eventTags.includes(tag));
   });
 
@@ -218,9 +233,6 @@ export default async function handler(req, res) {
 
   const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
   const isSearch = rawQuery.length > 0;
-  const searchWords = isSearch
-    ? rawQuery.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length > 1)
-    : [];
 
   const rawCategory = req.query.category;
   const category = VALID_CATEGORIES.has(rawCategory) ? rawCategory : 'sports';
@@ -228,7 +240,7 @@ export default async function handler(req, res) {
   const daysMin = Math.min(Math.max(parseInt(req.query.minDays) || 0, 0), daysCap);
 
   try {
-    const finalMarkets = await fetchCategoryMarkets(category, { isSearch, searchWords, daysCap, daysMin });
+    const finalMarkets = await fetchCategoryMarkets(category, { isSearch, rawQuery, daysCap, daysMin });
     return res.status(200).json(
       isSearch ? { markets: finalMarkets, query: rawQuery } : { markets: finalMarkets, category }
     );

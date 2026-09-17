@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBucket, fetchLegacyGeneric, SOURCING_VERSION } from '../lib/market-source-profiles.js';
+import { findGameContextForQuestion } from '../lib/espn-live.js';
+import { findSimilarSituations } from '../lib/situation-similarity.js';
 
 const SOURCE_QUALITY = {
   // Wire / Financial
@@ -205,11 +207,24 @@ export async function runMarketAnalysis({
   const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
   const rawSport = typeof sport === 'string' ? sport.replace(/[^a-zA-Z]/g, '').slice(0, 20) : null;
 
-  const [reputation, contextGraph] = await Promise.all([
+  const [reputation, contextGraph, gameContext] = await Promise.all([
     readReputation(supabase),
     supabase ? buildContextGraph(supabase, { category }).catch(() => null) : Promise.resolve(null),
+    category === 'sports' ? findGameContextForQuestion(question, rawSport, daysLeft).catch(() => null) : Promise.resolve(null),
   ]);
   const trackRecordSection = formatContextForPrompt(contextGraph);
+
+  // Empirical "similar statline" lookup — only meaningful once a game is
+  // actually live and there's a real trailing/leading side to ask about.
+  const historicalSituation = (gameContext?.state === 'in' && supabase)
+    ? await findSimilarSituations(supabase, {
+        league: gameContext.league,
+        period: gameContext.period,
+        scoreDiff: (gameContext.homeScore ?? 0) - (gameContext.awayScore ?? 0),
+        secondsRemaining: gameContext.secondsRemaining,
+        isPlayoff: gameContext.isPlayoff,
+      }).catch(() => null)
+    : null;
 
   try {
     const profile = CATEGORY_SOURCE_PROFILES[category];
@@ -283,7 +298,7 @@ export async function runMarketAnalysis({
       });
     }
 
-    if (items.length === 0 && redditPosts.length < 3 && structuredItems.length === 0) {
+    if (items.length === 0 && redditPosts.length < 3 && structuredItems.length === 0 && !gameContext) {
       return {
         lean: 'Uncertain',
         lean_confidence: 'Low',
@@ -308,11 +323,21 @@ export async function runMarketAnalysis({
       ? `\nOfficial/structured data (${structuredItems.length} items — filings, rosters, bills, disclosures):\n${structuredItems.map(i => `- [${i.sourceType}] ${i.title}`).join('\n')}\n`
       : '';
 
+    // Live/pregame ESPN game data (NFL/NBA only for now — see lib/espn-live.js).
+    // Grounds the analysis in the actual score/clock/injuries/Vegas line instead
+    // of relying on news headlines alone, and lets Claude reason about a game
+    // that's actually in progress rather than just pre-game odds.
+    const liveGameSection = gameContext ? `
+Live game data (from ESPN, ${gameContext.state === 'in' ? 'GAME IN PROGRESS' : gameContext.state === 'post' ? 'game completed' : 'pregame'}):
+- Status: ${gameContext.statusDetail || gameContext.state}${gameContext.period ? `, period ${gameContext.period}` : ''}${gameContext.clock ? `, clock ${gameContext.clock}` : ''}
+- Score: ${gameContext.awayTeam} ${gameContext.awayScore ?? '-'} at ${gameContext.homeTeam} ${gameContext.homeScore ?? '-'}${gameContext.venue ? ` (${gameContext.venue})` : ''}${gameContext.isPlayoff ? ' — PLAYOFF GAME' : ''}
+${gameContext.predictor ? `- ESPN's win probability model: ${gameContext.homeTeam} ${gameContext.predictor.homeWinPct}%, ${gameContext.awayTeam} ${gameContext.predictor.awayWinPct}%\n` : ''}${gameContext.vegasLine ? `- Vegas line (${gameContext.vegasLine.provider}): ${gameContext.vegasLine.spread}, moneyline ${gameContext.homeTeam} ${gameContext.vegasLine.homeMoneyLine} / ${gameContext.awayTeam} ${gameContext.vegasLine.awayMoneyLine}, over/under ${gameContext.vegasLine.overUnder}\n` : ''}${(gameContext.injuries.home.length || gameContext.injuries.away.length) ? `- Injuries: ${gameContext.homeTeam}: ${gameContext.injuries.home.map(i => `${i.player} (${i.status})`).join(', ') || 'none listed'}. ${gameContext.awayTeam}: ${gameContext.injuries.away.map(i => `${i.player} (${i.status})`).join(', ') || 'none listed'}.\n` : ''}${historicalSituation ? `- Historical comparison: in ${historicalSituation.sampleSize} past ${gameContext.league.toUpperCase()} games with a similar score and time situation, the trailing team came back to win ${historicalSituation.trailingTeamWinRate}% of the time.\n` : ''}${gameContext.state === 'in' ? 'This game is live right now — weigh the current score, period, and clock (and the historical comparison above, if present) heavily. A team down by a wide margin late in the game is a strong signal regardless of what pregame news said.\n' : ''}` : '';
+
     const prompt = `You are helping everyday users understand a prediction market question using recent news and public sentiment.
 
 Market question: "${question}"
 ${oddsContext}
-
+${liveGameSection}
 Recent news (${items.length} articles):
 ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
 ${structuredSection}${redditSection}${leanNote}${trackRecordSection}
@@ -421,7 +446,7 @@ Respond ONLY with valid JSON, no markdown:
       }
     }
 
-    return { ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(saveError ? { _saveError: saveError } : {}) };
+    return { ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(gameContext ? { liveGame: gameContext } : {}), ...(historicalSituation ? { historicalSituation } : {}), ...(saveError ? { _saveError: saveError } : {}) };
   } catch (err) {
     console.error('[runMarketAnalysis]', err.message);
     return { error: 'Analysis failed', status: 500 };

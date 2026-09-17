@@ -6,9 +6,11 @@
     { "source": "/predictions.html", "destination": "/accuracy.html", "permanent": true }
   ],
   "functions": {
-    "api/analyze.js":           { "maxDuration": 60 },
-    "api/predictions.js":       { "maxDuration": 60 },
-    "api/generate-baseline.js": { "maxDuration": 120 }
+    "api/analyze.js":                { "maxDuration": 60 },
+    "api/predictions.js":            { "maxDuration": 60 },
+    "api/generate-baseline.js":      { "maxDuration": 120 },
+    "api/ingest-completed-games.js": { "maxDuration": 60 },
+    "api/collect-price-snapshots.js": { "maxDuration": 30 }
   },
   "crons": [
     {
@@ -22,6 +24,14 @@
     {
       "path": "/api/generate-baseline?run=true",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/ingest-completed-games",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/collect-price-snapshots",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

@@ -168,3 +168,89 @@ create index if not exists predictions_market_slug_idx on predictions (market_sl
 -- market's odds; the reward loop (coverageVolumeAccuracy in lib/context-graph.js)
 -- measures this empirically per category instead of assuming an answer.
 alter table predictions add column if not exists coverage_volume_bucket text;
+
+-- ── Live in-game sports analysis: historical situation database ───────────────
+-- One row per meaningful game-state snapshot (score/period/clock), reconstructed
+-- from ESPN's play-by-play + winprobability data by scripts/backfill-game-situations.js
+-- (one-time historical backfill, NFL/NBA to start) and kept current by the daily
+-- api/ingest-completed-games.js cron. lib/situation-similarity.js queries this with
+-- tolerance bands to answer "in N historical games with a similar score/time
+-- situation, how often did the trailing team come back?" — see the plan for the
+-- full design. ESPN keeps full historical play-by-play indefinitely, so unlike
+-- price_snapshots below this table CAN be backfilled from the past, not just
+-- collected forward.
+create table if not exists game_situations (
+  id bigserial primary key,
+  league text not null,           -- 'nfl' | 'nba'
+  game_id text not null,          -- ESPN event id
+  season int,
+  is_playoff boolean,
+  period int not null,
+  seconds_remaining int not null, -- seconds remaining in the period, parsed from clock.displayValue
+  home_score int not null,
+  away_score int not null,
+  score_diff int not null,        -- home_score - away_score, signed
+  home_team text,
+  away_team text,
+  final_home_score int,
+  final_away_score int,
+  home_won boolean,               -- final outcome, joined in from header.competitions[0] once the game completed
+  created_at timestamptz default now(),
+  unique (game_id, period, seconds_remaining, home_score, away_score)
+);
+create index if not exists game_situations_lookup_idx on game_situations (league, period, score_diff, seconds_remaining);
+
+alter table game_situations enable row level security;
+-- Service-role key (server-side only, via the backfill script + ingest cron) bypasses
+-- RLS automatically. No browser-side writes; reads go through lib/situation-similarity.js.
+
+-- ── Short-horizon stock move prediction: forward-collected price snapshots ────
+-- Unlike game_situations, Yahoo Finance's free intraday API only exposes ~8 days
+-- of 1-minute history (confirmed live: requesting 60d at 1m granularity returns
+-- a hard 422) — there is no free deep historical source to backfill from, so this
+-- table starts empty and is built forward from today by api/collect-price-snapshots.js
+-- polling every ~1 minute during market hours (lib/sp500-tickers.js universe,
+-- via the existing crumb-authenticated batched quote pattern in api/sector-stocks.js).
+-- lib/situation-similarity-stocks.js derives features (pctChange5m, relativeVolume,
+-- timeOfDayBucket) from recent rows and pools across the whole tracked universe to
+-- reach a usable sample size sooner than any single ticker could alone.
+create table if not exists price_snapshots (
+  id bigserial primary key,
+  ticker text not null,
+  ts timestamptz not null,
+  price numeric not null,
+  volume bigint,
+  unique (ticker, ts)
+);
+create index if not exists price_snapshots_ticker_ts_idx on price_snapshots (ticker, ts desc);
+
+alter table price_snapshots enable row level security;
+-- Service-role key (server-side only, via the collector cron) bypasses RLS automatically.
+
+-- Precomputed situation/outcome rows derived from price_snapshots, one per
+-- ticker per collector run. Computed incrementally by
+-- api/collect-price-snapshots.js (features at insert time, outcome_next_5m
+-- filled in ~5 minutes later once it's known) specifically so
+-- lib/situation-similarity-stocks.js's "find similar past situations" query
+-- is a simple indexed range filter, not a self-join/table-scan over raw
+-- price_snapshots — that first design was tried and found to silently break
+-- (ordering bias + a row cap) once price_snapshots exceeds a few days of
+-- 502-ticker, 5-minute-interval history, which happens within about a week.
+create table if not exists stock_situations (
+  id bigserial primary key,
+  ticker text not null,
+  ts timestamptz not null,
+  price numeric not null,
+  pct_change_5m numeric,
+  pct_change_15m numeric,
+  relative_volume numeric,
+  time_of_day_bucket text, -- 'open' | 'midday' | 'close'
+  outcome_next_5m numeric, -- null until resolved ~5 minutes later
+  created_at timestamptz default now(),
+  unique (ticker, ts)
+);
+create index if not exists stock_situations_lookup_idx on stock_situations (time_of_day_bucket, pct_change_5m) where outcome_next_5m is not null;
+create index if not exists stock_situations_unresolved_idx on stock_situations (ts) where outcome_next_5m is null;
+
+alter table stock_situations enable row level security;
+-- Service-role key (server-side only, via the collector cron) bypasses RLS automatically.
