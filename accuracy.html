@@ -79,7 +79,16 @@
     .pred-badge.correct   { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.3); }
     .pred-badge.incorrect { background: rgba(255,82,82,0.12); color: var(--red); border: 1px solid rgba(255,82,82,0.25); }
     .pred-badge.pending   { background: rgba(136,136,136,0.12); color: var(--muted); border: 1px solid var(--border); }
-    .grade-badge { font-family: 'Share Tech Mono', sans-serif; font-size: 20px; font-weight: 700; width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: -0.5px; }
+    /* Score leads (the actual number), letter grade is a small secondary cue underneath —
+       a coarse A-F bucket was previously the most prominent thing on each card, which made
+       a marginal near-zero score visually indistinguishable from a strong one. */
+    .score-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+    .score-value { font-family: 'Share Tech Mono', sans-serif; font-size: 21px; font-weight: 700; letter-spacing: -0.4px; line-height: 1; white-space: nowrap; }
+    .score-value.pos { color: var(--accent); }
+    .score-value.neg { color: var(--red); }
+    .score-value.neutral { color: var(--muted); }
+    .score-unit { font-size: 10px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+    .grade-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 4px; letter-spacing: 0.3px; line-height: 1.5; }
     .grade-A { background: rgba(0,230,118,0.15); color: var(--accent); border: 1px solid rgba(0,230,118,0.35); }
     .grade-B { background: rgba(0,200,100,0.12); color: #4dd085; border: 1px solid rgba(0,200,100,0.25); }
     .grade-C { background: rgba(255,200,50,0.10); color: #ffc832; border: 1px solid rgba(255,200,50,0.25); }
@@ -321,8 +330,13 @@
     const gradeTitle = isPM
       ? 'Graded on whether the call was directionally correct'
       : 'Graded on the size of the price move in the predicted direction';
-    const gradeHtml = p.grade
-      ? `<div class="grade-badge grade-${esc(p.grade)}" title="${esc(gradeTitle)}">${esc(p.grade)}</div>`
+    // Score leads (the actual number of points earned) with the letter grade as a
+    // small secondary chip underneath — see .score-stack above for why.
+    const gradeHtml = (p.score != null)
+      ? `<div class="score-stack" title="${esc(gradeTitle)}">
+           <div class="score-value ${p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : 'neutral'}">${p.score > 0 ? '+' : ''}${p.score}<span class="score-unit">pts</span></div>
+           ${p.grade ? `<div class="grade-chip grade-${esc(p.grade)}">${esc(p.grade)}</div>` : ''}
+         </div>`
       : `<span class="pred-badge ${badgeClass}" title="${esc(gradeTitle)}">${badgeText}</span>`;
     if (isPM) {
       const lean = p.lean || p.analysis?.lean;
