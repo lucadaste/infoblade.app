@@ -545,6 +545,7 @@ Respond ONLY with valid JSON, no markdown:
         sources,
         source_grades:   sourceGrades,
         min_grade:       minGrade,
+        headlines,
       };
       // user_id requires schema cache reload in Supabase after ALTER TABLE —
       // only include when set to avoid "column not found" errors in schema cache.

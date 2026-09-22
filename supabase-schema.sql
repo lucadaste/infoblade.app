@@ -254,3 +254,16 @@ create index if not exists stock_situations_unresolved_idx on stock_situations (
 
 alter table stock_situations enable row level security;
 -- Service-role key (server-side only, via the collector cron) bypasses RLS automatically.
+
+-- ── Headline text, for future claim-type source grading ────────────────────────
+-- Predictions previously saved only which SOURCES were cited (outlet names), never
+-- the actual headline/article text that was fed into the analysis — so there was no
+-- way to later ask "was this specific claim a confirmed fact or a rumor" for any
+-- historical row, only "which outlet said something." This starts persisting that
+-- text going forward (see api/analyze.js and api/market-analyze.js) so a future
+-- claim-type-conditioned grading system (source + type of claim, not just source)
+-- has real material to work with instead of reconstructing it after the fact, which
+-- risks leaking hindsight bias into old data (edited/corrected articles, search
+-- results ranked by what's since become known, etc.) — this table starts empty and
+-- grows forward from today, deliberately, the same reasoning as price_snapshots above.
+alter table predictions add column if not exists headlines jsonb;

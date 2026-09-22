@@ -401,6 +401,7 @@ Respond ONLY with valid JSON, no markdown:
         created_at:          new Date().toISOString(),
         topic:               question,
         sources:             items.map(i => i.source),
+        headlines:           items.map(i => i.title),
         lean,
         lean_confidence:     (analysis.lean_confidence || '').trim() || null,
         market_odds_at_time: currentOdds ?? null,
