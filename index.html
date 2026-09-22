@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <style id="ii-auth-hide">html { visibility: hidden; }</style>
   <title>infoblade | World Events. Market Signals. Expected Outcomes.</title>
   <meta name="description" content="infoblade reads global news daily and maps what it means across stocks, crypto, and prediction markets. Every event traced from headline to the sectors, tickers, and odds it actually moves." />
   <script src="/api-base.js"></script>
@@ -865,10 +866,15 @@
   <script src="/auth.js"></script>
   <script>
   // Signed-in users don't need the marketing landing page — send them to the app home.
+  // The page stays hidden (see #ii-auth-hide in <head>) until we know which case we're
+  // in, so a signed-in visitor never sees this page flash before the redirect lands.
+  function _iiReveal() { document.getElementById('ii-auth-hide')?.remove(); }
+  setTimeout(_iiReveal, 2000); // safety net in case auth never resolves
   (function poll() {
     if (!window._auth) { setTimeout(poll, 100); return; }
     window._auth.onReady(function(user) {
-      if (user) window.location.replace('/home.html');
+      if (user) { window.location.replace('/home.html'); return; }
+      _iiReveal();
     });
   })();
   </script>

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <style id="ii-auth-hide">html { visibility: hidden; }</style>
   <title>infoblade | Home</title>
   <meta name="description" content="Your infoblade dashboard: watchlist, today's top signal, featured prediction markets, and crypto sentiment in one place." />
   <script src="/api-base.js"></script>
@@ -18,23 +19,29 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <style>
-    .dash-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; padding: 32px 48px 56px; }
-    @media (max-width: 720px) { .dash-grid { grid-template-columns: 1fr; padding: 20px 16px 40px; } }
+    .dash-wrap { padding: 32px 48px 56px; display: flex; flex-direction: column; gap: 28px; }
+    @media (max-width: 720px) { .dash-wrap { padding: 20px 16px 40px; gap: 24px; } }
 
-    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px; min-height: 160px; }
+    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
     .dash-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
     .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
     .dash-card-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .dash-card-link:hover { text-decoration: underline; }
-    .dash-card-body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .dash-card-body { min-height: 32px; display: flex; flex-direction: column; justify-content: center; }
     .dash-empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
 
     .wl-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .wl-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--ink); background: #242424; border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; }
     .wl-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-    .dash-card.placeholder .dash-card-title { color: var(--muted); }
-    .dash-soon { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; }
+    .dash-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: -8px; }
+    .dash-soon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .dash-soon-grid { grid-template-columns: 1fr; } }
+
+    .dash-card.placeholder { padding: 18px 20px; }
+    .dash-card.placeholder .dash-card-title { color: var(--ink); font-size: 13px; }
+    .dash-card.placeholder .dash-empty { font-size: 12.5px; }
+    .dash-soon { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #555; }
   </style>
 </head>
 <body>
@@ -73,7 +80,7 @@
     </div>
   </div>
 
-  <div class="dash-grid">
+  <div class="dash-wrap">
     <div class="dash-card" id="wl-card">
       <div class="dash-card-head">
         <div class="dash-card-title">Your Watchlist</div>
@@ -84,33 +91,39 @@
       </div>
     </div>
 
-    <div class="dash-card placeholder">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Top Signal Today <span class="dash-soon">Soon</span></div>
+    <div class="dash-section-label">Coming soon</div>
+    <div class="dash-soon-grid">
+      <div class="dash-card placeholder">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Top Signal Today</div>
+          <span class="dash-soon">Soon</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-empty">Today's highest-confidence AI call.</div>
+        </div>
         <a class="dash-card-link" href="/feed.html">Open Stock Markets &rarr;</a>
       </div>
-      <div class="dash-card-body">
-        <div class="dash-empty">The day's highest-confidence AI call will surface here. For now, browse the full feed.</div>
-      </div>
-    </div>
 
-    <div class="dash-card placeholder">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Featured Prediction Markets <span class="dash-soon">Soon</span></div>
+      <div class="dash-card placeholder">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Featured Markets</div>
+          <span class="dash-soon">Soon</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-empty">A handful of toss-up prediction markets.</div>
+        </div>
         <a class="dash-card-link" href="/markets.html">Open Prediction Markets &rarr;</a>
       </div>
-      <div class="dash-card-body">
-        <div class="dash-empty">A handful of toss-up markets will be featured here. For now, browse all markets.</div>
-      </div>
-    </div>
 
-    <div class="dash-card placeholder">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Crypto Pulse <span class="dash-soon">Soon</span></div>
+      <div class="dash-card placeholder">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Crypto Pulse</div>
+          <span class="dash-soon">Soon</span>
+        </div>
+        <div class="dash-card-body">
+          <div class="dash-empty">Fear &amp; Greed index and today's top movers.</div>
+        </div>
         <a class="dash-card-link" href="/crypto.html">Open Crypto Markets &rarr;</a>
-      </div>
-      <div class="dash-card-body">
-        <div class="dash-empty">Fear &amp; Greed and top movers will surface here. For now, browse crypto markets.</div>
       </div>
     </div>
   </div>
@@ -142,6 +155,10 @@
   <script src="/auth.js"></script>
   <script>
   // This page is for signed-in users only — bounce anyone else to the landing page.
+  // Stays hidden (see #ii-auth-hide in <head>) until we know which case we're in, so a
+  // logged-out visitor never sees this dashboard flash before the redirect lands.
+  function _iiReveal() { document.getElementById('ii-auth-hide')?.remove(); }
+  setTimeout(_iiReveal, 2000); // safety net in case auth never resolves
   (function poll() {
     if (!window._auth) { setTimeout(poll, 100); return; }
     window._auth.onReady(function(user) {
@@ -150,6 +167,7 @@
       var titleEl = document.getElementById('page-title');
       if (titleEl && user.name) titleEl.textContent = 'Welcome back, ' + user.name.split(' ')[0];
 
+      _iiReveal();
       loadWatchlistSummary();
     });
   })();
@@ -163,6 +181,10 @@
         fetch((window.API_BASE || '') + '/api/user-watchlist?type=crypto', { headers: { 'Authorization': 'Bearer ' + token } }),
         fetch((window.API_BASE || '') + '/api/user-watchlist?type=markets', { headers: { 'Authorization': 'Bearer ' + token } }),
       ]);
+      if (!stocksRes.ok || !cryptoRes.ok || !marketsRes.ok) {
+        body.innerHTML = '<div class="dash-empty">Couldn\'t verify your session — try refreshing the page.</div>';
+        return;
+      }
       var [stocks, crypto, markets] = await Promise.all([stocksRes.json(), cryptoRes.json(), marketsRes.json()]);
 
       var symbols = []
