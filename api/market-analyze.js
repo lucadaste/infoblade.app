@@ -3,32 +3,12 @@ import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.
 import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBucket, fetchLegacyGeneric, SOURCING_VERSION } from '../lib/market-source-profiles.js';
 import { findGameContextForQuestion } from '../lib/espn-live.js';
 import { findSimilarSituations } from '../lib/situation-similarity.js';
-
-const SOURCE_QUALITY = {
-  // Wire / Financial
-  'Reuters': 'High', 'Associated Press': 'High', 'AP': 'High',
-  'Bloomberg': 'High', 'Financial Times': 'High', 'Wall Street Journal': 'High',
-  'BBC': 'High', 'NPR': 'High', 'CNBC': 'High',
-  // Sports
-  'ESPN': 'High', 'The Athletic': 'High', 'CBS Sports': 'Medium',
-  'Sports Illustrated': 'Medium', 'Yahoo Sports': 'Medium',
-  'Bleacher Report': 'Medium', 'Sporting News': 'Medium',
-  'NBC Sports': 'Medium', 'Fox Sports': 'Medium',
-  // Politics / Law
-  'Politico': 'High', 'Axios': 'Medium', 'The Hill': 'Medium',
-  'NBC News': 'Medium', 'CBS News': 'Medium', 'ABC News': 'Medium',
-  'CNN': 'Medium', 'Washington Post': 'High', 'New York Times': 'High',
-  // Entertainment
-  'Variety': 'High', 'Hollywood Reporter': 'High', 'Deadline': 'High',
-  'Entertainment Weekly': 'Medium', 'People': 'Medium', 'TMZ': 'Medium',
-  'E! News': 'Medium', 'Billboard': 'Medium',
-  // Low
-  'Fox News': 'Low', 'Breitbart': 'Low', 'Daily Mail': 'Low',
-  'New York Post': 'Low', 'US Weekly': 'Low', 'In Touch': 'Low',
-  'National Enquirer': 'Low', 'OK Magazine': 'Low',
-  // Social / Reddit
-  'Reddit': 'Low'
-};
+// Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
+// same outlet gets the same tier (and the same empirical-reputation
+// adjustment) regardless of which pipeline sees it. Re-exported under the
+// same name for scripts/compare-token-usage.js's existing import.
+import { getSourceGrade } from '../lib/source-quality.js';
+export { getSourceGrade };
 
 function _setCors(res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
@@ -66,14 +46,6 @@ async function _checkRateLimit(supabase, ip) {
 function _sanitize(str, maxLen = 300) {
   if (typeof str !== 'string') return '';
   return str.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, maxLen);
-}
-
-export function getSourceGrade(source) {
-  const norm = source.toLowerCase();
-  for (const key of Object.keys(SOURCE_QUALITY)) {
-    if (norm.includes(key.toLowerCase())) return SOURCE_QUALITY[key];
-  }
-  return 'Unknown';
 }
 
 function buildSearchQuery(question) {
@@ -173,7 +145,7 @@ export async function runMarketAnalysis({
   if (currentOdds !== undefined && (currentOdds >= 93 || currentOdds <= 7)) {
     return {
       lean: 'Uncertain',
-      lean_confidence: 'Low',
+      lean_confidence: '1 — Market odds are already near-certain, so there is no meaningful call to make.',
       reasoning: `The market is already trading at ${currentOdds}% — the crowd has essentially decided this outcome. There is no meaningful prediction to make.`,
       key_sources: [],
       signal: 'Inconclusive',
@@ -259,7 +231,7 @@ export async function runMarketAnalysis({
         );
       }
 
-      fetched = fetched.map(i => ({ ...i, grade: i.grade || getSourceGrade(i.source) }));
+      fetched = fetched.map(i => ({ ...i, grade: i.grade || getSourceGrade(i.source, reputation) }));
       const allocated = allocateBudget(fetched);
       for (const i of allocated) {
         if (i.sourceType) sourceTypeMap[i.source] = i.sourceType;
@@ -289,7 +261,7 @@ export async function runMarketAnalysis({
       searchQuery = legacy.searchQuery;
       redditPosts = legacy.redditPosts;
       items = legacy.items.map(i => {
-        const grade = getSourceGrade(i.source);
+        const grade = getSourceGrade(i.source, reputation);
         const rep = reputation[i.source];
         const empirical = rep && rep.attempts >= 10
           ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
@@ -301,7 +273,7 @@ export async function runMarketAnalysis({
     if (items.length === 0 && redditPosts.length < 3 && structuredItems.length === 0 && !gameContext) {
       return {
         lean: 'Uncertain',
-        lean_confidence: 'Low',
+        lean_confidence: '1 — No relevant news, structured data, or live game signal found for this question.',
         reasoning: 'No relevant news or public discussion found for this question. The market odds are the best available signal.',
         key_sources: [],
         signal: 'Inconclusive',
@@ -351,12 +323,20 @@ TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section above shows this 
 
 DIRECTION COMMITMENT: For genuinely future uncertain events, reserve "Uncertain" only for true deadlock — when credible sources split almost evenly AND crowd odds are within 5% of 50/50 AND your domain knowledge offers no tiebreaker. If the news has ANY directional tilt (even slight), commit to Yes or No. "Uncertain" should be rare for future events.
 
+CONFIDENCE: lean_confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason. Use these anchors — judge source grade AND mechanism specificity together, and do not default to the middle just because sourcing is Unknown-grade (that alone doesn't mean 3):
+    5 = Multiple High-grade sources or official/structured data directly confirm the specific outcome, or one High-grade/structured source plus clear historical precedent for this exact scenario${gameContext ? ', or the live game data (score, clock, ESPN win-probability model) points overwhelmingly in one direction' : ''}.
+    4 = At least one Medium-or-higher-grade source, or a structured-data item, directly supports the specific outcome, with no credible contradicting signal.
+    3 = Sourcing is thin (Unknown-grade only, or a single source of any grade), but the causal mechanism is concrete and specific to this exact question, not a generic inference.
+    2 = Sourcing is thin AND the mechanism is generic, indirect, or needs several inferential steps to connect to this outcome — OR credible sources conflict on direction.
+    1 = No source meets even a Low-grade threshold and there is no structured data or live game signal, or the case is speculative extrapolation with no direct evidentiary support.
+  A single Unknown-grade source citing a specific, named event (a confirmed statement, a filed document, a final score) earns higher confidence than a single Unknown-grade source making a vague inference — don't rate them the same just because both sources are Unknown-grade. Weigh article substance, not just outlet tier: a story naming specific officials or figures on record deserves more confidence than a same-grade story that's speculation or an aggregated rehash.
+
 Write for a general audience — plain conversational English, no analyst jargon. Avoid vague phrases like "coverage suggests", "sentiment indicates", "market dynamics". Write the way you'd explain it to a curious friend. Do NOT use em dashes (—) anywhere in your response; use commas, colons, or periods instead.
 
 Respond ONLY with valid JSON, no markdown:
 {
   "lean": "Yes" | "No" | "Uncertain",
-  "lean_confidence": "High" | "Medium" | "Low",
+  "lean_confidence": "4 — specific reason",
   "crowd_summary": "One sentence describing what the crowd's odds actually mean — use the question to name the specific outcome, always include the ${currentOdds !== undefined ? currentOdds + '%' : 'market'} figure, e.g. 'The crowd is 52% confident the Warriors will win the series' or 'Bettors are 68% sure the Strait of Hormuz reopens this month'",
   "reasoning": "2-3 plain-English sentences on what the news specifically says — name teams, people, or events from the actual articles, say what was reported or confirmed, don't be vague or hedge everything",
   "key_sources": ["source1", "source2"],

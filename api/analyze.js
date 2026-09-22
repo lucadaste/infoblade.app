@@ -4,6 +4,7 @@ import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
+import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -268,64 +269,10 @@ async function _savePrediction(supabase, record) {
 
 // ── Source quality / consensus helpers (module scope so runAnalysis can use
 // them outside the request-handler closure, same as the GET grouping path) ────
-const sourceQualityMap = {
-  // Tier: High — wire services, major financial press
-  'Reuters': 'High', 'Associated Press': 'High', 'Bloomberg': 'High',
-  'Financial Times': 'High', 'The Wall Street Journal': 'High', 'The Economist': 'High',
-  'BBC': 'High', 'NPR': 'High', 'CNBC': 'High', 'Wall Street Journal': 'High',
-  'AP': 'High', 'White House': 'High', 'Politico': 'High', 'Barron\'s': 'High',
-  'S&P Global': 'High', 'Moody\'s': 'High', 'Fitch': 'High',
-  // Tier: Medium — established financial & tech media
-  'The Hill': 'Medium', 'Business Insider': 'Medium',
-  'MarketWatch': 'Medium', 'Yahoo Finance': 'Medium', 'CNN': 'Medium',
-  'The Guardian': 'Medium', 'NBC News': 'Medium', 'CBS News': 'Medium',
-  'Fox Business': 'Medium', 'Forbes': 'Medium', 'Quartz': 'Medium',
-  'Axios': 'Medium', 'Bloomberg Opinion': 'Medium',
-  // Financial analysis & stock news
-  'Benzinga': 'Medium', 'InvestorPlace': 'Medium', 'The Motley Fool': 'Medium',
-  'Motley Fool': 'Medium', 'Zacks': 'Medium', 'TheStreet': 'Medium',
-  'Investopedia': 'Medium', 'Nasdaq': 'Medium', 'Barchart': 'Medium',
-  'TipRanks': 'Medium', 'Seeking Alpha': 'Medium', 'Stock Analysis': 'Medium',
-  'Stock Titan': 'Medium', 'StocksToTrade': 'Medium', 'Quiver Quantitative': 'Medium',
-  'Traders Union': 'Medium', 'AlphaStreet': 'Medium', 'Finbold': 'Medium',
-  'GuruFocus': 'Medium', '24/7 Wall St': 'Medium', 'Simply Wall St': 'Medium',
-  'Proactive Investors': 'Medium', 'GlobeNewswire': 'Medium', 'PR Newswire': 'Medium',
-  'Business Wire': 'Medium', 'Globe Newswire': 'Medium',
-  // Tech media
-  'TechCrunch': 'Medium', 'The Verge': 'Medium', 'Wired': 'Medium',
-  'VentureBeat': 'Medium', 'Ars Technica': 'Medium', 'MIT Technology Review': 'Medium',
-  '9to5Mac': 'Medium', 'MacRumors': 'Medium', 'AppleInsider': 'Medium',
-  'Android Authority': 'Medium', 'ZDNet': 'Medium', 'CNET': 'Medium',
-  'Tom\'s Hardware': 'Medium', 'AnandTech': 'Medium', 'PCMag': 'Medium',
-  'Engadget': 'Medium', 'TechStock²': 'Medium',
-  // Crypto
-  'CoinDesk': 'Medium', 'The Block': 'Medium', 'Decrypt': 'Medium',
-  'Forkast': 'Medium', 'CoinPost': 'Medium', 'Cointelegraph': 'Low',
-  // Low-credibility
-  'Fox News': 'Low', 'Breitbart': 'Low', 'ZeroHedge': 'Low', 'Daily Mail': 'Low',
-  'New York Post': 'Low', 'The Daily Caller': 'Low', 'Infowars': 'Low', 'The Blaze': 'Low',
-  // Reddit
-  'Reddit r/wallstreetbets': 'Low', 'Reddit r/investing': 'Low', 'Reddit r/stocks': 'Low',
-  'Reddit r/options': 'Low', 'Reddit r/StockMarket': 'Low',
-  'Reddit r/CryptoCurrency': 'Low', 'Reddit r/Bitcoin': 'Low',
-  'Reddit r/ethereum': 'Low', 'Reddit r/CryptoMarkets': 'Low',
-};
+// Grading itself lives in lib/source-quality.js, shared with api/market-analyze.js,
+// so the same outlet always gets the same tier regardless of which pipeline sees it.
 const gradeScores  = { high: 3, medium: 2, low: 1, unknown: 0 };
 const gradeWeights = { High: 1.0, Medium: 0.7, Low: 0.4, Unknown: 0.2 };
-
-function normalizeSourceName(source) {
-  return source
-    .replace(/\s*\(.*?\)/g, '').replace(/[""'']/g, '')
-    .replace(/\b(news|tv|online|magazine|channel)\b/gi, '')
-    .replace(/[^a-zA-Z0-9 ]/g, ' ').trim().toLowerCase();
-}
-function getSourceGrade(source) {
-  const normalized = normalizeSourceName(source);
-  for (const key of Object.keys(sourceQualityMap)) {
-    if (normalized.includes(key.toLowerCase())) return sourceQualityMap[key];
-  }
-  return 'Unknown';
-}
 
 function getEffectiveWeight(source, grade, reputation) {
   const base = gradeWeights[grade] ?? 0.2;
@@ -360,7 +307,7 @@ function topTokens(counts, limit = 5) {
 }
 function buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, reputation = {} }) {
   const minScore = gradeScores[minGrade] ?? gradeScores.medium;
-  const records = sources.map((source, idx) => ({ source, headline: headlines[idx] || '', grade: sourceGrades?.[source] || getSourceGrade(source) }));
+  const records = sources.map((source, idx) => ({ source, headline: headlines[idx] || '', grade: getSourceGrade(source, reputation) }));
   const passing = records.filter(r => gradeScores[r.grade.toLowerCase()] >= minScore);
   const high = passing.filter(r => r.grade === 'High');
   const medium = passing.filter(r => r.grade === 'Medium');
@@ -465,7 +412,7 @@ Headlines from ${sources.length} sources:
 ${headlines.map(h => `- ${h}`).join('\n')}
 
 Sources and factuality grades:
-${sources.map(name => `- ${name}: ${sourceGrades?.[name] || 'Unknown'}`).join('\n')}
+${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
 
 Use weighted source consensus to shape the prediction:
 - High-grade sources carry weight 1.0
@@ -490,13 +437,19 @@ ${category === 'crypto-coin'
 - No foreign-listed stocks (no .NS .TO .L .DE .HK suffixes)
 - Foreign companies that trade as ADRs in the US may use their US ADR ticker
 - Sectors should reflect US market sectors only`}
-- Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason. Use these anchors — judge source grade AND mechanism specificity together, and do not default to the middle just because sourcing is Unknown-grade (that alone doesn't mean 3):
+- Confidence must be a number from 1 to 5 (stars) followed by a dash and a specific reason.${sources.length > 0 ? ` Use these anchors — judge source grade AND mechanism specificity together, and do not default to the middle just because sourcing is Unknown-grade (that alone doesn't mean 3):
     5 = Multiple High-grade sources agree on the specific mechanism, or one High-grade source plus clear historical precedent for this exact scenario.
     4 = At least one Medium-or-higher-grade source directly supports the specific catalyst, with no credible contradicting signal.
     3 = Sourcing is thin (Unknown-grade only, or a single source of any grade), but the causal mechanism is concrete and specific to this event and this ticker.
     2 = Sourcing is thin AND the mechanism is generic, indirect, or needs several inferential steps to connect the event to the ticker — OR credible sources conflict on direction.
     1 = No source meets even a Low-grade threshold, or the link between the event and this prediction is speculative extrapolation with no direct evidentiary support.
-  A single Unknown-grade source citing a specific, named catalyst (e.g. a named contract award or confirmed product launch) earns higher confidence than a single Unknown-grade source making a vague sector-wide inference — don't rate them the same just because both sources are Unknown-grade.
+  A single Unknown-grade source citing a specific, named catalyst (e.g. a named contract award or confirmed product launch) earns higher confidence than a single Unknown-grade source making a vague sector-wide inference — don't rate them the same just because both sources are Unknown-grade. Also weigh article substance, not just outlet tier: a story naming specific officials, documents, or figures on record deserves more confidence than a same-grade story that's vague speculation or an aggregated rehash of someone else's reporting.` : ` NO SOURCES were provided for this call — you are reasoning purely from historical base rates and domain knowledge, which is a legitimate, common case here, not automatically a failure. Judge confidence by how strong and well-established the PRECEDENT is, since there are no sources to grade:
+    5 = An extremely well-established, near-universal historical pattern applies directly to this exact situation (e.g. a broad, diversified index during a stable macro regime with no unusual conditions).
+    4 = A strong, well-documented precedent exists for this specific type of asset/situation, with high historical consistency and few notable exceptions.
+    3 = A reasonable precedent exists, but with meaningful historical variance or exceptions that could plausibly apply here.
+    2 = The precedent is weak, mixed, or requires several inferential leaps to connect to this specific case.
+    1 = No meaningful historical precedent applies here — this is closer to a coin flip or pure speculation.
+  Do not default to 1 just because there are no sources: a well-established base rate (e.g. "the S&P 500 rises in roughly 70% of 1-month periods") is a real, legitimate basis for confidence even with zero news behind it.`}
 - STOCK SPECIFICITY: Only list a ticker if there is a DIRECT, SPECIFIC causal chain between THIS event and that instrument's price. Do not include popular mega-cap stocks (TSLA, AAPL, MSFT, AMZN, NVDA, GOOGL, META) unless this specific event directly affects them by name or business model. Generic "risk-off" or "rising rates hurt all growth stocks" reasoning is not sufficient — name only the instruments with the clearest, most direct exposure.
 - AVOID CONTRADICTIONS: Each ticker should appear in EITHER winners OR losers, never both. If the net effect on a ticker is unclear, omit it entirely rather than hedging.
 - BASE RATE CALIBRATION: Before committing to a direction, anchor on historical base rates. Broad US equity indices (S&P 500, QQQ, Dow, Russell 2000, broad market ETFs like SPY/QQQ/IWM) rise in roughly 70% of 1-month periods and ~75% of 3-month periods. For a BEARISH call on a broad index over any multi-week or monthly horizon, you need a compelling case backed by multiple high-grade sources: confirmed or imminent recession signals, sustained unexpected Fed tightening, financial system stress, or a specific policy shock. Mildly negative news, geopolitical uncertainty, or a single bad data point is NOT sufficient to override the base-rate prior. If the evidence is mixed or ambiguous for a broad index, the probability-weighted call is UP. Apply the same logic for individual sector ETFs (XLK, XLE, etc.) — single-sector headwinds must be severe and clear-cut to justify a bearish 1-month call. Individual stocks have no such base-rate protection — use standard evidence weighting.
@@ -635,7 +588,7 @@ async function _searchGDELT(queries, timespanHours = 48) {
           const m = art.seendate.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/);
           if (m) date = new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}Z`).toUTCString();
         }
-        results.push({ title: art.title, source: art.domain || 'Web', date, grade: 'Medium' });
+        results.push({ title: art.title, source: art.domain || 'Web', date });
       }
     } catch (_) {}
   }));
@@ -659,7 +612,7 @@ async function _searchTavily(queries, apiKey, days = 3) {
         if (!item.title || item.title.length < 15) continue;
         let source = 'Web';
         try { source = new URL(item.url).hostname.replace(/^www\./, ''); } catch (_) {}
-        results.push({ title: item.title, source, date: item.published_date || null, grade: 'Medium' });
+        results.push({ title: item.title, source, date: item.published_date || null });
       }
     } catch (_) {}
   }));
@@ -678,7 +631,7 @@ async function _searchNewsAPI(queries, apiKey, timespanHours = 48) {
     if (d.status !== 'ok') { console.warn('[newsapi]', d.message); return []; }
     return (d.articles || [])
       .filter(a => a.title && a.title !== '[Removed]' && a.title.length > 15)
-      .map(a => ({ title: a.title, source: a.source?.name || 'NewsAPI', date: a.publishedAt || null, grade: 'Medium' }));
+      .map(a => ({ title: a.title, source: a.source?.name || 'NewsAPI', date: a.publishedAt || null }));
   } catch (_) { return []; }
 }
 
@@ -824,18 +777,18 @@ export default async function handler(req, res) {
         // Google RSS comes from ticker-specific search queries — already relevant, skip word filter
         for (const r of googleResults) {
           if (r.status === 'fulfilled') {
-            try { for (const item of parseRssItems(await r.value.text(), 'Google News')) rawItems.push({ ...item, grade: getSourceGrade(item.source), queryFiltered: true }); } catch (_) {}
+            try { for (const item of parseRssItems(await r.value.text(), 'Google News')) rawItems.push({ ...item, grade: staticSourceGrade(item.source), queryFiltered: true }); } catch (_) {}
           }
         }
         // Direct feeds are general firehoses — need word matching
         for (const r of directResults) {
           if (r.status === 'fulfilled') {
-            try { const { res, source } = r.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+            try { const { res, source } = r.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: staticSourceGrade(item.source) }); } catch (_) {}
           }
         }
         // GDELT/Tavily/NewsAPI are search-filtered — skip word filter
         for (const item of [...gdeltItems, ...tavilyItems, ...newsApiItems]) {
-          rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade, queryFiltered: true });
+          rawItems.push({ ...item, grade: staticSourceGrade(item.source), queryFiltered: true });
         }
 
         // Apply word filter only to general RSS feeds (not search-targeted sources)
@@ -930,7 +883,7 @@ Respond ONLY with valid JSON, no markdown:
           const articles = g.indices.map(i => capped[i - 1]).filter(Boolean);
           const uniqueSources = [...new Set(articles.map(a => a.source))];
           const sourceGrades = {};
-          uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
+          uniqueSources.forEach(s => { sourceGrades[s] = staticSourceGrade(s); });
           return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: articles.length, headlines: articles.map(a => a.title), dates: articles.map(a => a.date) };
         });
 
@@ -1124,16 +1077,16 @@ Respond ONLY with valid JSON, no markdown:
       let rawItems = [];
       for (const result of googleResults) {
         if (result.status === 'fulfilled') {
-          try { for (const item of parseRssItems(await result.value.text(), 'Unknown')) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+          try { for (const item of parseRssItems(await result.value.text(), 'Unknown')) rawItems.push({ ...item, grade: staticSourceGrade(item.source) }); } catch (_) {}
         }
       }
       for (const result of directResults) {
         if (result.status === 'fulfilled') {
-          try { const { res, source } = result.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: getSourceGrade(item.source) }); } catch (_) {}
+          try { const { res, source } = result.value; for (const item of parseRssItems(await res.text(), source)) rawItems.push({ ...item, grade: staticSourceGrade(item.source) }); } catch (_) {}
         }
       }
       for (const item of [...gdeltItems, ...tavilyItems, ...newsApiItems]) {
-        rawItems.push({ ...item, grade: getSourceGrade(item.source) || item.grade });
+        rawItems.push({ ...item, grade: staticSourceGrade(item.source) });
       }
 
       if (timeframe && timeframe !== 'any') {
@@ -1258,7 +1211,7 @@ Respond ONLY with valid JSON, no markdown:
         const groupArticles = g.indices.map(i => capped[i - 1]).filter(Boolean);
         const uniqueSources = [...new Set(groupArticles.map(a => a.source))];
         const sourceGrades = {};
-        uniqueSources.forEach(s => { sourceGrades[s] = getSourceGrade(s); });
+        uniqueSources.forEach(s => { sourceGrades[s] = staticSourceGrade(s); });
         return { topic: g.topic, sources: uniqueSources, sourceGrades, minGrade: selectedGrade, totalSources: groupArticles.length, headlines: groupArticles.map(a => a.title), dates: groupArticles.map(a => a.date) };
       }).filter(g => {
         if (!topicKeywords) return true; // 'any', 'macro', 'crypto', 'political' — no filter

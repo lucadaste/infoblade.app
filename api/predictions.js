@@ -137,7 +137,15 @@ function _pmScore(correct, lean, marketOddsAtTime) {
   return +(65 + edgeFraction * 35).toFixed(1);
 }
 function _pmGrade(correct)    { return correct ? 'A' : 'F'; }
+// PM predictions moved from a 3-bucket High/Medium/Low lean_confidence (which
+// could only ever land on weight 5/3/1, making 2 and 4 mathematically
+// unreachable) to the same numeric "N — reason" scale stock/crypto already
+// uses (see the CONFIDENCE rubric in api/market-analyze.js). Try the numeric
+// parse first; fall back to the legacy text mapping so historical rows still
+// get a sensible weight instead of collapsing to a default.
 function _pmWeight(confStr)   {
+  const m = String(confStr || '').match(/^\s*([1-5])/);
+  if (m) return parseInt(m[1]);
   if (confStr === 'High')   return 5;
   if (confStr === 'Medium') return 3;
   return 1;

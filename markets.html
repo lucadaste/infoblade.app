@@ -382,6 +382,19 @@
       return 'signal-inconclusive';
     }
 
+    // lean_confidence moved from High/Medium/Low text to the same numeric
+    // "N — reason" scale stock/crypto uses (see api/market-analyze.js). Parse
+    // the leading digit for display; legacy High/Medium/Low rows (pre-migration)
+    // fall back to their old mapping so old cards don't just show blank stars.
+    function confStars(conf) {
+      let n = parseInt(conf);
+      if (isNaN(n)) {
+        if (conf === 'High') n = 5; else if (conf === 'Medium') n = 3; else n = 1;
+      }
+      n = Math.max(1, Math.min(5, n));
+      return '★'.repeat(n) + '☆'.repeat(5 - n);
+    }
+
     async function analyzeMarket(market, cardEl) {
       const btn = cardEl.querySelector('.btn-analyze');
       const isFirstAnalysis = !cardEl.querySelector('.analysis-block');
@@ -418,7 +431,7 @@
           ${data.liveGame && data.liveGame.state === 'in' ? `<div class="live-score-row">🔴 LIVE: ${esc(data.liveGame.awayTeam)} ${data.liveGame.awayScore} at ${esc(data.liveGame.homeTeam)} ${data.liveGame.homeScore}${data.liveGame.period ? ` — Period ${data.liveGame.period}` : ''}${data.liveGame.clock ? `, ${esc(data.liveGame.clock)}` : ''}</div>` : ''}
           <div class="public-lean">${data.crowd_summary ? esc(data.crowd_summary) : `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
           <div class="analysis-header">
-            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)}, ${esc(data.lean_confidence)} confidence</span>
+            <span class="lean-badge ${leanBadgeClass(data.lean)}" title="${esc(data.lean_confidence || '')}">Analysis predicts: ${esc(data.lean)} <span aria-hidden="true">${confStars(data.lean_confidence)}</span></span>
             <span class="signal-badge ${signalBadgeClass(data.signal)}">${esc(data.signal)}</span>
           </div>
           <div class="analysis-reasoning">${esc(data.reasoning)}</div>
