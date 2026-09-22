@@ -31,12 +31,28 @@ const TIMEFRAMES = [
   { context: 'over the next 3 months', validationTimeframe: '90 days', weight: 0.1 },
 ];
 
-function _pickTimeframe() {
+// Stocks only trade Mon-Fri. A "1 day" validation window created on a Friday
+// or Saturday spans zero real trading days before it gets checked (Fri->Sat
+// and Sat->Sun both land entirely inside the weekend, with no new closing
+// price posted in between) — the resolver then compares a price against
+// itself, reads that as "didn't move," and grades it wrong regardless of
+// what was actually predicted. Confirmed directly: every affected 1-star
+// stock prediction traced back to exactly this (see
+// scripts/diagnose-direction-bias.js). Sunday through Thursday creation
+// always has at least one real trading day before a 1-day check-back, so
+// only these two starting days need to skip the option. Crypto trades 24/7
+// and never hits this, so it always keeps the full distribution.
+function _stockOneDayHorizonIsSafe() {
+  const day = new Date().getUTCDay(); // 0=Sun ... 5=Fri, 6=Sat
+  return day !== 5 && day !== 6;
+}
+
+function _pickTimeframe(allowOneDay = true) {
   const r = Math.random();
   let cum = 0;
   for (const tf of TIMEFRAMES) {
     cum += tf.weight;
-    if (r < cum) return tf;
+    if (r < cum) return (!allowOneDay && tf.validationTimeframe === '1 day') ? TIMEFRAMES[1] : tf;
   }
   return TIMEFRAMES[TIMEFRAMES.length - 1];
 }
@@ -126,9 +142,10 @@ async function _generateStocks(supabase, remaining, coveredTickers) {
   if (!candidates.length) return { attempted: 0, saved: 0 };
 
   const names = await _getStockNames();
+  const allowOneDay = _stockOneDayHorizonIsSafe();
   const results = await _runBatch(candidates, CONCURRENCY, async ticker => {
     const name = names[ticker] || ticker;
-    const tf = _pickTimeframe();
+    const tf = _pickTimeframe(allowOneDay);
     return runAnalysis({
       supabase,
       topic: `${name} (${ticker}) stock market outlook ${tf.context}`,
