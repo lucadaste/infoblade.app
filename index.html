@@ -75,6 +75,9 @@
     .modal-submit:active { transform: translateY(0); }
     .modal-footer-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
     .modal-footer-note a { color: var(--accent); text-decoration: none; }
+    .modal-remember { display: flex; align-items: center; gap: 8px; margin: -6px 0 16px; user-select: none; cursor: pointer; }
+    .modal-remember input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+    .modal-remember span { font-size: 13px; color: var(--muted); }
     .modal-tabs { display: flex; background: #0c0c0c; border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 22px; gap: 4px; }
     .modal-tab { flex: 1; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.3px; padding: 9px 0; border-radius: 7px; cursor: pointer; transition: color 0.15s, background 0.15s; }
     .modal-tab.active { color: #0a0a0a; background: var(--accent); }
@@ -681,6 +684,7 @@
             <button type="button" class="pass-eye" onclick="_togglePass('signin-pass',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
         </div>
+        <label class="modal-remember"><input type="checkbox" id="signin-remember" /><span>Remember me</span></label>
         <button type="button" class="modal-submit" id="btn-signin">Sign In</button>
         <p class="modal-footer-note" style="margin-top:14px"><a href="#" id="forgot-link">Forgot password?</a></p>
       </form>
@@ -852,6 +856,10 @@
       try {
         var result = await auth.signIn(identifier, pass);
         this.disabled = false; this.textContent = 'Sign In';
+        try {
+          if (document.getElementById('signin-remember').checked) localStorage.setItem('ii_remembered_identifier', identifier);
+          else localStorage.removeItem('ii_remembered_identifier');
+        } catch (_) {}
         if (result.status === 'needs_second_factor') {
           var factor = result.supportedSecondFactors && result.supportedSecondFactors[0];
           _signin2faStrategy = (factor && factor.strategy) || 'email_code';
@@ -945,6 +953,16 @@
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
     });
+
+    // Remember Me — prefill whatever identifier was last remembered so
+    // returning users don't have to retype it (never stores the password).
+    try {
+      var _remembered = localStorage.getItem('ii_remembered_identifier');
+      if (_remembered) {
+        document.getElementById('signin-email').value = _remembered;
+        document.getElementById('signin-remember').checked = true;
+      }
+    } catch (_) {}
 
     // Check URL param ?modal=signin
     if (new URLSearchParams(window.location.search).get('modal') === 'signin') {

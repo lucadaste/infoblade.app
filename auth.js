@@ -50,18 +50,40 @@
   let _wasSignedIn = false;
   try { _wasSignedIn = localStorage.getItem(_SIGNED_IN_CACHE_KEY) === '1'; } catch (_) {}
 
+  // Drives the click handler below — separate from _currentUser (the real,
+  // confirmed auth state) because the badge can *look* signed-in optimistically
+  // (from cache, above) before Clerk actually finishes confirming it. Gating
+  // the click on _currentUser instead of this meant clicking the badge during
+  // that window fell through to "open sign-in" even though it was showing
+  // green — i.e. clicking your own account icon bounced you to sign in.
+  let _visualSignedIn = _wasSignedIn;
+
+  function _dropdownHTML() {
+    return `
+      <a class="auth-dropdown-item" href="/account.html" id="auth-account-btn">Your Account</a>
+      <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
+    `;
+  }
+
+  function _wireDropdownSignOut(dropdown) {
+    const btn = dropdown.querySelector('#auth-signout-btn');
+    if (btn) btn.addEventListener('click', () => signOut());
+  }
+
   function _renderBadgeShell() {
     const badge = document.getElementById('auth-badge');
     if (!badge) return;
     badge.innerHTML = `
       <div class="auth-avatar-wrap">
         <button class="auth-avatar${_wasSignedIn ? ' signed-in' : ''}" id="auth-avatar" type="button" aria-label="Account" title="${_wasSignedIn ? 'Your account' : 'Sign in'}">${_PERSON_ICON}</button>
-        <div class="auth-dropdown" id="auth-dropdown"></div>
+        <div class="auth-dropdown" id="auth-dropdown">${_wasSignedIn ? _dropdownHTML() : ''}</div>
       </div>`;
+    const dropdown = document.getElementById('auth-dropdown');
+    if (_wasSignedIn) _wireDropdownSignOut(dropdown);
     document.getElementById('auth-avatar').addEventListener('click', function (e) {
       e.stopPropagation();
-      if (_currentUser) {
-        document.getElementById('auth-dropdown').classList.toggle('open');
+      if (_visualSignedIn) {
+        dropdown.classList.toggle('open');
       } else if (typeof window.__iiOpenSignIn === 'function') {
         window.__iiOpenSignIn();
       } else {
@@ -223,6 +245,7 @@
   }
 
   async function signOut() {
+    if (!clerk) return; // clicked during the brief optimistic-badge window, before Clerk finished loading
     await clerk.signOut();
   }
 
@@ -252,6 +275,7 @@
 
   function _updateUI(user) {
     _currentUser = user;
+    _visualSignedIn = !!user;
     if (window._auth) window._auth.user = user;
     try { localStorage.setItem(_SIGNED_IN_CACHE_KEY, user ? '1' : '0'); } catch (_) {}
 
@@ -265,13 +289,10 @@
     if (user) {
       avatar.classList.add('signed-in');
       avatar.title = user.email || 'Your account';
-      dropdown.innerHTML = `
-        <a class="auth-dropdown-item" href="/account.html" id="auth-account-btn">Your Account</a>
-        <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
-      `;
+      dropdown.innerHTML = _dropdownHTML();
+      _wireDropdownSignOut(dropdown);
       _dropdownCloseHandler = () => dropdown.classList.remove('open');
       document.addEventListener('click', _dropdownCloseHandler);
-      document.getElementById('auth-signout-btn').addEventListener('click', signOut);
     } else {
       avatar.classList.remove('signed-in');
       avatar.title = 'Sign in';
