@@ -113,34 +113,65 @@
   async function _noopToken() { return null; }
   function _noopReady(fn) { fn(null); }
 
-  let clerk = null;
-  try {
-    // Fetch the publishable key BEFORE loading the Clerk CDN bundle — this specific
-    // build (clerk.browser.js) reads the key from window.__clerk_publishable_key
-    // (or a data-clerk-publishable-key script attribute) at load time and
-    // self-constructs window.Clerk as a ready instance; it throws if the key
-    // isn't already set when the script executes.
+  // The publishable key is safe to cache client-side (it's the "publishable"
+  // half of the keypair, meant to be public) — caching it means most page
+  // loads can start injecting the Clerk script immediately instead of
+  // waiting on a round trip to /api/config first.
+  const _PK_CACHE_KEY = 'ii_clerk_pk';
+  let _cachedPk = null;
+  try { _cachedPk = localStorage.getItem(_PK_CACHE_KEY); } catch (_) {}
+
+  // Kicked off immediately (in parallel with everything else) so it's
+  // usually already resolved by the time anything actually needs it —
+  // whether that's the first-ever load (no cache yet) or a retry after
+  // the cached key turned out to be stale.
+  const _configPromise = (async () => {
     const r = await fetch((window.API_BASE || '') + '/api/config');
     if (!r.ok) throw new Error('/api/config returned ' + r.status);
     const { clerkPublishableKey, error } = await r.json();
     if (error) throw new Error('/api/config error: ' + error);
     if (!clerkPublishableKey) throw new Error('/api/config did not return a clerkPublishableKey');
+    try { localStorage.setItem(_PK_CACHE_KEY, clerkPublishableKey); } catch (_) {}
+    return clerkPublishableKey;
+  })();
 
-    window.__clerk_publishable_key = clerkPublishableKey;
-
-    if (!window.Clerk) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
-        s.onload = resolve;
-        s.onerror = () => reject(new Error('Failed to load Clerk script from CDN'));
-        document.head.appendChild(s);
-      });
-    }
-
+  async function _loadClerkScript() {
+    if (window.Clerk) return;
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('Failed to load Clerk script from CDN'));
+      document.head.appendChild(s);
+    });
     if (!window.Clerk) throw new Error('window.Clerk is not defined — CDN script did not load');
-    clerk = window.Clerk;
-    await clerk.load();
+  }
+
+  // Fetch the publishable key BEFORE loading the Clerk CDN bundle — this specific
+  // build (clerk.browser.js) reads the key from window.__clerk_publishable_key
+  // (or a data-clerk-publishable-key script attribute) at load time and
+  // self-constructs window.Clerk as a ready instance; it throws if the key
+  // isn't already set when the script executes.
+  async function _initClerk(useFreshKey) {
+    const pk = useFreshKey ? await _configPromise : (_cachedPk || await _configPromise);
+    window.__clerk_publishable_key = pk;
+    await _loadClerkScript();
+    await window.Clerk.load();
+    return window.Clerk;
+  }
+
+  let clerk = null;
+  try {
+    try {
+      clerk = await _initClerk(false);
+    } catch (err) {
+      // Most failures here are transient (a slow/blipped CDN response, a
+      // cold /api/config call, an out-of-date cached key) — retrying once
+      // against a guaranteed-fresh key is what stops a random refresh from
+      // silently landing on the "signed out" fallback below.
+      console.warn('[auth.js] Clerk init attempt 1 failed, retrying with a fresh key:', err);
+      clerk = await _initClerk(true);
+    }
   } catch (err) {
     console.error('[auth.js] Clerk initialization failed:', err);
   }
