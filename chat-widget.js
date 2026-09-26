@@ -86,8 +86,20 @@
       white-space: nowrap;
       overflow: hidden;
       isolation: isolate;
+      display: flex;
+      align-items: center;
+      gap: 7px;
       transition: color 0.2s;
       box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+    }
+    #ii-chat-btn .ii-spark {
+      flex-shrink: 0;
+      filter: drop-shadow(0 0 5px rgba(0,230,118,0.85));
+      animation: ii-spark-pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes ii-spark-pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      50% { transform: scale(1.18) rotate(10deg); opacity: 0.8; }
     }
     #ii-chat-btn::before {
       content: '';
@@ -301,7 +313,7 @@
   panel.innerHTML = `
     <div class="ii-ph">
       <div class="ii-ph-title"><em>II</em> AI Informant</div>
-      <button class="ii-close" id="ii-close-btn" aria-label="Close chat">×</button>
+      <button class="ii-close" id="ii-close-btn" aria-label="Close AI Informant">×</button>
     </div>
     <div class="ii-msgs" id="ii-msgs">
       <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for. Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
@@ -317,8 +329,8 @@
   // Floating trigger button
   const floatBtn = document.createElement('button');
   floatBtn.id = 'ii-chat-btn';
-  floatBtn.setAttribute('aria-label', 'AI Chat');
-  floatBtn.textContent = '✦ AI Chat';
+  floatBtn.setAttribute('aria-label', 'AI Informant');
+  floatBtn.innerHTML = `<svg class="ii-spark" width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="#00e676"/></svg><span>AI Informant</span>`;
   floatBtn.addEventListener('click', () => window.iiToggleChat?.());
   document.body.appendChild(floatBtn);
 
@@ -438,7 +450,7 @@
     // Auth gate — require sign-in
     const token = await window._auth?.getToken();
     if (!token) {
-      addMsg('assistant', '**AI Chat requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click **Let\'s Begin !** in the top-right corner to get started.');
+      addMsg('assistant', '**AI Informant requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click **Let\'s Begin !** in the top-right corner to get started.');
       inp.value = '';
       return;
     }
