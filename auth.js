@@ -165,32 +165,45 @@
     if (!u) return null;
     return {
       id: u.id,
+      username: u.username || '',
       email: u.primaryEmailAddress?.emailAddress || '',
+      phone: u.primaryPhoneNumber?.phoneNumber || '',
       name: u.unsafeMetadata?.fullName || u.firstName || '',
     };
   }
 
-  async function signUp(name, email, password) {
-    const su = await clerk.client.signUp.create({
-      emailAddress: email,
-      password,
-      unsafeMetadata: { fullName: name },
-    });
-    await su.prepareEmailAddressVerification({ strategy: 'email_code' });
+  // Which contact channel a pending sign-up is waiting on ('email' or 'phone'),
+  // so confirmSignUp() knows which Clerk verification call to make.
+  let _pendingSignUpChannel = null;
+
+  async function signUp({ username, password, email, phone }) {
+    const payload = { username, password };
+    if (email) payload.emailAddress = email;
+    if (phone) payload.phoneNumber = phone;
+    const su = await clerk.client.signUp.create(payload);
+    if (email) {
+      await su.prepareEmailAddressVerification({ strategy: 'email_code' });
+      _pendingSignUpChannel = 'email';
+    } else {
+      await su.preparePhoneNumberVerification({ strategy: 'phone_code' });
+      _pendingSignUpChannel = 'phone';
+    }
     return su;
   }
 
   async function confirmSignUp(code) {
     const su = clerk.client.signUp;
-    const result = await su.attemptEmailAddressVerification({ code });
+    const result = _pendingSignUpChannel === 'phone'
+      ? await su.attemptPhoneNumberVerification({ code })
+      : await su.attemptEmailAddressVerification({ code });
     if (result.status === 'complete') {
       await clerk.setActive({ session: result.createdSessionId });
     }
     return result;
   }
 
-  async function signIn(email, password) {
-    const si = await clerk.client.signIn.create({ identifier: email, password });
+  async function signIn(identifier, password) {
+    const si = await clerk.client.signIn.create({ identifier, password });
     if (si.status === 'complete') {
       await clerk.setActive({ session: si.createdSessionId });
     }
@@ -273,6 +286,16 @@
           <div id="ii-acct-email-verify" style="display:none">
             <div class="ii-acct-field"><label>Code</label><input type="text" id="ii-acct-email-code" inputmode="numeric" maxlength="6" /></div>
             <button class="ii-acct-btn" id="ii-acct-verify-email">Verify New Email</button>
+          </div>
+
+          <h3>Phone Number</h3>
+          <div id="ii-acct-phone-view">
+            <div class="ii-acct-field"><input type="tel" id="ii-acct-phone" placeholder="e.g. +1 555 123 4567" /></div>
+            <button class="ii-acct-btn" id="ii-acct-save-phone">Save Phone</button>
+          </div>
+          <div id="ii-acct-phone-verify" style="display:none">
+            <div class="ii-acct-field"><label>Code</label><input type="text" id="ii-acct-phone-code" inputmode="numeric" maxlength="6" /></div>
+            <button class="ii-acct-btn" id="ii-acct-verify-phone">Verify Phone</button>
           </div>
 
           <h3>Password</h3>
@@ -476,6 +499,47 @@
       this.disabled = false;
     });
 
+    let _pendingPhone = null;
+    document.getElementById('ii-acct-save-phone').addEventListener('click', async function () {
+      const phone = document.getElementById('ii-acct-phone').value.trim();
+      if (!phone) return setMsg('Please enter a phone number.', 'error');
+      this.disabled = true;
+      try {
+        _pendingPhone = await _withReverification(() => clerk.user.createPhoneNumber({ phoneNumber: phone }));
+        await _pendingPhone.prepareVerification({ strategy: 'phone_code' });
+        document.getElementById('ii-acct-phone-view').style.display = 'none';
+        document.getElementById('ii-acct-phone-verify').style.display = '';
+        clearMsg();
+      } catch (err) {
+        setMsg(err?.errors?.[0]?.message || err?.message || 'Could not save phone number.', 'error');
+      }
+      this.disabled = false;
+    });
+
+    document.getElementById('ii-acct-verify-phone').addEventListener('click', async function () {
+      const code = document.getElementById('ii-acct-phone-code').value.trim();
+      if (!code || !_pendingPhone) return setMsg('Please enter the code.', 'error');
+      this.disabled = true;
+      try {
+        await _pendingPhone.attemptVerification({ code });
+        const oldPhone = clerk.user.primaryPhoneNumber;
+        await clerk.user.update({ primaryPhoneNumberId: _pendingPhone.id });
+        if (oldPhone && oldPhone.id !== _pendingPhone.id) {
+          try { await oldPhone.delete(); } catch (_) {}
+        }
+        _updateUI(_normalizeUser(clerk.user));
+        document.getElementById('ii-acct-phone-verify').style.display = 'none';
+        document.getElementById('ii-acct-phone-view').style.display = '';
+        document.getElementById('ii-acct-phone').value = clerk.user.primaryPhoneNumber?.phoneNumber || '';
+        document.getElementById('ii-acct-phone-code').value = '';
+        _pendingPhone = null;
+        setMsg('Phone number updated.', 'success');
+      } catch (err) {
+        setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
+      }
+      this.disabled = false;
+    });
+
     document.getElementById('ii-acct-save-pass').addEventListener('click', async function () {
       const currentPassword = document.getElementById('ii-acct-curpass').value;
       const newPassword = document.getElementById('ii-acct-newpass').value;
@@ -506,14 +570,26 @@
     });
 
     _openAccountModal = function () {
-      document.getElementById('ii-acct-name').value = _currentUser?.name || '';
-      document.getElementById('ii-acct-email').value = _currentUser?.email || '';
+      // Re-read straight from the live Clerk user instead of trusting the
+      // cached _currentUser snapshot, and surface an error instead of
+      // silently rendering blank fields if the two have drifted out of sync.
+      const fresh = _normalizeUser(clerk.user);
+      if (fresh) { _currentUser = fresh; if (window._auth) window._auth.user = fresh; }
+      if (!fresh) {
+        setMsg('Could not load your account info. Please close this and reload the page.', 'error');
+      } else {
+        clearMsg();
+      }
+      document.getElementById('ii-acct-name').value = fresh?.name || '';
+      document.getElementById('ii-acct-email').value = fresh?.email || '';
+      document.getElementById('ii-acct-phone').value = fresh?.phone || '';
       document.getElementById('ii-acct-email-verify').style.display = 'none';
       document.getElementById('ii-acct-email-view').style.display = '';
+      document.getElementById('ii-acct-phone-verify').style.display = 'none';
+      document.getElementById('ii-acct-phone-view').style.display = '';
       document.getElementById('ii-acct-curpass').value = '';
       document.getElementById('ii-acct-newpass').value = '';
       reverifyBox.style.display = 'none';
-      clearMsg();
       overlay.classList.add('open');
     };
   }
