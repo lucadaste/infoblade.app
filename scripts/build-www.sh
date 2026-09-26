@@ -26,4 +26,11 @@ if [ -d "$ROOT/data" ]; then
   cp -r "$ROOT/data" "$WWW/data"
 fi
 
+# Brand assets (logo, favicons)
+if [ -d "$ROOT/images" ]; then
+  cp -r "$ROOT/images" "$WWW/images"
+fi
+cp "$ROOT/favicon.ico"        "$WWW/"
+cp "$ROOT/site.webmanifest"   "$WWW/"
+
 echo "✓ www/ built ($(find "$WWW" -type f | wc -l | tr -d ' ') files)"
