@@ -242,7 +242,6 @@
     <div class="nav-right">
       <div class="nav-buttons">
         <div id="auth-badge"></div>
-        <a class="nav-cta" href="#" id="signup-btn" style="display:none">Let's Begin !</a>
       </div>
       <div class="nav-menu-wrap">
         <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -703,7 +702,10 @@
   (function(){
     var overlay = document.getElementById('signup-modal');
     var _signin2faStrategy = null;
-    document.getElementById('signup-btn').addEventListener('click', function(e){ e.preventDefault(); _openTab('signup'); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); });
+    // Exposed so the account icon (rendered by auth.js on every page) can open
+    // this modal in place instead of navigating to /?modal=signin when we're
+    // already on the landing page.
+    window.__iiOpenSignIn = function(){ _openTab('signup'); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); };
     document.getElementById('modal-close').addEventListener('click', function(){ overlay.classList.remove('open'); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });

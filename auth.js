@@ -6,15 +6,19 @@
   // Inject styles for auth badge dropdown
   const _styleEl = document.createElement('style');
   _styleEl.textContent = `
-    #auth-badge { display: none; align-items: center; }
+    #auth-badge { display: flex; align-items: center; }
     .auth-avatar-wrap { position: relative; }
     .auth-avatar {
       width: 30px; height: 30px; border-radius: 50%;
-      background: var(--accent, #00e676); color: #111;
-      font-size: 12px; font-weight: 700;
+      background: #555; color: #111; border: none; padding: 0;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; user-select: none; flex-shrink: 0;
+      transition: background 0.15s;
     }
+    .auth-avatar:hover { background: #666; }
+    .auth-avatar.signed-in { background: var(--accent, #00e676); }
+    .auth-avatar.signed-in:hover { background: var(--accent, #00e676); opacity: 0.85; }
+    .auth-avatar svg { width: 16px; height: 16px; pointer-events: none; }
     .auth-dropdown {
       display: none; position: absolute; top: calc(100% + 8px); right: 0;
       background: #1c1c1c; border: 1px solid #2a2a2a; border-radius: 8px;
@@ -72,6 +76,33 @@
   `;
   document.head.appendChild(_styleEl);
 
+  // A generic person-in-a-circle icon. Rendered immediately (before Clerk even
+  // starts loading) so the account icon is on screen at all times — grey while
+  // signed out, green once we know the user is signed in — and never depends
+  // on Clerk successfully initializing to simply be present.
+  const _PERSON_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 19c1.4-3.4 4.3-5.2 7.5-5.2s6.1 1.8 7.5 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+  function _renderBadgeShell() {
+    const badge = document.getElementById('auth-badge');
+    if (!badge) return;
+    badge.innerHTML = `
+      <div class="auth-avatar-wrap">
+        <button class="auth-avatar" id="auth-avatar" type="button" aria-label="Account" title="Sign in">${_PERSON_ICON}</button>
+        <div class="auth-dropdown" id="auth-dropdown"></div>
+      </div>`;
+    document.getElementById('auth-avatar').addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (_currentUser) {
+        document.getElementById('auth-dropdown').classList.toggle('open');
+      } else if (typeof window.__iiOpenSignIn === 'function') {
+        window.__iiOpenSignIn();
+      } else {
+        window.location.href = '/?modal=signin';
+      }
+    });
+  }
+  _renderBadgeShell();
+
   function _fireReady() {
     _ready = true;
     _readyCallbacks.forEach(fn => fn(_currentUser));
@@ -115,10 +146,9 @@
   }
 
   if (!clerk) {
-    // Auth state is unknown — reveal the signup CTA rather than leaving it
-    // hidden forever (it defaults to display:none in HTML to avoid a flash
-    // for logged-in users while Clerk loads).
-    document.getElementById('signup-btn')?.style.removeProperty('display');
+    // Auth state is unknown — the badge shell rendered above already shows
+    // the (grey, signed-out-looking) account icon, so there's nothing more
+    // to reveal here.
     window._auth = {
       user: null, clerk: null,
       getToken: _noopToken,
@@ -494,66 +524,67 @@
     _currentUser = user;
     if (window._auth) window._auth.user = user;
 
-    const badge   = document.getElementById('auth-badge');
-    const ctaBtn  = document.getElementById('signup-btn');
+    const avatar   = document.getElementById('auth-avatar');
+    const dropdown = document.getElementById('auth-dropdown');
+    if (!avatar || !dropdown) return; // badge shell missing on this page
+
+    if (_dropdownCloseHandler) { document.removeEventListener('click', _dropdownCloseHandler); _dropdownCloseHandler = null; }
+    dropdown.classList.remove('open');
 
     if (user) {
-      // Show avatar badge with dropdown
-      if (badge) {
-        const initials = (user.name || user.email || '?').slice(0, 1).toUpperCase();
-        badge.innerHTML = `
-          <div class="auth-avatar-wrap">
-            <span class="auth-avatar" id="auth-avatar" title="${user.email}">${initials}</span>
-            <div class="auth-dropdown" id="auth-dropdown">
-              <button class="auth-dropdown-item" id="auth-account-btn">Your Account</button>
-              <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
-            </div>
-          </div>`;
-        badge.style.display = 'flex';
-
-        // Remove old global listener if present
-        if (_dropdownCloseHandler) document.removeEventListener('click', _dropdownCloseHandler);
-
-        document.getElementById('auth-avatar').addEventListener('click', e => {
-          e.stopPropagation();
-          document.getElementById('auth-dropdown').classList.toggle('open');
-        });
-        _dropdownCloseHandler = () => document.getElementById('auth-dropdown')?.classList.remove('open');
-        document.addEventListener('click', _dropdownCloseHandler);
-        document.getElementById('auth-signout-btn').addEventListener('click', signOut);
-        document.getElementById('auth-account-btn').addEventListener('click', () => {
-          document.getElementById('auth-dropdown').classList.remove('open');
-          if (_openAccountModal) _openAccountModal();
-        });
-      }
-
-      if (ctaBtn)  ctaBtn.style.display = 'none';
-
+      avatar.classList.add('signed-in');
+      avatar.title = user.email || 'Your account';
+      dropdown.innerHTML = `
+        <button class="auth-dropdown-item" id="auth-account-btn">Your Account</button>
+        <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
+      `;
+      _dropdownCloseHandler = () => dropdown.classList.remove('open');
+      document.addEventListener('click', _dropdownCloseHandler);
+      document.getElementById('auth-signout-btn').addEventListener('click', signOut);
+      document.getElementById('auth-account-btn').addEventListener('click', () => {
+        dropdown.classList.remove('open');
+        if (_openAccountModal) _openAccountModal();
+      });
     } else {
-      // Logged out
-      if (badge) { badge.innerHTML = ''; badge.style.display = 'none'; }
-      if (ctaBtn)  ctaBtn.style.removeProperty('display');
-
-      if (_dropdownCloseHandler) { document.removeEventListener('click', _dropdownCloseHandler); _dropdownCloseHandler = null; }
+      avatar.classList.remove('signed-in');
+      avatar.title = 'Sign in';
+      dropdown.innerHTML = '';
     }
   }
 
-  // Initialize
-  _initAccountModal();
-  _currentUser = _normalizeUser(clerk.user);
-  window._auth = {
-    user: _currentUser, clerk,
-    getToken,
-    signUp, confirmSignUp, signIn, signOut,
-    prepareSignInSecondFactor, attemptSignInSecondFactor,
-    requestPasswordReset, confirmPasswordReset,
-    onReady,
-  };
-  _updateUI(_currentUser);
+  // Initialize — wrapped so that a failure here (e.g. an unexpected Clerk
+  // user-object shape) can't silently strand every page in its pre-auth
+  // "hidden" state or leave the account icon in limbo; onReady always fires.
+  try {
+    _initAccountModal();
+    _currentUser = _normalizeUser(clerk.user);
+    window._auth = {
+      user: _currentUser, clerk,
+      getToken,
+      signUp, confirmSignUp, signIn, signOut,
+      prepareSignInSecondFactor, attemptSignInSecondFactor,
+      requestPasswordReset, confirmPasswordReset,
+      onReady,
+    };
+    _updateUI(_currentUser);
 
-  clerk.addListener(({ user }) => {
-    _updateUI(_normalizeUser(user));
-  });
+    clerk.addListener(({ user }) => {
+      try { _updateUI(_normalizeUser(user)); }
+      catch (err) { console.error('[auth.js] UI update on auth change failed:', err); }
+    });
+  } catch (err) {
+    console.error('[auth.js] initialization failed:', err);
+    if (!window._auth) {
+      window._auth = {
+        user: null, clerk,
+        getToken: _noopToken,
+        signUp: _noop, confirmSignUp: _noop, signIn: _noop, signOut: _noop,
+        requestPasswordReset: _noop, confirmPasswordReset: _noop,
+        prepareSignInSecondFactor: _noop, attemptSignInSecondFactor: _noop,
+        onReady: _noopReady,
+      };
+    }
+  }
 
   _fireReady();
 })();
