@@ -144,19 +144,19 @@
       </div>
       <div class="acct-profile-row">
         <div class="acct-avatar-wrap">
-          <img class="acct-avatar-img" id="acct-avatar-img" alt="Profile photo" />
+          <img class="acct-avatar-img" id="acct-avatar-img" alt="Profile photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23555' stroke-width='1.5'%3E%3Crect width='24' height='24' rx='12' fill='%23333'/%3E%3Ccircle cx='12' cy='9.5' r='3.8' stroke='%23888'/%3E%3Cpath d='M4.5 20c1.6-3.8 4.7-5.8 7.5-5.8s5.9 2 7.5 5.8' stroke='%23888' stroke-linecap='round'/%3E%3C/svg%3E" />
           <label class="acct-avatar-upload" for="acct-photo-input" aria-label="Change photo">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg>
           </label>
           <input type="file" id="acct-photo-input" accept="image/*" style="display:none" />
         </div>
         <div class="acct-profile-meta">
-          <div class="acct-username" id="acct-username-display"></div>
-          <div class="acct-username-note">Your username — used to sign in.</div>
           <button class="acct-photo-remove" id="acct-photo-remove" style="display:none">Remove photo</button>
         </div>
       </div>
-      <div class="acct-field"><label>Display Name</label><input type="text" id="acct-name" /></div>
+      <div class="acct-field"><label>Username</label><input type="text" id="acct-username" placeholder="Choose a username" /></div>
+      <button class="acct-btn" id="acct-save-username">Save Username</button>
+      <div class="acct-field" style="margin-top:20px"><label>Display Name</label><input type="text" id="acct-name" /></div>
       <button class="acct-btn" id="acct-save-name">Save Name</button>
     </div>
 
@@ -253,13 +253,20 @@
       el.textContent = ''; el.className = 'acct-msg';
     }
 
+    var DEFAULT_AVATAR = document.getElementById('acct-avatar-img').getAttribute('src');
+    // If Clerk's hosted image URL is ever slow/unreachable, fall back instead
+    // of leaving a broken-image glyph on screen.
+    document.getElementById('acct-avatar-img').addEventListener('error', function () {
+      if (this.src !== DEFAULT_AVATAR) this.src = DEFAULT_AVATAR;
+    });
+
     function populate(user) {
-      document.getElementById('acct-username-display').textContent = '@' + (user.username || '—');
+      document.getElementById('acct-username').value = user.username || '';
       document.getElementById('acct-name').value = user.name || '';
       document.getElementById('acct-email').value = user.email || '';
       document.getElementById('acct-phone').value = user.phone || '';
       var img = document.getElementById('acct-avatar-img');
-      img.src = clerk.user.imageUrl;
+      img.src = clerk.user.hasImage && clerk.user.imageUrl ? clerk.user.imageUrl : DEFAULT_AVATAR;
       document.getElementById('acct-photo-remove').style.display = clerk.user.hasImage ? '' : 'none';
     }
 
@@ -391,6 +398,21 @@
         setMsg('Profile photo removed.', 'success');
       } catch (err) {
         setMsg((err && err.errors && err.errors[0] && err.errors[0].message) || 'Could not remove photo.', 'error');
+      }
+      this.disabled = false;
+    });
+
+    // ── Username ──
+    document.getElementById('acct-save-username').addEventListener('click', async function () {
+      var username = document.getElementById('acct-username').value.trim();
+      if (!username) return setMsg('Username cannot be empty.', 'error');
+      this.disabled = true;
+      try {
+        await clerk.user.update({ username: username });
+        refreshFromClerk();
+        setMsg('Username updated.', 'success');
+      } catch (err) {
+        setMsg((err && err.errors && err.errors[0] && err.errors[0].message) || 'Could not update username — it may already be taken.', 'error');
       }
       this.disabled = false;
     });
