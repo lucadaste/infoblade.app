@@ -13,7 +13,7 @@
         <span style="width:8px;height:8px;border-radius:50%;background:#ff9800;flex-shrink:0"></span>
         No internet connection. Some data may be unavailable
       </span>
-      <button onclick="window.location.reload()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 12px;border-radius:4px;cursor:pointer;white-space:nowrap">
+      <button onclick="window.location.reload()" style="background:var(--hover-tint);border:1px solid var(--divider);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:4px 12px;border-radius:4px;cursor:pointer;white-space:nowrap">
         Retry
       </button>`;
     Object.assign(el.style, {
@@ -21,9 +21,9 @@
       bottom: '0',
       left: '0',
       right: '0',
-      background: '#1a1a1a',
-      borderTop: '1px solid #333',
-      color: '#e8e6e0',
+      background: 'var(--card)',
+      borderTop: '1px solid var(--border)',
+      color: 'var(--ink)',
       fontFamily: "'DM Sans', sans-serif",
       fontSize: '13px',
       fontWeight: '500',
@@ -69,7 +69,7 @@
       transform: 'translateX(-50%)',
       background: 'rgba(0,230,118,0.15)',
       border: '1px solid rgba(0,230,118,0.3)',
-      color: '#00e676',
+      color: 'var(--accent)',
       fontFamily: "'DM Sans', sans-serif",
       fontSize: '13px',
       fontWeight: '600',

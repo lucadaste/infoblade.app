@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script src="/theme.js"></script>
   <style id="ii-auth-hide">html { opacity: 0; transition: opacity .2s ease; }</style>
   <script>
     // Most visitors here are signed out — only pay the hide-and-wait cost
@@ -46,13 +47,13 @@
     .nav-cta:hover { background: var(--accent); color: #111; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
-    .modal-card { background: linear-gradient(180deg, #181818 0%, #121212 100%); border: 1px solid var(--border); border-radius: 16px; padding: 36px 36px 32px; width: 100%; max-width: 400px; position: relative; box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,230,118,0.05); animation: modalIn 0.25s ease both; }
+    .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 36px 36px 32px; width: 100%; max-width: 400px; position: relative; box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,230,118,0.05); animation: modalIn 0.25s ease both; }
     @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) { .modal-card { animation: none; } }
-    .modal-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border-radius: 50%; border: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; transition: color 0.15s, background 0.15s; }
-    .modal-close:hover { color: var(--ink); background: rgba(255,255,255,0.08); }
+    .modal-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--hover-tint); border-radius: 50%; border: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; transition: color 0.15s, background 0.15s; }
+    .modal-close:hover { color: var(--ink); background: var(--divider); }
     .modal-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
-    .modal-brand-mark { flex-shrink: 0; fill: white; opacity: 0.92; }
+    .modal-brand-mark { flex-shrink: 0; fill: var(--ink); opacity: 0.92; }
     .modal-brand-name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 19px; color: var(--ink); }
     .modal-brand-name span { color: var(--accent); }
     .modal-subtitle { font-size: 13px; color: var(--muted); text-align: center; margin: 0 0 24px; line-height: 1.65; }
@@ -62,13 +63,13 @@
     .modal-perk svg { flex-shrink: 0; color: var(--accent); }
     .modal-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
     .modal-field label { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; color: var(--muted); text-transform: uppercase; }
-    .modal-field input { background: #0a0a0a; border: 1px solid var(--border); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 12px 14px 12px 40px; border-radius: 8px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; box-sizing: border-box; }
+    .modal-field input { background: var(--paper); border: 1px solid var(--border); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 12px 14px 12px 40px; border-radius: 8px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; box-sizing: border-box; }
     .modal-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,230,118,0.12); }
     .field-wrap { position: relative; }
-    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #555; pointer-events: none; display: flex; transition: color 0.15s; }
+    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; display: flex; transition: color 0.15s; }
     .field-wrap:focus-within .field-icon { color: var(--accent); }
     .pass-wrap input { padding-right: 42px; }
-    .pass-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #555; padding: 0; display: flex; align-items: center; transition: color 0.15s; }
+    .pass-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 0; display: flex; align-items: center; transition: color 0.15s; }
     .pass-eye:hover { color: var(--muted); }
     .modal-submit { width: 100%; background: linear-gradient(135deg, #00e676, #00c766); color: #0a0a0a; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 14px; border: none; border-radius: 8px; cursor: pointer; margin-top: 6px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 6px 18px rgba(0,230,118,0.18); }
     .modal-submit:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,230,118,0.26); }
@@ -78,7 +79,7 @@
     .modal-remember { display: flex; align-items: center; gap: 8px; margin: -6px 0 16px; user-select: none; cursor: pointer; }
     .modal-remember input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
     .modal-remember span { font-size: 13px; color: var(--muted); }
-    .modal-tabs { display: flex; background: #0c0c0c; border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 22px; gap: 4px; }
+    .modal-tabs { display: flex; background: var(--paper); border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 22px; gap: 4px; }
     .modal-tab { flex: 1; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.3px; padding: 9px 0; border-radius: 7px; cursor: pointer; transition: color 0.15s, background 0.15s; }
     .modal-tab.active { color: #0a0a0a; background: var(--accent); }
     .modal-msg { font-size: 13px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: none; }
@@ -93,11 +94,11 @@
     .hero-sub { font-size: 18px; color: var(--muted); max-width: 560px; line-height: 1.75; margin-bottom: 0; font-weight: 300; }
     .hero-actions { display: flex; flex-direction: column; gap: 20px; flex-shrink: 0; }
     .hero-actions .btn-outline { display: block; min-width: 260px; padding: 26px 48px; font-size: 16px; text-align: center; border-radius: 8px; letter-spacing: 0.2px; }
-    .btn-primary { background: #111111; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 4px; border: 1.5px solid var(--accent); cursor: pointer; letter-spacing: 0.3px; transition: background 0.2s, color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
+    .btn-primary { background: var(--paper); color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 4px; border: 1.5px solid var(--accent); cursor: pointer; letter-spacing: 0.3px; transition: background 0.2s, color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
     .btn-primary:hover { background: var(--accent); color: #111111; transform: translateY(-1px); }
     .btn-secondary { font-size: 14px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; transition: color 0.2s; }
     .btn-secondary:hover { color: var(--ink); }
-    .ticker-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 13px 0; overflow: hidden; background: #0a0a0a; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1px; white-space: nowrap; user-select: none; }
+    .ticker-strip { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 13px 0; overflow: hidden; background: var(--card); color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 1px; white-space: nowrap; user-select: none; }
     .ticker-inner { display: inline-flex; gap: 56px; animation: ticker 28s linear infinite; }
     .ticker-strip:hover .ticker-inner { animation-play-state: paused; }
     .ticker-item { display: inline-flex; align-items: center; gap: 12px; }
@@ -114,32 +115,32 @@
     .step h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; margin-bottom: 12px; }
     .step p { font-size: 14px; color: var(--muted); line-height: 1.75; }
     .example-section { padding: 0 48px 88px; }
-    .example-card { background: #0a0a0a; color: #e8e6e0; border-radius: 14px; padding: 52px; }
+    .example-card { background: var(--card); color: var(--ink); border-radius: 14px; padding: 52px; }
     .example-label { font-size: 11px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); margin-bottom: 28px; }
     .example-event { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; margin-bottom: 8px; line-height: 1.3; }
-    .example-source { font-size: 13px; color: #666; margin-bottom: 40px; }
+    .example-source { font-size: 13px; color: var(--muted); margin-bottom: 40px; }
     .example-chain { display: flex; flex-direction: column; }
-    .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 22px 0; border-top: 1px solid #1e1e1e; }
-    .chain-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: #555; min-width: 130px; padding-top: 3px; flex-shrink: 0; }
-    .chain-content { font-size: 15px; color: #bbb; line-height: 1.7; flex: 1; }
+    .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 22px 0; border-top: 1px solid var(--border); }
+    .chain-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); min-width: 130px; padding-top: 3px; flex-shrink: 0; }
+    .chain-content { font-size: 15px; color: var(--text-soft); line-height: 1.7; flex: 1; }
     .chain-tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .ticker-pill { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 5px 13px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pill-down { background: rgba(255,80,80,0.1); color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
-    .pill-neutral { background: rgba(255,255,255,0.06); color: #888; border: 1px solid rgba(255,255,255,0.1); }
+    .pill-neutral { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
     .features-section { padding: 88px 48px; border-top: 1px solid var(--border); }
     .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
     .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 32px; transition: border-color 0.2s, transform 0.2s; }
-    .feature-card:hover { border-color: #444444; transform: translateY(-2px); }
+    .feature-card:hover { border-color: var(--divider); transform: translateY(-2px); }
     .feature-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; }
     .feature-card h4 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 10px; }
     .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.75; }
     .platform-header { padding: 80px 48px 48px; border-top: 1px solid var(--border); }
     .platform-header h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(24px, 3.5vw, 38px); letter-spacing: -1.2px; line-height: 1.1; margin-top: 16px; margin-bottom: 12px; }
     .platform-header p { font-size: 16px; color: var(--muted); max-width: 540px; line-height: 1.75; font-weight: 300; }
-    .disclaimer { padding: 36px 48px; border-top: 1px solid #1e1e1e; font-size: 12px; color: #555; line-height: 1.8; width: 100%; background: #0a0a0a; box-sizing: border-box; }
-    footer { background: #0a0a0a; border-top-color: #1e1e1e; }
-    footer p { color: #444; }
+    .disclaimer { padding: 36px 48px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); line-height: 1.8; width: 100%; background: var(--paper); box-sizing: border-box; }
+    footer { background: var(--paper); border-top-color: var(--border); }
+    footer p { color: var(--muted); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { opacity: 0; transform: translateY(16px); transition: opacity 0.6s ease, transform 0.6s ease; }
     .fade-in.visible { opacity: 1; transform: translateY(0); }
@@ -165,7 +166,7 @@
     .split-left h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(22px, 3.5vw, 36px); letter-spacing: -1.2px; line-height: 1.1; }
     .split-left p { font-size: 15px; color: var(--muted); line-height: 1.8; }
     .btn-outline { display: inline-block; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; padding: 12px 24px; border-radius: 4px; border: 1.5px solid var(--ink); color: var(--ink); text-decoration: none; transition: background 0.2s, color 0.2s; letter-spacing: 0.3px; }
-    .btn-outline:hover { background: var(--ink); color: #111111; }
+    .btn-outline:hover { background: var(--ink); color: var(--paper); }
     .preview-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; }
 
     /* Prediction markets mock */
@@ -193,7 +194,7 @@
     .cp-fg-bar { width: 72px; height: 3px; background: var(--border); border-radius: 2px; margin-top: 5px; margin-left: auto; }
     .cp-fg-fill { height: 100%; border-radius: 2px; background: #c87d00; }
     .cp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .cp-card { background: #0a0a0a; border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .cp-card { background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
     .cp-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; }
     .cp-sym { font-size: 10px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; margin-top: 1px; }
     .cp-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.5px; }
@@ -230,8 +231,8 @@
     #nav-menu.open { display: block; }
     #nav-menu a { display: flex; align-items: center; padding: 13px 18px; font-size: 14px; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border); transition: color 0.15s, background 0.15s; }
     #nav-menu a:last-child { border-bottom: none; }
-    #nav-menu a:hover { color: var(--ink); background: #1e1e1e; }
-    .hiw-icon { display: none; width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid #666; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: #666; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: border-color 0.2s, color 0.2s; }
+    #nav-menu a:hover { color: var(--ink); background: var(--surface-2); }
+    .hiw-icon { display: none; width: 21px; height: 21px; border-radius: 50%; border: 1.5px solid var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: border-color 0.2s, color 0.2s; }
     .nav-links a:hover .hiw-icon { border-color: var(--ink); color: var(--ink); }
     @media (max-width: 880px) {
       nav:not(.bottom-nav) { padding: 12px 16px; }
@@ -264,13 +265,19 @@
 <body>
 
   <nav>
-    <a class="nav-logo" href="#"><svg width="40" height="43" viewBox="0 0 432 466" aria-hidden="true" style="flex-shrink:0;margin-right:8px;fill:white;opacity:0.92"><path fill-rule="evenodd" d="M 77 24.258 C 77 24.950, 80.019 27.537, 83.709 30.008 C 91.878 35.477, 111.820 54.509, 116.048 60.870 C 117.741 63.417, 119.639 67.408, 120.267 69.740 C 121.584 74.627, 120.561 74.165, 141.500 79.312 C 157.225 83.177, 164.663 84.355, 165.437 83.102 C 166.819 80.866, 141.659 60.509, 117 43.912 C 112.120 40.628, 78.840 23, 77.519 23 C 77.233 23, 77 23.566, 77 24.258 M 22.072 82.022 C 19.636 82.536, 17.254 83.346, 16.777 83.823 C 15.974 84.626, 18.360 85.170, 35.500 88.088 C 42.381 89.260, 52.366 91.925, 66 96.229 C 73.747 98.675, 168.701 135.953, 189 144.518 C 192.025 145.794, 199.900 148.947, 206.500 151.525 C 223.306 158.088, 242.564 168.103, 248.626 173.432 C 260.872 184.198, 263.097 193.015, 257.096 207 C 255.326 211.125, 252.754 217.200, 251.381 220.500 C 250.008 223.800, 248.027 228.525, 246.980 231 C 245.933 233.475, 242.331 242.025, 238.977 250 C 235.623 257.975, 231.478 267.755, 229.766 271.733 C 226.251 279.902, 225.973 277.689, 232.936 297 C 235.217 303.325, 240.179 317.500, 243.964 328.500 C 252.501 353.313, 258.739 370.768, 259.522 372.036 C 259.901 372.649, 244.161 373, 216.264 373 L 172.411 373 150.955 390.968 C 139.155 400.850, 129.500 409.512, 129.500 410.218 C 129.500 411.249, 143.477 411.500, 200.858 411.500 L 272.216 411.500 282.197 403 C 287.686 398.325, 294.025 393.017, 296.284 391.205 C 298.542 389.392, 302.591 385.850, 305.282 383.333 L 310.174 378.757 307.661 371.128 C 306.279 366.933, 302.370 355.625, 298.974 346 C 295.579 336.375, 289.514 319.050, 285.498 307.500 C 281.481 295.950, 277.718 285.279, 277.136 283.786 C 276.272 281.573, 276.510 280.099, 278.425 275.786 C 279.716 272.879, 283.106 264.875, 285.958 258 C 288.810 251.125, 293.333 240.325, 296.009 234 C 298.684 227.675, 303.619 215.975, 306.975 208 C 310.330 200.025, 313.943 191.475, 315.002 189 C 324.190 167.542, 326.983 160.397, 326.586 159.362 C 325.203 155.760, 292.893 138.471, 274.500 131.491 C 262.871 127.078, 226.856 116.175, 204.689 110.356 C 196.469 108.199, 170.171 103.049, 156.500 100.920 C 153.200 100.406, 145.775 98.879, 140 97.527 C 128.326 94.793, 116.390 92.763, 95.500 89.957 C 78.174 87.630, 57.967 84.449, 51.967 83.105 C 45.278 81.606, 27.153 80.949, 22.072 82.022 M 122 261.500 C 122 328.325, 122.244 383, 122.542 383 C 122.840 383, 131.278 376.134, 141.292 367.743 C 151.306 359.351, 160.730 351.529, 162.234 350.361 L 164.968 348.237 165 261.369 C 165.018 213.591, 165.025 170.155, 165.016 164.844 L 165 155.188 160.750 153.664 C 158.412 152.826, 152.900 150.737, 148.500 149.023 C 133.559 143.201, 124.621 140, 123.309 140 C 122.238 140, 122 162.065, 122 261.500"/></svg>info<span>blade</span></a>
+    <a class="nav-logo" href="#"><svg width="40" height="43" viewBox="0 0 432 466" aria-hidden="true" style="flex-shrink:0;margin-right:8px;fill:currentColor;opacity:0.92"><path fill-rule="evenodd" d="M 77 24.258 C 77 24.950, 80.019 27.537, 83.709 30.008 C 91.878 35.477, 111.820 54.509, 116.048 60.870 C 117.741 63.417, 119.639 67.408, 120.267 69.740 C 121.584 74.627, 120.561 74.165, 141.500 79.312 C 157.225 83.177, 164.663 84.355, 165.437 83.102 C 166.819 80.866, 141.659 60.509, 117 43.912 C 112.120 40.628, 78.840 23, 77.519 23 C 77.233 23, 77 23.566, 77 24.258 M 22.072 82.022 C 19.636 82.536, 17.254 83.346, 16.777 83.823 C 15.974 84.626, 18.360 85.170, 35.500 88.088 C 42.381 89.260, 52.366 91.925, 66 96.229 C 73.747 98.675, 168.701 135.953, 189 144.518 C 192.025 145.794, 199.900 148.947, 206.500 151.525 C 223.306 158.088, 242.564 168.103, 248.626 173.432 C 260.872 184.198, 263.097 193.015, 257.096 207 C 255.326 211.125, 252.754 217.200, 251.381 220.500 C 250.008 223.800, 248.027 228.525, 246.980 231 C 245.933 233.475, 242.331 242.025, 238.977 250 C 235.623 257.975, 231.478 267.755, 229.766 271.733 C 226.251 279.902, 225.973 277.689, 232.936 297 C 235.217 303.325, 240.179 317.500, 243.964 328.500 C 252.501 353.313, 258.739 370.768, 259.522 372.036 C 259.901 372.649, 244.161 373, 216.264 373 L 172.411 373 150.955 390.968 C 139.155 400.850, 129.500 409.512, 129.500 410.218 C 129.500 411.249, 143.477 411.500, 200.858 411.500 L 272.216 411.500 282.197 403 C 287.686 398.325, 294.025 393.017, 296.284 391.205 C 298.542 389.392, 302.591 385.850, 305.282 383.333 L 310.174 378.757 307.661 371.128 C 306.279 366.933, 302.370 355.625, 298.974 346 C 295.579 336.375, 289.514 319.050, 285.498 307.500 C 281.481 295.950, 277.718 285.279, 277.136 283.786 C 276.272 281.573, 276.510 280.099, 278.425 275.786 C 279.716 272.879, 283.106 264.875, 285.958 258 C 288.810 251.125, 293.333 240.325, 296.009 234 C 298.684 227.675, 303.619 215.975, 306.975 208 C 310.330 200.025, 313.943 191.475, 315.002 189 C 324.190 167.542, 326.983 160.397, 326.586 159.362 C 325.203 155.760, 292.893 138.471, 274.500 131.491 C 262.871 127.078, 226.856 116.175, 204.689 110.356 C 196.469 108.199, 170.171 103.049, 156.500 100.920 C 153.200 100.406, 145.775 98.879, 140 97.527 C 128.326 94.793, 116.390 92.763, 95.500 89.957 C 78.174 87.630, 57.967 84.449, 51.967 83.105 C 45.278 81.606, 27.153 80.949, 22.072 82.022 M 122 261.500 C 122 328.325, 122.244 383, 122.542 383 C 122.840 383, 131.278 376.134, 141.292 367.743 C 151.306 359.351, 160.730 351.529, 162.234 350.361 L 164.968 348.237 165 261.369 C 165.018 213.591, 165.025 170.155, 165.016 164.844 L 165 155.188 160.750 153.664 C 158.412 152.826, 152.900 150.737, 148.500 149.023 C 133.559 143.201, 124.621 140, 123.309 140 C 122.238 140, 122 162.065, 122 261.500"/></svg>info<span>blade</span></a>
     <ul class="nav-links">
       <li><a href="#how-it-works"><span class="hiw-text">How it works</span><span class="hiw-icon" aria-hidden="true">?</span></a></li>
     </ul>
     <div class="nav-right">
       <div class="nav-buttons">
         <div id="auth-badge"></div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
+          <span class="theme-toggle-thumb">
+            <svg class="theme-toggle-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <svg class="theme-toggle-icon-moon" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>
+          </span>
+        </button>
       </div>
       <div class="nav-menu-wrap">
         <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -551,17 +558,17 @@
           <div class="acc-bar-bg"><div class="acc-bar-fill acc-bar-amber" style="width:64%"></div></div>
           <div class="acc-pct amber">64%</div>
         </div>
-        <div style="margin-top:16px;background:#161616;border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="margin-top:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div style="flex:1;min-width:0">
             <div style="font-size:13px;font-weight:500;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Nvidia: AI chip export controls impact</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25)">▲ NVDA +9.1%</span>
-              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25)">▲ AMD +6.3%</span>
+              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:var(--accent);border:1px solid rgba(0,230,118,0.25)">▲ NVDA +9.1%</span>
+              <span style="font-size:11px;font-family:'Share Tech Mono',sans-serif;font-weight:700;padding:2px 7px;border-radius:3px;background:rgba(0,230,118,0.12);color:var(--accent);border:1px solid rgba(0,230,118,0.25)">▲ AMD +6.3%</span>
             </div>
           </div>
           <div style="text-align:center;flex-shrink:0">
-            <div style="font-family:'Share Tech Mono',sans-serif;font-size:20px;font-weight:700;width:38px;height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(0,230,118,0.15);color:#00e676;border:1px solid rgba(0,230,118,0.35)">A</div>
-            <div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:3px;color:#00e676">+62</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-size:20px;font-weight:700;width:38px;height:38px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(0,230,118,0.15);color:var(--accent);border:1px solid rgba(0,230,118,0.35)">A</div>
+            <div style="font-family:'Share Tech Mono',sans-serif;font-size:11px;font-weight:700;margin-top:3px;color:var(--accent)">+62</div>
           </div>
         </div>
       </div>
@@ -576,7 +583,7 @@
   </section>
 
   <div class="disclaimer">
-    <strong style="color:#666;">Disclaimer:</strong> infoblade is an informational tool only. Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any security. All analysis is AI-generated based on publicly available information and is provided for educational and informational purposes only. Past patterns and historical precedents do not guarantee future market results. Always conduct your own research and consult a licensed financial advisor before making any investment decisions.
+    <strong style="color:var(--muted);">Disclaimer:</strong> infoblade is an informational tool only. Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any security. All analysis is AI-generated based on publicly available information and is provided for educational and informational purposes only. Past patterns and historical precedents do not guarantee future market results. Always conduct your own research and consult a licensed financial advisor before making any investment decisions.
   </div>
 
   <footer>
