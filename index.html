@@ -31,28 +31,40 @@
     .nav-buttons { display: flex; gap: 8px; align-items: center; }
     .nav-cta { background: transparent; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; padding: 8px 18px; border-radius: 5px; border: 1.5px solid var(--accent); text-decoration: none; white-space: nowrap; transition: background 0.15s, color 0.15s; flex-shrink: 0; }
     .nav-cta:hover { background: var(--accent); color: #111; }
-    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 2000; align-items: center; justify-content: center; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
-    .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 40px; width: 100%; max-width: 380px; position: relative; }
-    .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; transition: color 0.15s; }
-    .modal-close:hover { color: var(--ink); }
-    .modal-card h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; margin-bottom: 8px; }
-    .modal-card > p { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+    .modal-card { background: linear-gradient(180deg, #181818 0%, #121212 100%); border: 1px solid var(--border); border-radius: 16px; padding: 36px 36px 32px; width: 100%; max-width: 400px; position: relative; box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,230,118,0.05); animation: modalIn 0.25s ease both; }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .modal-card { animation: none; } }
+    .modal-close { position: absolute; top: 16px; right: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); border-radius: 50%; border: none; color: var(--muted); font-size: 18px; cursor: pointer; line-height: 1; transition: color 0.15s, background 0.15s; }
+    .modal-close:hover { color: var(--ink); background: rgba(255,255,255,0.08); }
+    .modal-brand { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .modal-brand-mark { flex-shrink: 0; fill: white; opacity: 0.92; }
+    .modal-brand-name { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 19px; color: var(--ink); }
+    .modal-brand-name span { color: var(--accent); }
+    .modal-subtitle { font-size: 13px; color: var(--muted); text-align: center; margin: 0 0 24px; line-height: 1.65; }
+    .modal-card h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; margin-bottom: 8px; }
+    .modal-perks { display: flex; flex-direction: column; gap: 9px; margin: 0 0 22px; padding: 15px 16px; background: rgba(0,230,118,0.05); border: 1px solid rgba(0,230,118,0.15); border-radius: 10px; }
+    .modal-perk { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+    .modal-perk svg { flex-shrink: 0; color: var(--accent); }
     .modal-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
-    .modal-field label { font-size: 12px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); text-transform: uppercase; }
-    .modal-field input { background: #0a0a0a; border: 1px solid var(--border); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 11px 14px; border-radius: 6px; outline: none; transition: border-color 0.15s; width: 100%; }
-    .modal-field input:focus { border-color: var(--accent); }
-    .pass-wrap { position: relative; }
+    .modal-field label { font-size: 11px; font-weight: 600; letter-spacing: 0.6px; color: var(--muted); text-transform: uppercase; }
+    .modal-field input { background: #0a0a0a; border: 1px solid var(--border); color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 12px 14px 12px 40px; border-radius: 8px; outline: none; transition: border-color 0.15s, box-shadow 0.15s; width: 100%; box-sizing: border-box; }
+    .modal-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,230,118,0.12); }
+    .field-wrap { position: relative; }
+    .field-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #555; pointer-events: none; display: flex; transition: color 0.15s; }
+    .field-wrap:focus-within .field-icon { color: var(--accent); }
     .pass-wrap input { padding-right: 42px; }
     .pass-eye { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #555; padding: 0; display: flex; align-items: center; transition: color 0.15s; }
     .pass-eye:hover { color: var(--muted); }
-    .modal-submit { width: 100%; background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px; border: none; border-radius: 6px; cursor: pointer; margin-top: 8px; transition: opacity 0.15s; }
-    .modal-submit:hover { opacity: 0.85; }
+    .modal-submit { width: 100%; background: linear-gradient(135deg, #00e676, #00c766); color: #0a0a0a; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 14px; border: none; border-radius: 8px; cursor: pointer; margin-top: 6px; transition: transform 0.15s, box-shadow 0.15s; box-shadow: 0 6px 18px rgba(0,230,118,0.18); }
+    .modal-submit:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,230,118,0.26); }
+    .modal-submit:active { transform: translateY(0); }
     .modal-footer-note { text-align: center; font-size: 13px; color: var(--muted); margin-top: 20px; }
     .modal-footer-note a { color: var(--accent); text-decoration: none; }
-    .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 28px; gap: 0; }
-    .modal-tab { flex: 1; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 13px; font-weight: 700; padding: 10px 0; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
-    .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .modal-tabs { display: flex; background: #0c0c0c; border: 1px solid var(--border); border-radius: 10px; padding: 4px; margin-bottom: 22px; gap: 4px; }
+    .modal-tab { flex: 1; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12.5px; font-weight: 700; letter-spacing: 0.3px; padding: 9px 0; border-radius: 7px; cursor: pointer; transition: color 0.15s, background 0.15s; }
+    .modal-tab.active { color: #0a0a0a; background: var(--accent); }
     .modal-msg { font-size: 13px; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: none; }
     .modal-msg.error { background: rgba(255,82,82,0.12); color: #ff7070; border: 1px solid rgba(255,82,82,0.2); display: block; }
     .modal-msg.success { background: rgba(0,230,118,0.1); color: var(--accent); border: 1px solid rgba(0,230,118,0.2); display: block; }
@@ -571,6 +583,13 @@
   <div class="modal-overlay" id="signup-modal">
     <div class="modal-card">
       <button class="modal-close" id="modal-close">×</button>
+
+      <div class="modal-brand">
+        <svg class="modal-brand-mark" width="30" height="19" viewBox="0 0 24 15" aria-hidden="true"><path fill-rule="evenodd" d="M21.50,12.00 L23.44,10.87L21.32,10.15 L23.00,8.66L20.78,8.36 L22.14,6.58L19.90,6.72 L20.89,4.70L18.72,5.28 L19.30,3.11L17.28,4.10 L17.42,1.86L15.64,3.22 L15.34,1.00L13.85,2.68 L13.13,0.56L12.00,2.50 L10.87,0.56L10.15,2.68 L8.66,1.00L8.36,3.22 L6.58,1.86L6.72,4.10 L4.70,3.11L5.28,5.28 L3.11,4.70L4.10,6.72 L1.86,6.58L3.22,8.36 L1.00,8.66L2.68,10.15 L0.56,10.87L2.50,12.00 Z M15.50,12.00 A3.5,3.5 0 1 0 8.50,12.00 L15.50,12.00Z"/><line x1="0" y1="13.5" x2="24" y2="13.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <div class="modal-brand-name">info<span>blade</span></div>
+      </div>
+      <p class="modal-subtitle" id="modal-subtitle">Track markets your way — save a watchlist, get AI-graded signals, and see the receipts.</p>
+
       <div class="modal-tabs">
         <button class="modal-tab active" id="tab-signup" onclick="_openTab('signup')">Create Profile</button>
         <button class="modal-tab" id="tab-signin" onclick="_openTab('signin')">Sign In</button>
@@ -579,17 +598,29 @@
 
       <!-- Sign-up form -->
       <form id="form-signup" autocomplete="on" onsubmit="return false">
+        <div class="modal-perks">
+          <div class="modal-perk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Personalized watchlist across stocks, crypto &amp; markets</div>
+          <div class="modal-perk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Daily AI signals with confidence scoring</div>
+          <div class="modal-perk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> A public track record you can actually check</div>
+        </div>
         <div class="modal-field">
           <label>Username</label>
-          <input type="text" id="signup-name" name="name" placeholder="Your username" autocomplete="name" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 19c1.4-3.4 4.3-5.2 7.5-5.2s6.1 1.8 7.5 5.2"/></svg></span>
+            <input type="text" id="signup-name" name="name" placeholder="Your username" autocomplete="name" />
+          </div>
         </div>
         <div class="modal-field">
           <label>Email</label>
-          <input type="email" id="signup-email" name="email" placeholder="you@example.com" autocomplete="email" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+            <input type="email" id="signup-email" name="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
         </div>
         <div class="modal-field">
           <label>Password</label>
-          <div class="pass-wrap">
+          <div class="pass-wrap field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
             <input type="password" id="signup-pass" name="new-password" placeholder="Choose a password" autocomplete="new-password" />
             <button type="button" class="pass-eye" onclick="_togglePass('signup-pass',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
@@ -599,11 +630,14 @@
 
       <!-- Email verification code (shown right after signup) -->
       <div id="form-verify" style="display:none">
-        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Verify your email</h2>
+        <h2>Verify your email</h2>
         <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the 6-digit code we sent to your email.</p>
         <div class="modal-field">
           <label>Code</label>
-          <input type="text" id="verify-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6z"/></svg></span>
+            <input type="text" id="verify-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </div>
         </div>
         <button class="modal-submit" id="btn-verify">Verify</button>
       </div>
@@ -612,11 +646,15 @@
       <form id="form-signin" autocomplete="on" onsubmit="return false" style="display:none">
         <div class="modal-field">
           <label>Email</label>
-          <input type="email" id="signin-email" name="email" placeholder="you@example.com" autocomplete="username" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+            <input type="email" id="signin-email" name="email" placeholder="you@example.com" autocomplete="username" />
+          </div>
         </div>
         <div class="modal-field">
           <label>Password</label>
-          <div class="pass-wrap">
+          <div class="pass-wrap field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
             <input type="password" id="signin-pass" name="password" placeholder="Your password" autocomplete="current-password" />
             <button type="button" class="pass-eye" onclick="_togglePass('signin-pass',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
@@ -627,22 +665,28 @@
 
       <!-- Sign-in second-factor verification (shown if the account requires it) -->
       <div id="form-signin2fa" style="display:none">
-        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Verify your identity</h2>
+        <h2>Verify your identity</h2>
         <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the code we emailed you to finish signing in.</p>
         <div class="modal-field">
           <label>Code</label>
-          <input type="text" id="signin2fa-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6z"/></svg></span>
+            <input type="text" id="signin2fa-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </div>
         </div>
         <button class="modal-submit" id="btn-signin2fa">Verify</button>
       </div>
 
       <!-- Reset password form -->
       <form id="form-reset" onsubmit="return false" style="display:none">
-        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Reset password</h2>
+        <h2>Reset password</h2>
         <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter your email and we'll send a reset link.</p>
         <div class="modal-field">
           <label>Email</label>
-          <input type="email" id="reset-email" name="email" placeholder="you@example.com" autocomplete="email" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
+            <input type="email" id="reset-email" name="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
         </div>
         <button type="button" class="modal-submit" id="btn-reset">Send Reset Link</button>
         <p class="modal-footer-note" style="margin-top:16px"><a href="#" id="reset-back-btn">← Back to sign in</a></p>
@@ -650,15 +694,19 @@
 
       <!-- New password form (shown after requesting a reset code) -->
       <form id="form-newpass" onsubmit="return false" style="display:none">
-        <h2 style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px">Set new password</h2>
+        <h2>Set new password</h2>
         <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the code we emailed you and choose a new password.</p>
         <div class="modal-field">
           <label>Code</label>
-          <input type="text" id="newpass-code" name="one-time-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6z"/></svg></span>
+            <input type="text" id="newpass-code" name="one-time-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </div>
         </div>
         <div class="modal-field">
           <label>New Password</label>
-          <div class="pass-wrap">
+          <div class="pass-wrap field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
             <input type="password" id="newpass-input" name="new-password" placeholder="New password (min. 8 chars)" autocomplete="new-password" />
             <button type="button" class="pass-eye" onclick="_togglePass('newpass-input',this)" tabindex="-1" aria-label="Show password"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
@@ -676,6 +724,10 @@
       ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>'
       : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   }
+  var _modalSubtitles = {
+    signup: "Track markets your way — save a watchlist, get AI-graded signals, and see the receipts.",
+    signin: "Welcome back. Pick up right where you left off.",
+  };
   function _openTab(tab) {
     ['signup','signin','signin2fa','verify','reset','newpass'].forEach(function(t) {
       var el = document.getElementById('form-' + t);
@@ -687,6 +739,9 @@
       document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
       document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
     }
+    var subtitle = document.getElementById('modal-subtitle');
+    subtitle.textContent = _modalSubtitles[tab] || '';
+    subtitle.style.display = _modalSubtitles[tab] ? '' : 'none';
     _clearMsg();
   }
   function _setMsg(text, type) {
@@ -706,6 +761,21 @@
     // this modal in place instead of navigating to /?modal=signin when we're
     // already on the landing page.
     window.__iiOpenSignIn = function(){ _openTab('signup'); overlay.classList.add('open'); setTimeout(function(){ document.getElementById('signup-email').focus(); }, 80); };
+    // auth.js initializes asynchronously (fetch config, load the Clerk SDK,
+    // clerk.load()) — someone who fills the form fast (autofill + a quick
+    // click) can beat that. Wait a few seconds instead of failing outright.
+    function _waitForAuth(maxMs) {
+      maxMs = maxMs || 4000;
+      return new Promise(function(resolve) {
+        if (window._auth) return resolve(window._auth);
+        var start = Date.now();
+        (function check() {
+          if (window._auth) return resolve(window._auth);
+          if (Date.now() - start > maxMs) return resolve(null);
+          setTimeout(check, 100);
+        })();
+      });
+    }
     document.getElementById('modal-close').addEventListener('click', function(){ overlay.classList.remove('open'); });
     overlay.addEventListener('click', function(e){ if(e.target === overlay) overlay.classList.remove('open'); });
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });
@@ -717,7 +787,7 @@
       if (!name || !email || !pass) return _setMsg('Please fill in all fields.', 'error');
       if (pass.length < 8) return _setMsg('Password must be at least 8 characters.', 'error');
       this.disabled = true; this.textContent = 'Creating…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Create Account'; return; }
       try {
         await auth.signUp(name, email, pass);
@@ -734,7 +804,7 @@
       var code = document.getElementById('verify-code').value.trim();
       if (!code) return _setMsg('Please enter the code.', 'error');
       this.disabled = true; this.textContent = 'Verifying…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       try {
         var result = await auth.confirmSignUp(code);
         this.disabled = false; this.textContent = 'Verify';
@@ -752,7 +822,7 @@
       var pass  = document.getElementById('signin-pass').value;
       if (!email || !pass) return _setMsg('Please fill in all fields.', 'error');
       this.disabled = true; this.textContent = 'Signing in…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Sign In'; return; }
       try {
         var result = await auth.signIn(email, pass);
@@ -784,7 +854,7 @@
       var code = document.getElementById('signin2fa-code').value.trim();
       if (!code) return _setMsg('Please enter the code.', 'error');
       this.disabled = true; this.textContent = 'Verifying…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Verify'; return; }
       try {
         var result = await auth.attemptSignInSecondFactor(_signin2faStrategy, code);
@@ -816,7 +886,7 @@
       var email = document.getElementById('reset-email').value.trim();
       if (!email) return _setMsg('Please enter your email.', 'error');
       this.disabled = true; this.textContent = 'Sending…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Send Reset Link'; return; }
       try {
         await auth.requestPasswordReset(email);
@@ -835,7 +905,7 @@
       if (!code) return _setMsg('Please enter the code.', 'error');
       if (!pass || pass.length < 8) return _setMsg('Password must be at least 8 characters.', 'error');
       this.disabled = true; this.textContent = 'Saving…';
-      var auth = window._auth;
+      var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet.', 'error'); this.disabled = false; this.textContent = 'Set New Password'; return; }
       try {
         var result = await auth.confirmPasswordReset(code, pass);
