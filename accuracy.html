@@ -351,7 +351,7 @@
     const gradeHtml = (p.score != null)
       ? `<div class="score-stack" title="${esc(gradeTitle)}">
            <div class="score-value ${p.score > 0 ? 'pos' : p.score < 0 ? 'neg' : 'neutral'}">${p.score > 0 ? '+' : ''}${p.score}<span class="score-unit">pts</span></div>
-           ${p.grade ? `<div class="grade-chip grade-${esc(p.grade)}">${esc(p.grade)}</div>` : ''}
+           ${p.grade ? `<div class="grade-chip grade-${esc(p.grade[0])}">${esc(p.grade)}</div>` : ''}
          </div>`
       : `<span class="pred-badge ${badgeClass}" title="${esc(gradeTitle)}">${badgeText}</span>`;
     if (isPM) {
