@@ -543,16 +543,13 @@
     });
 
     // ── Gate + init ──
-    (function poll() {
-      if (!window._auth) { setTimeout(poll, 100); return; }
-      window._auth.onReady(function (user) {
-        document.getElementById('acct-loading').style.display = 'none';
-        if (!user) { document.getElementById('auth-gate').classList.add('show'); return; }
-        clerk = window._auth.clerk;
-        document.getElementById('acct-content').style.display = '';
-        refreshFromClerk();
-      });
-    })();
+    window._onAuthReady(function (user) {
+      document.getElementById('acct-loading').style.display = 'none';
+      if (!user) { document.getElementById('auth-gate').classList.add('show'); return; }
+      clerk = window._auth.clerk;
+      document.getElementById('acct-content').style.display = '';
+      refreshFromClerk();
+    });
   })();
   </script>
   <script src="/offline.js"></script>

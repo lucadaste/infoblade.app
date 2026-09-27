@@ -1907,12 +1907,9 @@
   <script src="/auth.js"></script>
   <script>
   // Recheck gate when auth state resolves (handles sign-in while on stocks tab)
-  (function poll() {
-    if (!window._auth) { setTimeout(poll, 100); return; }
-    window._auth.onReady(function() {
-      if (pageMode === 'stocks') setMode('stocks');
-    });
-  })();
+  window._onAuthReady(function() {
+    if (pageMode === 'stocks') setMode('stocks');
+  });
   </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>

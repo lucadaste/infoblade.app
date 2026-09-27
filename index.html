@@ -794,13 +794,14 @@
     function _waitForAuth(maxMs) {
       maxMs = maxMs || 4000;
       return new Promise(function(resolve) {
-        if (window._auth) return resolve(window._auth);
-        var start = Date.now();
-        (function check() {
-          if (window._auth) return resolve(window._auth);
-          if (Date.now() - start > maxMs) return resolve(null);
-          setTimeout(check, 100);
-        })();
+        var done = false;
+        var timer = setTimeout(function() { if (!done) { done = true; resolve(null); } }, maxMs);
+        window._onAuthReady(function() {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(window._auth);
+        });
       });
     }
     document.getElementById('modal-close').addEventListener('click', function(){ overlay.classList.remove('open'); });
@@ -841,6 +842,7 @@
         if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
         overlay.classList.remove('open');
         _clearMsg();
+        window.location.href = '/home.html';
       } catch (err) {
         this.disabled = false; this.textContent = 'Verify';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
@@ -878,6 +880,11 @@
         }
         overlay.classList.remove('open');
         _clearMsg();
+        // onReady only ever fires once (at initial load), so the poll further down
+        // that normally sends a signed-in visitor to /home.html never re-fires here —
+        // without this the page just sat on the landing page post-login, which read
+        // as "signing in does nothing."
+        window.location.href = '/home.html';
       } catch (err) {
         this.disabled = false; this.textContent = 'Sign In';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid email or password.', 'error');
@@ -896,6 +903,7 @@
         if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
         overlay.classList.remove('open');
         _clearMsg();
+        window.location.href = '/home.html';
       } catch (err) {
         this.disabled = false; this.textContent = 'Verify';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
@@ -948,7 +956,7 @@
         this.disabled = false; this.textContent = 'Set New Password';
         if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
         _setMsg('Password updated! You\'re now signed in.', 'success');
-        setTimeout(function(){ overlay.classList.remove('open'); _openTab('signin'); }, 1500);
+        setTimeout(function(){ window.location.href = '/home.html'; }, 1200);
       } catch (err) {
         this.disabled = false; this.textContent = 'Set New Password';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
@@ -993,13 +1001,10 @@
     setTimeout(function () { s.remove(); document.documentElement.style.opacity = ''; }, 200);
   }
   setTimeout(_iiReveal, 2000); // safety net in case auth never resolves
-  (function poll() {
-    if (!window._auth) { setTimeout(poll, 100); return; }
-    window._auth.onReady(function(user) {
-      if (user) { window.location.replace('/home.html'); return; }
-      _iiReveal();
-    });
-  })();
+  window._onAuthReady(function(user) {
+    if (user) { window.location.replace('/home.html'); return; }
+    _iiReveal();
+  });
   </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>

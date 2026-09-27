@@ -178,38 +178,31 @@
     setTimeout(function () { s.remove(); document.documentElement.style.opacity = ''; }, 200);
   }
   setTimeout(_iiReveal, 2000); // safety net in case auth never resolves
-  (function poll() {
-    if (!window._auth) { setTimeout(poll, 100); return; }
-    window._auth.onReady(function(user) {
-      if (!user) { window.location.replace('/'); return; }
+  window._onAuthReady(function(user) {
+    if (!user) { window.location.replace('/'); return; }
 
-      var titleEl = document.getElementById('page-title');
-      if (titleEl && user.name) titleEl.textContent = 'Welcome back, ' + user.name.split(' ')[0];
+    var titleEl = document.getElementById('page-title');
+    if (titleEl && user.name) titleEl.textContent = 'Welcome back, ' + user.name.split(' ')[0];
 
-      _iiReveal();
-      loadWatchlistSummary();
-    });
-  })();
+    _iiReveal();
+    loadWatchlistSummary();
+  });
 
   async function loadWatchlistSummary() {
     var body = document.getElementById('wl-body');
     try {
       var token = await window._auth.getToken();
-      var [stocksRes, cryptoRes, marketsRes] = await Promise.all([
-        fetch((window.API_BASE || '') + '/api/user-watchlist?type=stocks', { headers: { 'Authorization': 'Bearer ' + token } }),
-        fetch((window.API_BASE || '') + '/api/user-watchlist?type=crypto', { headers: { 'Authorization': 'Bearer ' + token } }),
-        fetch((window.API_BASE || '') + '/api/user-watchlist?type=markets', { headers: { 'Authorization': 'Bearer ' + token } }),
-      ]);
-      if (!stocksRes.ok || !cryptoRes.ok || !marketsRes.ok) {
+      var allRes = await fetch((window.API_BASE || '') + '/api/user-watchlist?type=all', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!allRes.ok) {
         body.innerHTML = '<div class="dash-empty">Couldn\'t verify your session — try refreshing the page.</div>';
         return;
       }
-      var [stocks, crypto, markets] = await Promise.all([stocksRes.json(), cryptoRes.json(), marketsRes.json()]);
+      var all = await allRes.json();
 
       var symbols = []
-        .concat((stocks?.symbols || []).filter(function(s){ return !s.startsWith('SECTOR:'); }))
-        .concat(crypto?.symbols || [])
-        .concat(markets?.symbols || []);
+        .concat((all?.stocks || []).filter(function(s){ return !s.startsWith('SECTOR:'); }))
+        .concat(all?.crypto || [])
+        .concat(all?.markets || []);
 
       if (!symbols.length) {
         body.innerHTML = '<div class="dash-empty">Nothing on your watchlist yet. Add tickers, coins, or markets to track them here.</div>';

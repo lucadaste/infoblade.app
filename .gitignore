@@ -150,3 +150,5 @@ data/*.json
 www/
 ios/
 android/
+.vercel
+.env*

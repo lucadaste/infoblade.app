@@ -3,6 +3,13 @@
   let _ready = false;
   let _currentUser = null;
 
+  // Exposed synchronously (function declarations are hoisted, so `onReady`
+  // below is already callable here) so every page can register a callback
+  // the instant this script tag finishes, instead of polling `window._auth`
+  // with setTimeout(100) — that poll added up to 100ms of pure dead time to
+  // every page load and login-triggered redirect for no reason.
+  window._onAuthReady = onReady;
+
   // Inject styles for auth badge dropdown
   const _styleEl = document.createElement('style');
   _styleEl.textContent = `

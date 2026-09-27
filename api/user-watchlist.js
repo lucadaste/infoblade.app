@@ -19,6 +19,23 @@ export default async function handler(req, res) {
   const table = TABLE_MAP[wlType] || 'watchlists';
 
   if (req.method === 'GET') {
+    if (wlType === 'all') {
+      // One request from the client instead of three — each of stocks/crypto/markets
+      // used to be a separate fetch (separate token verification + Supabase round
+      // trip), which was the main source of lag on the post-login dashboard.
+      const [stocksRes, cryptoRes, marketsRes] = await Promise.all([
+        sb.from('watchlists').select('symbol').eq('user_id', user.id),
+        sb.from('crypto_watchlists').select('symbol').eq('user_id', user.id),
+        sb.from('market_watchlists').select('symbol').eq('user_id', user.id),
+      ]);
+      const firstError = stocksRes.error || cryptoRes.error || marketsRes.error;
+      if (firstError) return res.status(500).json({ error: firstError.message });
+      return res.status(200).json({
+        stocks: (stocksRes.data || []).map(r => r.symbol),
+        crypto: (cryptoRes.data || []).map(r => r.symbol),
+        markets: (marketsRes.data || []).map(r => r.symbol),
+      });
+    }
     const { data, error } = await sb.from(table).select('symbol').eq('user_id', user.id);
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json({ symbols: (data || []).map(r => r.symbol) });
