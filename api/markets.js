@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 
 const SPORT_LABELS = {
   nba: 'NBA', nfl: 'NFL', mlb: 'MLB', nhl: 'NHL', mls: 'MLS',
@@ -50,37 +50,44 @@ function _categoryForTags(eventTags) {
   return null;
 }
 
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-}
+// Browse results don't depend on category (tag filtering happens after the
+// fetch), so the generator's five concurrent category calls share one fetch.
+const BROWSE_TTL_MS = 60000;
+const _browseCache = new Map(); // `${daysMin}:${daysCap}:${pages}` -> { ts, promise }
 
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
+function _fetchBrowseEvents(daysMin, daysCap, pages) {
+  const key = `${daysMin}:${daysCap}:${pages}`;
+  const hit = _browseCache.get(key);
+  if (hit && Date.now() - hit.ts < BROWSE_TTL_MS) return hit.promise;
 
-async function _checkRateLimit(supabase, ip) {
-  if (!supabase) return true;
-  const now = new Date();
-  const windowStart = new Date(now - 60000);
-  const key = `${ip}:markets`;
-  try {
-    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
-    if (!data || new Date(data.window_start) < windowStart) {
-      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-      return true;
+  const promise = (async () => {
+    const now = Date.now();
+    const endDateMax = new Date(now + daysCap * 86400000).toISOString();
+    const endDateMin = new Date(now + daysMin * 86400000).toISOString();
+    // /events is deprecated (sunset 2026-05-01) in favor of /events/keyset — same
+    // response shape, cursor-paginated. The API caps each page at 100 events.
+    const base = `https://gamma-api.polymarket.com/events/keyset?active=true&closed=false&limit=100&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
+    const events = [];
+    let cursor = null;
+    for (let page = 0; page < pages; page++) {
+      const url = cursor ? `${base}&after_cursor=${encodeURIComponent(cursor)}` : base;
+      let data;
+      try {
+        const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) });
+        data = await r.json();
+      } catch (err) {
+        if (page === 0) throw err;
+        break; // a slow deep page shouldn't discard the pages already fetched
+      }
+      if (Array.isArray(data.events)) events.push(...data.events);
+      cursor = data.next_cursor;
+      if (!cursor || !data.events?.length) break;
     }
-    if (data.count >= 30) return false;
-    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
-    return true;
-  } catch (_) { return false; }
+    return events;
+  })();
+  promise.catch(() => _browseCache.delete(key));
+  _browseCache.set(key, { ts: Date.now(), promise });
+  return promise;
 }
 
 // ── Core fetch+filter pipeline ─────────────────────────────────────────────────
@@ -89,8 +96,10 @@ async function _checkRateLimit(supabase, ip) {
 // candidate markets without re-implementing the nonsense/esports filtering and
 // odds-band logic. `opts.isSearch`/`opts.rawQuery` are only meaningful when a
 // caller is doing a text search (the HTTP handler); the generator always omits them.
+// `opts.pages` (100 events each, by 24h volume) and `opts.limit` (markets kept per
+// category) let the generator draw from a much deeper pool than the browse UI shows.
 export async function fetchCategoryMarkets(category, opts = {}) {
-  const { isSearch = false, rawQuery = '', daysCap = 365, daysMin = 0 } = opts;
+  const { isSearch = false, rawQuery = '', daysCap = 365, daysMin = 0, pages = 1, limit = 10 } = opts;
   const targetTags = CATEGORY_TAGS[category];
 
   const now = new Date();
@@ -108,18 +117,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     const searchData = await searchRes.json();
     events = Array.isArray(searchData.events) ? searchData.events : [];
   } else {
-    const endDateMax = new Date(now.getTime() + daysCap * 86400000).toISOString();
-    const endDateMin = new Date(now.getTime() + daysMin * 86400000).toISOString();
-    // /events is deprecated (sunset 2026-05-01) in favor of /events/keyset — same
-    // response shape, just cursor-paginated instead of offset-paginated.
-    const polyUrl = `https://gamma-api.polymarket.com/events/keyset?active=true&closed=false&limit=300&order=volume24hr&ascending=false&end_date_min=${encodeURIComponent(endDateMin)}&end_date_max=${encodeURIComponent(endDateMax)}`;
-
-    const polyRes = await fetch(
-      polyUrl,
-      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(10000) }
-    );
-    const data = await polyRes.json();
-    events = Array.isArray(data.events) ? data.events : [];
+    events = await _fetchBrowseEvents(daysMin, daysCap, pages);
   }
 
   const filtered = events.filter(event => {
@@ -181,7 +179,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     };
   }).filter(Boolean)
     .sort((a, b) => b.volume24h - a.volume24h)
-    .slice(0, isSearch ? 20 : 10);
+    .slice(0, isSearch ? 20 : limit);
 
   // Batch AI call: generate a plain-english "what YES means" label for each market, and
   // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
@@ -203,7 +201,7 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: Math.max(500, markets.length * 45), messages: [{ role: 'user', content: labelPrompt }] }),
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(Math.max(8000, markets.length * 300))
       });
       const labelData = await labelRes.json();
       const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
@@ -222,13 +220,13 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
 }
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const supabase = _getSupabase();
-  const allowed = await _checkRateLimit(supabase, ip);
+  const ip = clientIp(req);
+  const supabase = getSupabase();
+  const allowed = await checkRateLimit(supabase, ip, 'markets', 30);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const rawQuery = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';

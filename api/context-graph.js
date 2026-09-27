@@ -1,12 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph } from '../lib/context-graph.js';
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase env vars');
-  return createClient(url, key);
-}
+import { getSupabase } from '../lib/http.js';
 
 export default async function handler(req, res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
@@ -18,7 +11,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) {
+  try { supabase = getSupabase({ required: true }); } catch (e) {
     return res.status(500).json({ error: e.message });
   }
 

@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { computeCurrentFeatures, findSimilarMoves } from '../lib/situation-similarity-stocks.js';
+import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 
 // ── Lightweight short-horizon stock situation lookup (no LLM call) ─────────
 // Powers a small stat block on feed.html's per-ticker analysis panel:
@@ -9,47 +9,14 @@ import { computeCurrentFeatures, findSimilarMoves } from '../lib/situation-simil
 // Returns { found: false } until the forward-collecting price-snapshot cron
 // (api/collect-price-snapshots.js) has built up enough history — expected to
 // be the case for the first while after this ships, not a bug.
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-}
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
-
-async function _checkRateLimit(supabase, ip) {
-  if (!supabase) return true;
-  const now = new Date();
-  const windowStart = new Date(now - 60000);
-  const key = `${ip}:stock-situation`;
-  try {
-    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
-    if (!data || new Date(data.window_start) < windowStart) {
-      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-      return true;
-    }
-    if (data.count >= 60) return false;
-    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
-    return true;
-  } catch (_) { return false; }
-}
-
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const supabase = _getSupabase();
-  const allowed = await _checkRateLimit(supabase, ip);
+  const ip = clientIp(req);
+  const supabase = getSupabase();
+  const allowed = await checkRateLimit(supabase, ip, 'stock-situation', 60);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const ticker = typeof req.query.ticker === 'string' ? req.query.ticker.toUpperCase().replace(/[^A-Z.\-]/g, '').slice(0, 10) : '';

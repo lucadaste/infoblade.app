@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
@@ -8,21 +7,8 @@ import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
-  return createClient(url, key);
-}
-
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Vary', 'Origin');
-}
+import { pickPmMarket as _pickPmMarket, pmOutcome as _pmOutcome, pmWordScore as _pmWordScore } from '../lib/pm-resolution.js';
+import { getSupabase, setCors } from '../lib/http.js';
 
 // Grading (resolve / news-grade) writes to the DB and spends LLM/external-API
 // budget, so it must not be publicly triggerable. Vercel automatically sends
@@ -153,20 +139,41 @@ function _pmWeight(confStr)   {
 
 // ── Route handlers ────────────────────────────────────────────────────────────
 
+// Stock/crypto rows (lean IS NULL) are graded from price history once their
+// validation date passes; prediction-market rows (lean Yes/No) are graded from
+// Polymarket's own resolution. The two run independently — they used to share
+// one oldest-1000 query with an early return when no price rows were due, so
+// PM grading silently never ran on those passes and newer PM rows sat behind
+// the backlog of long-dated ones.
 async function handleResolve(req, res, supabase) {
   const nowStr = new Date().toISOString();
   const nowMs  = Date.now();
 
-  // ── 1. Fetch all unresolved predictions ──────────────────────────────────────
+  const [prices, markets] = await Promise.all([
+    _resolvePriceBased(supabase, nowStr, nowMs).catch(err => ({ resolved: 0, error: err.message })),
+    _resolvePredictionMarkets(supabase, nowStr, nowMs).catch(err => ({ resolved: 0, error: err.message })),
+  ]);
+  await _cleanCryptoTickers(supabase).catch(() => {});
+
+  return res.status(200).json({ resolved: prices.resolved + markets.resolved, prices, markets });
+}
+
+async function _resolvePriceBased(supabase, nowStr, nowMs) {
+  // ── 1. Fetch unresolved stock/crypto predictions that could be due ─────────
+  // Rows with no stored validation_date fall back to created_at + timeframe
+  // below, so they're fetched too.
   const { data: all, error } = await supabase
     .from('predictions')
-    .select('id, topic, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, lean, lean_confidence, market_slug, market_odds_at_time, status, retry_count')
+    .select('id, topic, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, status, retry_count')
     .is('correct', null)
+    .is('lean', null)
+    .neq('status', 'failed')
+    .or(`validation_date.is.null,validation_date.lte.${nowStr}`)
     .order('created_at', { ascending: true })
     .limit(1000);
 
-  if (error) return res.status(500).json({ error: error.message });
-  if (!all?.length) return res.status(200).json({ resolved: 0, total: 0 });
+  if (error) throw error;
+  if (!all?.length) return { resolved: 0, due: 0 };
 
   // ── 2. Derive effective validation date for each; keep only expired ones ───
   // (status === 'failed' rows are permanently excluded here — they've already
@@ -184,7 +191,7 @@ async function handleResolve(req, res, supabase) {
     ready.push({ ...p, _vDate: vDate });
   }
 
-  if (!ready.length) return res.status(200).json({ resolved: 0, total: all.length, pending: all.length });
+  if (!ready.length) return { resolved: 0, due: 0 };
 
   // ── 2.5. Atomically claim the ready rows before spending API budget on them ──
   // Guards against a slow resolve run overlapping the next scheduled one (or a
@@ -210,7 +217,7 @@ async function handleResolve(req, res, supabase) {
   }
   const claimedReady = ready.filter(p => claimed.has(p.id));
   if (!claimedReady.length) {
-    return res.status(200).json({ resolved: 0, total: all.length, ready: ready.length, claimed: 0 });
+    return { resolved: 0, due: ready.length, claimed: 0 };
   }
 
   // ── 3. Collect unique tickers and the overall date range ──────────────────
@@ -388,226 +395,202 @@ async function handleResolve(req, res, supabase) {
       .eq('id', p.id);
   }
 
-  // ── 7. Prediction market resolution (Polymarket) ─────────────────────────
-  // Check ALL unresolved PM predictions — Polymarket's closed/resolved flags are
-  // the source of truth. Don't gate on validation_date: markets resolve as soon
-  // as the outcome is known (e.g. MVP awarded before series ends), not on the
-  // scheduled market close date.
-  const pmReady = all.filter(p => {
-    if (p.correct !== null) return false;
-    const lean = p.lean || p.analysis?.lean;
-    return lean === 'Yes' || lean === 'No';
-  });
+  return { resolved, skipped, due: ready.length, claimed: claimedReady.length };
+}
 
-  const pmResolvedIds = new Set(); // track IDs graded in this step so step 9 can skip them
+// Clean up stock tickers from crypto-coin predictions.
+// Existing records stored before the single-coin rule had MSTR, IBIT, MARA,
+// RIOT, COIN, etc. mixed in alongside the coin. Strip them so only the coin
+// symbol remains in winner_tickers, loser_tickers, and baseline_prices.
+async function _cleanCryptoTickers(supabase) {
+  const { data: cryptoPreds } = await supabase
+    .from('predictions')
+    .select('id, winner_tickers, loser_tickers, baseline_prices')
+    .eq('category', 'crypto-coin')
+    .limit(500);
 
-  for (const pred of pmReady) {
-    const lean     = pred.lean || pred.analysis?.lean;
-    const confStr  = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
-    const slug     = pred.market_slug;
-    if (!slug) continue; // no slug — handled by step 9 fuzzy matching
+  for (const p of cryptoPreds || []) {
+    const cleanWinners = (p.winner_tickers || []).filter(t => _COIN_SYMS.has(t));
+    const cleanLosers  = (p.loser_tickers  || []).filter(t => _COIN_SYMS.has(t));
+    const winnersClean = cleanWinners.length === (p.winner_tickers || []).length;
+    const losersClean  = cleanLosers.length  === (p.loser_tickers  || []).length;
+    if (winnersClean && losersClean) continue;
 
+    const cleanPrices = Object.fromEntries(
+      Object.entries(p.baseline_prices || {}).filter(([k]) => _COIN_SYMS.has(k))
+    );
+    await supabase.from('predictions').update({
+      winner_tickers:  cleanWinners,
+      loser_tickers:   cleanLosers,
+      baseline_prices: cleanPrices,
+    }).eq('id', p.id);
+  }
+}
+
+
+// ── Prediction market resolution (Polymarket) ─────────────────────────────────
+
+function _pmGradeUpdate(pred, outcome, nowStr, extraAnalysis = {}) {
+  const leanCorrect = pred.lean === outcome;
+  const accuracyScore = _pmScore(leanCorrect, pred.lean, pred.market_odds_at_time);
+  return {
+    correct:         leanCorrect,
+    validated_at:    nowStr,
+    validation_date: nowStr,
+    status:          'resolved',
+    analysis: {
+      ...(pred.analysis || {}),
+      grade: _pmGrade(leanCorrect), score: accuracyScore, accuracy_score: accuracyScore,
+      confidence_weight: _pmWeight(pred.lean_confidence || pred.analysis?.lean_confidence || 'Low'),
+      resolved_outcome: outcome, lean_was: pred.lean,
+      ...extraAnalysis,
+    },
+  };
+}
+
+async function _fetchPmEvent(slug) {
+  try {
+    const r = await fetch(
+      `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+    );
+    if (!r.ok) return null;
+    const events = await r.json();
+    return (Array.isArray(events) ? events[0] : events) || null;
+  } catch (_) { return null; }
+}
+
+// Stays inside the route's 60s maxDuration alongside the price grader.
+const PM_RESOLVE_BUDGET_MS = 40000;
+const PM_FETCH_CONCURRENCY = 8;
+
+async function _resolvePredictionMarkets(supabase, nowStr, nowMs) {
+  const deadline = nowMs + PM_RESOLVE_BUDGET_MS;
+
+  // ── 1. Every unresolved PM prediction (paged — the backlog of long-dated
+  //    markets can run past a single 1000-row page). `analysis` is fetched
+  //    later, only for the rows actually being graded.
+  const pending = [];
+  for (let from = 0; from < 10000; from += 1000) {
+    const { data, error } = await supabase
+      .from('predictions')
+      .select('id, topic, created_at, validation_date, lean, lean_confidence, market_slug, market_odds_at_time')
+      .is('correct', null)
+      .in('lean', ['Yes', 'No'])
+      .order('created_at', { ascending: true })
+      .range(from, from + 999);
+    if (error) throw error;
+    pending.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  if (!pending.length) return { resolved: 0, pending: 0 };
+
+  // ── 2. Check the markets most likely to have resolved first: past their end
+  //    date, then no end date, then soonest-ending. Markets can resolve before
+  //    their scheduled end (MVP awarded before the series ends), so future ones
+  //    are still checked — just after, and only while budget remains.
+  const dueKey = p => {
+    const v = p.validation_date ? new Date(p.validation_date).getTime() : null;
+    if (v == null) return [1, 0];
+    return v <= nowMs ? [0, v] : [2, v];
+  };
+  pending.sort((a, b) => { const x = dueKey(a), y = dueKey(b); return x[0] - y[0] || x[1] - y[1]; });
+
+  // The same market is often predicted on several days — one fetch per slug.
+  const bySlug = new Map();
+  for (const p of pending) {
+    if (!p.market_slug) continue;
+    if (!bySlug.has(p.market_slug)) bySlug.set(p.market_slug, []);
+    bySlug.get(p.market_slug).push(p);
+  }
+
+  const toGrade = []; // { pred, outcome, extra }
+  const graded = new Set();
+  const slugs = [...bySlug.keys()];
+  let slugIdx = 0, slugsChecked = 0;
+  async function worker() {
+    while (slugIdx < slugs.length && Date.now() < deadline) {
+      const slug = slugs[slugIdx++];
+      const event = await _fetchPmEvent(slug);
+      slugsChecked++;
+      if (!event) continue;
+      for (const pred of bySlug.get(slug)) {
+        const outcome = _pmOutcome(_pickPmMarket(event, pred.topic));
+        if (outcome) { toGrade.push({ pred, outcome, extra: {} }); graded.add(pred.id); }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: PM_FETCH_CONCURRENCY }, worker));
+
+  // ── 3. Fallback for rows with no slug (or a stale one): fuzzy-match the
+  //    question against recently closed events.
+  const unmatched = pending.filter(p => !graded.has(p.id) && (!p.market_slug || dueKey(p)[0] === 0));
+  let textMatched = 0;
+  if (unmatched.length && Date.now() < deadline) {
+    // The plain closed=true endpoint only returns old 2021-2023 data;
+    // end_date_min is required to get recent markets.
+    const oneYearAgo = new Date(nowMs - 365 * 86400000).toISOString().slice(0, 10);
+    let closedEvents = [];
     try {
       const r = await fetch(
-        `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(slug)}`,
-        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) }
+        `https://gamma-api.polymarket.com/events?closed=true&limit=500&end_date_min=${oneYearAgo}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) }
       );
-      if (!r.ok) continue;
-      const events = await r.json();
-      const event  = Array.isArray(events) ? events[0] : events;
-      if (!event?.closed) continue;
-      // Use the highest-volume market as primary (multi-outcome events have many markets)
-      const allMarkets = event.markets || [];
-      const market = allMarkets.length === 1
-        ? allMarkets[0]
-        : [...allMarkets].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
-      if (!market) continue;
+      if (r.ok) closedEvents = await r.json();
+    } catch (_) {}
+    if (!Array.isArray(closedEvents)) closedEvents = [];
 
-      let prices;
-      try { prices = typeof market.outcomePrices === 'string' ? JSON.parse(market.outcomePrices) : market.outcomePrices; }
-      catch (_) { continue; }
-      if (!Array.isArray(prices) || prices.length < 2) continue;
-
-      // Require the oracle to have actually finalized the outcome. `event.closed` only
-      // means trading halted — it flips true before resolution, and a closed-but-unresolved
-      // market's price can still be a stale/interim read, not the true outcome. Trusting a
-      // 97%+ price on a merely-closed market caused a false grade in production.
-      if (market.umaResolutionStatus !== 'resolved') continue;
-
-      const yesPrice = parseFloat(prices[0]);
-      const outcome  = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
-      if (!outcome) continue;
-
-      const leanCorrect   = lean === outcome;
-      const accuracyScore = _pmScore(leanCorrect, lean, pred.market_odds_at_time);
-      const pmGrade       = _pmGrade(leanCorrect);
-      const confWeight    = _pmWeight(confStr);
-
-      const { error: pmErr } = await supabase
-        .from('predictions')
-        .update({
-          correct:         leanCorrect,
-          validated_at:    nowStr,
-          validation_date: nowStr,
-          analysis:        {
-            ...(pred.analysis || {}),
-            grade: pmGrade, score: accuracyScore, accuracy_score: accuracyScore,
-            confidence_weight: confWeight,
-            resolved_outcome: outcome, lean_was: lean,
-            officially_resolved: market.resolved ?? false,
-          },
-        })
-        .eq('id', pred.id);
-      if (!pmErr) { resolved++; pmResolvedIds.add(pred.id); }
-    } catch (_) { /* skip on network error, retry next pass */ }
-  }
-
-  // ── 8. Clean up stock tickers from crypto-coin predictions ───────────────
-  // Existing records stored before the single-coin rule had MSTR, IBIT, MARA,
-  // RIOT, COIN, etc. mixed in alongside the coin. Strip them so only the coin
-  // symbol remains in winner_tickers, loser_tickers, and baseline_prices.
-  {
-    const { data: cryptoPreds } = await supabase
-      .from('predictions')
-      .select('id, winner_tickers, loser_tickers, baseline_prices')
-      .eq('category', 'crypto-coin')
-      .limit(500);
-
-    for (const p of cryptoPreds || []) {
-      const cleanWinners = (p.winner_tickers || []).filter(t => _COIN_SYMS.has(t));
-      const cleanLosers  = (p.loser_tickers  || []).filter(t => _COIN_SYMS.has(t));
-      const winnersClean = cleanWinners.length === (p.winner_tickers || []).length;
-      const losersClean  = cleanLosers.length  === (p.loser_tickers  || []).length;
-      if (winnersClean && losersClean) continue;
-
-      const cleanPrices = Object.fromEntries(
-        Object.entries(p.baseline_prices || {}).filter(([k]) => _COIN_SYMS.has(k))
-      );
-      await supabase.from('predictions').update({
-        winner_tickers:  cleanWinners,
-        loser_tickers:   cleanLosers,
-        baseline_prices: cleanPrices,
-      }).eq('id', p.id);
-    }
-  }
-
-  // Step 9 (crypto sub-event cleanup, matching predictions saved before the
-  // skipSave fix by regex against `topic`) used to run here on every resolve
-  // pass — cron AND every page load. An unconditional regex delete with no
-  // audit trail on a hot path is too risky; it's now a manual, dry-run-by-
-  // default script: scripts/cleanup-topics.js.
-
-  // ── 10. Retroactive PM grading via Polymarket text search ─────────────────
-  // Fuzzy text matching for PM predictions that don't have a slug OR whose slug
-  // lookup in step 7 failed (stale/wrong slug). Acts as a universal fallback.
-  {
-    const pmNoSlug = all.filter(p =>
-      (p.lean || p.analysis?.lean) && p.correct === null && !pmResolvedIds.has(p.id)
-    );
-
-    if (pmNoSlug.length > 0) {
-      // Fetch recently closed Polymarket events (recent 12 months).
-      // The plain closed=true endpoint only returns old 2021-2023 data; end_date_min
-      // is required to get recent markets.
-      const oneYearAgo = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
-      let closedEvents = [];
-      try {
-        const r = await fetch(
-          `https://gamma-api.polymarket.com/events?closed=true&limit=500&end_date_min=${oneYearAgo}`,
-          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(12000) }
-        );
-        if (r.ok) closedEvents = await r.json();
-      } catch (_) {}
-
-      const _PM_STOPS = new Set([
-        'will','does','the','this','that','for','with','not','its','has','from',
-        'been','have','which','their','more','most','just','also','over','after',
-        'when','what','who','would','could','should','these','those','they','them',
-        'into','about','before','during','between','going','than','very','too',
-      ]);
-
-      function _pmWordScore(q, title) {
-        const qWords = q.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/)
-          .filter(w => w.length > 2 && !_PM_STOPS.has(w));
-        if (!qWords.length) return { score: 0, matched: 0 };
-        const tWords = new Set(title.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/));
-        const matched = qWords.filter(w => tWords.has(w)).length;
-        return { score: matched / qWords.length, matched };
-      }
-
-      let pmTextMatched = 0;
-      for (const pred of pmNoSlug) {
-        const question = pred.topic || '';
-        let bestEvent = null, bestScore = 0, bestMatched = 0, secondBestScore = 0;
-
-        for (const event of Array.isArray(closedEvents) ? closedEvents : []) {
-          const { score: s, matched } = _pmWordScore(question, event.title || '');
-          if (s > bestScore) {
-            secondBestScore = bestScore;
-            bestScore = s; bestEvent = event; bestMatched = matched;
-          } else if (s > secondBestScore) {
-            secondBestScore = s;
-          }
+    for (const pred of unmatched) {
+      const question = pred.topic || '';
+      let bestEvent = null, bestScore = 0, bestMatched = 0, secondBestScore = 0;
+      for (const event of closedEvents) {
+        const { score: s, matched } = _pmWordScore(question, event.title || '');
+        if (s > bestScore) {
+          secondBestScore = bestScore;
+          bestScore = s; bestEvent = event; bestMatched = matched;
+        } else if (s > secondBestScore) {
+          secondBestScore = s;
         }
-        // Require strong, unambiguous word overlap before trusting a text match: at least
-        // 70% of significant words (up from 55%, which let generic questions sharing only
-        // "world"/"win"/"2026"-type words cross-match unrelated events), at least 3 matched
-        // words (so a 70% match on a 3-word query isn't just 2 words), and a clear lead over
-        // the next-best candidate (so two near-duplicate events, e.g. per-country markets in
-        // the same event group, don't get resolved by a coin flip).
-        if (bestScore < 0.7 || bestMatched < 3 || !bestEvent) continue;
-        if (bestScore - secondBestScore < 0.15) continue;
-
-        const allMkts = bestEvent.markets || [];
-        const market = allMkts.length === 1
-          ? allMkts[0]
-          : [...allMkts].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
-        if (!market) continue;
-
-        let prices;
-        try {
-          prices = typeof market.outcomePrices === 'string'
-            ? JSON.parse(market.outcomePrices) : market.outcomePrices;
-        } catch (_) { continue; }
-        if (!Array.isArray(prices) || prices.length < 2) continue;
-        if (market.umaResolutionStatus !== 'resolved') continue;
-
-        const yesPrice = parseFloat(prices[0]);
-        const outcome = yesPrice >= 0.97 ? 'Yes' : yesPrice <= 0.03 ? 'No' : null;
-        if (!outcome) continue;
-
-        const lean        = pred.lean || pred.analysis?.lean;
-        const confStr     = pred.lean_confidence || pred.analysis?.lean_confidence || 'Low';
-        const leanCorrect = lean === outcome;
-        const accScore    = _pmScore(leanCorrect, lean, pred.market_odds_at_time);
-        const confWeight  = _pmWeight(confStr);
-
-        const { error: pmErr2 } = await supabase
-          .from('predictions')
-          .update({
-            correct:         leanCorrect,
-            validated_at:    nowStr,
-            validation_date: nowStr,
-            market_slug:     bestEvent.slug || null,
-            analysis: {
-              ...(pred.analysis || {}),
-              grade: _pmGrade(leanCorrect),
-              score: accScore,
-              accuracy_score: accScore,
-              confidence_weight: confWeight,
-              resolved_outcome: outcome,
-              lean_was: lean,
-              text_match_pct: Math.round(bestScore * 100),
-            },
-          })
-          .eq('id', pred.id);
-        if (!pmErr2) { resolved++; pmTextMatched++; }
       }
+      // Require strong, unambiguous word overlap before trusting a text match: at least
+      // 70% of significant words (55% let generic questions sharing only
+      // "world"/"win"/"2026"-type words cross-match unrelated events), at least 3 matched
+      // words, and a clear lead over the next-best candidate (so two near-duplicate
+      // events, e.g. per-country markets in the same event group, don't get resolved by
+      // a coin flip).
+      if (bestScore < 0.7 || bestMatched < 3 || !bestEvent) continue;
+      if (bestScore - secondBestScore < 0.15) continue;
+
+      const outcome = _pmOutcome(_pickPmMarket(bestEvent, question));
+      if (!outcome) continue;
+      toGrade.push({ pred, outcome, extra: { text_match_pct: Math.round(bestScore * 100) }, slug: bestEvent.slug || null });
+      graded.add(pred.id);
+      textMatched++;
     }
   }
 
-  return res.status(200).json({ resolved, skipped, total: all.length, ready: ready.length, pmChecked: pmReady.length });
+  // ── 4. Write grades (merging into each row's existing analysis JSON).
+  let resolved = 0;
+  for (let i = 0; i < toGrade.length; i += 100) {
+    const chunk = toGrade.slice(i, i + 100);
+    const { data: full } = await supabase.from('predictions').select('id, analysis').in('id', chunk.map(g => g.pred.id));
+    const analysisById = new Map((full || []).map(r => [r.id, r.analysis]));
+    await Promise.allSettled(chunk.map(async ({ pred, outcome, extra, slug }) => {
+      const update = _pmGradeUpdate({ ...pred, analysis: analysisById.get(pred.id) }, outcome, nowStr, extra);
+      if (slug !== undefined) update.market_slug = slug;
+      // `correct IS NULL` guard: never overwrite a grade another pass already wrote.
+      const { data, error } = await supabase.from('predictions').update(update).eq('id', pred.id).is('correct', null).select('id');
+      if (!error && data?.length) resolved++;
+    }));
+  }
+
+  return {
+    resolved, textMatched, pending: pending.length,
+    slugs: slugs.length, slugsChecked,
+    budgetExhausted: slugsChecked < slugs.length,
+  };
 }
+
 
 async function handleGraph(req, res, supabase) {
   const tickers = (req.query.tickers || '')
@@ -898,7 +881,10 @@ async function handleNewsGrade(req, res, supabase) {
   const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'Missing ANTHROPIC_KEY' });
 
-  // Fetch pending PM predictions at least 1 day old (avoid grading same-day predictions)
+  // Pending PM predictions at least 1 day old (avoid grading same-day
+  // predictions) whose market has reached its end date, most recently ended
+  // first. Oldest-first used to spend the whole 25-row budget every day on the
+  // same long-dated markets that couldn't possibly be decided yet.
   const oneDayAgo = new Date(nowMs - 86400000).toISOString();
   const { data: pending, error } = await supabase
     .from('predictions')
@@ -906,7 +892,8 @@ async function handleNewsGrade(req, res, supabase) {
     .is('correct', null)
     .not('lean', 'is', null)
     .lt('created_at', oneDayAgo)
-    .order('created_at', { ascending: true })
+    .or(`validation_date.is.null,validation_date.lte.${nowStr}`)
+    .order('validation_date', { ascending: false, nullsFirst: false })
     .limit(25); // cap per run to control Claude API cost
 
   if (error) return res.status(500).json({ error: error.message });
@@ -923,18 +910,8 @@ async function handleNewsGrade(req, res, supabase) {
     // exactly what YES and NO mean. Without this, "Cavaliers vs. Knicks" is ambiguous.
     let marketQuestion = topic;
     if (pred.market_slug) {
-      try {
-        const pr = await fetch(
-          `https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(pred.market_slug)}`,
-          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(6000) }
-        );
-        if (pr.ok) {
-          const pEvents = await pr.json();
-          const pEvent  = Array.isArray(pEvents) ? pEvents[0] : pEvents;
-          const mkt     = (pEvent?.markets || [])[0];
-          if (mkt?.question) marketQuestion = mkt.question; // e.g. "Will the Cavaliers win Game 3?"
-        }
-      } catch (_) {}
+      const mkt = _pickPmMarket(await _fetchPmEvent(pred.market_slug), topic);
+      if (mkt?.question) marketQuestion = mkt.question; // e.g. "Will the Cavaliers win Game 3?"
     }
 
     // Build search query: strip leading "Will" and trailing "?" then take first 8 words
@@ -1012,6 +989,7 @@ Respond ONLY with valid JSON, no markdown:
           correct:         leanCorrect,
           validated_at:    nowStr,
           validation_date: confirmedDate,
+          status:          'resolved',
           analysis: {
             ...(pred.analysis || {}),
             grade:             _pmGrade(leanCorrect),
@@ -1024,11 +1002,12 @@ Respond ONLY with valid JSON, no markdown:
             grading_reasoning: assessment.reasoning || null,
           },
         })
-        .eq('id', pred.id);
+        .eq('id', pred.id)
+        .is('correct', null);
 
       if (!updateErr) {
         graded++;
-        results.push({ id: pred.id, topic: pred.topic, lean, outcome: assessment.outcome, correct });
+        results.push({ id: pred.id, topic: pred.topic, lean, outcome: assessment.outcome, correct: leanCorrect });
       }
     } catch (_) { /* skip on error, retry tomorrow */ }
   }
@@ -1039,11 +1018,11 @@ Respond ONLY with valid JSON, no markdown:
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res, { methods: 'GET, POST, OPTIONS', headers: 'Content-Type, Authorization' });
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) {
+  try { supabase = getSupabase({ required: true }); } catch (e) {
     return res.status(500).json({ error: 'Database configuration error', detail: e.message });
   }
 

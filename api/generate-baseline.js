@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
 import { runAnalysis } from './analyze.js';
 import { runMarketAnalysis } from './market-analyze.js';
 import { fetchCategoryMarkets } from './markets.js';
 import { SECTOR_STOCKS } from './sector-stocks.js';
 import { COIN_INFO, CORE_COINS } from '../lib/coin-symbols.js';
 import { categoryToSection } from '../lib/prediction-sections.js';
+import { getSupabase } from '../lib/http.js';
 
 // ── Daily baseline prediction generator ────────────────────────────────────────
 // Runs on a cron independent of user traffic so the accuracy dashboard reflects
@@ -18,6 +18,18 @@ import { categoryToSection } from '../lib/prediction-sections.js';
 const DAILY_TARGET = parseInt(process.env.BASELINE_DAILY_TARGET, 10) || 50;
 const BATCH_SIZE    = parseInt(process.env.BASELINE_BATCH_SIZE, 10) || 3;
 const CONCURRENCY    = 3;
+
+// Prediction markets get their own, larger budget: there are hundreds of live
+// markets (vs a fixed stock/coin universe) and most resolve within weeks, so
+// they're the fastest way to grow the graded track record.
+const PM_DAILY_TARGET = parseInt(process.env.BASELINE_PM_DAILY_TARGET, 10) || 150;
+const PM_BATCH_SIZE   = parseInt(process.env.BASELINE_PM_BATCH_SIZE, 10) || 6;
+// Don't re-predict a market the platform already called within this window —
+// a 30-day market predicted daily would otherwise count as ~30 correlated
+// outcomes and crowd out markets that have never been covered.
+const PM_REPEAT_COOLDOWN_DAYS = parseInt(process.env.BASELINE_PM_COOLDOWN_DAYS, 10) || 3;
+const PM_BROWSE_PAGES = 5;   // 100 events per page, by 24h volume
+const PM_PER_CATEGORY = 60;
 
 const PM_CATEGORIES = ['sports', 'politics', 'finance', 'entertainment', 'tech'];
 
@@ -66,13 +78,6 @@ const STOCK_NAME_FALLBACKS = {
   GDX: 'VanEck Gold Miners ETF', VNQ: 'Vanguard Real Estate ETF',
   HYG: 'iShares iBoxx High Yield Corporate Bond ETF',
 };
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
-  return createClient(url, key);
-}
 
 // Same SEC company list feed.html's ticker search and api/tickers.js use, so
 // baseline stock topics read the same as organic ones ("Apple Inc. (AAPL)...").
@@ -123,7 +128,6 @@ async function _todaysBaselineState(supabase) {
   const counts = { stocks: 0, crypto: 0, 'prediction-markets': 0 };
   const coveredTickers = new Set();
   const coveredCoins    = new Set();
-  const coveredSlugs    = new Set();
 
   for (const p of data || []) {
     const section = p.lean ? 'prediction-markets' : categoryToSection(p.category || 'any');
@@ -131,10 +135,41 @@ async function _todaysBaselineState(supabase) {
     const tickers = [...(p.winner_tickers || []), ...(p.loser_tickers || [])];
     if (section === 'stocks') tickers.forEach(t => coveredTickers.add(t));
     if (section === 'crypto') tickers.forEach(t => coveredCoins.add(t));
-    if (section === 'prediction-markets' && p.market_slug) coveredSlugs.add(p.market_slug);
+  }
+
+  // Any market predicted within the cooldown — baseline or user-triggered.
+  const coveredSlugs = new Set();
+  const since = new Date(Date.now() - PM_REPEAT_COOLDOWN_DAYS * 86400000).toISOString();
+  for (let from = 0; from < 20000; from += 1000) {
+    const { data: rows, error: slugErr } = await supabase
+      .from('predictions')
+      .select('market_slug')
+      .not('market_slug', 'is', null)
+      .gte('created_at', since)
+      .range(from, from + 999);
+    if (slugErr) throw slugErr;
+    for (const r of rows || []) coveredSlugs.add(r.market_slug);
+    if (!rows || rows.length < 1000) break;
   }
 
   return { counts, coveredTickers, coveredCoins, coveredSlugs };
+}
+
+// Weighted sample without replacement, favoring markets that end soon so their
+// grades land on the dashboard within days. Random rather than top-N: an
+// "Uncertain" lean isn't saved, so a fixed ordering re-picked the same few
+// undecidable markets every run and stalled the section for the whole day.
+function _sampleMarkets(markets, n) {
+  const weightOf = m => (m.daysLeft != null && m.daysLeft <= 7) ? 4 : (m.daysLeft != null && m.daysLeft <= 30) ? 2 : 1;
+  const pool = markets.map(m => ({ m, w: weightOf(m) }));
+  const out = [];
+  while (out.length < n && pool.length) {
+    let r = Math.random() * pool.reduce((sum, x) => sum + x.w, 0);
+    let i = 0;
+    while ((r -= pool[i].w) > 0 && i < pool.length - 1) i++;
+    out.push(pool.splice(i, 1)[0].m);
+  }
+  return out;
 }
 
 async function _generateStocks(supabase, remaining, coveredTickers) {
@@ -183,7 +218,7 @@ async function _generateCrypto(supabase, remaining, coveredCoins) {
 
 async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
   const perCategory = await Promise.all(
-    PM_CATEGORIES.map(cat => fetchCategoryMarkets(cat, {}).catch(() => []))
+    PM_CATEGORIES.map(cat => fetchCategoryMarkets(cat, { pages: PM_BROWSE_PAGES, limit: PM_PER_CATEGORY }).catch(() => []))
   );
   const seen = new Set();
   const candidates = [];
@@ -194,10 +229,10 @@ async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
       candidates.push(m);
     }
   }
-  const batch = candidates.slice(0, Math.min(remaining, BATCH_SIZE));
-  if (!batch.length) return { attempted: 0, saved: 0 };
+  const batch = _sampleMarkets(candidates, Math.min(remaining, PM_BATCH_SIZE));
+  if (!batch.length) return { attempted: 0, saved: 0, pool: 0 };
 
-  const results = await _runBatch(batch, CONCURRENCY, async market => {
+  const results = await _runBatch(batch, PM_BATCH_SIZE, async market => {
     return runMarketAnalysis({
       supabase,
       question: market.question || market.title,
@@ -205,11 +240,12 @@ async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
       marketCategory: market.category,
       slug: market.slug,
       daysLeft: market.daysLeft,
+      sport: market.sport,
       baselineGenerated: true,
     });
   });
 
-  return { attempted: batch.length, saved: results.filter(r => r?.predictionSaved).length };
+  return { attempted: batch.length, saved: results.filter(r => r?.predictionSaved).length, pool: candidates.length };
 }
 
 export default async function handler(req, res) {
@@ -225,7 +261,7 @@ export default async function handler(req, res) {
   if (!isCron && !isManual) return res.status(401).json({ error: 'Unauthorized' });
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+  try { supabase = getSupabase({ required: true }); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
 
   try {
     const { counts, coveredTickers, coveredCoins, coveredSlugs } = await _todaysBaselineState(supabase);
@@ -242,13 +278,14 @@ export default async function handler(req, res) {
       counts.crypto < DAILY_TARGET
         ? _generateCrypto(supabase, DAILY_TARGET - counts.crypto, coveredCoins)
         : Promise.resolve(met),
-      counts['prediction-markets'] < DAILY_TARGET
-        ? _generatePredictionMarkets(supabase, DAILY_TARGET - counts['prediction-markets'], coveredSlugs)
+      counts['prediction-markets'] < PM_DAILY_TARGET
+        ? _generatePredictionMarkets(supabase, PM_DAILY_TARGET - counts['prediction-markets'], coveredSlugs)
         : Promise.resolve(met),
     ]);
 
     const summary = {
       target: DAILY_TARGET,
+      pmTarget: PM_DAILY_TARGET,
       before: counts,
       sections: { stocks, crypto, 'prediction-markets': predictionMarkets },
     };

@@ -1,7 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
 import { SP500_TICKERS } from '../lib/sp500-tickers.js';
 import { fetchBatchedQuotes } from '../lib/quote-fetch.js';
 import { timeOfDayBucket } from '../lib/situation-similarity-stocks.js';
+import { getSupabase } from '../lib/http.js';
 
 // ── Forward-collecting price snapshot + situation cron ─────────────────────
 // Builds price_snapshots AND stock_situations from scratch, going forward from
@@ -25,13 +25,6 @@ const CHUNK_SIZE = 100;
 const CHUNK_DELAY_MS = 150;
 const RESOLVE_WINDOW_MIN_MIN = 4;   // resolve situations at least this old...
 const RESOLVE_WINDOW_MAX_MIN = 10;  // ...but not older than this (bounded scan)
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase env vars');
-  return createClient(url, key);
-}
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -157,7 +150,7 @@ export default async function handler(req, res) {
   }
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+  try { supabase = getSupabase({ required: true }); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
 
   try {
     const { now, quotes } = await _fetchAllQuotes();

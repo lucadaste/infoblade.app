@@ -22,11 +22,6 @@ cp "$ROOT/chat-widget.js"      "$WWW/"
 cp "$ROOT/sentiment-widget.js" "$WWW/"
 cp "$ROOT/auth.js"        "$WWW/"
 
-# Static data assets
-if [ -d "$ROOT/data" ]; then
-  cp -r "$ROOT/data" "$WWW/data"
-fi
-
 # Brand assets (logo, favicons)
 if [ -d "$ROOT/images" ]; then
   cp -r "$ROOT/images" "$WWW/images"

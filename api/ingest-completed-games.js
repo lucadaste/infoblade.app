@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
 import { collectCompletedGameIdsForDate, buildSituationRows, gameAlreadyIngested } from '../lib/game-situation-ingest.js';
+import { getSupabase } from '../lib/http.js';
 
 // ── Daily game_situations top-up ────────────────────────────────────────────
 // Keeps the historical "similar statline" dataset (lib/situation-similarity.js)
@@ -8,13 +8,6 @@ import { collectCompletedGameIdsForDate, buildSituationRows, gameAlreadyIngested
 // games only — small enough to comfortably fit one Vercel invocation — and
 // reuses the exact same row-building logic the backfill script uses.
 const SUPPORTED_LEAGUES = ['nfl', 'nba'];
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('Missing Supabase env vars');
-  return createClient(url, key);
-}
 
 function _yesterdayDateParam() {
   const d = new Date(Date.now() - 86400000);
@@ -34,7 +27,7 @@ export default async function handler(req, res) {
   if (!isCron && !isManual) return res.status(401).json({ error: 'Unauthorized' });
 
   let supabase;
-  try { supabase = _getSupabase(); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
+  try { supabase = getSupabase({ required: true }); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
 
   const dateParam = req.query.date || _yesterdayDateParam();
   const summary = {};

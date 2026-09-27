@@ -1,9 +1,4 @@
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
+import { setCors } from '../lib/http.js';
 
 // Display-name aliases → real Yahoo Finance symbols
 const SYMBOL_ALIASES = { 'SPX': '^GSPC' };
@@ -275,7 +270,7 @@ export const SECTOR_STOCKS = {
 };
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).end();
 

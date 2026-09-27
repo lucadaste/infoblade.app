@@ -1,47 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
+import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
 const _groupCache = new Map();    // headlines fingerprint -> { data, ts }  TTL 30min
-
-// ── Supabase ──────────────────────────────────────────────────────────────────
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
-  return createClient(url, key);
-}
-
-// ── Rate limiting (per-IP, 20 req/min for analyze POST, 60 req/min for GET) ──
-async function _checkRateLimit(supabase, ip, limit) {
-  const now = new Date();
-  const windowStart = new Date(now - 60000);
-  const key = `${ip}:analyze`;
-
-  const { data, error } = await supabase
-    .from('rate_limits')
-    .select('count, window_start')
-    .eq('key', key)
-    .maybeSingle();
-
-  if (error) return true; // fail open rather than blocking valid users
-
-  if (!data || new Date(data.window_start) < windowStart) {
-    await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-    return true;
-  }
-
-  if (data.count >= limit) return false;
-
-  await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
-  return true;
-}
 
 // ── Input sanitisation ────────────────────────────────────────────────────────
 function _sanitize(str, maxLen = 500) {
@@ -64,7 +31,6 @@ function _sanitizeObject(obj, maxKeys = 40, keyMax = 100, valMax = 20) {
 }
 
 const _COIN_SYMS = COIN_SYMS;
-
 
 // ── Polymarket ────────────────────────────────────────────────────────────────
 const _PM_STOPWORDS = new Set([
@@ -563,16 +529,6 @@ Respond ONLY with valid JSON, no markdown:
   }
 }
 
-// ── CORS helper ───────────────────────────────────────────────────────────────
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-}
-
 // ── GDELT real-time news search (free, no key, 65k+ sources) ─────────────────
 async function _searchGDELT(queries, timespanHours = 48) {
   const timespan = timespanHours <= 6 ? '6h' : timespanHours <= 24 ? '24h' : timespanHours <= 72 ? '3d' : '1week';
@@ -649,7 +605,7 @@ async function _fetchCryptoFearGreed() {
 }
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res, { methods: 'POST, GET, OPTIONS', headers: 'Content-Type, Authorization' });
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   // ── GET: fetch & group news ───────────────────────────────────────────────
@@ -685,22 +641,9 @@ export default async function handler(req, res) {
       }
     }
 
-    const getIp = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-    try {
-      const sbForLimit = _getSupabase();
-      const key = `${getIp}:analyze:get`;
-      const now = new Date();
-      const windowStart = new Date(now - 60000);
-      const { data: rlData } = await sbForLimit.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
-      if (rlData && new Date(rlData.window_start) >= windowStart && rlData.count >= 10) {
-        return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
-      }
-      if (!rlData || new Date(rlData.window_start) < windowStart) {
-        await sbForLimit.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-      } else {
-        await sbForLimit.from('rate_limits').update({ count: rlData.count + 1 }).eq('key', key);
-      }
-    } catch (_) { /* fail open if Supabase not configured */ }
+    if (!await checkRateLimit(getSupabase(), clientIp(req), 'analyze:get', 10, { failOpen: true })) {
+      return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+    }
 
     try {
       const { category, timeframe, minGrade, stock, stockName } = req.query;
@@ -1234,15 +1177,15 @@ Respond ONLY with valid JSON, no markdown:
 
   // ── POST: deep analysis + save prediction ─────────────────────────────────
   if (req.method === 'POST') {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    const ip = clientIp(req);
 
     let supabase = null;
-    try { supabase = _getSupabase(); } catch (_) { /* Supabase not configured — skip rate limiting and persistence */ }
+    try { supabase = getSupabase({ required: true }); } catch (_) { /* Supabase not configured — skip rate limiting and persistence */ }
 
     // skipSave requests (display-only analysis cards) don't persist — don't count against save limit
     const isSkipSave = !!(req.body?.skipSave);
     if (supabase && !isSkipSave) {
-      const allowed = await _checkRateLimit(supabase, ip, 60);
+      const allowed = await checkRateLimit(supabase, ip, 'analyze', 60, { failOpen: true });
       if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
     }
 

@@ -1,33 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForChat } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
+import { getSupabase, checkRateLimit, clientIp } from '../lib/http.js';
 
 // Module-level headline cache — shared across warm invocations, 5-min TTL
 const _headlineCache = new Map();
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
-
-async function _checkRateLimit(supabase, ip) {
-  if (!supabase) return true;
-  const now = new Date();
-  const windowStart = new Date(now - 60000);
-  const key = `${ip}:chat`;
-  try {
-    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
-    if (!data || new Date(data.window_start) < windowStart) {
-      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-      return true;
-    }
-    if (data.count >= 30) return false;
-    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
-    return true;
-  } catch (_) { return false; }
-}
 
 const PAGE_DESCRIPTIONS = {
   'stock-markets':      'The user is on the Stock Markets page. It groups live US financial news by topic, analyzes market impact, identifies winning/losing US-listed stocks and ETFs for each event, and assigns 1-5 star confidence ratings. Users can also search any individual stock ticker for a dedicated analysis.',
@@ -245,10 +221,10 @@ export default async function handler(req, res) {
   // Require authenticated user
   const user = await getClerkUser(req);
   if (!user) return res.status(401).json({ error: 'Sign in to use AI Informant.' });
-  const supabase = _getSupabase();
+  const supabase = getSupabase();
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const allowed = await _checkRateLimit(supabase, ip);
+  const ip = clientIp(req);
+  const allowed = await checkRateLimit(supabase, ip, 'chat', 30);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const { messages, pageContext } = req.body || {};

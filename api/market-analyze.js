@@ -1,47 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBucket, fetchLegacyGeneric, SOURCING_VERSION } from '../lib/market-source-profiles.js';
 import { findGameContextForQuestion } from '../lib/espn-live.js';
 import { findSimilarSituations } from '../lib/situation-similarity.js';
+import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
+
 // Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
 // same outlet gets the same tier (and the same empirical-reputation
 // adjustment) regardless of which pipeline sees it. Re-exported under the
 // same name for scripts/compare-token-usage.js's existing import.
 import { getSourceGrade } from '../lib/source-quality.js';
 export { getSourceGrade };
-
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Vary', 'Origin');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-}
-
-function _getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
-
-async function _checkRateLimit(supabase, ip) {
-  if (!supabase) return true;
-  const now = new Date();
-  const windowStart = new Date(now - 60000);
-  const key = `${ip}:market-analyze`;
-  try {
-    const { data } = await supabase.from('rate_limits').select('count, window_start').eq('key', key).maybeSingle();
-    if (!data || new Date(data.window_start) < windowStart) {
-      await supabase.from('rate_limits').upsert({ key, count: 1, window_start: now.toISOString() });
-      return true;
-    }
-    if (data.count >= 20) return false;
-    await supabase.from('rate_limits').update({ count: data.count + 1 }).eq('key', key);
-    return true;
-  } catch (_) { return false; }
-}
 
 function _sanitize(str, maxLen = 300) {
   if (typeof str !== 'string') return '';
@@ -435,13 +403,13 @@ Respond ONLY with valid JSON, no markdown:
 }
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res, { methods: 'POST, OPTIONS' });
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
-  const supabase = _getSupabase();
-  const allowed = await _checkRateLimit(supabase, ip);
+  const ip = clientIp(req);
+  const supabase = getSupabase();
+  const allowed = await checkRateLimit(supabase, ip, 'market-analyze', 20);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const rawQuestion = req.body?.question;

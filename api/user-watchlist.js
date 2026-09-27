@@ -1,25 +1,14 @@
-import { createClient } from '@supabase/supabase-js';
 import { getClerkUser } from '../lib/auth.js';
-
-function _setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-}
-
-function _getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-}
+import { getSupabase, setCors } from '../lib/http.js';
 
 export default async function handler(req, res) {
-  _setCors(res);
+  setCors(res, { methods: 'GET, POST, DELETE, OPTIONS', headers: 'Content-Type, Authorization' });
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const user = await getClerkUser(req);
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-  const sb = _getSupabase();
+  const sb = getSupabase({ required: true });
   const wlType = req.query.type || 'stocks'; // stocks | crypto | markets
 
   const TABLE_MAP = {
