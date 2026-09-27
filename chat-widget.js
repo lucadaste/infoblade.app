@@ -447,21 +447,21 @@
     text = (text || inp.value).trim();
     if (!text || busy) return;
 
+    startersEl.remove();
+    inp.value = '';
+    inp.style.height = 'auto';
+    addMsg('user', text);
+
     // Auth gate — require sign-in
     const token = await window._auth?.getToken();
     if (!token) {
-      addMsg('assistant', '**AI Informant requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click **Let\'s Begin !** in the top-right corner to get started.');
-      inp.value = '';
+      addMsg('assistant', '**AI Informant requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click the account icon in the top-right corner to get started.');
       return;
     }
 
     busy = true;
-    startersEl.remove();
-    inp.value = '';
-    inp.style.height = 'auto';
     sendBtn.disabled = true;
 
-    addMsg('user', text);
     history.push({ role: 'user', content: text });
 
     const thinking = addThinking();
