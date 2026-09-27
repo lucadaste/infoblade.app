@@ -109,13 +109,3 @@ footer p { font-size: 13px; color: var(--muted); }
   .hero { padding: 20px 16px 16px; flex-wrap: wrap; align-items: flex-start; }
   footer { padding: 20px 16px; }
 }
-
-/* ── Theme Toggle ─────────────────────────────────────────────────────────── */
-.theme-toggle { position: relative; width: 44px; height: 25px; flex-shrink: 0; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; padding: 0; display: inline-flex; align-items: center; transition: background 0.2s, border-color 0.2s; }
-.theme-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 19px; height: 19px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; color: var(--paper); transition: transform 0.25s cubic-bezier(.4,0,.2,1); }
-[data-theme="light"] .theme-toggle-thumb { transform: translateX(19px); }
-.theme-toggle-thumb svg { width: 12px; height: 12px; }
-.theme-toggle-icon-sun { display: none; }
-.theme-toggle-icon-moon { display: block; }
-[data-theme="light"] .theme-toggle-icon-sun { display: block; }
-[data-theme="light"] .theme-toggle-icon-moon { display: none; }

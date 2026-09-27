@@ -22,7 +22,7 @@
     .auth-dropdown {
       display: none; position: absolute; top: calc(100% + 8px); right: 0;
       background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      min-width: 120px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); z-index: 600; overflow: hidden;
+      min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); z-index: 600; overflow: hidden;
     }
     .auth-dropdown.open { display: block; }
     .auth-dropdown-item {
@@ -32,6 +32,8 @@
       text-align: left; cursor: pointer; transition: background 0.15s;
     }
     .auth-dropdown-item:hover { background: var(--surface-2); }
+    .auth-theme-item { display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--border); }
+    .auth-theme-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--muted); }
   `;
   document.head.appendChild(_styleEl);
 
@@ -40,6 +42,8 @@
   // signed out, green once we know the user is signed in — and never depends
   // on Clerk successfully initializing to simply be present.
   const _PERSON_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 19c1.4-3.4 4.3-5.2 7.5-5.2s6.1 1.8 7.5 5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  const _SUN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>';
+  const _MOON_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>';
 
   // Remembering the last known sign-in state lets the badge render in its
   // likely-correct color immediately on the next page load, instead of
@@ -58,9 +62,16 @@
   // green — i.e. clicking your own account icon bounced you to sign in.
   let _visualSignedIn = _wasSignedIn;
 
+  function _themeItemState() {
+    const isLight = window.__iiTheme ? window.__iiTheme.get() === 'light' : false;
+    return isLight ? { icon: _MOON_ICON, text: 'Dark mode' } : { icon: _SUN_ICON, text: 'Light mode' };
+  }
+
   function _dropdownHTML() {
+    const t = _themeItemState();
     return `
       <a class="auth-dropdown-item" href="/account.html" id="auth-account-btn">Your Account</a>
+      <button class="auth-dropdown-item auth-theme-item" id="auth-theme-btn" type="button">${t.icon}<span id="auth-theme-label">${t.text}</span></button>
       <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
     `;
   }
@@ -68,6 +79,13 @@
   function _wireDropdownSignOut(dropdown) {
     const btn = dropdown.querySelector('#auth-signout-btn');
     if (btn) btn.addEventListener('click', () => signOut());
+    const themeBtn = dropdown.querySelector('#auth-theme-btn');
+    if (themeBtn) themeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (window.__iiTheme) window.__iiTheme.toggle();
+      const t = _themeItemState();
+      themeBtn.innerHTML = `${t.icon}<span id="auth-theme-label">${t.text}</span>`;
+    });
   }
 
   function _renderBadgeShell() {

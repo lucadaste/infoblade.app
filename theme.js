@@ -10,20 +10,27 @@
   }
   syncMetaThemeColor(theme);
 
+  function setTheme(next) {
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('ib-theme', next); } catch (e) {}
+    syncMetaThemeColor(next);
+    document.dispatchEvent(new CustomEvent('ib-theme-change', { detail: { theme: next } }));
+  }
+
+  // Public API so any page's UI (e.g. the account dropdown) can read/flip the
+  // theme without needing a `.theme-toggle` element to already be in the DOM.
+  window.__iiTheme = {
+    get: function () { return document.documentElement.getAttribute('data-theme'); },
+    set: setTheme,
+    toggle: function () {
+      var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+      setTheme(next);
+      return next;
+    },
+  };
+
   function wire() {
     syncMetaThemeColor(document.documentElement.getAttribute('data-theme'));
-    var toggles = document.querySelectorAll('.theme-toggle');
-    if (!toggles.length) return;
-    toggles.forEach(function (btn) {
-      btn.setAttribute('aria-pressed', document.documentElement.getAttribute('data-theme') === 'light');
-      btn.addEventListener('click', function () {
-        var next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', next);
-        try { localStorage.setItem('ib-theme', next); } catch (e) {}
-        syncMetaThemeColor(next);
-        toggles.forEach(function (b) { b.setAttribute('aria-pressed', next === 'light'); });
-      });
-    });
   }
 
   if (document.readyState === 'loading') {
