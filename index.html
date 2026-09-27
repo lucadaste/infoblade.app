@@ -12,8 +12,8 @@
     // freeze while auth spins up.
     try { if (localStorage.getItem('ii_was_signed_in') !== '1') document.getElementById('ii-auth-hide').remove(); } catch (_) { document.getElementById('ii-auth-hide')?.remove(); }
   </script>
-  <title>infoblade | World Events. Market Signals. Expected Outcomes.</title>
-  <meta name="description" content="infoblade reads global news daily and maps what it means across stocks, crypto, and prediction markets. Every event traced from headline to the sectors, tickers, and odds it actually moves." />
+  <title>infoblade | Informed Investing, Made Simple</title>
+  <meta name="description" content="infoblade reads global news daily and explains, in plain English, what it means for stocks, crypto, and prediction markets. No jargon, no recommendations, and a public accuracy record for every call — built for beginners and pros alike." />
   <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
@@ -92,8 +92,14 @@
     .hero h1 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(42px, 6.5vw, 76px); line-height: 1.12; letter-spacing: -2.5px; margin-bottom: 28px; }
     .hero h1 em { font-style: normal; background: var(--accent); color: #111111; padding: 0 10px; }
     .hero-sub { font-size: 18px; color: var(--muted); max-width: 560px; line-height: 1.75; margin-bottom: 0; font-weight: 300; }
-    .hero-actions { display: flex; flex-direction: column; gap: 20px; flex-shrink: 0; }
-    .hero-actions .btn-outline { display: block; min-width: 260px; padding: 26px 48px; font-size: 16px; text-align: center; border-radius: 8px; letter-spacing: 0.2px; }
+    .hero-actions { display: flex; flex-direction: column; gap: 18px; flex-shrink: 0; }
+    .btn-cta { display: inline-block; padding: 22px 48px; font-size: 16px; text-align: center; border-radius: 8px; letter-spacing: 0.2px; background: linear-gradient(135deg, #00e676, #00c766); color: #0a0a0a; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; border: none; cursor: pointer; text-decoration: none; box-shadow: 0 6px 18px rgba(0,230,118,0.18); transition: transform 0.15s, box-shadow 0.15s; }
+    .btn-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,230,118,0.26); }
+    .hero-actions .btn-cta { display: block; min-width: 260px; }
+    .hero-links { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); justify-content: center; }
+    .hero-links a { color: var(--muted); text-decoration: none; border-bottom: 1px solid transparent; transition: color 0.15s, border-color 0.15s; }
+    .hero-links a:hover { color: var(--ink); border-color: var(--divider); }
+    .hero-links-lead { color: var(--muted); }
     .btn-primary { background: var(--paper); color: var(--accent); font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 4px; border: 1.5px solid var(--accent); cursor: pointer; letter-spacing: 0.3px; transition: background 0.2s, color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
     .btn-primary:hover { background: var(--accent); color: #111111; transform: translateY(-1px); }
     .btn-secondary { font-size: 14px; color: var(--muted); text-decoration: underline; cursor: pointer; background: none; border: none; transition: color 0.2s; }
@@ -130,6 +136,8 @@
     .pill-neutral { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
     .features-section { padding: 88px 48px; border-top: 1px solid var(--border); }
     .features-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .features-grid .feature-card:last-child { grid-column: 1 / -1; }
+    @media (max-width: 768px) { .features-grid .feature-card:last-child { grid-column: auto; } }
     .feature-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 32px; transition: border-color 0.2s, transform 0.2s; }
     .feature-card:hover { border-color: var(--divider); transform: translateY(-2px); }
     .feature-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 6px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; }
@@ -168,6 +176,14 @@
     .btn-outline { display: inline-block; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; padding: 12px 24px; border-radius: 4px; border: 1.5px solid var(--ink); color: var(--ink); text-decoration: none; transition: background 0.2s, color 0.2s; letter-spacing: 0.3px; }
     .btn-outline:hover { background: var(--ink); color: var(--paper); }
     .preview-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; }
+    .split-note { font-size: 13.5px; color: var(--muted); line-height: 1.7; border-left: 2px solid var(--accent); padding-left: 14px; }
+    .split-note strong { color: var(--ink); font-weight: 500; }
+
+    /* Closing CTA band */
+    .cta-band { padding: 96px 48px; border-top: 1px solid var(--border); text-align: center; background: var(--card); }
+    .cta-band h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(24px, 3.5vw, 36px); letter-spacing: -1.2px; margin-bottom: 14px; }
+    .cta-band p { font-size: 15px; color: var(--muted); max-width: 480px; margin: 0 auto 32px; line-height: 1.75; }
+    .cta-band-note { font-size: 12px; color: var(--muted); margin-top: 16px; }
 
     /* Prediction markets mock */
     .pm-tag { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
@@ -245,8 +261,8 @@
     @media (max-width: 768px) {
       .hero { padding: 64px 24px 56px; flex-direction: column; align-items: flex-start; gap: 36px; }
       .hero-sub { margin-bottom: 0; }
-      .hero-actions { flex-direction: row; flex-wrap: wrap; gap: 14px; }
-      .hero-actions .btn-outline { min-width: auto; padding: 12px 24px; font-size: 13px; border-radius: 4px; }
+      .hero-actions { flex-direction: column; align-items: stretch; gap: 16px; }
+      .hero-actions .btn-cta { min-width: auto; padding: 16px 24px; font-size: 14px; }
       .section { padding: 64px 24px; }
       .example-section { padding: 0 24px 64px; } .features-section { padding: 0 24px 64px; }
       .steps { grid-template-columns: 1fr; gap: 2px; }
@@ -257,6 +273,7 @@
       .split-section { grid-template-columns: 1fr; gap: 40px; padding: 64px 24px; }
       .features-section { padding: 0 24px 64px; }
       .disclaimer { padding: 28px 24px; } footer { padding: 24px; }
+      .cta-band { padding: 56px 24px; }
     }
 
   </style>
@@ -297,13 +314,17 @@
   <section class="hero">
     <div class="hero-left">
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
-      <h1>World events.<br><em>Market signals.</em><br>Expected Outcomes.</h1>
-      <p class="hero-sub">One pipeline. Three markets. Every major news event mapped to the stocks, crypto assets, and prediction market odds it actually moves.</p>
+      <h1>Informed investing,<br><em>made simple.</em></h1>
+      <p class="hero-sub">infoblade reads the day's news and explains, in plain English, what it means for stocks, crypto, and prediction markets. No jargon, no black box, and no advice pushed on you, whether this is your first trade or your five-thousandth. Every call is graded in public, so you can see for yourself how well it works.</p>
     </div>
     <div class="hero-actions">
-      <a class="btn-outline" href="/feed.html">Stock Markets →</a>
-      <a class="btn-outline" href="/markets.html">Prediction Markets →</a>
-      <a class="btn-outline" href="/crypto.html">Crypto →</a>
+      <button class="btn-cta" onclick="window.__iiOpenSignIn && window.__iiOpenSignIn()">Get started — it's free</button>
+      <div class="hero-links">
+        <span class="hero-links-lead">Or explore first, no account needed:</span>
+        <a href="/feed.html">Stock Markets</a>
+        <a href="/markets.html">Prediction Markets</a>
+        <a href="/crypto.html">Crypto</a>
+      </div>
     </div>
   </section>
 
@@ -324,8 +345,8 @@
 
   <div class="platform-header fade-in">
     <div class="section-label">The platform</div>
-    <h2>Three tools. One pipeline.</h2>
-    <p>Stocks, crypto, and prediction markets, all run through the same source-weighted intelligence layer. Every call logged publicly so you can see exactly how well it's working.</p>
+    <h2>Three tools. One pipeline. Zero jargon.</h2>
+    <p>Stocks, crypto, and prediction markets, all run through the same source-weighted intelligence layer, then explained the way you'd explain it to a friend. Every call is logged publicly, so you can see exactly how well it's working before you ever trust it.</p>
   </div>
 
   <section class="section" id="how-it-works">
@@ -338,13 +359,13 @@
       </div>
       <div class="step fade-in">
         <div class="step-num">02</div>
-        <h3>AI reasons through it</h3>
-        <p>We identify which events carry real economic weight, then traces the full chain reaction to sectors, specific stocks, digital assets, and prediction market odds.</p>
+        <h3>AI connects the dots</h3>
+        <p>We identify which events carry real economic weight, then trace the full chain reaction to sectors, specific stocks, digital assets, and prediction market odds, the same way an analyst would, just faster.</p>
       </div>
       <div class="step fade-in">
         <div class="step-num">03</div>
-        <h3>You get clarity</h3>
-        <p>No jargon, no noise. Across stocks, crypto, and prediction markets: each event explained in plain English, with sectors, tickers, and confidence levels that we log and track over time.</p>
+        <h3>You get a plain-English signal</h3>
+        <p>No jargon, no noise. Each event is explained in everyday language, with sectors, tickers, and confidence levels attached, so you understand the "why," not just the "what," whatever your experience level.</p>
       </div>
     </div>
   </section>
@@ -356,6 +377,7 @@
       <h2>Market-moving events, traced to the ticker</h2>
       <p>Every day, we read hundreds of sources, groups related headlines into distinct market events, and maps the full economic chain from the story to affected sectors and specific stocks.</p>
       <p>Filtered by category, timeframe, and source quality. Updated daily.</p>
+      <p class="split-note">In plain English: think of it as a daily briefing that tells you which stocks are affected by today's news, and <strong>why</strong>, not just a headline with no context.</p>
       <a class="btn-outline" href="/feed.html">Open Stock Markets →</a>
     </div>
     <div>
@@ -400,6 +422,7 @@
       <h2>Does the market know something the news doesn't?</h2>
       <p>We pull live questions from Polymarket and run them through the same news-analysis pipeline that powers the daily feed. The result: a real-time signal showing whether current market odds align with, or contradict, what the news is actually saying.</p>
       <p>If the crowd is pricing a 72% chance of a rate cut and our news analysis tells a different story, you'll see exactly that tension and why it exists.</p>
+      <p class="split-note">In plain English: a prediction market is a live poll with money on the line, its price is the crowd's best guess at the odds of "yes." We check whether the news actually backs that guess up.</p>
       <a class="btn-outline" href="/markets.html">Explore prediction markets →</a>
     </div>
     <div>
@@ -429,6 +452,7 @@
       <div class="split-label">Crypto Markets</div>
       <h2>Live prices, fear and greed, and AI news analysis for 32 digital assets</h2>
       <p>The same pipeline that powers Stock Markets, applied to crypto. Track BTC, ETH, SOL, and 29 more assets in real time, then run analysis on any coin to see which news events are driving price action.</p>
+      <p class="split-note">In plain English: Fear &amp; Greed is a 0–100 mood gauge for the crypto market, we pair it with the news behind it so a sudden swing actually makes sense instead of feeling random.</p>
       <a class="btn-outline" href="/crypto.html">Open Crypto Markets →</a>
     </div>
     <div>
@@ -516,6 +540,15 @@
         <h4>No recommendations, ever</h4>
         <p>We give you the context, the reasoning, and the track record across every tool on the platform. The decision is always yours. Informed, not directed.</p>
       </div>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M2 4.5A2 2 0 0 1 4 2.5h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8l-3.5 3v-3H4a2 2 0 0 1-2-2z" stroke="#0a0a0a" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h4>Ask the AI Informant, anytime</h4>
+        <p>Not sure what a term means, or how we arrived at a signal? Sign in and ask the AI Informant directly, right from any page. It explains the reasoning behind every call in plain language, tailored to however much you already know.</p>
+      </div>
     </div>
   </section>
 
@@ -572,8 +605,16 @@
       <h2>Every call is on the record</h2>
       <p>Every AI prediction is graded A through F: the direction called, the tickers named, and the actual price moves when the timeframe closes. Stocks, crypto, and prediction markets, all in one place.</p>
       <p>That track record feeds directly back into future predictions — the AI sees its own win rate per ticker and sector, and adjusts its confidence accordingly.</p>
+      <p class="split-note">In plain English: think of each grade like a report card, an A means the call played out as expected, an F means it didn't. Nothing is hidden after the fact.</p>
       <a class="btn-outline" href="/accuracy.html">View accuracy history →</a>
     </div>
+  </section>
+
+  <section class="cta-band fade-in">
+    <h2>Ready to invest with clarity?</h2>
+    <p>Join for free and get a personal watchlist, daily AI signals across stocks, crypto, and prediction markets, and direct access to the AI Informant, all backed by a public track record.</p>
+    <button class="btn-cta" onclick="window.__iiOpenSignIn && window.__iiOpenSignIn()">Get started — it's free</button>
+    <div class="cta-band-note">No credit card required. No recommendations pushed on you, ever.</div>
   </section>
 
   <div class="disclaimer">
