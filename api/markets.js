@@ -98,8 +98,10 @@ function _fetchBrowseEvents(daysMin, daysCap, pages) {
 // caller is doing a text search (the HTTP handler); the generator always omits them.
 // `opts.pages` (100 events each, by 24h volume) and `opts.limit` (markets kept per
 // category) let the generator draw from a much deeper pool than the browse UI shows.
+// `opts.labels: false` skips the Haiku labeling/legitimacy pass — the generator
+// only analyzes a handful of the pool, so it runs labelMarkets on just those.
 export async function fetchCategoryMarkets(category, opts = {}) {
-  const { isSearch = false, rawQuery = '', daysCap = 365, daysMin = 0, pages = 1, limit = 10 } = opts;
+  const { isSearch = false, rawQuery = '', daysCap = 365, daysMin = 0, pages = 1, limit = 10, labels = true } = opts;
   const targetTags = CATEGORY_TAGS[category];
 
   const now = new Date();
@@ -181,10 +183,14 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     .sort((a, b) => b.volume24h - a.volume24h)
     .slice(0, isSearch ? 20 : limit);
 
-  // Batch AI call: generate a plain-english "what YES means" label for each market, and
-  // flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
-  // Reuses this same call rather than adding a second one — the keyword filter above
-  // catches known phrasings for free; this catches anything new without upkeep.
+  return labels ? labelMarkets(markets) : markets;
+}
+
+// Batch AI call: generate a plain-english "what YES means" label for each market, and
+// flag any market that's unfalsifiable/supernatural/joke (no real news could analyze it).
+// The keyword filter in fetchCategoryMarkets catches known phrasings for free; this
+// catches anything new without upkeep. Returns the markets that passed, labeled.
+export async function labelMarkets(markets) {
   try {
     const anthropicKey = process.env.ANTHROPIC_KEY;
     if (anthropicKey && markets.length > 0) {
@@ -201,7 +207,7 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': anthropicKey, 'anthropic-version': '2023-06-01' },
         body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: Math.max(500, markets.length * 45), messages: [{ role: 'user', content: labelPrompt }] }),
-        signal: AbortSignal.timeout(Math.max(8000, markets.length * 300))
+        signal: AbortSignal.timeout(8000)
       });
       const labelData = await labelRes.json();
       const raw = labelData.content?.[0]?.text?.replace(/```json|```/g, '').trim();
@@ -215,8 +221,7 @@ Respond ONLY with a JSON array of objects in the same order, no markdown:
     }
   } catch (_) { /* labels/legitimacy check are optional — cards still render without them */ }
 
-  const finalMarkets = markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
-  return finalMarkets;
+  return markets.filter(m => !m._nonsense).map(({ _nonsense, ...m }) => m);
 }
 
 export default async function handler(req, res) {

@@ -1,6 +1,6 @@
 import { runAnalysis } from './analyze.js';
 import { runMarketAnalysis } from './market-analyze.js';
-import { fetchCategoryMarkets } from './markets.js';
+import { fetchCategoryMarkets, labelMarkets } from './markets.js';
 import { SECTOR_STOCKS } from './sector-stocks.js';
 import { COIN_INFO, CORE_COINS } from '../lib/coin-symbols.js';
 import { categoryToSection } from '../lib/prediction-sections.js';
@@ -218,7 +218,7 @@ async function _generateCrypto(supabase, remaining, coveredCoins) {
 
 async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
   const perCategory = await Promise.all(
-    PM_CATEGORIES.map(cat => fetchCategoryMarkets(cat, { pages: PM_BROWSE_PAGES, limit: PM_PER_CATEGORY }).catch(() => []))
+    PM_CATEGORIES.map(cat => fetchCategoryMarkets(cat, { pages: PM_BROWSE_PAGES, limit: PM_PER_CATEGORY, labels: false }).catch(() => []))
   );
   const seen = new Set();
   const candidates = [];
@@ -229,8 +229,10 @@ async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
       candidates.push(m);
     }
   }
-  const batch = _sampleMarkets(candidates, Math.min(remaining, PM_BATCH_SIZE));
-  if (!batch.length) return { attempted: 0, saved: 0, pool: 0 };
+  // Legitimacy-check only the sampled batch (one small Haiku call) rather than
+  // labeling the whole several-hundred-market pool every run.
+  const batch = await labelMarkets(_sampleMarkets(candidates, Math.min(remaining, PM_BATCH_SIZE)));
+  if (!batch.length) return { attempted: 0, saved: 0, pool: candidates.length };
 
   const results = await _runBatch(batch, PM_BATCH_SIZE, async market => {
     return runMarketAnalysis({

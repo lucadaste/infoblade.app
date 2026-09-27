@@ -3,6 +3,7 @@ import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBuck
 import { findGameContextForQuestion } from '../lib/espn-live.js';
 import { findSimilarSituations } from '../lib/situation-similarity.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
+import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 
 // Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
 // same outlet gets the same tier (and the same empirical-reputation
@@ -273,21 +274,18 @@ Live game data (from ESPN, ${gameContext.state === 'in' ? 'GAME IN PROGRESS' : g
 - Score: ${gameContext.awayTeam} ${gameContext.awayScore ?? '-'} at ${gameContext.homeTeam} ${gameContext.homeScore ?? '-'}${gameContext.venue ? ` (${gameContext.venue})` : ''}${gameContext.isPlayoff ? ' — PLAYOFF GAME' : ''}
 ${gameContext.predictor ? `- ESPN's win probability model: ${gameContext.homeTeam} ${gameContext.predictor.homeWinPct}%, ${gameContext.awayTeam} ${gameContext.predictor.awayWinPct}%\n` : ''}${gameContext.vegasLine ? `- Vegas line (${gameContext.vegasLine.provider}): ${gameContext.vegasLine.spread}, moneyline ${gameContext.homeTeam} ${gameContext.vegasLine.homeMoneyLine} / ${gameContext.awayTeam} ${gameContext.vegasLine.awayMoneyLine}, over/under ${gameContext.vegasLine.overUnder}\n` : ''}${(gameContext.injuries.home.length || gameContext.injuries.away.length) ? `- Injuries: ${gameContext.homeTeam}: ${gameContext.injuries.home.map(i => `${i.player} (${i.status})`).join(', ') || 'none listed'}. ${gameContext.awayTeam}: ${gameContext.injuries.away.map(i => `${i.player} (${i.status})`).join(', ') || 'none listed'}.\n` : ''}${historicalSituation ? `- Historical comparison: in ${historicalSituation.sampleSize} past ${gameContext.league.toUpperCase()} games with a similar score and time situation, the trailing team came back to win ${historicalSituation.trailingTeamWinRate}% of the time.\n` : ''}${gameContext.state === 'in' ? 'This game is live right now — weigh the current score, period, and clock (and the historical comparison above, if present) heavily. A team down by a wide margin late in the game is a strong signal regardless of what pregame news said.\n' : ''}` : '';
 
-    const prompt = `You are helping everyday users understand a prediction market question using recent news and public sentiment.
+    // Fixed rules go in a cached system prefix (see lib/prompt-layout.js); only
+    // the live-game clause in the confidence anchors varies, so at most two
+    // cache entries. The market and its evidence go in the user turn.
+    const systemRules = `You are helping everyday users understand a prediction market question using recent news and public sentiment. You will be given the market question, its current odds, and the evidence gathered for it.
 
-Market question: "${question}"
-${oddsContext}
-${liveGameSection}
-Recent news (${items.length} articles):
-${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
-${structuredSection}${redditSection}${leanNote}${trackRecordSection}
 Weight news sources by grade (High > Medium > Low). Treat official/structured data (filings, rosters, bills, disclosures) as a stronger factual signal than ordinary news when both are present. "Nx coverage" means N outlets ran essentially the same story — high coverage volume can mean the news is well-confirmed, but it can also mean the market has already priced in a widely-known story, so don't automatically treat heavy coverage as a bigger edge than a single high-grade or official source. Use Reddit posts as a crowd sentiment signal — they show which way public opinion is leaning, which directly influences prediction market odds. Be direct — if sources clearly point one way, say so.
 
 Consider: official statements, confirmed facts, injury reports, results, direct reporting.
 
 ALREADY RESOLVED: If the news or your knowledge clearly shows this event has already happened and the outcome is known (a game was played, a vote occurred, an elimination already happened), set lean to "Uncertain" and explain in reasoning that the event is already resolved. Do NOT predict past events. Only predict genuinely uncertain future outcomes.
 
-TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section above shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
+TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section in the input shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
 DIRECTION COMMITMENT: For genuinely future uncertain events, reserve "Uncertain" only for true deadlock — when credible sources split almost evenly AND crowd odds are within 5% of 50/50 AND your domain knowledge offers no tiebreaker. If the news has ANY directional tilt (even slight), commit to Yes or No. "Uncertain" should be rare for future events.
 
@@ -305,12 +303,19 @@ Respond ONLY with valid JSON, no markdown:
 {
   "lean": "Yes" | "No" | "Uncertain",
   "lean_confidence": "4 — specific reason",
-  "crowd_summary": "One sentence describing what the crowd's odds actually mean — use the question to name the specific outcome, always include the ${currentOdds !== undefined ? currentOdds + '%' : 'market'} figure, e.g. 'The crowd is 52% confident the Warriors will win the series' or 'Bettors are 68% sure the Strait of Hormuz reopens this month'",
+  "crowd_summary": "One sentence describing what the crowd's odds actually mean — use the question to name the specific outcome, always include the market odds percentage from the input if one was given, e.g. 'The crowd is 52% confident the Warriors will win the series' or 'Bettors are 68% sure the Strait of Hormuz reopens this month'",
   "reasoning": "2-3 plain-English sentences on what the news specifically says — name teams, people, or events from the actual articles, say what was reported or confirmed, don't be vague or hedge everything",
   "key_sources": ["source1", "source2"],
   "signal": "Aligns with market" | "Contradicts market" | "Inconclusive",
   "signal_detail": "One conversational sentence on whether the news agrees or disagrees with the crowd — e.g. 'The news strongly backs what the crowd is betting on' or 'The news tells a different story from what the crowd thinks'"
 }`;
+
+    const prompt = `Market question: "${question}"
+${oddsContext}
+${liveGameSection}
+Recent news (${items.length} articles):
+${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
+${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
 
     const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -322,6 +327,7 @@ Respond ONLY with valid JSON, no markdown:
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 500,
+        system: [{ type: 'text', text: systemRules, cache_control: CACHE_1H }],
         messages: [{ role: 'user', content: prompt }]
       }),
       signal: AbortSignal.timeout(30000)
@@ -332,6 +338,7 @@ Respond ONLY with valid JSON, no markdown:
       console.error('[runMarketAnalysis] Anthropic error:', data.error.message);
       return { error: 'Analysis failed', status: 500 };
     }
+    logCacheUsage('runMarketAnalysis', data.usage);
 
     const raw = data.content[0].text.replace(/```json|```/g, '').trim();
     let analysis;
@@ -352,7 +359,7 @@ Respond ONLY with valid JSON, no markdown:
       const validationDate = daysLeft != null
         ? new Date(Date.now() + daysLeft * 86400000).toISOString()
         : null;
-      const savedAnalysis = { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null };
+      const savedAnalysis = { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null, prompt_layout: PROMPT_LAYOUT_VERSION };
       if (baselineGenerated) savedAnalysis.baseline_generated = true;
       // Tag which sourcing methodology produced this row — see SOURCING_VERSION in
       // lib/market-source-profiles.js. Only set when the category-aware profile path

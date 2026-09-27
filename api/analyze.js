@@ -5,6 +5,7 @@ import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
+import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -370,15 +371,10 @@ export async function runAnalysis({
     const trackRecordSection = formatContextForPrompt(contextGraph);
     const conflictSection = _buildConflictSection(liveConflicts, candidateTickers);
 
-    const prompt = `You are a senior financial analyst focused exclusively on US markets. Multiple news outlets are reporting on this specific market event:
-
-Topic: "${topic}"
-
-Headlines from ${sources.length} sources:
-${headlines.map(h => `- ${h}`).join('\n')}
-
-Sources and factuality grades:
-${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
+    // Fixed rules go in a cached system prefix (see lib/prompt-layout.js); only
+    // the crypto/stock and sources/no-sources branches vary, so at most four
+    // cache entries. Everything per-request goes after the cache breakpoint.
+    const systemRules = `You are a senior financial analyst focused exclusively on US markets. You will be given a specific market event that multiple news outlets are reporting on: its headlines, the sources with their factuality grades, and supporting market data.
 
 Use weighted source consensus to shape the prediction:
 - High-grade sources carry weight 1.0
@@ -386,13 +382,9 @@ Use weighted source consensus to shape the prediction:
 - Low-grade sources carry weight 0.4
 Only include sources that meet the selected factuality threshold for the final prediction.
 
-Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}
-Only use ${thresholdText} for this analysis.
-
 Analyze with the precision of a Goldman Sachs research note. Focus on the SPECIFIC event, not general trends.
 
-TIMEFRAME LENS: ${timeframeGuidance}
+TIMEFRAME LENS: apply the timeframe lens given with the event.
 
 CRITICAL RULES:
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead.
@@ -420,8 +412,8 @@ ${category === 'crypto-coin'
 - AVOID CONTRADICTIONS: Each ticker should appear in EITHER winners OR losers, never both. If the net effect on a ticker is unclear, omit it entirely rather than hedging.
 - BASE RATE CALIBRATION: Before committing to a direction, anchor on historical base rates. Broad US equity indices (S&P 500, QQQ, Dow, Russell 2000, broad market ETFs like SPY/QQQ/IWM) rise in roughly 70% of 1-month periods and ~75% of 3-month periods. For a BEARISH call on a broad index over any multi-week or monthly horizon, you need a compelling case backed by multiple high-grade sources: confirmed or imminent recession signals, sustained unexpected Fed tightening, financial system stress, or a specific policy shock. Mildly negative news, geopolitical uncertainty, or a single bad data point is NOT sufficient to override the base-rate prior. If the evidence is mixed or ambiguous for a broad index, the probability-weighted call is UP. Apply the same logic for individual sector ETFs (XLK, XLE, etc.) — single-sector headwinds must be severe and clear-cut to justify a bearish 1-month call. Individual stocks have no such base-rate protection — use standard evidence weighting.
 - For direction: conflicting sources are NORMAL and expected. Weigh each source by its factuality grade (High=1.0, Medium=0.7, Low=0.4). Sum the weighted bullish vs bearish signals from credible sources and commit to whichever side has more weight. If news is sparse or mixed but one side has ANY edge, pick it. If news doesn't clearly point anywhere, use your knowledge of the sector, macro environment, historical precedent, and the specific event type to make the best educated guess — that IS your job. Reserve "uncertain" ONLY for true deadlock: where both weighted totals are within 5% of each other AND your domain knowledge gives no tiebreaker. "Uncertain" should be rare (under 10% of calls). Do NOT use it to avoid being wrong.
-- TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section above is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
-- CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears above, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
+- TRACK RECORD CALIBRATION: The PLATFORM TRACK RECORD section in the input is YOUR historical performance. If it shows you have been wrong on a specific direction for a specific ticker, you MUST require stronger evidence before repeating that direction, and you MUST lower your confidence. If the track record shows you are weak on short-term calls, use a medium-term timeframe instead of short-term. If the track record shows a directional bias in this sector, explicitly correct for that bias. Do not ignore this data.
+- CROSS-TOPIC CONSISTENCY: If a LIVE CONFLICTING SIGNALS section appears in the input, do not silently call one of those tickers in the opposite direction. Either explicitly justify the override in that ticker's winners/losers explanation (naming the prior call and why this catalyst is stronger), or leave that ticker out of this analysis entirely.
 
 Respond ONLY with valid JSON, no markdown:
 {
@@ -435,10 +427,33 @@ Respond ONLY with valid JSON, no markdown:
   "confidence": "4 — specific reason"
 }`;
 
+    const requestRules = `Only use ${thresholdText} for this analysis.
+
+TIMEFRAME LENS: ${timeframeGuidance}`;
+
+    const prompt = `Topic: "${topic}"
+
+Headlines from ${sources.length} sources:
+${headlines.map(h => `- ${h}`).join('\n')}
+
+Sources and factuality grades:
+${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
+
+Consensus summary: ${consensus}
+${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}`;
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: [
+          { type: 'text', text: systemRules, cache_control: CACHE_1H },
+          { type: 'text', text: requestRules },
+        ],
+        messages: [{ role: 'user', content: prompt }],
+      })
     });
 
     const data = await response.json();
@@ -446,6 +461,7 @@ Respond ONLY with valid JSON, no markdown:
       console.error('[runAnalysis] Anthropic error:', data.error.message);
       return { error: 'Analysis service unavailable', status: 500 };
     }
+    logCacheUsage('runAnalysis', data.usage);
 
     let analysis;
     try {
@@ -501,7 +517,7 @@ Respond ONLY with valid JSON, no markdown:
         id:              predictionId,
         topic,
         category:        category || null,
-        analysis:        baselineGenerated ? { ...analysis, baseline_generated: true } : analysis,
+        analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(baselineGenerated ? { baseline_generated: true } : {}) },
         winner_tickers:  winnerTickers,
         loser_tickers:   loserTickers,
         baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
