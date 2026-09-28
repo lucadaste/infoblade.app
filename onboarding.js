@@ -1,6 +1,12 @@
 (function () {
   const STORAGE_KEY = 'ii_onboarded_v1';
   if (localStorage.getItem(STORAGE_KEY)) return;
+  // A never-onboarded visitor landing straight on the sign-in modal (e.g. the
+  // auth-gate redirect from another page, or a shared link) would otherwise
+  // get this tutorial stacked on top of it at a higher z-index — visually
+  // covering the modal and silently eating every click on "Sign In," making
+  // login look broken. Defer the tour rather than block the thing they came to do.
+  if (new URLSearchParams(location.search).get('modal') === 'signin') return;
 
   const SLIDES = [
     {
