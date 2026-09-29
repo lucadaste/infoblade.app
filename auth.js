@@ -40,14 +40,14 @@
     }
     .auth-dropdown-item:hover { background: var(--surface-2); }
     .theme-toggle-btn {
-      width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;
-      background: var(--muted); color: #111; border: none; padding: 0;
+      width: 22px; height: 22px; margin-right: 14px;
+      background: none; color: var(--muted); border: none; padding: 0;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; user-select: none; flex-shrink: 0;
-      transition: background 0.15s;
+      transition: color 0.15s;
     }
-    .theme-toggle-btn:hover { background: var(--text-soft); }
-    .theme-toggle-btn svg { width: 16px; height: 16px; pointer-events: none; }
+    .theme-toggle-btn:hover { color: var(--ink); }
+    .theme-toggle-btn svg { width: 15px; height: 15px; pointer-events: none; }
   `;
   document.head.appendChild(_styleEl);
 
