@@ -225,7 +225,7 @@
   async function signUp({ username, password, email, phone }) {
     const payload = { username, password };
     if (email) payload.emailAddress = email;
-    if (phone) payload.phoneNumber = phone;
+    else if (phone) payload.phoneNumber = phone;
     const su = await clerk.client.signUp.create(payload);
     if (email) {
       await su.prepareEmailAddressVerification({ strategy: 'email_code' });
