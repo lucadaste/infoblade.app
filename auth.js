@@ -39,8 +39,15 @@
       text-align: left; cursor: pointer; transition: background 0.15s;
     }
     .auth-dropdown-item:hover { background: var(--surface-2); }
-    .auth-theme-item { display: flex; align-items: center; gap: 9px; border-top: 1px solid var(--border); }
-    .auth-theme-item svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--muted); }
+    .theme-toggle-btn {
+      width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;
+      background: var(--muted); color: #111; border: none; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none; flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .theme-toggle-btn:hover { background: var(--text-soft); }
+    .theme-toggle-btn svg { width: 16px; height: 16px; pointer-events: none; }
   `;
   document.head.appendChild(_styleEl);
 
@@ -75,10 +82,8 @@
   }
 
   function _dropdownHTML() {
-    const t = _themeItemState();
     return `
       <a class="auth-dropdown-item" href="/account.html" id="auth-account-btn">Your Account</a>
-      <button class="auth-dropdown-item auth-theme-item" id="auth-theme-btn" type="button">${t.icon}<span id="auth-theme-label">${t.text}</span></button>
       <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
     `;
   }
@@ -86,12 +91,15 @@
   function _wireDropdownSignOut(dropdown) {
     const btn = dropdown.querySelector('#auth-signout-btn');
     if (btn) btn.addEventListener('click', () => signOut());
-    const themeBtn = dropdown.querySelector('#auth-theme-btn');
-    if (themeBtn) themeBtn.addEventListener('click', (e) => {
+  }
+
+  function _wireThemeToggle(badge) {
+    const btn = badge.querySelector('#theme-toggle-btn');
+    if (!btn) return;
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (window.__iiTheme) window.__iiTheme.toggle();
-      const t = _themeItemState();
-      themeBtn.innerHTML = `${t.icon}<span id="auth-theme-label">${t.text}</span>`;
+      btn.innerHTML = _themeItemState().icon;
     });
   }
 
@@ -99,12 +107,14 @@
     const badge = document.getElementById('auth-badge');
     if (!badge) return;
     badge.innerHTML = `
+      <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" aria-label="Toggle theme" title="Toggle light/dark mode">${_themeItemState().icon}</button>
       <div class="auth-avatar-wrap">
         <button class="auth-avatar${_wasSignedIn ? ' signed-in' : ''}" id="auth-avatar" type="button" aria-label="Account" title="${_wasSignedIn ? 'Your account' : 'Sign in'}">${_PERSON_ICON}</button>
         <div class="auth-dropdown" id="auth-dropdown">${_wasSignedIn ? _dropdownHTML() : ''}</div>
       </div>`;
     const dropdown = document.getElementById('auth-dropdown');
     if (_wasSignedIn) _wireDropdownSignOut(dropdown);
+    _wireThemeToggle(badge);
     document.getElementById('auth-avatar').addEventListener('click', function (e) {
       e.stopPropagation();
       if (_visualSignedIn) {

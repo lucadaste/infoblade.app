@@ -1,7 +1,7 @@
 (function () {
   var saved = null;
   try { saved = localStorage.getItem('ib-theme'); } catch (e) {}
-  var theme = saved === 'light' || saved === 'dark' ? saved : (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  var theme = saved === 'light' || saved === 'dark' ? saved : 'dark';
   document.documentElement.setAttribute('data-theme', theme);
 
   function syncMetaThemeColor(t) {
