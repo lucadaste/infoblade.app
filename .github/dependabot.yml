@@ -1,0 +1,24 @@
+# Weekly dependency update PRs. Security fixes are opened as soon as an
+# advisory is published (once Dependabot security updates are enabled in the
+# repo's Settings → Code security).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: /sentiment
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: docker
+    directory: /sentiment
+    schedule:
+      interval: monthly
