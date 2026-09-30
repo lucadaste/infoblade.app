@@ -13,41 +13,27 @@
   // Inject styles for auth badge dropdown
   const _styleEl = document.createElement('style');
   _styleEl.textContent = `
-    #auth-badge { display: flex; align-items: center; }
-    .auth-avatar-wrap { position: relative; }
-    .auth-avatar {
-      width: 30px; height: 30px; border-radius: 50%;
-      background: var(--muted); color: #111; border: none; padding: 0;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; user-select: none; flex-shrink: 0;
-      transition: background 0.15s;
+    .ib-menu-extra { list-style: none; padding: 4px 0 2px; border-top: 1px solid var(--border); }
+    .nav-links .ib-menu-extra { border-bottom: none; }
+    .ib-menu-label {
+      padding: 10px 18px 4px; font-size: 10.5px; font-weight: 600;
+      letter-spacing: 1.1px; text-transform: uppercase; color: var(--muted); opacity: 0.7;
     }
-    .auth-avatar:hover { background: var(--text-soft); }
-    .auth-avatar.signed-in { background: var(--accent, #00e676); }
-    .auth-avatar.signed-in:hover { background: var(--accent, #00e676); opacity: 0.85; }
-    .auth-avatar svg { width: 16px; height: 16px; pointer-events: none; }
-    .auth-dropdown {
-      display: none; position: absolute; top: calc(100% + 8px); right: 0;
-      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-      min-width: 150px; box-shadow: 0 8px 24px rgba(0,0,0,0.55); z-index: 600; overflow: hidden;
+    .ib-menu-extra .ib-menu-item, #nav-menu .ib-menu-extra .ib-menu-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 10px 18px; background: none; border: none; border-bottom: none;
+      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      color: var(--muted); text-align: left; text-decoration: none; cursor: pointer;
+      transition: color 0.15s, background 0.15s;
     }
-    .auth-dropdown.open { display: block; }
-    .auth-dropdown-item {
-      display: block; width: 100%; padding: 11px 16px;
-      background: none; border: none; color: var(--ink);
-      font-family: 'DM Sans', sans-serif; font-size: 13px;
-      text-align: left; cursor: pointer; transition: background 0.15s;
-    }
-    .auth-dropdown-item:hover { background: var(--surface-2); }
-    .theme-toggle-btn {
-      width: 22px; height: 22px; margin-right: 14px;
-      background: none; color: var(--muted); border: none; padding: 0;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; user-select: none; flex-shrink: 0;
-      transition: color 0.15s;
-    }
-    .theme-toggle-btn:hover { color: var(--ink); }
-    .theme-toggle-btn svg { width: 15px; height: 15px; pointer-events: none; }
+    .ib-menu-extra .ib-menu-item:hover, #nav-menu .ib-menu-extra .ib-menu-item:hover { color: var(--ink); background: var(--hover-tint, var(--surface-2)); }
+    .ib-menu-extra .ib-menu-item.active { color: var(--accent); }
+    .ib-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; pointer-events: none; }
+    .ib-menu-item span { white-space: nowrap; }
+    .nav-links:has(.ib-menu-extra), #nav-menu:has(.ib-menu-extra) { min-width: 210px; }
+    /* The menu is now tall enough to reach the mid-screen AI button; tuck that
+       button away while the menu is open so it doesn't sit on top of it. */
+    body:has(.nav-links.open, #nav-menu.open) #ii-chat-btn { opacity: 0; pointer-events: none; }
   `;
   document.head.appendChild(_styleEl);
 
@@ -59,74 +45,83 @@
   const _SUN_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>';
   const _MOON_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5Z"/></svg>';
 
-  // Remembering the last known sign-in state lets the badge render in its
-  // likely-correct color immediately on the next page load, instead of
-  // always starting grey and visibly flipping to green once Clerk finishes
-  // loading a few hundred ms later — that flip-delay is what read as "the
-  // icon is slow." _updateUI() below keeps this in sync with reality.
+  // Remembering the last known sign-in state lets the menu's Account section
+  // render correctly on the next page load instead of flashing "Sign in" until
+  // Clerk finishes loading. _updateUI() below keeps this in sync with reality.
   const _SIGNED_IN_CACHE_KEY = 'ii_was_signed_in';
   let _wasSignedIn = false;
   try { _wasSignedIn = localStorage.getItem(_SIGNED_IN_CACHE_KEY) === '1'; } catch (_) {}
 
-  // Drives the click handler below — separate from _currentUser (the real,
-  // confirmed auth state) because the badge can *look* signed-in optimistically
-  // (from cache, above) before Clerk actually finishes confirming it. Gating
-  // the click on _currentUser instead of this meant clicking the badge during
-  // that window fell through to "open sign-in" even though it was showing
-  // green — i.e. clicking your own account icon bounced you to sign in.
-  let _visualSignedIn = _wasSignedIn;
+  const _GEAR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const _SIGNOUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>';
 
   function _themeItemState() {
     const isLight = window.__iiTheme ? window.__iiTheme.get() === 'light' : false;
     return isLight ? { icon: _MOON_ICON, text: 'Dark mode' } : { icon: _SUN_ICON, text: 'Light mode' };
   }
 
-  function _dropdownHTML() {
+  // Theme + account controls live inside the hamburger menu (Settings /
+  // Account sections) rather than as separate icons in the nav bar. Pages use
+  // either a <ul class="nav-links"> (app pages) or <div id="nav-menu"> (landing).
+  function _menuEl() {
+    return document.querySelector('.nav-links') || document.getElementById('nav-menu');
+  }
+
+  function _closeMenu() {
+    const menu = _menuEl();
+    const burger = document.getElementById('nav-burger');
+    if (menu) menu.classList.remove('open');
+    if (burger) burger.classList.remove('open');
+  }
+
+  function _accountSectionHTML(signedIn) {
+    if (!signedIn) {
+      return `<button class="ib-menu-item" id="ib-menu-signin" type="button">${_PERSON_ICON}<span>Sign in</span></button>`;
+    }
+    const onAccount = location.pathname === '/account.html' || location.pathname === '/account';
     return `
-      <a class="auth-dropdown-item" href="/account.html" id="auth-account-btn">Your Account</a>
-      <button class="auth-dropdown-item" id="auth-signout-btn">Sign out</button>
-    `;
+      <a class="ib-menu-item${onAccount ? ' active' : ''}" href="/account.html">${_GEAR_ICON}<span>Account settings</span></a>
+      <button class="ib-menu-item" id="ib-menu-signout" type="button">${_SIGNOUT_ICON}<span>Sign out</span></button>`;
   }
 
-  function _wireDropdownSignOut(dropdown) {
-    const btn = dropdown.querySelector('#auth-signout-btn');
-    if (btn) btn.addEventListener('click', () => signOut());
+  function _renderAccountSection(signedIn) {
+    const section = document.getElementById('ib-menu-account');
+    if (!section) return;
+    section.innerHTML = _accountSectionHTML(signedIn);
+    const signInBtn = section.querySelector('#ib-menu-signin');
+    if (signInBtn) signInBtn.addEventListener('click', () => {
+      _closeMenu();
+      if (typeof window.__iiOpenSignIn === 'function') window.__iiOpenSignIn();
+      else window.location.href = '/?modal=signin';
+    });
+    const signOutBtn = section.querySelector('#ib-menu-signout');
+    if (signOutBtn) signOutBtn.addEventListener('click', () => { _closeMenu(); signOut(); });
   }
 
-  function _wireThemeToggle(badge) {
-    const btn = badge.querySelector('#theme-toggle-btn');
-    if (!btn) return;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
+  function _renderMenuShell() {
+    const menu = _menuEl();
+    if (!menu) return;
+    const extra = document.createElement(menu.tagName === 'UL' ? 'li' : 'div');
+    extra.className = 'ib-menu-extra';
+    const t = _themeItemState();
+    extra.innerHTML = `
+      <div class="ib-menu-label">Settings</div>
+      <button class="ib-menu-item" id="ib-menu-theme" type="button"><span class="ib-menu-theme-icon">${t.icon}</span><span class="ib-menu-theme-text">${t.text}</span></button>
+      <div class="ib-menu-label">Account</div>
+      <div id="ib-menu-account"></div>`;
+    menu.appendChild(extra);
+    _renderAccountSection(_wasSignedIn);
+
+    const themeBtn = extra.querySelector('#ib-menu-theme');
+    themeBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // keep the menu open so the change is visible
       if (window.__iiTheme) window.__iiTheme.toggle();
-      btn.innerHTML = _themeItemState().icon;
+      const s = _themeItemState();
+      themeBtn.querySelector('.ib-menu-theme-icon').innerHTML = s.icon;
+      themeBtn.querySelector('.ib-menu-theme-text').textContent = s.text;
     });
   }
-
-  function _renderBadgeShell() {
-    const badge = document.getElementById('auth-badge');
-    if (!badge) return;
-    badge.innerHTML = `
-      <button class="theme-toggle-btn" id="theme-toggle-btn" type="button" aria-label="Toggle theme" title="Toggle light/dark mode">${_themeItemState().icon}</button>
-      <div class="auth-avatar-wrap">
-        <button class="auth-avatar${_wasSignedIn ? ' signed-in' : ''}" id="auth-avatar" type="button" aria-label="Account" title="${_wasSignedIn ? 'Your account' : 'Sign in'}">${_PERSON_ICON}</button>
-        <div class="auth-dropdown" id="auth-dropdown">${_wasSignedIn ? _dropdownHTML() : ''}</div>
-      </div>`;
-    const dropdown = document.getElementById('auth-dropdown');
-    if (_wasSignedIn) _wireDropdownSignOut(dropdown);
-    _wireThemeToggle(badge);
-    document.getElementById('auth-avatar').addEventListener('click', function (e) {
-      e.stopPropagation();
-      if (_visualSignedIn) {
-        dropdown.classList.toggle('open');
-      } else if (typeof window.__iiOpenSignIn === 'function') {
-        window.__iiOpenSignIn();
-      } else {
-        window.location.href = '/?modal=signin';
-      }
-    });
-  }
-  _renderBadgeShell();
+  _renderMenuShell();
 
   function _fireReady() {
     _ready = true;
@@ -306,33 +301,11 @@
     _readyCallbacks.push(fn);
   }
 
-  let _dropdownCloseHandler = null;
-
   function _updateUI(user) {
     _currentUser = user;
-    _visualSignedIn = !!user;
     if (window._auth) window._auth.user = user;
     try { localStorage.setItem(_SIGNED_IN_CACHE_KEY, user ? '1' : '0'); } catch (_) {}
-
-    const avatar   = document.getElementById('auth-avatar');
-    const dropdown = document.getElementById('auth-dropdown');
-    if (!avatar || !dropdown) return; // badge shell missing on this page
-
-    if (_dropdownCloseHandler) { document.removeEventListener('click', _dropdownCloseHandler); _dropdownCloseHandler = null; }
-    dropdown.classList.remove('open');
-
-    if (user) {
-      avatar.classList.add('signed-in');
-      avatar.title = user.email || 'Your account';
-      dropdown.innerHTML = _dropdownHTML();
-      _wireDropdownSignOut(dropdown);
-      _dropdownCloseHandler = () => dropdown.classList.remove('open');
-      document.addEventListener('click', _dropdownCloseHandler);
-    } else {
-      avatar.classList.remove('signed-in');
-      avatar.title = 'Sign in';
-      dropdown.innerHTML = '';
-    }
+    _renderAccountSection(!!user);
   }
 
   // Initialize — wrapped so that a failure here (e.g. an unexpected Clerk
