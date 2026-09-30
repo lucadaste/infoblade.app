@@ -77,7 +77,6 @@
       width: 54px;
       height: 54px;
       background: var(--card);
-      color: var(--ink);
       border-radius: 50%;
       border: none;
       cursor: pointer;
@@ -86,59 +85,52 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: color 0.2s, transform 0.2s;
+      transition: transform 0.2s;
       box-shadow: 0 4px 24px rgba(0,0,0,0.6);
     }
     #ii-chat-btn:hover { transform: translateY(-50%) scale(1.06); }
-    #ii-chat-btn .ii-spark {
-      width: 20px; height: 20px;
-      flex-shrink: 0;
-      filter: drop-shadow(0 0 5px rgba(0,230,118,0.85));
-      animation: ii-spark-pulse 2.4s ease-in-out infinite;
-    }
-    @keyframes ii-spark-pulse {
-      0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-      50% { transform: scale(1.18) rotate(10deg); opacity: 0.8; }
-    }
-    #ii-chat-btn::before {
-      content: '';
-      position: absolute;
-      width: 300px; height: 300px;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%) rotate(0deg);
-      background: conic-gradient(from 0deg, transparent 0deg, #00e676 55deg, #b8ffe0 85deg, #ffffff 105deg, #b8ffe0 125deg, #00e676 175deg, transparent 235deg);
-      animation: ii-spin 2.8s linear infinite;
-      border-radius: 50%;
-      z-index: -1;
-    }
-    #ii-chat-btn::after {
-      content: '';
-      position: absolute;
-      inset: 2px;
-      background: var(--card);
-      border-radius: 50%;
-      z-index: -1;
-      transition: background 0.2s;
-    }
-    #ii-chat-btn:hover::after { background: var(--surface-2); }
-    #ii-chat-btn.active { color: var(--accent); }
-    #ii-chat-btn.active::after { background: var(--surface-2); }
-    @keyframes ii-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    #ii-chat-btn .ii-pulse-ring {
+    #ii-chat-btn .ii-blade-icon {
       position: absolute;
-      inset: -6px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 31px;
+      height: auto;
+    }
+    #ii-chat-btn .ii-blade-fill {
+      fill: var(--accent);
+      opacity: 1;
+      transition: opacity 0.15s ease;
+    }
+    #ii-chat-btn .ii-blade-stroke {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 16;
+      stroke-dasharray: 6200;
+      stroke-dashoffset: 6200;
+      opacity: 0;
+      transition: stroke-dashoffset 0.55s ease, opacity 0.1s;
+    }
+    #ii-chat-btn:hover .ii-blade-fill,
+    #ii-chat-btn.active .ii-blade-fill { opacity: 0; }
+    #ii-chat-btn:hover .ii-blade-stroke,
+    #ii-chat-btn.active .ii-blade-stroke { stroke-dashoffset: 0; opacity: 1; }
+
+    #ii-chat-btn .ii-glow-ring {
+      position: absolute;
+      inset: -7px;
       border-radius: 50%;
       border: 1.5px solid var(--accent);
-      opacity: 0;
-      animation: ii-ring-pulse 2.8s ease-out infinite;
+      opacity: 0.12;
+      animation: ii-breathe 5.5s ease-in-out infinite;
       pointer-events: none;
+      transition: opacity 0.2s;
     }
-    #ii-chat-btn.active .ii-pulse-ring { animation: none; opacity: 0; }
-    @keyframes ii-ring-pulse {
-      0% { transform: scale(0.85); opacity: 0.55; }
-      70% { transform: scale(1.35); opacity: 0; }
-      100% { transform: scale(1.35); opacity: 0; }
+    #ii-chat-btn:hover .ii-glow-ring,
+    #ii-chat-btn.active .ii-glow-ring { animation-play-state: paused; opacity: 0.12; }
+    @keyframes ii-breathe {
+      0%, 100% { opacity: 0.12; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.05); }
     }
 
     .ii-tooltip {
@@ -371,7 +363,7 @@
   const floatBtn = document.createElement('button');
   floatBtn.id = 'ii-chat-btn';
   floatBtn.setAttribute('aria-label', 'AI Informant');
-  floatBtn.innerHTML = `<svg class="ii-spark" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 0C12 6.627 6.627 12 0 12C6.627 12 12 17.373 12 24C12 17.373 17.373 12 24 12C17.373 12 12 6.627 12 0Z" fill="var(--accent)"/></svg><span class="ii-pulse-ring" aria-hidden="true"></span><span class="ii-tooltip" role="tooltip">AI Informant</span>`;
+  floatBtn.innerHTML = `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="ii-blade" viewBox="0 0 432 466"><path fill-rule="evenodd" d="M 77 24.258 C 77 24.950, 80.019 27.537, 83.709 30.008 C 91.878 35.477, 111.820 54.509, 116.048 60.870 C 117.741 63.417, 119.639 67.408, 120.267 69.740 C 121.584 74.627, 120.561 74.165, 141.500 79.312 C 157.225 83.177, 164.663 84.355, 165.437 83.102 C 166.819 80.866, 141.659 60.509, 117 43.912 C 112.120 40.628, 78.840 23, 77.519 23 C 77.233 23, 77 23.566, 77 24.258 M 22.072 82.022 C 19.636 82.536, 17.254 83.346, 16.777 83.823 C 15.974 84.626, 18.360 85.170, 35.500 88.088 C 42.381 89.260, 52.366 91.925, 66 96.229 C 73.747 98.675, 168.701 135.953, 189 144.518 C 192.025 145.794, 199.900 148.947, 206.500 151.525 C 223.306 158.088, 242.564 168.103, 248.626 173.432 C 260.872 184.198, 263.097 193.015, 257.096 207 C 255.326 211.125, 252.754 217.200, 251.381 220.500 C 250.008 223.800, 248.027 228.525, 246.980 231 C 245.933 233.475, 242.331 242.025, 238.977 250 C 235.623 257.975, 231.478 267.755, 229.766 271.733 C 226.251 279.902, 225.973 277.689, 232.936 297 C 235.217 303.325, 240.179 317.500, 243.964 328.500 C 252.501 353.313, 258.739 370.768, 259.522 372.036 C 259.901 372.649, 244.161 373, 216.264 373 L 172.411 373 150.955 390.968 C 139.155 400.850, 129.500 409.512, 129.500 410.218 C 129.500 411.249, 143.477 411.500, 200.858 411.500 L 272.216 411.500 282.197 403 C 287.686 398.325, 294.025 393.017, 296.284 391.205 C 298.542 389.392, 302.591 385.850, 305.282 383.333 L 310.174 378.757 307.661 371.128 C 306.279 366.933, 302.370 355.625, 298.974 346 C 295.579 336.375, 289.514 319.050, 285.498 307.500 C 281.481 295.950, 277.718 285.279, 277.136 283.786 C 276.272 281.573, 276.510 280.099, 278.425 275.786 C 279.716 272.879, 283.106 264.875, 285.958 258 C 288.810 251.125, 293.333 240.325, 296.009 234 C 298.684 227.675, 303.619 215.975, 306.975 208 C 310.330 200.025, 313.943 191.475, 315.002 189 C 324.190 167.542, 326.983 160.397, 326.586 159.362 C 325.203 155.760, 292.893 138.471, 274.500 131.491 C 262.871 127.078, 226.856 116.175, 204.689 110.356 C 196.469 108.199, 170.171 103.049, 156.500 100.920 C 153.200 100.406, 145.775 98.879, 140 97.527 C 128.326 94.793, 116.390 92.763, 95.500 89.957 C 78.174 87.630, 57.967 84.449, 51.967 83.105 C 45.278 81.606, 27.153 80.949, 22.072 82.022 M 122 261.500 C 122 328.325, 122.244 383, 122.542 383 C 122.840 383, 131.278 376.134, 141.292 367.743 C 151.306 359.351, 160.730 351.529, 162.234 350.361 L 164.968 348.237 165 261.369 C 165.018 213.591, 165.025 170.155, 165.016 164.844 L 165 155.188 160.750 153.664 C 158.412 152.826, 152.900 150.737, 148.500 149.023 C 133.559 143.201, 124.621 140, 123.309 140 C 122.238 140, 122 162.065, 122 261.500"/></symbol></defs></svg><svg class="ii-blade-icon ii-blade-fill" viewBox="0 0 432 466" aria-hidden="true"><use href="#ii-blade"></use></svg><svg class="ii-blade-icon ii-blade-stroke" viewBox="0 0 432 466" aria-hidden="true"><use href="#ii-blade"></use></svg><span class="ii-glow-ring" aria-hidden="true"></span><span class="ii-tooltip" role="tooltip">AI Informant</span>`;
   floatBtn.addEventListener('click', () => window.iiToggleChat?.());
   document.body.appendChild(floatBtn);
 
