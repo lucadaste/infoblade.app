@@ -10,32 +10,51 @@
   // every page load and login-triggered redirect for no reason.
   window._onAuthReady = onReady;
 
-  // Inject styles for auth badge dropdown
+  // Inject styles for the account badge + its dropdown
   const _styleEl = document.createElement('style');
   _styleEl.textContent = `
-    .ib-menu-extra { list-style: none; padding: 4px 0 2px; border-top: 1px solid var(--border); }
-    .nav-links .ib-menu-extra { border-bottom: none; }
-    .ib-menu-label {
-      padding: 10px 18px 4px; font-size: 10.5px; font-weight: 600;
-      letter-spacing: 1.1px; text-transform: uppercase; color: var(--muted); opacity: 0.7;
+    #auth-badge { display: none; align-items: center; }
+    .ib-account-wrap { position: relative; }
+    .ib-account-btn {
+      width: 34px; height: 34px; border-radius: 50%; padding: 0;
+      background: var(--surface-2); color: var(--muted); border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: color 0.15s, background 0.15s;
     }
-    .ib-menu-extra .ib-menu-item, #nav-menu .ib-menu-extra .ib-menu-item {
+    .ib-account-btn:hover { color: var(--ink); }
+    .ib-account-btn.signed-in { color: var(--accent); }
+    .ib-account-btn svg { width: 18px; height: 18px; pointer-events: none; }
+    .ib-account-dropdown {
+      display: none; position: absolute; top: calc(100% + 12px); right: 0; min-width: 210px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 6px 0; z-index: 250; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    .ib-account-dropdown.open { display: block; }
+    .ib-account-info { padding: 10px 18px 8px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+    .ib-account-name { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ib-account-email { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ib-menu-item {
       display: flex; align-items: center; gap: 10px; width: 100%;
-      padding: 10px 18px; background: none; border: none; border-bottom: none;
+      padding: 10px 18px; background: none; border: none;
       font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
       color: var(--muted); text-align: left; text-decoration: none; cursor: pointer;
       transition: color 0.15s, background 0.15s;
     }
-    .ib-menu-extra .ib-menu-item:hover, #nav-menu .ib-menu-extra .ib-menu-item:hover { color: var(--ink); background: var(--hover-tint, var(--surface-2)); }
-    .ib-menu-extra .ib-menu-item.active { color: var(--accent); }
+    .ib-menu-item:hover { color: var(--ink); background: var(--hover-tint, var(--surface-2)); }
+    .ib-menu-item.active { color: var(--accent); }
     .ib-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; pointer-events: none; }
     .ib-menu-item span { white-space: nowrap; }
-    .nav-links:has(.ib-menu-extra), #nav-menu:has(.ib-menu-extra) { min-width: 210px; }
-    /* The menu is now tall enough to reach the mid-screen AI button; tuck that
-       button away while the menu is open so it doesn't sit on top of it. */
-    body:has(.nav-links.open, #nav-menu.open) #ii-chat-btn { opacity: 0; pointer-events: none; }
+    /* The hamburger menu now lists every section (a fallback for screens where
+       the bottom nav bar is cut off) and can reach the mid-screen AI button;
+       tuck that button away while either menu is open so it doesn't sit on
+       top of it. */
+    body:has(.nav-links.open, #nav-menu.open, .ib-account-dropdown.open) #ii-chat-btn { opacity: 0; pointer-events: none; }
   `;
   document.head.appendChild(_styleEl);
+
+  function _escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 
   // A generic person-in-a-circle icon. Rendered immediately (before Clerk even
   // starts loading) so the account icon is on screen at all times — grey while
@@ -60,68 +79,89 @@
     return isLight ? { icon: _MOON_ICON, text: 'Dark mode' } : { icon: _SUN_ICON, text: 'Light mode' };
   }
 
-  // Theme + account controls live inside the hamburger menu (Settings /
-  // Account sections) rather than as separate icons in the nav bar. Pages use
-  // either a <ul class="nav-links"> (app pages) or <div id="nav-menu"> (landing).
-  function _menuEl() {
-    return document.querySelector('.nav-links') || document.getElementById('nav-menu');
-  }
-
-  function _closeMenu() {
-    const menu = _menuEl();
+  // The hamburger menu (<ul class="nav-links"> on app pages, <div id="nav-menu">
+  // on landing) lists every section, mirroring the bottom nav bar — a fallback
+  // for screens where that bar is cut off. Theme + account controls instead
+  // live under a dedicated account icon in the nav bar itself.
+  function _closeBurgerMenu() {
+    const menu = document.querySelector('.nav-links') || document.getElementById('nav-menu');
     const burger = document.getElementById('nav-burger');
     if (menu) menu.classList.remove('open');
     if (burger) burger.classList.remove('open');
   }
 
-  function _accountSectionHTML(signedIn) {
-    if (!signedIn) {
-      return `<button class="ib-menu-item" id="ib-menu-signin" type="button">${_PERSON_ICON}<span>Sign in</span></button>`;
-    }
-    const onAccount = location.pathname === '/account.html' || location.pathname === '/account';
-    return `
-      <a class="ib-menu-item${onAccount ? ' active' : ''}" href="/account.html">${_GEAR_ICON}<span>Account settings</span></a>
-      <button class="ib-menu-item" id="ib-menu-signout" type="button">${_SIGNOUT_ICON}<span>Sign out</span></button>`;
+  function _closeAccountDropdown() {
+    const dd = document.getElementById('ib-account-dropdown');
+    const btn = document.getElementById('ib-account-btn');
+    if (dd) dd.classList.remove('open');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 
-  function _renderAccountSection(signedIn) {
-    const section = document.getElementById('ib-menu-account');
-    if (!section) return;
-    section.innerHTML = _accountSectionHTML(signedIn);
-    const signInBtn = section.querySelector('#ib-menu-signin');
-    if (signInBtn) signInBtn.addEventListener('click', () => {
-      _closeMenu();
-      if (typeof window.__iiOpenSignIn === 'function') window.__iiOpenSignIn();
-      else window.location.href = '/?modal=signin';
-    });
-    const signOutBtn = section.querySelector('#ib-menu-signout');
-    if (signOutBtn) signOutBtn.addEventListener('click', () => { _closeMenu(); signOut(); });
-  }
-
-  function _renderMenuShell() {
-    const menu = _menuEl();
-    if (!menu) return;
-    const extra = document.createElement(menu.tagName === 'UL' ? 'li' : 'div');
-    extra.className = 'ib-menu-extra';
+  function _accountDropdownHTML(signedIn, user) {
     const t = _themeItemState();
-    extra.innerHTML = `
-      <div class="ib-menu-label">Settings</div>
+    const infoHTML = (signedIn && user) ? `
+      <div class="ib-account-info">
+        <div class="ib-account-name">${_escapeHTML(user.name || user.username || 'Account')}</div>
+        ${user.email ? `<div class="ib-account-email">${_escapeHTML(user.email)}</div>` : ''}
+      </div>` : '';
+    const onAccount = location.pathname === '/account.html' || location.pathname === '/account';
+    const accountHTML = signedIn
+      ? `<a class="ib-menu-item${onAccount ? ' active' : ''}" href="/account.html">${_GEAR_ICON}<span>Account settings</span></a>
+         <button class="ib-menu-item" id="ib-menu-signout" type="button">${_SIGNOUT_ICON}<span>Sign out</span></button>`
+      : `<button class="ib-menu-item" id="ib-menu-signin" type="button">${_PERSON_ICON}<span>Sign in</span></button>`;
+    return `
+      ${infoHTML}
       <button class="ib-menu-item" id="ib-menu-theme" type="button"><span class="ib-menu-theme-icon">${t.icon}</span><span class="ib-menu-theme-text">${t.text}</span></button>
-      <div class="ib-menu-label">Account</div>
-      <div id="ib-menu-account"></div>`;
-    menu.appendChild(extra);
-    _renderAccountSection(_wasSignedIn);
+      ${accountHTML}`;
+  }
 
-    const themeBtn = extra.querySelector('#ib-menu-theme');
+  function _renderAccountDropdown(signedIn) {
+    const dd = document.getElementById('ib-account-dropdown');
+    if (!dd) return;
+    dd.innerHTML = _accountDropdownHTML(signedIn, _currentUser);
+
+    const themeBtn = dd.querySelector('#ib-menu-theme');
     themeBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // keep the menu open so the change is visible
+      e.stopPropagation(); // keep the dropdown open so the change is visible
       if (window.__iiTheme) window.__iiTheme.toggle();
       const s = _themeItemState();
       themeBtn.querySelector('.ib-menu-theme-icon').innerHTML = s.icon;
       themeBtn.querySelector('.ib-menu-theme-text').textContent = s.text;
     });
+    const signInBtn = dd.querySelector('#ib-menu-signin');
+    if (signInBtn) signInBtn.addEventListener('click', () => {
+      _closeAccountDropdown();
+      if (typeof window.__iiOpenSignIn === 'function') window.__iiOpenSignIn();
+      else window.location.href = '/?modal=signin';
+    });
+    const signOutBtn = dd.querySelector('#ib-menu-signout');
+    if (signOutBtn) signOutBtn.addEventListener('click', () => { _closeAccountDropdown(); signOut(); });
   }
-  _renderMenuShell();
+
+  function _renderAccountBadge() {
+    const badge = document.getElementById('auth-badge');
+    if (!badge) return;
+    badge.style.display = 'flex';
+    badge.innerHTML = `
+      <div class="ib-account-wrap">
+        <button class="ib-account-btn${_wasSignedIn ? ' signed-in' : ''}" id="ib-account-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Account" title="Account">${_PERSON_ICON}</button>
+        <div class="ib-account-dropdown" id="ib-account-dropdown"></div>
+      </div>`;
+    _renderAccountDropdown(_wasSignedIn);
+
+    document.getElementById('ib-account-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      _closeBurgerMenu();
+      const dd = document.getElementById('ib-account-dropdown');
+      const open = dd.classList.toggle('open');
+      e.currentTarget.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', (e) => {
+      const wrap = badge.querySelector('.ib-account-wrap');
+      if (wrap && !wrap.contains(e.target)) _closeAccountDropdown();
+    });
+  }
+  _renderAccountBadge();
 
   function _fireReady() {
     _ready = true;
@@ -305,7 +345,9 @@
     _currentUser = user;
     if (window._auth) window._auth.user = user;
     try { localStorage.setItem(_SIGNED_IN_CACHE_KEY, user ? '1' : '0'); } catch (_) {}
-    _renderAccountSection(!!user);
+    const btn = document.getElementById('ib-account-btn');
+    if (btn) btn.classList.toggle('signed-in', !!user);
+    _renderAccountDropdown(!!user);
   }
 
   // Initialize — wrapped so that a failure here (e.g. an unexpected Clerk
