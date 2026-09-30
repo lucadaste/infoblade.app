@@ -24,13 +24,17 @@
     .ib-account-btn:hover { color: var(--ink); }
     .ib-account-btn.signed-in { color: var(--accent); }
     .ib-account-btn svg { width: 18px; height: 18px; pointer-events: none; }
+    .ib-account-btn.has-photo { background: none; }
+    .ib-account-btn-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; pointer-events: none; }
     .ib-account-dropdown {
       display: none; position: absolute; top: calc(100% + 12px); right: 0; min-width: 210px;
       background: var(--card); border: 1px solid var(--border); border-radius: 10px;
       padding: 6px 0; z-index: 250; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
     .ib-account-dropdown.open { display: block; }
-    .ib-account-info { padding: 10px 18px 8px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+    .ib-account-info { display: flex; align-items: center; gap: 10px; padding: 10px 18px 12px; border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+    .ib-account-info-photo { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .ib-account-info-text { min-width: 0; }
     .ib-account-name { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ib-account-email { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .ib-menu-item {
@@ -44,6 +48,11 @@
     .ib-menu-item.active { color: var(--accent); }
     .ib-menu-item svg { width: 16px; height: 16px; flex-shrink: 0; pointer-events: none; }
     .ib-menu-item span { white-space: nowrap; }
+    /* The theme toggle is a secondary utility, not an account action — kept
+       in the same dropdown (per product decision) but visually set apart at
+       the bottom instead of sitting right under the account info as if it
+       were the primary item. */
+    .ib-menu-item-theme { border-top: 1px solid var(--border); margin-top: 2px; padding-top: 11px; }
     /* The hamburger menu now lists every section (a fallback for screens where
        the bottom nav bar is cut off) and can reach the mid-screen AI button;
        tuck that button away while either menu is open so it doesn't sit on
@@ -70,6 +79,12 @@
   const _SIGNED_IN_CACHE_KEY = 'ii_was_signed_in';
   let _wasSignedIn = false;
   try { _wasSignedIn = localStorage.getItem(_SIGNED_IN_CACHE_KEY) === '1'; } catch (_) {}
+
+  // Same idea for the avatar photo: shows the last-known picture immediately
+  // instead of the generic person icon flashing before Clerk resolves.
+  const _AVATAR_CACHE_KEY = 'ii_avatar_url';
+  let _cachedAvatarUrl = '';
+  try { _cachedAvatarUrl = localStorage.getItem(_AVATAR_CACHE_KEY) || ''; } catch (_) {}
 
   const _GEAR_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.7l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.7v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>';
   const _SIGNOUT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>';
@@ -99,10 +114,14 @@
 
   function _accountDropdownHTML(signedIn, user) {
     const t = _themeItemState();
+    const photoUrl = (signedIn && user && user.imageUrl) ? user.imageUrl : '';
     const infoHTML = (signedIn && user) ? `
       <div class="ib-account-info">
-        <div class="ib-account-name">${_escapeHTML(user.name || user.username || 'Account')}</div>
-        ${user.email ? `<div class="ib-account-email">${_escapeHTML(user.email)}</div>` : ''}
+        ${photoUrl ? `<img class="ib-account-info-photo" src="${_escapeHTML(photoUrl)}" alt="">` : ''}
+        <div class="ib-account-info-text">
+          <div class="ib-account-name">${_escapeHTML(user.name || user.username || 'Account')}</div>
+          ${user.email ? `<div class="ib-account-email">${_escapeHTML(user.email)}</div>` : ''}
+        </div>
       </div>` : '';
     const onAccount = location.pathname === '/account.html' || location.pathname === '/account';
     const accountHTML = signedIn
@@ -111,8 +130,8 @@
       : `<button class="ib-menu-item" id="ib-menu-signin" type="button">${_PERSON_ICON}<span>Sign in</span></button>`;
     return `
       ${infoHTML}
-      <button class="ib-menu-item" id="ib-menu-theme" type="button"><span class="ib-menu-theme-icon">${t.icon}</span><span class="ib-menu-theme-text">${t.text}</span></button>
-      ${accountHTML}`;
+      ${accountHTML}
+      <button class="ib-menu-item ib-menu-item-theme" id="ib-menu-theme" type="button"><span class="ib-menu-theme-icon">${t.icon}</span><span class="ib-menu-theme-text">${t.text}</span></button>`;
   }
 
   function _renderAccountDropdown(signedIn) {
@@ -138,13 +157,18 @@
     if (signOutBtn) signOutBtn.addEventListener('click', () => { _closeAccountDropdown(); signOut(); });
   }
 
+  function _accountBtnIconHTML(photoUrl) {
+    return photoUrl ? `<img class="ib-account-btn-img" src="${_escapeHTML(photoUrl)}" alt="">` : _PERSON_ICON;
+  }
+
   function _renderAccountBadge() {
     const badge = document.getElementById('auth-badge');
     if (!badge) return;
     badge.style.display = 'flex';
+    const photoUrl = _wasSignedIn ? _cachedAvatarUrl : '';
     badge.innerHTML = `
       <div class="ib-account-wrap">
-        <button class="ib-account-btn${_wasSignedIn ? ' signed-in' : ''}" id="ib-account-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Account" title="Account">${_PERSON_ICON}</button>
+        <button class="ib-account-btn${_wasSignedIn ? ' signed-in' : ''}${photoUrl ? ' has-photo' : ''}" id="ib-account-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Account" title="Account">${_accountBtnIconHTML(photoUrl)}</button>
         <div class="ib-account-dropdown" id="ib-account-dropdown"></div>
       </div>`;
     _renderAccountDropdown(_wasSignedIn);
@@ -156,10 +180,14 @@
       const open = dd.classList.toggle('open');
       e.currentTarget.setAttribute('aria-expanded', String(open));
     });
+    // Capture phase (the `true` below), not bubble: the per-page burger
+    // button calls e.stopPropagation() on click, which would otherwise stop
+    // this from ever seeing that click and the two menus would stay open
+    // on top of each other.
     document.addEventListener('click', (e) => {
       const wrap = badge.querySelector('.ib-account-wrap');
       if (wrap && !wrap.contains(e.target)) _closeAccountDropdown();
-    });
+    }, true);
   }
   _renderAccountBadge();
 
@@ -260,6 +288,7 @@
       email: u.primaryEmailAddress?.emailAddress || '',
       phone: u.primaryPhoneNumber?.phoneNumber || '',
       name: u.unsafeMetadata?.fullName || u.firstName || u.username || '',
+      imageUrl: u.hasImage ? (u.imageUrl || '') : '',
     };
   }
 
@@ -345,8 +374,14 @@
     _currentUser = user;
     if (window._auth) window._auth.user = user;
     try { localStorage.setItem(_SIGNED_IN_CACHE_KEY, user ? '1' : '0'); } catch (_) {}
+    const photoUrl = (user && user.imageUrl) || '';
+    try { localStorage.setItem(_AVATAR_CACHE_KEY, photoUrl); } catch (_) {}
     const btn = document.getElementById('ib-account-btn');
-    if (btn) btn.classList.toggle('signed-in', !!user);
+    if (btn) {
+      btn.classList.toggle('signed-in', !!user);
+      btn.classList.toggle('has-photo', !!photoUrl);
+      btn.innerHTML = _accountBtnIconHTML(photoUrl);
+    }
     _renderAccountDropdown(!!user);
   }
 
