@@ -403,11 +403,18 @@
   document.getElementById('ii-close-btn').addEventListener('click', () => setOpen(false));
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
 
-  // Close when clicking outside the panel and trigger button
+  // Close when clicking outside the panel and trigger button.
+  // Uses composedPath (the click's ancestor chain captured at dispatch time)
+  // instead of panel.contains(e.target) — some in-panel clicks (e.g. a
+  // starter-question chip) synchronously remove their own container as part
+  // of handling the click, which detaches e.target from the document before
+  // this listener runs. A detached node always fails .contains(), so the
+  // click looked "outside" and closed the panel it was just opened from.
   document.addEventListener('click', e => {
     if (!open) return;
     const navBtn = document.getElementById('ii-chat-btn');
-    if (!panel.contains(e.target) && (!navBtn || !navBtn.contains(e.target))) {
+    const path = e.composedPath ? e.composedPath() : [];
+    if (!path.includes(panel) && !(navBtn && path.includes(navBtn))) {
       setOpen(false);
     }
   });
