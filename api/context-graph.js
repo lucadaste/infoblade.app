@@ -12,7 +12,8 @@ export default async function handler(req, res) {
 
   let supabase;
   try { supabase = getSupabase({ required: true }); } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error('[context-graph]', e);
+    return res.status(500).json({ error: 'Service unavailable' });
   }
 
   const tickers = (req.query.tickers || '')

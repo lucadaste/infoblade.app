@@ -183,6 +183,12 @@
     loadWatchlistSummary();
   });
 
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+  }
+
   async function loadWatchlistSummary() {
     var body = document.getElementById('wl-body');
     try {
@@ -208,7 +214,7 @@
       var extra = symbols.length - shown.length;
       body.innerHTML =
         '<div class="wl-chip-row">' +
-          shown.map(function(s){ return '<span class="wl-chip">' + s + '</span>'; }).join('') +
+          shown.map(function(s){ return '<span class="wl-chip">' + esc(s) + '</span>'; }).join('') +
           (extra > 0 ? '<span class="wl-chip">+' + extra + '</span>' : '') +
         '</div>' +
         '<div class="wl-count">' + symbols.length + ' item' + (symbols.length === 1 ? '' : 's') + ' tracked</div>';

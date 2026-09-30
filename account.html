@@ -529,7 +529,22 @@
       if (!confirm('Are you sure you want to permanently delete your account? This cannot be undone.')) return;
       this.disabled = true;
       try {
-        await withReverification(function () { return clerk.user.delete(); });
+        // Grab a fresh token right before deletion (inside the retried fn, so
+        // it's still fresh after a reverification prompt) — the session is gone
+        // once the Clerk user is deleted, and the data cleanup below needs it.
+        var token = null;
+        await withReverification(async function () {
+          token = await clerk.session.getToken({ skipCache: true });
+          return clerk.user.delete();
+        });
+        // Erase stored data (watchlists etc.). If this call fails, the Clerk
+        // user.deleted webhook (api/clerk-webhook.js) performs the same cleanup.
+        try {
+          await fetch((window.API_BASE || '') + '/api/account', { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+        } catch (_) {}
+        ['ii_watchlist', 'ii_crypto_watchlist', 'ii_markets_watchlist', 'ii_was_signed_in'].forEach(function (k) {
+          try { localStorage.removeItem(k); } catch (_) {}
+        });
         window.location.href = '/';
       } catch (err) {
         setMsg((err && err.errors && err.errors[0] && err.errors[0].message) || 'Could not delete account.', 'error');

@@ -8,20 +8,20 @@ import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { pickPmMarket as _pickPmMarket, pmOutcome as _pmOutcome, pmWordScore as _pmWordScore } from '../lib/pm-resolution.js';
-import { getSupabase, setCors } from '../lib/http.js';
+import { getSupabase, setCors, secretMatches } from '../lib/http.js';
 
 // Grading (resolve / news-grade) writes to the DB and spends LLM/external-API
 // budget, so it must not be publicly triggerable. Vercel automatically sends
 // `Authorization: Bearer $CRON_SECRET` on its own cron-triggered requests
 // when CRON_SECRET is set — no vercel.json change needed for that path. The
-// `x-cron-secret` header / `secret` query param exist only for manual/admin
-// triggering (e.g. via curl), same as api/validate.js used to support.
+// `x-cron-secret` header exists only for manual/admin triggering (e.g. via
+// curl). There's deliberately no ?secret= query param: URLs end up in logs.
 function _isAuthorizedForGrading(req) {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return false;
   const authHeader  = req.headers['authorization'];
-  const manualToken = req.headers['x-cron-secret'] || req.query.secret;
-  return authHeader === `Bearer ${cronSecret}` || manualToken === cronSecret;
+  const manualToken = req.headers['x-cron-secret'];
+  return secretMatches(authHeader, `Bearer ${cronSecret}`) || secretMatches(manualToken, cronSecret);
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -1023,7 +1023,8 @@ export default async function handler(req, res) {
 
   let supabase;
   try { supabase = getSupabase({ required: true }); } catch (e) {
-    return res.status(500).json({ error: 'Database configuration error', detail: e.message });
+    console.error('[predictions]', e);
+    return res.status(500).json({ error: 'Database configuration error' });
   }
 
   try {

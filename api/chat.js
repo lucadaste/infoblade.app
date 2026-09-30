@@ -240,6 +240,10 @@ export default async function handler(req, res) {
   const ip = clientIp(req);
   const allowed = await checkRateLimit(supabase, ip, 'chat', 30);
   if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+  // Also cap per account, so one user can't spend the AI budget by spreading
+  // requests across many IPs.
+  const userAllowed = await checkRateLimit(supabase, `user:${user.id}`, 'chat', 20);
+  if (!userAllowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
   const { messages, pageContext } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {

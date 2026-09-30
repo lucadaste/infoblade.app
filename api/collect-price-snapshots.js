@@ -1,7 +1,7 @@
 import { SP500_TICKERS } from '../lib/sp500-tickers.js';
 import { fetchBatchedQuotes } from '../lib/quote-fetch.js';
 import { timeOfDayBucket } from '../lib/situation-similarity-stocks.js';
-import { getSupabase } from '../lib/http.js';
+import { getSupabase, secretMatches } from '../lib/http.js';
 
 // ── Forward-collecting price snapshot + situation cron ─────────────────────
 // Builds price_snapshots AND stock_situations from scratch, going forward from
@@ -139,10 +139,11 @@ export default async function handler(req, res) {
   const cronSecret   = process.env.CRON_SECRET;
   const manualSecret = process.env.VALIDATE_SECRET;
   const authHeader    = req.headers['authorization'];
-  const manualToken   = req.query.secret || req.headers['x-validate-secret'];
+  // Header only — a ?secret= query param would end up in access logs.
+  const manualToken   = req.headers['x-validate-secret'];
 
-  const isCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`;
-  const isManual = manualSecret && manualToken === manualSecret;
+  const isCron   = !!cronSecret   && secretMatches(authHeader, `Bearer ${cronSecret}`);
+  const isManual = !!manualSecret && secretMatches(manualToken, manualSecret);
   if (!isCron && !isManual) return res.status(401).json({ error: 'Unauthorized' });
 
   if (!isMarketHours() && !req.query.force) {

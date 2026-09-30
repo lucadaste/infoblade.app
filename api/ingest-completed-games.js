@@ -1,5 +1,5 @@
 import { collectCompletedGameIdsForDate, buildSituationRows, gameAlreadyIngested } from '../lib/game-situation-ingest.js';
-import { getSupabase } from '../lib/http.js';
+import { getSupabase, secretMatches } from '../lib/http.js';
 
 // ── Daily game_situations top-up ────────────────────────────────────────────
 // Keeps the historical "similar statline" dataset (lib/situation-similarity.js)
@@ -20,10 +20,11 @@ export default async function handler(req, res) {
   const cronSecret   = process.env.CRON_SECRET;
   const manualSecret = process.env.VALIDATE_SECRET;
   const authHeader    = req.headers['authorization'];
-  const manualToken   = req.query.secret || req.headers['x-validate-secret'];
+  // Header only — a ?secret= query param would end up in access logs.
+  const manualToken   = req.headers['x-validate-secret'];
 
-  const isCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`;
-  const isManual = manualSecret && manualToken === manualSecret;
+  const isCron   = !!cronSecret   && secretMatches(authHeader, `Bearer ${cronSecret}`);
+  const isManual = !!manualSecret && secretMatches(manualToken, manualSecret);
   if (!isCron && !isManual) return res.status(401).json({ error: 'Unauthorized' });
 
   let supabase;

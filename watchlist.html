@@ -251,6 +251,12 @@
       {s:'OP',n:'Optimism'},{s:'INJ',n:'Injective'},{s:'SUI',n:'Sui'},
     ];
 
+    // Watchlist values come from localStorage / the server and are rendered as
+    // HTML below, so escape them rather than trusting their shape.
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
     /* ── Storage helpers ──────────────────────────────── */
     function getWL()   { try { return JSON.parse(localStorage.getItem('ii_watchlist'))||{sectors:[],tickers:[]}; } catch(e) { return {sectors:[],tickers:[]}; } }
     function saveWL(w) { localStorage.setItem('ii_watchlist', JSON.stringify(w)); }
@@ -287,7 +293,7 @@
       if (wl.tickers && wl.tickers.length > 0) {
         tickerSection.style.display = '';
         chips.innerHTML = wl.tickers.map(t =>
-          `<div class="chip">${t}<button class="chip-remove" onclick="removeTicker('${t}')" title="Remove">×</button></div>`
+          `<div class="chip">${esc(t)}<button class="chip-remove" data-remove-ticker="${esc(t)}" title="Remove">×</button></div>`
         ).join('');
         document.getElementById('ticker-count').textContent = wl.tickers.length;
       } else {
@@ -361,7 +367,7 @@
       document.getElementById('coin-count').textContent = coins.length;
       if (coins.length > 0) {
         chips.innerHTML = coins.map(c =>
-          `<div class="chip">${c}<button class="chip-remove" onclick="removeCoin('${c}')" title="Remove">×</button></div>`
+          `<div class="chip">${esc(c)}<button class="chip-remove" data-remove-coin="${esc(c)}" title="Remove">×</button></div>`
         ).join('');
       } else {
         chips.innerHTML = '<span class="empty-note">No coins watched yet. Search above to add one.</span>';
@@ -426,16 +432,15 @@
       }
       wrap.innerHTML = `<div class="market-list">${markets.map(m => {
         const dateStr = m.savedAt ? new Date(m.savedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-        const safeSlug = (m.slug||'').replace(/'/g,"\\'");
         return `<div class="market-item">
           <div class="market-item-body">
-            <div class="market-item-question">${m.question||''}</div>
+            <div class="market-item-question">${esc(m.question)}</div>
             <div class="market-item-meta">
-              ${m.yesPrice!=null?`<span class="market-item-odds">${m.yesPrice}% YES</span>`:''}
-              ${dateStr?`<span class="market-item-date">Saved ${dateStr}</span>`:''}
+              ${m.yesPrice!=null?`<span class="market-item-odds">${esc(m.yesPrice)}% YES</span>`:''}
+              ${dateStr?`<span class="market-item-date">Saved ${esc(dateStr)}</span>`:''}
             </div>
           </div>
-          <button class="market-item-remove" onclick="removeMarket('${safeSlug}')" title="Remove">×</button>
+          <button class="market-item-remove" data-remove-market="${esc(m.slug)}" title="Remove">×</button>
         </div>`;
       }).join('')}</div>`;
     }
@@ -451,6 +456,15 @@
     }
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.add-input-wrap')) closeSuggestions();
+    });
+
+    /* ── Remove buttons (delegated, so values never go into inline JS) ── */
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-remove-ticker], [data-remove-coin], [data-remove-market]');
+      if (!btn) return;
+      if (btn.dataset.removeTicker !== undefined) removeTicker(btn.dataset.removeTicker);
+      else if (btn.dataset.removeCoin !== undefined) removeCoin(btn.dataset.removeCoin);
+      else removeMarket(btn.dataset.removeMarket);
     });
 
     /* ── Init ─────────────────────────────────────────── */
