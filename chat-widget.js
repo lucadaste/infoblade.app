@@ -45,10 +45,10 @@
   style.textContent = `
     #ii-ai-panel {
       position: fixed;
-      bottom: 204px;
+      bottom: 212px;
       right: 16px;
-      width: min(360px, calc(100vw - 32px));
-      max-height: min(480px, calc(100vh - 228px));
+      width: min(400px, calc(100vw - 32px));
+      max-height: min(540px, calc(100vh - 236px));
       background: var(--card);
       z-index: 9998;
       display: flex;
@@ -73,10 +73,10 @@
       bottom: 140px;
       right: 16px;
       z-index: 9997;
-      width: 54px;
-      height: 54px;
+      width: 62px;
+      height: 62px;
       background: var(--card);
-      border-radius: 18px;
+      border-radius: 20px;
       border: none;
       cursor: pointer;
       overflow: visible;
@@ -93,7 +93,7 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 31px;
+      width: 37px;
       height: auto;
       fill: var(--accent);
     }
@@ -101,7 +101,7 @@
     #ii-chat-btn .ii-sweep {
       position: absolute;
       inset: 0;
-      border-radius: 18px;
+      border-radius: 20px;
       pointer-events: none;
       background: linear-gradient(115deg, transparent 40%, rgba(0,230,118,0.9) 50%, transparent 60%);
       background-size: 280% 100%;
@@ -140,26 +140,6 @@
     }
     #ii-chat-btn.active .ii-tooltip { opacity: 0; }
 
-    .ii-ph {
-      background: var(--card);
-      padding: 14px 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-      border-radius: 10px 10px 0 0;
-    }
-    .ii-ph-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--ink);
-      letter-spacing: -0.2px;
-    }
     .ii-logo-icon {
       width: 15px;
       height: auto;
@@ -171,27 +151,34 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.86); }
     }
-    .ii-close {
-      background: none;
-      border: none;
-      font-size: 20px;
+    .ii-close-float {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 16px;
       line-height: 1;
       color: var(--muted);
       cursor: pointer;
-      padding: 0;
       display: flex;
       align-items: center;
-      transition: color 0.15s;
+      justify-content: center;
+      z-index: 2;
+      transition: color 0.15s, background 0.15s;
     }
-    .ii-close:hover { color: var(--ink); }
+    .ii-close-float:hover { color: var(--ink); background: var(--card); }
 
     .ii-msgs {
       flex: 1;
       overflow-y: auto;
-      padding: 14px 14px 10px;
+      padding: 44px 16px 10px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       min-height: 0;
@@ -202,7 +189,7 @@
 
     .ii-m {
       font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
@@ -212,7 +199,7 @@
       align-self: flex-end;
       background: var(--accent);
       color: #111111;
-      padding: 8px 12px;
+      padding: 9px 13px;
       border-radius: 12px 12px 3px 12px;
       font-weight: 500;
     }
@@ -220,7 +207,7 @@
       align-self: flex-start;
       background: var(--paper);
       color: var(--ink);
-      padding: 10px 13px;
+      padding: 11px 14px;
       border-radius: 12px 12px 12px 3px;
     }
     .ii-m-ai strong { color: var(--ink); }
@@ -230,7 +217,7 @@
       align-items: center;
       gap: 8px;
       color: var(--muted);
-      font-size: 12.5px;
+      font-size: 13.5px;
       font-family: 'DM Sans', sans-serif;
       padding: 3px 0;
     }
@@ -238,16 +225,16 @@
     .ii-starters {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 7px;
       margin-top: 2px;
     }
     .ii-sq {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
-      padding: 8px 11px;
+      padding: 9px 12px;
       font-family: 'DM Sans', sans-serif;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
       cursor: pointer;
       text-align: left;
@@ -258,9 +245,9 @@
 
     .ii-input-row {
       display: flex;
-      gap: 8px;
-      padding: 10px 12px;
-      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      gap: 9px;
+      padding: 12px 14px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
       border-top: 1px solid var(--border);
       background: var(--card);
       flex-shrink: 0;
@@ -269,10 +256,10 @@
     #ii-inp {
       flex: 1;
       font-family: 'DM Sans', sans-serif;
-      font-size: 13px;
+      font-size: 14px;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 11px;
+      border-radius: 7px;
+      padding: 9px 12px;
       background: var(--paper);
       color: var(--ink);
       resize: none;
@@ -287,11 +274,11 @@
       background: var(--accent);
       color: #111111;
       border: none;
-      border-radius: 6px;
-      padding: 0 14px;
+      border-radius: 7px;
+      padding: 0 16px;
       font-family: 'Syne', sans-serif;
       font-weight: 700;
-      font-size: 12px;
+      font-size: 13px;
       letter-spacing: .3px;
       cursor: pointer;
       flex-shrink: 0;
@@ -301,14 +288,14 @@
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
 
     @media (max-width: 480px) {
-      #ii-chat-btn { width: 48px; height: 48px; bottom: 140px; }
-      #ii-ai-panel { bottom: 198px; max-height: min(420px, calc(100vh - 222px)); }
+      #ii-chat-btn { width: 54px; height: 54px; bottom: 140px; }
+      #ii-ai-panel { bottom: 204px; max-height: min(480px, calc(100vh - 228px)); }
       .ii-tooltip { display: none; }
     }
 
     @media (min-width: 1024px) {
       #ii-chat-btn { bottom: 146px; }
-      #ii-ai-panel { bottom: 210px; max-height: min(480px, calc(100vh - 234px)); }
+      #ii-ai-panel { bottom: 218px; max-height: min(540px, calc(100vh - 242px)); }
     }
   `;
   document.head.appendChild(style);
@@ -327,16 +314,13 @@
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'AI Informant');
   panel.innerHTML = `
-    <div class="ii-ph">
-      <div class="ii-ph-title"><svg class="ii-logo-icon" id="ii-ph-logo" viewBox="0 0 432 466" aria-hidden="true"><use href="#ii-blade"></use></svg>AI Informant</div>
-      <button class="ii-close" id="ii-close-btn" aria-label="Close AI Informant">×</button>
-    </div>
+    <button class="ii-close-float" id="ii-close-btn" aria-label="Close AI Informant">×</button>
     <div class="ii-msgs" id="ii-msgs">
       <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for. Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
       <div class="ii-starters" id="ii-starters"></div>
     </div>
     <div class="ii-input-row">
-      <textarea id="ii-inp" rows="1" placeholder="Ask about a stock, sector, or the site…"></textarea>
+      <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
       <button id="ii-send">Send</button>
     </div>
   `;
@@ -484,8 +468,6 @@
 
     busy = true;
     sendBtn.disabled = true;
-    const headerLogo = document.getElementById('ii-ph-logo');
-    headerLogo?.classList.add('ii-pulsing');
 
     history.push({ role: 'user', content: text });
 
@@ -508,7 +490,6 @@
         ? 'The request timed out. Please try again.'
         : 'Connection error. Please try again.');
     }
-    headerLogo?.classList.remove('ii-pulsing');
     busy = false;
     sendBtn.disabled = false;
     inp.focus();
