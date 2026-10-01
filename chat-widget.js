@@ -76,7 +76,7 @@
       width: 54px;
       height: 54px;
       background: var(--card);
-      border-radius: 50%;
+      border-radius: 18px;
       border: none;
       cursor: pointer;
       overflow: visible;
@@ -101,7 +101,7 @@
     #ii-chat-btn .ii-sweep {
       position: absolute;
       inset: 0;
-      border-radius: 50%;
+      border-radius: 18px;
       pointer-events: none;
       background: linear-gradient(115deg, transparent 40%, rgba(0,230,118,0.9) 50%, transparent 60%);
       background-size: 280% 100%;
