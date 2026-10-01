@@ -154,16 +154,17 @@
     }
     .ii-row .ii-m-ai { max-width: none; flex: 1; min-width: 0; }
     .ii-avatar {
-      width: 20px;
-      height: 20px;
+      width: 30px;
+      height: 30px;
       margin-top: 2px;
       flex-shrink: 0;
       fill: var(--accent);
+      transform-origin: center;
     }
-    .ii-avatar-spin { animation: ii-avatar-spin 0.9s linear infinite; }
-    @keyframes ii-avatar-spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
+    @keyframes ii-avatar-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; filter: drop-shadow(0 0 0 rgba(0,230,118,0)); }
+      50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 7px rgba(0,230,118,0.65)); }
     }
     .ii-close-float {
       position: absolute;
@@ -375,7 +376,7 @@
     svg.setAttribute('viewBox', '0 0 432 466');
     svg.setAttribute('aria-hidden', 'true');
     svg.classList.add('ii-avatar');
-    if (spinning) svg.classList.add('ii-avatar-spin');
+    if (spinning) svg.classList.add('ii-avatar-busy');
     svg.innerHTML = '<use href="#ii-blade"></use>';
     return svg;
   }
@@ -408,7 +409,7 @@
       bubble.className = 'ii-m ii-m-ai';
       row.appendChild(bubble);
       await typeText(bubble, line);
-      avatar.classList.remove('ii-avatar-spin');
+      avatar.classList.remove('ii-avatar-busy');
       await sleep(250);
     }
     startersEl = buildStarters();
