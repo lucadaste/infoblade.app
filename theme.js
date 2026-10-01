@@ -6,7 +6,7 @@
 
   function syncMetaThemeColor(t) {
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', t === 'light' ? '#f1faf5' : '#111111');
+    if (meta) meta.setAttribute('content', t === 'light' ? '#dcf0e5' : '#111111');
   }
   syncMetaThemeColor(theme);
 
