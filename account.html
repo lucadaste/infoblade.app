@@ -188,7 +188,7 @@
         Phone Number
       </div>
       <div id="acct-phone-view">
-        <div class="acct-field"><input type="tel" id="acct-phone" placeholder="+1 555 123 4567" /></div>
+        <div class="acct-field"><input type="tel" id="acct-phone" placeholder="1-555-123-4567" inputmode="tel" /></div>
         <button class="acct-btn" id="acct-save-phone">Save Phone</button>
       </div>
       <div id="acct-phone-verify" class="acct-verify-box" style="display:none">
@@ -247,6 +247,35 @@
   (function () {
     var clerk = null; // set once auth is ready
 
+    // Masks the phone field as the user types into "555-123-4567" (or, with a
+    // leading country digit, "1-555-123-4567") and converts that to the E.164
+    // form (e.g. "+15551234567") Clerk's API requires.
+    function _formatPhoneMask(raw) {
+      var digits = raw.replace(/\D/g, '').slice(0, 11);
+      var hasCountry = digits.length === 11;
+      var rest = hasCountry ? digits.slice(1) : digits;
+      var out = hasCountry ? digits[0] : '';
+      if (rest.length > 0) out += (out ? '-' : '') + rest.slice(0, 3);
+      if (rest.length > 3) out += '-' + rest.slice(3, 6);
+      if (rest.length > 6) out += '-' + rest.slice(6, 10);
+      return out;
+    }
+    var acctPhoneInput = document.getElementById('acct-phone');
+    acctPhoneInput.addEventListener('input', function () {
+      var pos = this.selectionStart;
+      var before = this.value;
+      this.value = _formatPhoneMask(this.value);
+      var delta = this.value.length - before.length;
+      var next = Math.max(0, (pos || 0) + delta);
+      try { this.setSelectionRange(next, next); } catch (_) {}
+    });
+    function _phoneToE164(masked) {
+      var digits = masked.replace(/\D/g, '');
+      if (digits.length === 10) return '+1' + digits;
+      if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+      return null;
+    }
+
     function setMsg(text, type) {
       var el = document.getElementById('acct-msg');
       el.textContent = text; el.className = 'acct-msg ' + type;
@@ -268,7 +297,7 @@
       document.getElementById('acct-username').value = user.username || '';
       document.getElementById('acct-name').value = user.name || '';
       document.getElementById('acct-email').value = user.email || '';
-      document.getElementById('acct-phone').value = user.phone || '';
+      document.getElementById('acct-phone').value = user.phone ? _formatPhoneMask(user.phone) : '';
       var img = document.getElementById('acct-avatar-img');
       img.src = clerk.user.hasImage && clerk.user.imageUrl ? clerk.user.imageUrl : DEFAULT_AVATAR;
       document.getElementById('acct-photo-remove').style.display = clerk.user.hasImage ? '' : 'none';
@@ -478,8 +507,10 @@
     // ── Phone ──
     var pendingPhone = null;
     document.getElementById('acct-save-phone').addEventListener('click', async function () {
-      var phone = document.getElementById('acct-phone').value.trim();
-      if (!phone) return setMsg('Please enter a phone number.', 'error');
+      var phoneMasked = document.getElementById('acct-phone').value.trim();
+      if (!phoneMasked) return setMsg('Please enter a phone number.', 'error');
+      var phone = _phoneToE164(phoneMasked);
+      if (!phone) return setMsg('Please enter a complete 10-digit phone number.', 'error');
       this.disabled = true;
       try {
         pendingPhone = await withReverification(function () { return clerk.user.createPhoneNumber({ phoneNumber: phone }); });

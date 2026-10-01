@@ -689,7 +689,7 @@
           <label>Phone</label>
           <div class="field-wrap">
             <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-            <input type="tel" id="signup-phone" name="phone" placeholder="+1 555 123 4567" autocomplete="off" />
+            <input type="tel" id="signup-phone" name="phone" placeholder="1-555-123-4567" autocomplete="off" inputmode="tel" />
           </div>
         </div>
         <p class="modal-footer-note" style="margin:-4px 0 4px;text-align:left">Add at least one: email or phone.</p>
@@ -717,6 +717,22 @@
           </div>
         </div>
         <button class="modal-submit" id="btn-verify">Verify</button>
+      </div>
+
+      <!-- Second verification code, for whichever of email/phone wasn't used
+           to verify above — shown only when the sign-up form had both. -->
+      <div id="form-verify2" style="display:none">
+        <h2>One more thing</h2>
+        <p id="verify2-copy" style="font-size:14px;color:var(--muted);margin-bottom:24px">Enter the 6-digit code we sent you.</p>
+        <div class="modal-field">
+          <label>Code</label>
+          <div class="field-wrap">
+            <span class="field-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 6v6c0 4.5 3.2 8.3 8 9 4.8-.7 8-4.5 8-9V6z"/></svg></span>
+            <input type="text" id="verify2-code" placeholder="123456" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </div>
+        </div>
+        <button class="modal-submit" id="btn-verify2">Verify</button>
+        <p class="modal-footer-note" style="margin-top:14px"><a href="#" id="skip-verify2">Skip for now — add it later in Account settings</a></p>
       </div>
 
       <!-- Sign-in form -->
@@ -794,6 +810,41 @@
     </div>
   </div>
   <script>
+  // Masks a phone input as the user types into "555-123-4567" (or, with a
+  // leading country digit, "1-555-123-4567") and converts that to the E.164
+  // form (e.g. "+15551234567") Clerk's API requires — the display stays
+  // human-readable while the submitted value stays valid.
+  function _formatPhoneMask(raw) {
+    var digits = raw.replace(/\D/g, '').slice(0, 11);
+    var hasCountry = digits.length === 11;
+    var rest = hasCountry ? digits.slice(1) : digits;
+    var out = hasCountry ? digits[0] : '';
+    if (rest.length > 0) out += (out ? '-' : '') + rest.slice(0, 3);
+    if (rest.length > 3) out += '-' + rest.slice(3, 6);
+    if (rest.length > 6) out += '-' + rest.slice(6, 10);
+    return out;
+  }
+  function _wirePhoneMask(input) {
+    input.addEventListener('input', function () {
+      var pos = this.selectionStart;
+      var before = this.value;
+      this.value = _formatPhoneMask(this.value);
+      // Formatting can insert/remove dashes ahead of the caret; nudge it back
+      // to roughly the same spot instead of letting it jump to the end.
+      var delta = this.value.length - before.length;
+      var next = Math.max(0, (pos || 0) + delta);
+      try { this.setSelectionRange(next, next); } catch (_) {}
+    });
+  }
+  // Returns E.164 (e.g. "+15551234567") for a valid 10- or 11-digit (leading 1)
+  // US number, or null if what's there isn't a complete number.
+  function _phoneToE164(masked) {
+    var digits = masked.replace(/\D/g, '');
+    if (digits.length === 10) return '+1' + digits;
+    if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+    return null;
+  }
+
   function _togglePass(id, btn) {
     var inp = document.getElementById(id);
     var showing = inp.type === 'text';
@@ -807,7 +858,7 @@
     signin: "Welcome back. Pick up right where you left off.",
   };
   function _openTab(tab) {
-    ['signup','signin','signin2fa','verify','reset','newpass'].forEach(function(t) {
+    ['signup','signin','signin2fa','verify','verify2','reset','newpass'].forEach(function(t) {
       var el = document.getElementById('form-' + t);
       if (el) el.style.display = (t === tab) ? '' : 'none';
     });
@@ -835,6 +886,9 @@
   (function(){
     var overlay = document.getElementById('signup-modal');
     var _signin2faStrategy = null;
+    var _pendingSecondary = null;   // { type: 'email'|'phone', value } — whichever of the two signup gave us a value for but didn't verify first
+    var _secondaryResource = null;  // the Clerk EmailAddress/PhoneNumber created for it, once verification starts
+    _wirePhoneMask(document.getElementById('signup-phone'));
     // Exposed so the account icon (rendered by auth.js on every page) can open
     // this modal in place instead of navigating to /?modal=signin when we're
     // already on the landing page.
@@ -860,17 +914,27 @@
     document.addEventListener('keydown', function(e){ if(e.key === 'Escape') overlay.classList.remove('open'); });
 
     document.getElementById('btn-signup').addEventListener('click', async function(){
-      var username = document.getElementById('signup-name').value.trim();
-      var email    = document.getElementById('signup-email').value.trim();
-      var phone    = document.getElementById('signup-phone').value.trim();
-      var pass     = document.getElementById('signup-pass').value;
+      var username   = document.getElementById('signup-name').value.trim();
+      var email      = document.getElementById('signup-email').value.trim();
+      var phoneMasked = document.getElementById('signup-phone').value.trim();
+      var pass       = document.getElementById('signup-pass').value;
       if (!username || !pass) return _setMsg('Please fill in your username and password.', 'error');
-      if (!email && !phone) return _setMsg('Please add at least an email or a phone number.', 'error');
+      if (!email && !phoneMasked) return _setMsg('Please add at least an email or a phone number.', 'error');
+      var phone = null;
+      if (phoneMasked) {
+        phone = _phoneToE164(phoneMasked);
+        if (!phone) return _setMsg('Please enter a complete 10-digit phone number.', 'error');
+      }
       if (pass.length < 8) return _setMsg('Password must be at least 8 characters.', 'error');
       this.disabled = true; this.textContent = 'Creating…';
       var auth = await _waitForAuth();
       if (!auth) { _setMsg('Auth not loaded yet, please wait.', 'error'); this.disabled = false; this.textContent = 'Create Account'; return; }
       try {
+        // signUp() only ever hands Clerk ONE identifier up front (email takes
+        // priority when both are given) — the other would otherwise just be
+        // silently dropped, so remember it and verify it as a second step
+        // once the account exists.
+        _pendingSecondary = (email && phone) ? { type: 'phone', value: phone } : null;
         await auth.signUp({ username: username, password: pass, email: email, phone: phone });
         this.disabled = false; this.textContent = 'Create Account';
         _clearMsg();
@@ -882,6 +946,12 @@
       }
     });
 
+    function _finishSignup() {
+      overlay.classList.remove('open');
+      _clearMsg();
+      window.location.href = '/home.html';
+    }
+
     document.getElementById('btn-verify').addEventListener('click', async function(){
       var code = document.getElementById('verify-code').value.trim();
       if (!code) return _setMsg('Please enter the code.', 'error');
@@ -891,13 +961,60 @@
         var result = await auth.confirmSignUp(code);
         this.disabled = false; this.textContent = 'Verify';
         if (result.status !== 'complete') return _setMsg('Invalid or expired code.', 'error');
-        overlay.classList.remove('open');
         _clearMsg();
-        window.location.href = '/home.html';
+        if (_pendingSecondary) {
+          try {
+            var user = auth.clerk.user;
+            if (_pendingSecondary.type === 'phone') {
+              _secondaryResource = await user.createPhoneNumber({ phoneNumber: _pendingSecondary.value });
+              await _secondaryResource.prepareVerification({ strategy: 'phone_code' });
+              document.getElementById('verify2-copy').textContent = 'We also sent a code to your phone number to verify it.';
+            } else {
+              _secondaryResource = await user.createEmailAddress({ emailAddress: _pendingSecondary.value });
+              await _secondaryResource.prepareVerification({ strategy: 'email_code' });
+              document.getElementById('verify2-copy').textContent = 'We also sent a code to your email to verify it.';
+            }
+            _openTab('verify2');
+            return;
+          } catch (err) {
+            // Not fatal — the account itself is created and signed in; the
+            // second contact method can always be added later in Account
+            // settings. Just skip straight to finishing.
+            console.warn('[signup] could not start secondary contact verification:', err);
+            _pendingSecondary = null;
+          }
+        }
+        _finishSignup();
       } catch (err) {
         this.disabled = false; this.textContent = 'Verify';
         _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
       }
+    });
+
+    document.getElementById('btn-verify2').addEventListener('click', async function(){
+      var code = document.getElementById('verify2-code').value.trim();
+      if (!code || !_secondaryResource) return _setMsg('Please enter the code.', 'error');
+      this.disabled = true; this.textContent = 'Verifying…';
+      try {
+        await _secondaryResource.attemptVerification({ code: code });
+        var patch = {};
+        patch[_pendingSecondary.type === 'phone' ? 'primaryPhoneNumberId' : 'primaryEmailAddressId'] = _secondaryResource.id;
+        await window._auth.clerk.user.update(patch);
+        this.disabled = false; this.textContent = 'Verify';
+        _finishSignup();
+      } catch (err) {
+        this.disabled = false; this.textContent = 'Verify';
+        _setMsg(err?.errors?.[0]?.message || err?.message || 'Invalid or expired code.', 'error');
+      }
+    });
+
+    document.getElementById('skip-verify2').addEventListener('click', async function(e){
+      e.preventDefault();
+      // Discard the unverified identifier rather than leaving it dangling —
+      // otherwise a later attempt to add the same email/phone in Account
+      // settings could collide with this unverified leftover.
+      if (_secondaryResource) { try { await _secondaryResource.delete(); } catch (_) {} }
+      _finishSignup();
     });
 
     document.getElementById('btn-signin').addEventListener('click', async function(){
