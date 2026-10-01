@@ -84,10 +84,15 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s;
+      transition: transform 0.2s, opacity 0.2s;
       box-shadow: 0 4px 24px rgba(0,0,0,0.6);
     }
     #ii-chat-btn:hover { transform: scale(1.06); }
+    #ii-chat-btn.ii-hidden {
+      opacity: 0;
+      transform: scale(0.5);
+      pointer-events: none;
+    }
 
     #ii-chat-btn .ii-blade-icon {
       position: absolute;
@@ -140,18 +145,25 @@
     }
     #ii-chat-btn.active .ii-tooltip { opacity: 0; }
 
-    .ii-mark {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border-radius: 5px;
-      background: var(--accent);
-      flex-shrink: 0;
+    .ii-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      align-self: flex-start;
+      max-width: 90%;
     }
-    .ii-mark.ii-pulsing { animation: ii-mark-pulse 1s ease-in-out infinite; }
-    @keyframes ii-mark-pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.35; transform: scale(0.72); }
+    .ii-row .ii-m-ai { max-width: none; flex: 1; min-width: 0; }
+    .ii-avatar {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      fill: var(--accent);
+    }
+    .ii-avatar-spin { animation: ii-avatar-spin 0.9s linear infinite; }
+    @keyframes ii-avatar-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
     }
     .ii-close-float {
       position: absolute;
@@ -358,6 +370,16 @@
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  function makeAvatar(spinning) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 432 466');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('ii-avatar');
+    if (spinning) svg.classList.add('ii-avatar-spin');
+    svg.innerHTML = '<use href="#ii-blade"></use>';
+    return svg;
+  }
+
   async function typeText(el, text, speed = 14) {
     for (let i = 1; i <= text.length; i++) {
       el.textContent = text.slice(0, i);
@@ -374,16 +396,19 @@
     inp.disabled = true;
     sendBtn.disabled = true;
     for (const line of lines) {
-      const pulse = document.createElement('div');
-      pulse.className = 'ii-m-thinking';
-      pulse.innerHTML = `<span class="ii-mark ii-pulsing"></span>`;
-      msgsEl.appendChild(pulse);
+      const row = document.createElement('div');
+      row.className = 'ii-row ii-m-thinking';
+      const avatar = makeAvatar(true);
+      row.appendChild(avatar);
+      msgsEl.appendChild(row);
       msgsEl.scrollTop = msgsEl.scrollHeight;
       await sleep(500);
+      row.classList.remove('ii-m-thinking');
       const bubble = document.createElement('div');
       bubble.className = 'ii-m ii-m-ai';
-      pulse.replaceWith(bubble);
+      row.appendChild(bubble);
       await typeText(bubble, line);
+      avatar.classList.remove('ii-avatar-spin');
       await sleep(250);
     }
     startersEl = buildStarters();
@@ -396,7 +421,10 @@
     open = v;
     panel.classList.toggle('ii-open', open);
     const navBtn = document.getElementById('ii-chat-btn');
-    if (navBtn) navBtn.classList.toggle('active', open);
+    if (navBtn) {
+      navBtn.classList.toggle('active', open);
+      navBtn.classList.toggle('ii-hidden', open);
+    }
     if (open && !introStarted) {
       introStarted = true;
       playIntro();
@@ -473,25 +501,36 @@
   }
 
   function addMsg(role, text) {
-    const d = document.createElement('div');
-    d.className = 'ii-m ' + (role === 'user' ? 'ii-m-user' : 'ii-m-ai');
     if (role === 'user') {
+      const d = document.createElement('div');
+      d.className = 'ii-m ii-m-user';
       d.textContent = text;
-    } else {
-      d.innerHTML = mdToHtml(text);
+      msgsEl.appendChild(d);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      return d;
     }
-    msgsEl.appendChild(d);
+    const row = document.createElement('div');
+    row.className = 'ii-row';
+    row.appendChild(makeAvatar(false));
+    const bubble = document.createElement('div');
+    bubble.className = 'ii-m ii-m-ai';
+    bubble.innerHTML = mdToHtml(text);
+    row.appendChild(bubble);
+    msgsEl.appendChild(row);
     msgsEl.scrollTop = msgsEl.scrollHeight;
-    return d;
+    return bubble;
   }
 
   function addThinking() {
-    const d = document.createElement('div');
-    d.className = 'ii-m-thinking';
-    d.innerHTML = `<span class="ii-mark ii-pulsing"></span> Thinking…`;
-    msgsEl.appendChild(d);
+    const row = document.createElement('div');
+    row.className = 'ii-row ii-m-thinking';
+    row.appendChild(makeAvatar(true));
+    const span = document.createElement('span');
+    span.textContent = 'Thinking…';
+    row.appendChild(span);
+    msgsEl.appendChild(row);
     msgsEl.scrollTop = msgsEl.scrollHeight;
-    return d;
+    return row;
   }
 
   async function send(text) {
