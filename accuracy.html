@@ -35,7 +35,7 @@
 
     /* Stats row */
     .stats-row { display: flex; gap: 2px; margin-bottom: 36px; }
-    .stat-card { background: var(--card); border: 1px solid var(--border); padding: 24px 28px; flex: 1; }
+    .stat-card { background: var(--card); padding: 24px 28px; flex: 1; }
     .stat-card:first-child { border-radius: 10px 0 0 10px; }
     .stat-card:last-child  { border-radius: 0 10px 10px 0; }
     .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
@@ -51,7 +51,7 @@
     .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 36px; }
     @media (max-width: 900px) { .cat-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
-    .cat-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+    .cat-card { background: var(--card); border-radius: 8px; padding: 16px 18px; }
     .cat-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
     .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 3px; margin-bottom: 10px; }
     .cat-bar-fill { height: 3px; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
@@ -61,7 +61,7 @@
     /* Charts row */
     .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
     @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
-    .chart-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+    .chart-wrap { background: var(--card); border-radius: 10px; padding: 24px; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
     /* Top tickers vertical list (inside chart card) */
@@ -75,7 +75,7 @@
 
     /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
-    .pred-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+    .pred-card { background: var(--card); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
     .pred-topic { font-size: 14px; font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
     .pred-meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; }
     .pred-tickers { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -113,7 +113,7 @@
     .filter-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
     /* Validation banner */
-    .val-banner { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .val-banner { background: var(--card); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
     .val-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: dot-pulse 2s ease-out infinite; flex-shrink: 0; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

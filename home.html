@@ -32,10 +32,10 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#111111">
   <style>
-    .dash-wrap { padding: 32px 48px 56px; display: flex; flex-direction: column; gap: 28px; }
-    @media (max-width: 720px) { .dash-wrap { padding: 20px 16px 40px; gap: 24px; } }
+    .dash-wrap { padding: 32px 48px 56px; display: flex; flex-direction: column; gap: 40px; max-width: 760px; }
+    @media (max-width: 720px) { .dash-wrap { padding: 20px 16px 40px; gap: 32px; } }
 
-    .dash-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .dash-card { display: flex; flex-direction: column; gap: 12px; }
     .dash-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
     .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
     .dash-card-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
@@ -44,17 +44,24 @@
     .dash-empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
 
     .wl-chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .wl-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px; }
+    .wl-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--surface-2); border-radius: 4px; padding: 5px 10px; }
     .wl-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-    .dash-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: -8px; }
-    .dash-soon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    @media (max-width: 900px) { .dash-soon-grid { grid-template-columns: 1fr; } }
+    .dash-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
+    .dash-soon-grid { display: flex; flex-direction: column; }
 
-    .dash-card.placeholder { padding: 18px 20px; }
+    .dash-card.placeholder { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .dash-card.placeholder:last-child { border-bottom: none; }
+    .dash-card.placeholder .dash-card-main { display: flex; flex-direction: column; gap: 2px; }
+    .dash-card.placeholder .dash-card-head { justify-content: flex-start; gap: 8px; }
     .dash-card.placeholder .dash-card-title { color: var(--ink); font-size: 13px; }
+    .dash-card.placeholder .dash-card-body { min-height: 0; }
     .dash-card.placeholder .dash-empty { font-size: 12.5px; }
+    .dash-card.placeholder .dash-card-link { flex-shrink: 0; }
     .dash-soon { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
+    @media (max-width: 560px) {
+      .dash-card.placeholder { flex-direction: column; align-items: flex-start; gap: 6px; }
+    }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -111,34 +118,40 @@
     <div class="dash-section-label">Coming soon</div>
     <div class="dash-soon-grid">
       <div class="dash-card placeholder">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Top Signal Today</div>
-          <span class="dash-soon">Soon</span>
-        </div>
-        <div class="dash-card-body">
-          <div class="dash-empty">Today's highest-confidence AI call.</div>
+        <div class="dash-card-main">
+          <div class="dash-card-head">
+            <div class="dash-card-title">Top Signal Today</div>
+            <span class="dash-soon">Soon</span>
+          </div>
+          <div class="dash-card-body">
+            <div class="dash-empty">Today's highest-confidence AI call.</div>
+          </div>
         </div>
         <a class="dash-card-link" href="/feed.html">Open Stock Markets &rarr;</a>
       </div>
 
       <div class="dash-card placeholder">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Featured Markets</div>
-          <span class="dash-soon">Soon</span>
-        </div>
-        <div class="dash-card-body">
-          <div class="dash-empty">A handful of toss-up prediction markets.</div>
+        <div class="dash-card-main">
+          <div class="dash-card-head">
+            <div class="dash-card-title">Featured Markets</div>
+            <span class="dash-soon">Soon</span>
+          </div>
+          <div class="dash-card-body">
+            <div class="dash-empty">A handful of toss-up prediction markets.</div>
+          </div>
         </div>
         <a class="dash-card-link" href="/markets.html">Open Prediction Markets &rarr;</a>
       </div>
 
       <div class="dash-card placeholder">
-        <div class="dash-card-head">
-          <div class="dash-card-title">Crypto Pulse</div>
-          <span class="dash-soon">Soon</span>
-        </div>
-        <div class="dash-card-body">
-          <div class="dash-empty">Fear &amp; Greed index and today's top movers.</div>
+        <div class="dash-card-main">
+          <div class="dash-card-head">
+            <div class="dash-card-title">Crypto Pulse</div>
+            <span class="dash-soon">Soon</span>
+          </div>
+          <div class="dash-card-body">
+            <div class="dash-empty">Fear &amp; Greed index and today's top movers.</div>
+          </div>
         </div>
         <a class="dash-card-link" href="/crypto.html">Open Crypto Markets &rarr;</a>
       </div>
