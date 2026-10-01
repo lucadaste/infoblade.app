@@ -599,6 +599,14 @@
       document.getElementById('acct-content').style.display = '';
       refreshFromClerk();
     });
+    // Signing out from the account dropdown while already on this page used to leave
+    // your account settings (name, email, delete-account button) on screen — re-gate
+    // immediately instead of waiting for a reload.
+    window._onAuthChange(function (user) {
+      if (user) return;
+      document.getElementById('acct-content').style.display = 'none';
+      document.getElementById('auth-gate').classList.add('show');
+    });
   })();
   </script>
   <script src="/offline.js"></script>

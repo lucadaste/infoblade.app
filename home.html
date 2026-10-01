@@ -194,6 +194,9 @@
     setTimeout(function () { s.remove(); document.documentElement.style.opacity = ''; }, 200);
   }
   setTimeout(_iiReveal, 2000); // safety net in case auth never resolves
+  // Signing out from the account dropdown doesn't navigate anywhere — without this,
+  // the dashboard (and whatever it shows about you) just stays on screen after sign-out.
+  window._onAuthChange(function(user) { if (!user) window.location.replace('/'); });
   window._onAuthReady(function(user) {
     if (!user) { window.location.replace('/'); return; }
 

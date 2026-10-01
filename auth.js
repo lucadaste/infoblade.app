@@ -2,6 +2,7 @@
   let _readyCallbacks = [];
   let _ready = false;
   let _currentUser = null;
+  let _changeCallbacks = [];
 
   // Exposed synchronously (function declarations are hoisted, so `onReady`
   // below is already callable here) so every page can register a callback
@@ -9,6 +10,14 @@
   // with setTimeout(100) — that poll added up to 100ms of pure dead time to
   // every page load and login-triggered redirect for no reason.
   window._onAuthReady = onReady;
+
+  // onReady only ever fires once (the first time auth resolves) — fine for
+  // initial page gating, but it means a page that checked "am I signed in?"
+  // on load never finds out if the user later signs out from the account
+  // dropdown without leaving the page: the gated content (dashboard, account
+  // settings, etc.) just stays on screen. This fires on every subsequent
+  // change too, so pages can re-gate themselves live.
+  window._onAuthChange = function (fn) { _changeCallbacks.push(fn); };
 
   // Inject styles for the account badge + its dropdown
   const _styleEl = document.createElement('style');
@@ -401,8 +410,12 @@
     _updateUI(_currentUser);
 
     clerk.addListener(({ user }) => {
-      try { _updateUI(_normalizeUser(user)); }
+      const normalized = _normalizeUser(user);
+      try { _updateUI(normalized); }
       catch (err) { console.error('[auth.js] UI update on auth change failed:', err); }
+      _changeCallbacks.forEach(fn => {
+        try { fn(normalized); } catch (err) { console.error('[auth.js] onAuthChange callback failed:', err); }
+      });
     });
   } catch (err) {
     console.error('[auth.js] initialization failed:', err);
