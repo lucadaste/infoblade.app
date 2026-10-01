@@ -140,16 +140,18 @@
     }
     #ii-chat-btn.active .ii-tooltip { opacity: 0; }
 
-    .ii-logo-icon {
-      width: 15px;
-      height: auto;
-      fill: var(--accent);
+    .ii-mark {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 5px;
+      background: var(--accent);
       flex-shrink: 0;
     }
-    .ii-logo-icon.ii-pulsing { animation: ii-logo-pulse 1.1s ease-in-out infinite; }
-    @keyframes ii-logo-pulse {
+    .ii-mark.ii-pulsing { animation: ii-mark-pulse 1s ease-in-out infinite; }
+    @keyframes ii-mark-pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.86); }
+      50% { opacity: 0.35; transform: scale(0.72); }
     }
     .ii-close-float {
       position: absolute;
@@ -315,10 +317,7 @@
   panel.setAttribute('aria-label', 'AI Informant');
   panel.innerHTML = `
     <button class="ii-close-float" id="ii-close-btn" aria-label="Close AI Informant">×</button>
-    <div class="ii-msgs" id="ii-msgs">
-      <div class="ii-m ii-m-ai"><strong>Have a stock, event, or topic in mind?</strong> That's what I'm here for. Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.<br><br>You can also ask me how anything on this site works, what the data means, or anything else.</div>
-      <div class="ii-starters" id="ii-starters"></div>
-    </div>
+    <div class="ii-msgs" id="ii-msgs"></div>
     <div class="ii-input-row">
       <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
       <button id="ii-send">Send</button>
@@ -334,15 +333,18 @@
   floatBtn.addEventListener('click', () => window.iiToggleChat?.());
   document.body.appendChild(floatBtn);
 
-  // Starters
-  const startersEl = document.getElementById('ii-starters');
-  starters.forEach(text => {
-    const btn = document.createElement('button');
-    btn.className = 'ii-sq';
-    btn.textContent = text;
-    btn.addEventListener('click', () => send(text));
-    startersEl.appendChild(btn);
-  });
+  function buildStarters() {
+    const el = document.createElement('div');
+    el.className = 'ii-starters';
+    starters.forEach(text => {
+      const btn = document.createElement('button');
+      btn.className = 'ii-sq';
+      btn.textContent = text;
+      btn.addEventListener('click', () => send(text));
+      el.appendChild(btn);
+    });
+    return el;
+  }
 
   // ── Logic ─────────────────────────────────────────────────────────────────
   const msgsEl  = document.getElementById('ii-msgs');
@@ -351,12 +353,54 @@
   let open = false;
   let history = [];
   let busy = false;
+  let introStarted = false;
+  let startersEl = null;
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function typeText(el, text, speed = 14) {
+    for (let i = 1; i <= text.length; i++) {
+      el.textContent = text.slice(0, i);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      await sleep(speed);
+    }
+  }
+
+  async function playIntro() {
+    const lines = [
+      "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
+      "You can also ask me how anything on this site works, what the data means, or anything else.",
+    ];
+    inp.disabled = true;
+    sendBtn.disabled = true;
+    for (const line of lines) {
+      const pulse = document.createElement('div');
+      pulse.className = 'ii-m-thinking';
+      pulse.innerHTML = `<span class="ii-mark ii-pulsing"></span>`;
+      msgsEl.appendChild(pulse);
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      await sleep(500);
+      const bubble = document.createElement('div');
+      bubble.className = 'ii-m ii-m-ai';
+      pulse.replaceWith(bubble);
+      await typeText(bubble, line);
+      await sleep(250);
+    }
+    startersEl = buildStarters();
+    msgsEl.appendChild(startersEl);
+    inp.disabled = false;
+    sendBtn.disabled = false;
+  }
 
   function setOpen(v) {
     open = v;
     panel.classList.toggle('ii-open', open);
     const navBtn = document.getElementById('ii-chat-btn');
     if (navBtn) navBtn.classList.toggle('active', open);
+    if (open && !introStarted) {
+      introStarted = true;
+      playIntro();
+    }
   }
 
   document.getElementById('ii-close-btn').addEventListener('click', () => setOpen(false));
@@ -444,7 +488,7 @@
   function addThinking() {
     const d = document.createElement('div');
     d.className = 'ii-m-thinking';
-    d.innerHTML = `<svg class="ii-logo-icon ii-pulsing" viewBox="0 0 432 466" aria-hidden="true"><use href="#ii-blade"></use></svg> Thinking…`;
+    d.innerHTML = `<span class="ii-mark ii-pulsing"></span> Thinking…`;
     msgsEl.appendChild(d);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return d;
@@ -454,7 +498,7 @@
     text = (text || inp.value).trim();
     if (!text || busy) return;
 
-    startersEl.remove();
+    startersEl?.remove();
     inp.value = '';
     inp.style.height = 'auto';
     addMsg('user', text);
