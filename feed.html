@@ -30,7 +30,7 @@
     .hero-stat-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
-    .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
+    .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
@@ -145,8 +145,7 @@
 
     /* Page mode bar — primary two-tab switcher */
     .page-mode-bar { display: flex; border-bottom: 2px solid var(--border); background: var(--paper); }
-    .pmode-tab { flex: 1; padding: 24px 48px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.15s; position: relative; bottom: -2px; text-align: left; border-right: 1px solid var(--border); }
-    .pmode-tab:last-child { border-right: none; }
+    .pmode-tab { flex: 1; padding: 24px 48px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.15s; position: relative; bottom: -2px; text-align: left; }
     .pmode-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--muted); transition: color 0.15s; display: block; }
     .pmode-desc { font-size: 13px; color: var(--muted); font-weight: 400; display: block; margin-top: 5px; line-height: 1.4; }
     .pmode-tab.active { border-bottom-color: var(--accent); }
