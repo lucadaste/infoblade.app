@@ -12,7 +12,7 @@
   const PAGE_STARTERS = {
     'stock-markets': [
       "What does impact timeframe mean?",
-      "How are confidence stars calculated?",
+      "What does the hit rate mean?",
       "What's moving markets today?",
     ],
     'prediction-markets': [

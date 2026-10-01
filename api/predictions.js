@@ -137,6 +137,47 @@ function _pmWeight(confStr)   {
   return 1;
 }
 
+// Prediction-market edge: our hit rate vs. always picking the crowd favorite
+// (the side priced above 50% when we made the call), plus the call rate since
+// close calls started becoming briefings (api/market-analyze.js PM_MODEL_VERSION).
+// Hit rates are unweighted on purpose — the crowd has no confidence weights, so
+// a like-for-like comparison has to count every call once.
+async function _pmEdgeStats(validated, supabase) {
+  const graded = (validated || []).filter(p => p.lean === 'Yes' || p.lean === 'No');
+  if (!graded.length) return null;
+  const ours = graded.filter(p => p.correct).length;
+
+  let crowdN = 0, crowdCorrect = 0;
+  for (const p of graded) {
+    const odds = p.market_odds_at_time;
+    if (odds == null || odds === 50) continue;
+    const outcome = p.analysis?.resolved_outcome || (p.correct ? p.lean : (p.lean === 'Yes' ? 'No' : 'Yes'));
+    crowdN++;
+    if ((odds > 50 ? 'Yes' : 'No') === outcome) crowdCorrect++;
+  }
+
+  let calls = null, briefings = null, callRate = null;
+  try {
+    const [{ count: c }, { count: b, error: bErr }] = await Promise.all([
+      supabase.from('predictions').select('id', { count: 'exact', head: true })
+        .in('lean', ['Yes', 'No']).not('analysis->>pm_model_version', 'is', null),
+      supabase.from('pm_briefings').select('id', { count: 'exact', head: true }),
+    ]);
+    if (!bErr && (c ?? 0) + (b ?? 0) > 0) {
+      calls = c ?? 0; briefings = b ?? 0;
+      callRate = Math.round(calls / (calls + briefings) * 100);
+    }
+  } catch (_) { /* pm_briefings not migrated yet — call rate stays null */ }
+
+  return {
+    graded: graded.length,
+    accuracy: Math.round(ours / graded.length * 100),
+    crowdN,
+    crowdAccuracy: crowdN ? Math.round(crowdCorrect / crowdN * 100) : null,
+    calls, briefings, callRate,
+  };
+}
+
 // ── Route handlers ────────────────────────────────────────────────────────────
 
 // Stock/crypto rows (lean IS NULL) are graded from price history once their
@@ -609,7 +650,7 @@ async function handleGraph(req, res, supabase) {
 async function handleStats(req, res, supabase) {
   const { data: validated, error: vErr } = await supabase
     .from('predictions')
-    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices, category')
+    .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices, category, lean, market_odds_at_time')
     .not('correct', 'is', null)
     .order('created_at', { ascending: false });
   if (vErr) throw vErr;
@@ -848,9 +889,11 @@ async function handleStats(req, res, supabase) {
     }
   }
 
+  const pmEdge = await _pmEdgeStats(validated, supabase);
+
   return res.status(200).json({
     summary: { total, correct, incorrect: total - correct, accuracy, accuracyCI, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
-    timeline, cumulativeTimeline, bySection, byCategory, topTickers, calibration,
+    timeline, cumulativeTimeline, bySection, byCategory, topTickers, calibration, pmEdge,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
       validationDate: p.validation_date,
@@ -865,6 +908,8 @@ async function handleStats(req, res, supabase) {
       category: p.category,
       lean: p.lean || p.analysis?.lean || null,
       signal: p.signal || p.analysis?.signal || null,
+      yesProbability: p.analysis?.yes_probability ?? null,
+      predictedOutcome: p.analysis?.predicted_outcome || null,
       analysis: { resolved_outcome: p.analysis?.resolved_outcome || null },
     }))
   });
@@ -1015,6 +1060,43 @@ Respond ONLY with valid JSON, no markdown:
   return res.status(200).json({ graded, checked: pending.length, results });
 }
 
+// ── Track record: hit rate per section × confidence level ────────────────────
+// What the UI shows instead of confidence stars on stock/crypto calls: "calls
+// like this have been right N% of the time". Buckets under
+// MIN_TRACK_RECORD_N come back with hitRate null so the UI hides the number
+// rather than showing a noisy one. Small payload, CDN-cached for an hour.
+const MIN_TRACK_RECORD_N = 20;
+
+async function handleTrackRecord(req, res, supabase) {
+  const buckets = {}; // section -> level -> { n, correct }
+  for (let from = 0; from < 50000; from += 1000) {
+    const { data, error } = await supabase
+      .from('predictions')
+      .select('category, lean, correct, cw:analysis->confidence_weight, conf:analysis->>confidence')
+      .not('correct', 'is', null)
+      .range(from, from + 999);
+    if (error) throw error;
+    for (const p of data || []) {
+      if (p.lean) continue; // PM calls show their own probability instead
+      const section = _categoryToSection(p.category || 'any');
+      const level = Math.min(5, Math.max(1, Math.round(p.cw ?? _parseConfidenceStars(p.conf))));
+      const b = ((buckets[section] ||= {})[level] ||= { n: 0, correct: 0 });
+      b.n++;
+      if (p.correct) b.correct++;
+    }
+    if (!data || data.length < 1000) break;
+  }
+  const out = {};
+  for (const [section, levels] of Object.entries(buckets)) {
+    out[section] = {};
+    for (const [level, b] of Object.entries(levels)) {
+      out[section][level] = { n: b.n, hitRate: b.n >= MIN_TRACK_RECORD_N ? Math.round(b.correct / b.n * 100) : null };
+    }
+  }
+  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
+  return res.status(200).json({ minN: MIN_TRACK_RECORD_N, sections: out });
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 export default async function handler(req, res) {
@@ -1035,6 +1117,7 @@ export default async function handler(req, res) {
       return await handleNewsGrade(req, res, supabase);
     }
     if (req.query.graph        === 'true')           return await handleGraph(req, res, supabase);
+    if (req.query['track-record'] === 'true')        return await handleTrackRecord(req, res, supabase);
     if (req.method === 'GET')                        return await handleStats(req, res, supabase);
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {

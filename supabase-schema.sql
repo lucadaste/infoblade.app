@@ -267,3 +267,31 @@ alter table stock_situations enable row level security;
 -- results ranked by what's since become known, etc.) — this table starts empty and
 -- grows forward from today, deliberately, the same reasoning as price_snapshots above.
 alter table predictions add column if not exists headlines jsonb;
+
+-- ── Prediction-market probabilities + close-call briefings ───────────────────
+-- model_probability: Claude's own 0-100 "chance of YES" for the market, saved next
+-- to market_odds_at_time so scripts/diagnose-pm-edge.js can compare the two (Brier
+-- score, model-vs-crowd gap) and a later fitted blend has something to learn from.
+alter table predictions add column if not exists model_probability integer;
+
+-- When a call is too close to make (model probability near the market's odds, or
+-- low confidence), api/market-analyze.js shows a "know before you bet" briefing
+-- instead of a Yes/No. Those live here, not in predictions, so they never reach
+-- the graders or pending counts. Rows still count toward the call rate (calls vs.
+-- briefings) and the baseline generator's per-market repeat cooldown.
+create table if not exists pm_briefings (
+  id                  text primary key,
+  created_at          timestamptz not null default now(),
+  topic               text not null,
+  market_slug         text,
+  category            text,
+  market_odds_at_time integer,
+  model_probability   integer,
+  lean_confidence     text,
+  close_reason        text,
+  analysis            jsonb not null
+);
+create index if not exists pm_briefings_created_at_idx on pm_briefings (created_at desc);
+create index if not exists pm_briefings_market_slug_idx on pm_briefings (market_slug);
+alter table pm_briefings enable row level security;
+-- Service-role key (server-side only) bypasses RLS automatically. No browser access.

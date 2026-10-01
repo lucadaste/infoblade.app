@@ -186,12 +186,14 @@
   <div class="cat-grid" id="section-grid">
     <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
   </div>
+  <!-- Prediction markets vs. the crowd (filled from data.pmEdge; hidden until there's data) -->
+  <p id="pm-edge" style="display:none;font-size:13px;color:var(--muted);margin:-12px 0 28px;line-height:1.6"></p>
 
   <!-- Charts + Top Tickers -->
   <div class="charts-row">
     <div class="chart-wrap">
       <div class="section-title">Cumulative Score</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence — a 5-star call moves the needle 5× more than a 1-star call.</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence: a very-high-confidence call counts 5× more than a very-low one.</p>
       <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
     </div>
     <div class="chart-wrap">
@@ -204,8 +206,8 @@
 
   <!-- Calibration: does a higher confidence rating actually mean higher realized accuracy? -->
   <div style="margin-bottom:32px">
-    <div class="section-title">Calibration: Confidence vs. Realized Accuracy</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Each bar is the actual correct-rate for predictions made at that confidence level. A well-calibrated system's bars rise left to right.</p>
+    <div class="section-title">Hit Rate by Confidence Level</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">How often calls at each confidence level actually turned out right. If confidence means anything, these should rise left to right.</p>
     <div class="cat-grid" id="calibration-grid">
       <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
     </div>
@@ -344,9 +346,6 @@
     const date       = new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const validDate  = p.validationDate ? new Date(p.validationDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
     const tf         = p.impactTimeframe ? `<span>${esc(p.impactTimeframe)}</span>` : '';
-    // Extract only the star number (1-5) — the full reasoning text must not leak into the card
-    const confStars  = p.confidence ? (String(p.confidence).match(/^\s*([1-5])/)||['',''])[1] : '';
-    const conf       = confStars ? `<span>★ ${confStars}</span>` : '';
     // Category badge
     const _CAT_BADGE = { 'crypto-coin':'Crypto', crypto:'Stocks', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
@@ -369,6 +368,9 @@
       const lean = p.lean || p.analysis?.lean;
       const signal = p.signal || p.analysis?.signal;
       const resolvedOutcome = p.analysis?.resolved_outcome;
+      // Newer rows name the outcome in words ("the Warriors will win the series").
+      const plainPrediction = (lean === 'Yes' || lean === 'No') && p.predictedOutcome
+        ? p.predictedOutcome.charAt(0).toLowerCase() + p.predictedOutcome.slice(1) : null;
       const leanColor = lean === 'Yes' ? 'var(--accent)' : lean === 'No' ? 'var(--red)' : 'var(--muted)';
       const signalColor = signal === 'Aligns with market' ? 'var(--accent)' : signal === 'Contradicts market' ? '#ffc832' : 'var(--muted)';
       const outcomeHtml = resolvedOutcome
@@ -378,8 +380,9 @@
         <div class="pred-card">
           <div style="flex:1;min-width:0">
             <div class="pred-topic">${esc(p.topic)}</div>
+            ${plainPrediction ? `<div style="font-size:13px;color:var(--text-soft);margin-top:4px;line-height:1.5">We predicted ${esc(plainPrediction)}${typeof p.yesProbability === 'number' ? ` (about a ${lean === 'Yes' ? p.yesProbability : 100 - p.yesProbability}% chance)` : ''}.</div>` : ''}
             <div class="ticker-moves" style="margin-top:6px">
-              ${lean ? `<span class="tm-chip" style="background:var(--hover-tint);border-color:${leanColor};color:${leanColor}">Predicted: ${esc(lean)}</span>` : ''}
+              ${lean && !plainPrediction ? `<span class="tm-chip" style="background:var(--hover-tint);border-color:${leanColor};color:${leanColor}">Predicted: ${esc(lean)}</span>` : ''}
               ${signal ? `<span class="tm-chip" style="background:var(--hover-tint);border-color:${signalColor};color:${signalColor}">${esc(signal)}</span>` : ''}
               ${outcomeHtml}
             </div>
@@ -419,11 +422,25 @@
             ${catBadge}
             <span>${date}</span>
             ${validDate ? `<span>→ ${validDate}</span>` : ''}
-            ${tf}${conf}
+            ${tf}
           </div>
         </div>
         <div style="flex-shrink:0">${gradeHtml}</div>
       </div>`;
+  }
+
+  // "We make a call on X% of markets; on those we're right Y%, vs. Z% for the
+  // crowd." Crowd = always picking the side the market favored at call time.
+  function renderPmEdge(e) {
+    const el = document.getElementById('pm-edge');
+    if (!e || e.crowdAccuracy == null || e.crowdN < 10) { el.style.display = 'none'; return; }
+    const lead = e.callRate != null
+      ? `Prediction markets: we make a call on <strong style="color:var(--ink)">${e.callRate}%</strong> of markets; on those we're right`
+      : `Prediction markets: we're right`;
+    const diff = e.accuracy - e.crowdAccuracy;
+    const diffColor = diff > 0 ? 'var(--accent)' : diff < 0 ? 'var(--red)' : 'var(--muted)';
+    el.innerHTML = `${lead} <strong style="color:${diffColor}">${e.accuracy}%</strong>, vs. <strong style="color:var(--ink)">${e.crowdAccuracy}%</strong> for the crowd. <span style="font-size:11px">(Crowd = always picking the side the market favored, ${e.crowdN} graded markets.)</span>`;
+    el.style.display = '';
   }
 
   function renderBySection(bySection) {
@@ -453,6 +470,8 @@
     }).join('');
   }
 
+  const CONF_LEVEL_LABELS = { 1: 'Very low confidence', 2: 'Low confidence', 3: 'Medium confidence', 4: 'High confidence', 5: 'Very high confidence' };
+
   function renderCalibration(calibration) {
     const el = document.getElementById('calibration-grid');
     if (!calibration || !calibration.length) {
@@ -460,11 +479,11 @@
       return;
     }
     el.innerHTML = calibration.map(b => {
-      const stars = '★'.repeat(b.confidence) + '☆'.repeat(5 - b.confidence);
+      const label = CONF_LEVEL_LABELS[b.confidence] || `Level ${b.confidence}`;
       if (!b.sufficient) {
         return `
           <div class="cat-card">
-            <div class="cat-name">${stars}</div>
+            <div class="cat-name">${label}</div>
             <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:0%"></div></div>
             <div class="cat-stat"><span class="cat-pct" style="color:var(--muted)">—</span></div>
             <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} — insufficient data (need 10+)</div>
@@ -473,7 +492,7 @@
       const accColor = b.realizedAccuracy >= 60 ? 'var(--accent)' : b.realizedAccuracy >= 40 ? '#ffc832' : 'var(--red)';
       return `
         <div class="cat-card">
-          <div class="cat-name">${stars}</div>
+          <div class="cat-name">${label}</div>
           <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${b.realizedAccuracy}%;background:${accColor}"></div></div>
           <div class="cat-stat"><span class="cat-pct" style="color:${accColor}">${b.realizedAccuracy}%</span></div>
           <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} graded</div>
@@ -595,6 +614,7 @@
       if (data.error) throw new Error(data.error);
       renderStats(data.summary);
       renderBySection(data.bySection);
+      renderPmEdge(data.pmEdge);
       renderCumulativeChart(data.cumulativeTimeline);
       renderTickers(data.topTickers);
       renderCalibration(data.calibration);

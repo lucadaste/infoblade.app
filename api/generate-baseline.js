@@ -151,6 +151,20 @@ async function _todaysBaselineState(supabase) {
     for (const r of rows || []) coveredSlugs.add(r.market_slug);
     if (!rows || rows.length < 1000) break;
   }
+  // Close calls are saved to pm_briefings instead (api/market-analyze.js) —
+  // cool those down too, or the same near-50/50 markets get re-analyzed daily.
+  // Tolerates the table not existing yet (schema migration not run).
+  for (let from = 0; from < 20000; from += 1000) {
+    const { data: rows, error: briefErr } = await supabase
+      .from('pm_briefings')
+      .select('market_slug')
+      .not('market_slug', 'is', null)
+      .gte('created_at', since)
+      .range(from, from + 999);
+    if (briefErr) break;
+    for (const r of rows || []) coveredSlugs.add(r.market_slug);
+    if (!rows || rows.length < 1000) break;
+  }
 
   return { counts, coveredTickers, coveredCoins, coveredSlugs };
 }

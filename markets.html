@@ -122,6 +122,15 @@
     .signal-inconclusive { background: var(--border); color: var(--muted); border: 1px solid transparent; }
     .public-lean { font-size: 13px; color: var(--text-soft); padding: 8px 12px; background: var(--hover-tint); border-radius: 6px; border: 1px solid var(--border); }
     .public-lean strong { color: var(--ink); font-weight: 700; }
+    .briefing-card { padding: 12px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--hover-tint); }
+    .briefing-title { display: inline-block; margin-bottom: 8px; }
+    .briefing-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-soft); }
+    .briefing-list li + li { margin-top: 4px; }
+    .prediction-card { padding: 14px 16px; border-radius: 8px; border: 1px solid var(--border); border-left: 3px solid var(--accent); background: var(--hover-tint); }
+    .prediction-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .prediction-headline { font-size: 17px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+    .prediction-odds { font-size: 13px; color: var(--text-soft); margin-top: 6px; line-height: 1.5; }
+    .know-section .briefing-list { padding-left: 18px; }
     .analysis-reasoning { font-size: 14px; color: var(--text-soft); line-height: 1.7; }
     .analysis-signal-detail { font-size: 12px; color: var(--muted); font-style: italic; }
     .analysis-sources { font-size: 12px; color: var(--muted); }
@@ -392,17 +401,38 @@
       return 'signal-inconclusive';
     }
 
-    // lean_confidence moved from High/Medium/Low text to the same numeric
-    // "N — reason" scale stock/crypto uses (see api/market-analyze.js). Parse
-    // the leading digit for display; legacy High/Medium/Low rows (pre-migration)
-    // fall back to their old mapping so old cards don't just show blank stars.
-    function confStars(conf) {
-      let n = parseInt(conf);
-      if (isNaN(n)) {
-        if (conf === 'High') n = 5; else if (conf === 'Medium') n = 3; else n = 1;
+    // Prediction in plain words: names the actual outcome ("We think the Warriors
+    // will win the series") and states both chances in terms of that outcome, so
+    // nobody has to know which side "Yes" is. Older analyses without
+    // predicted_outcome fall back to the legacy lean badge below.
+    function hasPlainPrediction(data) {
+      return !!data.predicted_outcome && (data.lean === 'Yes' || data.lean === 'No') && typeof data.yes_probability === 'number';
+    }
+    function predictionOddsLine(data, market) {
+      const ours = data.lean === 'Yes' ? data.yes_probability : 100 - data.yes_probability;
+      let line = `We give it about a <strong style="color:var(--ink)">${ours}%</strong> chance.`;
+      if (typeof market.yesPrice === 'number') {
+        const crowd = data.lean === 'Yes' ? market.yesPrice : 100 - market.yesPrice;
+        if (Math.abs(ours - crowd) < 5)  line += ` Bettors agree, at about ${crowd}%.`;
+        else if (ours > crowd)           line += ` Bettors are less sure, at ${crowd}%.`;
+        else                             line += ` Bettors are even more confident, at ${crowd}%.`;
       }
-      n = Math.max(1, Math.min(5, n));
-      return '★'.repeat(n) + '☆'.repeat(5 - n);
+      return line;
+    }
+    function renderPrediction(data, market) {
+      const outcome = data.predicted_outcome.charAt(0).toLowerCase() + data.predicted_outcome.slice(1);
+      return `
+          <div class="prediction-card">
+            <div class="prediction-label">Our prediction</div>
+            <div class="prediction-headline">We think ${esc(outcome)}.</div>
+            <div class="prediction-odds">${predictionOddsLine(data, market)}</div>
+          </div>
+          <div class="analysis-reasoning">${esc(data.reasoning)}</div>
+          ${data.briefing?.length ? `
+          <div class="know-section">
+            <div class="prediction-label">What to know</div>
+            <ul class="briefing-list">${data.briefing.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+          </div>` : ''}`;
     }
 
     async function analyzeMarket(market, cardEl) {
@@ -429,6 +459,7 @@
           lean: data.lean,
           lean_confidence: data.lean_confidence,
           signal: data.signal,
+          close_call: !!data.close_call,
           market_odds: market.yesPrice
         });
 
@@ -439,13 +470,19 @@
         block.className = 'analysis-block';
         block.innerHTML = `
           ${data.liveGame && data.liveGame.state === 'in' ? `<div class="live-score-row">🔴 LIVE: ${esc(data.liveGame.awayTeam)} ${data.liveGame.awayScore} at ${esc(data.liveGame.homeTeam)} ${data.liveGame.homeScore}${data.liveGame.period ? ` — Period ${data.liveGame.period}` : ''}${data.liveGame.clock ? `, ${esc(data.liveGame.clock)}` : ''}</div>` : ''}
+          ${hasPlainPrediction(data) ? renderPrediction(data, market) : `
           <div class="public-lean">${data.crowd_summary ? esc(data.crowd_summary) : `The crowd is <strong>${market.yesPrice}%</strong> confident the answer is YES`}</div>
+          ${data.close_call && data.briefing?.length ? `
+          <div class="briefing-card">
+            <span class="lean-badge lean-uncertain briefing-title">Too close to call — here's what to know</span>
+            <ul class="briefing-list">${data.briefing.map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+          </div>` : `
           <div class="analysis-header">
-            <span class="lean-badge ${leanBadgeClass(data.lean)}" title="${esc(data.lean_confidence || '')}">Analysis predicts: ${esc(data.lean)} <span aria-hidden="true">${confStars(data.lean_confidence)}</span></span>
+            <span class="lean-badge ${leanBadgeClass(data.lean)}">Analysis predicts: ${esc(data.lean)}</span>
             <span class="signal-badge ${signalBadgeClass(data.signal)}">${esc(data.signal)}</span>
           </div>
           <div class="analysis-reasoning">${esc(data.reasoning)}</div>
-          ${data.signal_detail ? `<div class="analysis-signal-detail">${esc(data.signal_detail)}</div>` : ''}
+          ${data.signal_detail ? `<div class="analysis-signal-detail">${esc(data.signal_detail)}</div>` : ''}`}`}
           ${data.historicalSituation ? `<div class="historical-situation">📊 In <strong>${data.historicalSituation.sampleSize}</strong> historical games with a similar score and time situation, the trailing team came back to win <strong>${data.historicalSituation.trailingTeamWinRate}%</strong> of the time.</div>` : ''}
           ${data.key_sources?.length ? `
             <button class="ar-sources-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><i class="toggle-arrow">›</i> ${data.key_sources.length} source${data.key_sources.length !== 1 ? 's' : ''}</button>

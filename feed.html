@@ -107,8 +107,8 @@
     .tech-stat-down { background: rgba(255,80,80,0.1); color: #ff7070; }
     .tech-stat-neu  { background: var(--hover-tint); color: var(--muted); }
     .tech-rating { font-size: 11px; color: var(--muted); }
-    .conf-stars { font-size: 16px; letter-spacing: 1px; }
-    .conf-label { font-size: 13px; color: var(--muted); }
+    .track-record { font-family: 'Share Tech Mono', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .track-record-sub { font-size: 12px; color: var(--muted); margin-left: 6px; }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
     .empty-state h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
@@ -1025,8 +1025,8 @@
         }
         const leanColor = d.lean === 'Yes' ? '#2a9e4f' : '#c84040';
         const leanLabel = d.lean === 'Yes' ? '↑ Likely to rise' : '↓ Unlikely to rise';
-        const confBadge = d.lean_confidence
-          ? `<span style="font-size:11px;margin-left:8px" title="${esc(d.lean_confidence)}">${renderStars(getConfScore(d.lean_confidence))}</span>` : '';
+        const confBadge = typeof d.yes_probability === 'number'
+          ? `<span style="font-size:12px;margin-left:8px;color:var(--muted)">${d.yes_probability}% chance of rising</span>` : '';
         el.innerHTML = `
           <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1160,9 +1160,29 @@
       return isNaN(n) ? 3 : Math.max(1, Math.min(5, n));
     };
 
-    function renderStars(score) {
-      const color = score >= 4 ? '#4ade80' : score === 3 ? '#fbbf24' : '#ff7070';
-      return `<span class="conf-stars" style="color:${color}" data-tip="How strongly the news signals a clear market impact (1 = weak signal, 5 = very clear direction)">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span><span class="conf-label"> ${score}/5</span>`;
+    // Track record instead of confidence stars: how often our past calls at this
+    // confidence level have actually been right (api/predictions.js?track-record).
+    // Loaded once per page; placeholders rendered before it arrives are filled
+    // in when it does. Rows with too little history are hidden, not guessed.
+    let _trackRecord = null;
+    fetch(window.API_BASE + '/api/predictions?track-record=true')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { _trackRecord = d?.sections || {}; fillTrackRecords(); })
+      .catch(() => { _trackRecord = {}; fillTrackRecords(); });
+
+    function renderTrackRecord(level, section = 'stocks') {
+      return `<span class="track-record-slot" data-level="${level}" data-section="${section}"></span>`;
+    }
+
+    function fillTrackRecords(root = document) {
+      if (!_trackRecord) return;
+      root.querySelectorAll('.track-record-slot:not([data-filled])').forEach(el => {
+        el.dataset.filled = '1';
+        const b = _trackRecord[el.dataset.section]?.[el.dataset.level];
+        const row = el.closest('.chain-row');
+        if (!b || b.hitRate == null) { if (row) row.style.display = 'none'; else el.remove(); return; }
+        el.innerHTML = `<span class="track-record" data-tip="Calls at this confidence level have been right ${b.hitRate}% of the time across ${b.n} graded predictions">${b.hitRate}%</span><span class="track-record-sub">hit rate on similar calls</span>`;
+      });
     }
 
     function loadWatchlist() {
@@ -1310,10 +1330,11 @@
         </div>
         ${renderTechnicalSnapshot(analysis)}
         <div class="chain-row">
-          <div class="chain-label">Confidence</div>
-          <div class="chain-content">${renderStars(confScore)}</div>
+          <div class="chain-label">Track record</div>
+          <div class="chain-content">${renderTrackRecord(confScore)}</div>
         </div>
       `;
+      fillTrackRecords(card);
       return card;
     }
 
@@ -1377,10 +1398,11 @@
         </div>
         ${renderTechnicalSnapshot(analysis)}
         <div class="chain-row">
-          <div class="chain-label">Confidence</div>
-          <div class="chain-content">${renderStars(confScore)}</div>
+          <div class="chain-label">Track record</div>
+          <div class="chain-content">${renderTrackRecord(confScore)}</div>
         </div>
       `;
+      fillTrackRecords(card);
       return card;
     }
 
