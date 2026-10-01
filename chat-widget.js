@@ -112,7 +112,7 @@
       background-size: 280% 100%;
       background-position: 140% 0;
       opacity: 0;
-      animation: ii-ignite-loop 10s ease-out infinite;
+      animation: ii-ignite-loop 5s ease-out infinite;
     }
     #ii-chat-btn.active .ii-sweep { animation-play-state: paused; opacity: 0; }
     @keyframes ii-ignite-loop {
