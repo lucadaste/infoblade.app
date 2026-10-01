@@ -146,20 +146,24 @@
     #ii-chat-btn.active .ii-tooltip { opacity: 0; }
 
     .ii-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
+      position: relative;
       align-self: flex-start;
       max-width: 90%;
+      padding-left: 40px;
     }
-    .ii-row .ii-m-ai { max-width: none; flex: 1; min-width: 0; }
+    .ii-row .ii-m-ai { max-width: none; }
     .ii-avatar {
       width: 30px;
       height: 30px;
-      margin-top: 2px;
-      flex-shrink: 0;
       fill: var(--accent);
       transform-origin: center;
+    }
+    .ii-avatar-float {
+      position: absolute;
+      left: 0;
+      top: 2px;
+      transition: top 0.35s cubic-bezier(0.4,0,0.2,1);
+      pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
     @keyframes ii-avatar-pulse {
@@ -188,6 +192,7 @@
     .ii-close-float:hover { color: var(--ink); background: var(--card); }
 
     .ii-msgs {
+      position: relative;
       flex: 1;
       overflow-y: auto;
       padding: 44px 16px 10px;
@@ -212,25 +217,16 @@
     }
     .ii-m-user {
       align-self: flex-end;
-      background: var(--accent);
-      color: #111111;
-      padding: 9px 13px;
-      border-radius: 12px 12px 3px 12px;
-      font-weight: 500;
+      color: var(--ink);
+      font-weight: 600;
+      text-align: right;
     }
     .ii-m-ai {
       align-self: flex-start;
-      background: var(--paper);
       color: var(--ink);
-      padding: 11px 14px;
-      border-radius: 12px 12px 12px 3px;
     }
     .ii-m-ai strong { color: var(--ink); }
     .ii-m-thinking {
-      align-self: flex-start;
-      display: flex;
-      align-items: center;
-      gap: 8px;
       color: var(--muted);
       font-size: 13.5px;
       font-family: 'DM Sans', sans-serif;
@@ -371,14 +367,16 @@
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  function makeAvatar(spinning) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 432 466');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.classList.add('ii-avatar');
-    if (spinning) svg.classList.add('ii-avatar-busy');
-    svg.innerHTML = '<use href="#ii-blade"></use>';
-    return svg;
+  const avatarEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  avatarEl.setAttribute('viewBox', '0 0 432 466');
+  avatarEl.setAttribute('aria-hidden', 'true');
+  avatarEl.classList.add('ii-avatar', 'ii-avatar-float');
+  avatarEl.innerHTML = '<use href="#ii-blade"></use>';
+  msgsEl.appendChild(avatarEl);
+
+  function moveAvatarTo(rowEl, busy) {
+    avatarEl.style.top = rowEl.offsetTop + 'px';
+    avatarEl.classList.toggle('ii-avatar-busy', !!busy);
   }
 
   async function typeText(el, text, speed = 14) {
@@ -399,17 +397,19 @@
     for (const line of lines) {
       const row = document.createElement('div');
       row.className = 'ii-row ii-m-thinking';
-      const avatar = makeAvatar(true);
-      row.appendChild(avatar);
+      row.textContent = 'Thinking…';
       msgsEl.appendChild(row);
+      moveAvatarTo(row, true);
       msgsEl.scrollTop = msgsEl.scrollHeight;
       await sleep(500);
       row.classList.remove('ii-m-thinking');
+      row.textContent = '';
       const bubble = document.createElement('div');
       bubble.className = 'ii-m ii-m-ai';
       row.appendChild(bubble);
+      moveAvatarTo(row, true);
       await typeText(bubble, line);
-      avatar.classList.remove('ii-avatar-busy');
+      moveAvatarTo(row, false);
       await sleep(250);
     }
     startersEl = buildStarters();
@@ -512,12 +512,12 @@
     }
     const row = document.createElement('div');
     row.className = 'ii-row';
-    row.appendChild(makeAvatar(false));
     const bubble = document.createElement('div');
     bubble.className = 'ii-m ii-m-ai';
     bubble.innerHTML = mdToHtml(text);
     row.appendChild(bubble);
     msgsEl.appendChild(row);
+    moveAvatarTo(row, false);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return bubble;
   }
@@ -525,11 +525,9 @@
   function addThinking() {
     const row = document.createElement('div');
     row.className = 'ii-row ii-m-thinking';
-    row.appendChild(makeAvatar(true));
-    const span = document.createElement('span');
-    span.textContent = 'Thinking…';
-    row.appendChild(span);
+    row.textContent = 'Thinking…';
     msgsEl.appendChild(row);
+    moveAvatarTo(row, true);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return row;
   }
