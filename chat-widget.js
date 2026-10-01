@@ -47,8 +47,8 @@
       position: fixed;
       bottom: 212px;
       right: 16px;
-      width: min(400px, calc(100vw - 32px));
-      max-height: min(540px, calc(100vh - 236px));
+      width: min(460px, calc(100vw - 32px));
+      max-height: min(620px, calc(100vh - 236px));
       background: var(--card);
       z-index: 9998;
       display: flex;
@@ -148,21 +148,21 @@
     .ii-row {
       position: relative;
       align-self: flex-start;
-      max-width: 90%;
-      padding-left: 40px;
+      max-width: 92%;
+      padding-left: 42px;
     }
     .ii-row .ii-m-ai { max-width: none; }
     .ii-avatar {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       fill: var(--accent);
       transform-origin: center;
     }
     .ii-avatar-float {
       position: absolute;
-      left: 0;
-      top: 2px;
-      transition: top 0.35s cubic-bezier(0.4,0,0.2,1);
+      left: 6px;
+      top: 3px;
+      transition: top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
@@ -195,10 +195,10 @@
       position: relative;
       flex: 1;
       overflow-y: auto;
-      padding: 44px 16px 10px;
+      padding: 48px 22px 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 18px;
       scroll-behavior: smooth;
       -webkit-overflow-scrolling: touch;
       min-height: 0;
@@ -209,11 +209,11 @@
 
     .ii-m {
       font-family: 'DM Sans', sans-serif;
-      font-size: 14px;
-      line-height: 1.55;
+      font-size: 14.5px;
+      line-height: 1.6;
       white-space: pre-wrap;
       word-break: break-word;
-      max-width: 90%;
+      max-width: 92%;
     }
     .ii-m-user {
       align-self: flex-end;
@@ -257,8 +257,8 @@
     .ii-input-row {
       display: flex;
       gap: 9px;
-      padding: 12px 14px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding: 14px 18px;
+      padding-bottom: max(14px, env(safe-area-inset-bottom));
       border-top: 1px solid var(--border);
       background: var(--card);
       flex-shrink: 0;
@@ -306,7 +306,7 @@
 
     @media (min-width: 1024px) {
       #ii-chat-btn { bottom: 146px; }
-      #ii-ai-panel { bottom: 218px; max-height: min(540px, calc(100vh - 242px)); }
+      #ii-ai-panel { bottom: 218px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 242px)); }
     }
   `;
   document.head.appendChild(style);
