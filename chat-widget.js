@@ -229,7 +229,8 @@
       color: var(--muted);
       font-size: 13.5px;
       font-family: 'DM Sans', sans-serif;
-      padding: 3px 0;
+      padding-top: 3px;
+      padding-bottom: 3px;
     }
 
     .ii-starters {
