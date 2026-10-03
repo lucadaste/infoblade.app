@@ -158,11 +158,10 @@
       fill: var(--accent);
       transform-origin: center;
     }
-    .ii-avatar-float {
+    .ii-row-avatar {
       position: absolute;
       left: 6px;
       top: 3px;
-      transition: top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
@@ -367,16 +366,19 @@
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  const avatarEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  avatarEl.setAttribute('viewBox', '0 0 432 466');
-  avatarEl.setAttribute('aria-hidden', 'true');
-  avatarEl.classList.add('ii-avatar', 'ii-avatar-float');
-  avatarEl.innerHTML = '<use href="#ii-blade"></use>';
-  msgsEl.appendChild(avatarEl);
-
-  function moveAvatarTo(rowEl, busy) {
-    avatarEl.style.top = rowEl.offsetTop + 'px';
-    avatarEl.classList.toggle('ii-avatar-busy', !!busy);
+  // Each AI row gets its own avatar icon, pinned to that row's top-left —
+  // a single floating icon that slid between rows used to visually overshoot
+  // past the last message into the input box whenever that row sat near the
+  // bottom of the scroll area. A per-row icon scrolls with its own message
+  // and can never land outside it.
+  function makeAvatarIcon(busy) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 432 466');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.classList.add('ii-avatar', 'ii-row-avatar');
+    if (busy) svg.classList.add('ii-avatar-busy');
+    svg.innerHTML = '<use href="#ii-blade"></use>';
+    return svg;
   }
 
   async function typeText(el, text, speed = 14) {
@@ -397,19 +399,21 @@
     for (const line of lines) {
       const row = document.createElement('div');
       row.className = 'ii-row ii-m-thinking';
-      row.textContent = 'Thinking…';
+      const icon = makeAvatarIcon(true);
+      row.appendChild(icon);
+      const thinkingText = document.createElement('span');
+      thinkingText.textContent = 'Thinking…';
+      row.appendChild(thinkingText);
       msgsEl.appendChild(row);
-      moveAvatarTo(row, true);
       msgsEl.scrollTop = msgsEl.scrollHeight;
       await sleep(500);
       row.classList.remove('ii-m-thinking');
-      row.textContent = '';
+      thinkingText.remove();
       const bubble = document.createElement('div');
       bubble.className = 'ii-m ii-m-ai';
       row.appendChild(bubble);
-      moveAvatarTo(row, true);
       await typeText(bubble, line);
-      moveAvatarTo(row, false);
+      icon.classList.remove('ii-avatar-busy');
       await sleep(250);
     }
     startersEl = buildStarters();
@@ -512,12 +516,12 @@
     }
     const row = document.createElement('div');
     row.className = 'ii-row';
+    row.appendChild(makeAvatarIcon(false));
     const bubble = document.createElement('div');
     bubble.className = 'ii-m ii-m-ai';
     bubble.innerHTML = mdToHtml(text);
     row.appendChild(bubble);
     msgsEl.appendChild(row);
-    moveAvatarTo(row, false);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return bubble;
   }
@@ -525,9 +529,11 @@
   function addThinking() {
     const row = document.createElement('div');
     row.className = 'ii-row ii-m-thinking';
-    row.textContent = 'Thinking…';
+    row.appendChild(makeAvatarIcon(true));
+    const thinkingText = document.createElement('span');
+    thinkingText.textContent = 'Thinking…';
+    row.appendChild(thinkingText);
     msgsEl.appendChild(row);
-    moveAvatarTo(row, true);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return row;
   }
