@@ -38,12 +38,15 @@
     .hero-stat-label a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); }
     .hero-stat-label a:hover { color: var(--accent); border-color: var(--accent); }
 
-    .dash-wrap { padding: 8px 48px 56px; display: flex; flex-direction: column; gap: 44px; max-width: 760px; }
-    @media (max-width: 720px) { .dash-wrap { padding: 4px 16px 40px; gap: 36px; } }
+    .dash-wrap { padding: 8px 48px 56px; display: flex; flex-direction: column; gap: 20px; max-width: 960px; }
+    @media (max-width: 720px) { .dash-wrap { padding: 4px 16px 40px; gap: 14px; } }
 
-    .dash-card { display: flex; flex-direction: column; gap: 14px; }
+    .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 860px) { .dash-grid { grid-template-columns: 1fr; gap: 14px; } }
+
+    .dash-card { display: flex; flex-direction: column; gap: 14px; background: var(--card); border-radius: 16px; padding: 22px 24px; }
     .dash-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
+    .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
     .dash-card-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .dash-card-link:hover { text-decoration: underline; }
     .dash-card-body { min-height: 32px; display: flex; flex-direction: column; justify-content: center; }
@@ -72,9 +75,9 @@
 
     /* Crypto pulse */
     .fg-row { display: flex; align-items: baseline; gap: 10px; }
-    .fg-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 30px; color: var(--ink); letter-spacing: -0.5px; }
-    .fg-label { font-size: 13px; color: var(--muted); }
-    .crypto-movers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .fg-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 30px; letter-spacing: -0.5px; }
+    .fg-label { font-size: 13px; font-weight: 600; }
+    .crypto-movers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
     .mover-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 4px; background: var(--surface-2); }
     .mover-up { color: #2a9e4f; }
     .mover-down { color: #c84040; }
@@ -135,33 +138,35 @@
       </div>
     </div>
 
-    <div class="dash-card" id="signal-card">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Top Signal Today</div>
-        <a class="dash-card-link" href="/feed.html">Open Stock Markets &rarr;</a>
+    <div class="dash-grid">
+      <div class="dash-card" id="signal-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Top Signal Today</div>
+          <a class="dash-card-link" href="/feed.html">Stocks &rarr;</a>
+        </div>
+        <div class="dash-card-body" id="signal-body">
+          <div class="dash-empty">Loading&hellip;</div>
+        </div>
       </div>
-      <div class="dash-card-body" id="signal-body">
-        <div class="dash-empty">Loading&hellip;</div>
-      </div>
-    </div>
 
-    <div class="dash-card" id="market-card">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Featured Markets</div>
-        <a class="dash-card-link" href="/markets.html">Open Prediction Markets &rarr;</a>
+      <div class="dash-card" id="market-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Featured Markets</div>
+          <a class="dash-card-link" href="/markets.html">Markets &rarr;</a>
+        </div>
+        <div class="dash-card-body" id="market-body">
+          <div class="dash-empty">Loading&hellip;</div>
+        </div>
       </div>
-      <div class="dash-card-body" id="market-body">
-        <div class="dash-empty">Loading&hellip;</div>
-      </div>
-    </div>
 
-    <div class="dash-card" id="crypto-card">
-      <div class="dash-card-head">
-        <div class="dash-card-title">Crypto Pulse</div>
-        <a class="dash-card-link" href="/crypto.html">Open Crypto Markets &rarr;</a>
-      </div>
-      <div class="dash-card-body" id="crypto-body">
-        <div class="dash-empty">Loading&hellip;</div>
+      <div class="dash-card" id="crypto-card">
+        <div class="dash-card-head">
+          <div class="dash-card-title">Crypto Pulse</div>
+          <a class="dash-card-link" href="/crypto.html">Crypto &rarr;</a>
+        </div>
+        <div class="dash-card-body" id="crypto-body">
+          <div class="dash-empty">Loading&hellip;</div>
+        </div>
       </div>
     </div>
   </div>
@@ -333,9 +338,13 @@
       prices.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
       var movers = prices.slice(0, 3);
 
-      var fgHtml = fg
-        ? '<div class="fg-row"><span class="fg-value">' + esc(fg.value) + '</span><span class="fg-label">Fear &amp; Greed — ' + esc(fg.value_classification) + '</span></div>'
-        : '';
+      var fgHtml = '';
+      if (fg) {
+        var fgVal = parseInt(fg.value, 10);
+        var fgWord = fgVal <= 33 ? 'Bearish' : fgVal <= 66 ? 'Uncertain' : 'Bullish';
+        var fgColor = fgVal <= 33 ? '#c84040' : fgVal <= 66 ? '#c87d00' : '#2a9e4f';
+        fgHtml = '<div class="fg-row"><span class="fg-value" style="color:' + fgColor + '">' + fgVal + '</span><span class="fg-label" style="color:' + fgColor + '">' + fgWord + '</span></div>';
+      }
       var moversHtml = movers.length
         ? '<div class="crypto-movers">' + movers.map(function (c) {
             var pct = c.price_change_percentage_24h;
