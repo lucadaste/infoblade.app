@@ -32,12 +32,18 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#111111">
   <style>
-    .dash-wrap { padding: 32px 48px 56px; display: flex; flex-direction: column; gap: 40px; max-width: 760px; }
-    @media (max-width: 720px) { .dash-wrap { padding: 20px 16px 40px; gap: 32px; } }
+    .hero-stat { margin-top: 20px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .hero-stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 26px; color: var(--accent); letter-spacing: -0.3px; }
+    .hero-stat-label { font-size: 13px; color: var(--muted); }
+    .hero-stat-label a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); }
+    .hero-stat-label a:hover { color: var(--accent); border-color: var(--accent); }
 
-    .dash-card { display: flex; flex-direction: column; gap: 12px; }
+    .dash-wrap { padding: 8px 48px 56px; display: flex; flex-direction: column; gap: 44px; max-width: 760px; }
+    @media (max-width: 720px) { .dash-wrap { padding: 4px 16px 40px; gap: 36px; } }
+
+    .dash-card { display: flex; flex-direction: column; gap: 14px; }
     .dash-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-    .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.2px; }
+    .dash-card-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--muted); }
     .dash-card-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .dash-card-link:hover { text-decoration: underline; }
     .dash-card-body { min-height: 32px; display: flex; flex-direction: column; justify-content: center; }
@@ -47,21 +53,31 @@
     .wl-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--ink); background: var(--surface-2); border-radius: 4px; padding: 5px 10px; }
     .wl-count { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-    .dash-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); }
-    .dash-soon-grid { display: flex; flex-direction: column; }
+    /* Top signal */
+    .signal-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .signal-dir { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.2px; }
+    .dir-bullish { color: #2a9e4f; }
+    .dir-bearish { color: #c84040; }
+    .signal-conf { font-size: 12px; color: var(--muted); }
+    .signal-topic { font-size: 13.5px; color: var(--text-soft); line-height: 1.55; }
 
-    .dash-card.placeholder { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
-    .dash-card.placeholder:last-child { border-bottom: none; }
-    .dash-card.placeholder .dash-card-main { display: flex; flex-direction: column; gap: 2px; }
-    .dash-card.placeholder .dash-card-head { justify-content: flex-start; gap: 8px; }
-    .dash-card.placeholder .dash-card-title { color: var(--ink); font-size: 13px; }
-    .dash-card.placeholder .dash-card-body { min-height: 0; }
-    .dash-card.placeholder .dash-empty { font-size: 12.5px; }
-    .dash-card.placeholder .dash-card-link { flex-shrink: 0; }
-    .dash-soon { font-size: 9px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--muted); }
-    @media (max-width: 560px) {
-      .dash-card.placeholder { flex-direction: column; align-items: flex-start; gap: 6px; }
-    }
+    /* Featured markets */
+    .market-list { display: flex; flex-direction: column; gap: 16px; }
+    .market-topic { font-size: 13.5px; color: var(--ink); line-height: 1.5; margin-bottom: 5px; }
+    .market-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+    .market-prob { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; color: var(--accent); }
+    .market-signal { font-weight: 600; }
+    .market-signal.aligns { color: #2a9e4f; }
+    .market-signal.contradicts { color: #c87d00; }
+
+    /* Crypto pulse */
+    .fg-row { display: flex; align-items: baseline; gap: 10px; }
+    .fg-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 30px; color: var(--ink); letter-spacing: -0.5px; }
+    .fg-label { font-size: 13px; color: var(--muted); }
+    .crypto-movers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .mover-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 4px; background: var(--surface-2); }
+    .mover-up { color: #2a9e4f; }
+    .mover-down { color: #c84040; }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -101,6 +117,10 @@
       <div class="hero-tag"><span class="hero-tag-dot"></span> Your Dashboard</div>
       <h1 id="page-title">Welcome back</h1>
       <p class="hero-sub">Your watchlist, today's top signal, and what's moving — in one place.</p>
+      <div class="hero-stat" id="hero-stat" hidden>
+        <span class="hero-stat-value" id="hero-stat-value">—</span>
+        <span class="hero-stat-label" id="hero-stat-label"></span>
+      </div>
     </div>
   </div>
 
@@ -115,45 +135,33 @@
       </div>
     </div>
 
-    <div class="dash-section-label">Coming soon</div>
-    <div class="dash-soon-grid">
-      <div class="dash-card placeholder">
-        <div class="dash-card-main">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Top Signal Today</div>
-            <span class="dash-soon">Soon</span>
-          </div>
-          <div class="dash-card-body">
-            <div class="dash-empty">Today's highest-confidence AI call.</div>
-          </div>
-        </div>
+    <div class="dash-card" id="signal-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title">Top Signal Today</div>
         <a class="dash-card-link" href="/feed.html">Open Stock Markets &rarr;</a>
       </div>
+      <div class="dash-card-body" id="signal-body">
+        <div class="dash-empty">Loading&hellip;</div>
+      </div>
+    </div>
 
-      <div class="dash-card placeholder">
-        <div class="dash-card-main">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Featured Markets</div>
-            <span class="dash-soon">Soon</span>
-          </div>
-          <div class="dash-card-body">
-            <div class="dash-empty">A handful of toss-up prediction markets.</div>
-          </div>
-        </div>
+    <div class="dash-card" id="market-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title">Featured Markets</div>
         <a class="dash-card-link" href="/markets.html">Open Prediction Markets &rarr;</a>
       </div>
+      <div class="dash-card-body" id="market-body">
+        <div class="dash-empty">Loading&hellip;</div>
+      </div>
+    </div>
 
-      <div class="dash-card placeholder">
-        <div class="dash-card-main">
-          <div class="dash-card-head">
-            <div class="dash-card-title">Crypto Pulse</div>
-            <span class="dash-soon">Soon</span>
-          </div>
-          <div class="dash-card-body">
-            <div class="dash-empty">Fear &amp; Greed index and today's top movers.</div>
-          </div>
-        </div>
+    <div class="dash-card" id="crypto-card">
+      <div class="dash-card-head">
+        <div class="dash-card-title">Crypto Pulse</div>
         <a class="dash-card-link" href="/crypto.html">Open Crypto Markets &rarr;</a>
+      </div>
+      <div class="dash-card-body" id="crypto-body">
+        <div class="dash-empty">Loading&hellip;</div>
       </div>
     </div>
   </div>
@@ -207,10 +215,144 @@
     loadWatchlistSummary();
   });
 
+  // Public, unauthenticated data — kick these off immediately rather than
+  // waiting on auth to resolve, since they don't need a token.
+  loadTopSignal();
+  loadFeaturedMarkets();
+  loadCryptoPulse();
+  loadAccuracyStat();
+
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
     });
+  }
+
+  function confNum(c) {
+    var m = String(c || '').match(/^\s*([1-5])/);
+    return m ? +m[1] : 0;
+  }
+
+  var _predictionsPromise = null;
+  function fetchPredictions() {
+    if (!_predictionsPromise) {
+      _predictionsPromise = fetch((window.API_BASE || '') + '/api/predictions')
+        .then(function (r) { if (!r.ok) throw new Error('bad status'); return r.json(); });
+    }
+    return _predictionsPromise;
+  }
+
+  async function loadAccuracyStat() {
+    try {
+      var data = await fetchPredictions();
+      var s = data && data.summary;
+      if (!s || s.accuracy == null || s.total < 5) return;
+      var wrap = document.getElementById('hero-stat');
+      document.getElementById('hero-stat-value').textContent = s.accuracy + '%';
+      var ciStr = s.accuracyCI ? ' (' + s.accuracyCI.lower + '–' + s.accuracyCI.upper + '%)' : '';
+      document.getElementById('hero-stat-label').innerHTML =
+        'accurate across ' + s.total + ' graded calls' + ciStr + ' — <a href="/accuracy.html">Track record &rarr;</a>';
+      wrap.hidden = false;
+    } catch (_) { /* leave hero-stat hidden */ }
+  }
+
+  async function loadTopSignal() {
+    var body = document.getElementById('signal-body');
+    try {
+      var data = await fetchPredictions();
+      var recent = data.recent || [];
+      var candidates = recent.filter(function (p) {
+        return !p.lean && p.correct == null && p.confidence &&
+          ((p.winnerTickers && p.winnerTickers.length) || (p.loserTickers && p.loserTickers.length));
+      });
+      candidates.sort(function (a, b) {
+        return confNum(b.confidence) - confNum(a.confidence) ||
+          new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      var top = candidates[0];
+      if (!top) {
+        body.innerHTML = '<div class="dash-empty">No high-confidence call yet today — check back soon.</div>';
+        return;
+      }
+      var bullish = !!(top.winnerTickers && top.winnerTickers.length);
+      var ticker = bullish ? top.winnerTickers[0] : top.loserTickers[0];
+      var arrow = bullish ? '↑' : '↓';
+      var dirClass = bullish ? 'dir-bullish' : 'dir-bearish';
+      body.innerHTML =
+        '<div class="signal-row">' +
+          '<span class="signal-dir ' + dirClass + '">' + arrow + ' ' + esc(ticker) + '</span>' +
+          '<span class="signal-conf">Confidence ' + confNum(top.confidence) + '/5</span>' +
+        '</div>' +
+        '<div class="signal-topic">' + esc(top.topic) + '</div>';
+    } catch (_) {
+      body.innerHTML = '<div class="dash-empty">Couldn\'t load today\'s signal right now.</div>';
+    }
+  }
+
+  async function loadFeaturedMarkets() {
+    var body = document.getElementById('market-body');
+    try {
+      var data = await fetchPredictions();
+      var recent = data.recent || [];
+      var candidates = recent.filter(function (p) {
+        return (p.lean === 'Yes' || p.lean === 'No') && p.correct == null && typeof p.yesProbability === 'number';
+      });
+      candidates.sort(function (a, b) { return Math.abs(a.yesProbability - 50) - Math.abs(b.yesProbability - 50); });
+      var picks = candidates.slice(0, 2);
+      if (!picks.length) {
+        body.innerHTML = '<div class="dash-empty">No toss-up markets right now — check back soon.</div>';
+        return;
+      }
+      body.innerHTML = '<div class="market-list">' + picks.map(function (p) {
+        var ours = p.lean === 'Yes' ? p.yesProbability : 100 - p.yesProbability;
+        var outcome = p.predictedOutcome
+          ? (p.predictedOutcome.charAt(0).toLowerCase() + p.predictedOutcome.slice(1))
+          : p.topic;
+        var sigClass = p.signal === 'Aligns with market' ? 'aligns' : p.signal === 'Contradicts market' ? 'contradicts' : '';
+        var sigHtml = p.signal ? '<span class="market-signal ' + sigClass + '">' + esc(p.signal) + '</span>' : '';
+        return (
+          '<div class="market-item">' +
+            '<div class="market-topic">We think ' + esc(outcome) + '.</div>' +
+            '<div class="market-meta"><span class="market-prob">' + ours + '%</span>' + sigHtml + '</div>' +
+          '</div>'
+        );
+      }).join('') + '</div>';
+    } catch (_) {
+      body.innerHTML = '<div class="dash-empty">Couldn\'t load featured markets right now.</div>';
+    }
+  }
+
+  async function loadCryptoPulse() {
+    var body = document.getElementById('crypto-body');
+    try {
+      var res = await fetch((window.API_BASE || '') + '/api/crypto-prices');
+      if (!res.ok) throw new Error('bad status');
+      var data = await res.json();
+      var fg = data.fearGreed;
+      var prices = (data.prices || []).filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
+      prices.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
+      var movers = prices.slice(0, 3);
+
+      var fgHtml = fg
+        ? '<div class="fg-row"><span class="fg-value">' + esc(fg.value) + '</span><span class="fg-label">Fear &amp; Greed — ' + esc(fg.value_classification) + '</span></div>'
+        : '';
+      var moversHtml = movers.length
+        ? '<div class="crypto-movers">' + movers.map(function (c) {
+            var pct = c.price_change_percentage_24h;
+            var cls = pct >= 0 ? 'mover-up' : 'mover-down';
+            var sign = pct >= 0 ? '+' : '';
+            return '<span class="mover-chip ' + cls + '">' + esc((c.symbol || '').toUpperCase()) + ' ' + sign + pct.toFixed(1) + '%</span>';
+          }).join('') + '</div>'
+        : '';
+
+      if (!fgHtml && !moversHtml) {
+        body.innerHTML = '<div class="dash-empty">Crypto data unavailable right now.</div>';
+        return;
+      }
+      body.innerHTML = fgHtml + moversHtml;
+    } catch (_) {
+      body.innerHTML = '<div class="dash-empty">Couldn\'t load crypto data right now.</div>';
+    }
   }
 
   async function loadWatchlistSummary() {
