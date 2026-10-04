@@ -22,6 +22,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(
 
 /* ── Navigation ───────────────────────────────────────────────────────────── */
 nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; }
+/* Nav is its own stacking context (position + z-index), so a dropdown inside
+   it can never out-rank something outside nav just by raising its own
+   z-index — only nav's z-index (100) is compared against outside siblings.
+   On home.html the AI chat docks permanently top-right with a transparent
+   background (chat-widget.js's #ii-ai-panel.ii-embedded), at z-index 9998 —
+   far above nav. Opening the account dropdown (which sits in the same
+   top-right corner) then painted the transparent dock *over* it, letting
+   the dropdown's content show dimly through — read as a "see-through card"
+   glitch even though neither element has any real transparency of its own.
+   Bump nav above the dock only while one of its menus is actually open. */
+nav:not(.bottom-nav):has(.nav-links.open, .ib-account-dropdown.open, #nav-menu.open) { z-index: 9999; }
 .nav-icon { grid-column: 1; justify-self: start; display: inline-flex; align-items: center; color: var(--ink); text-decoration: none; }
 .nav-icon svg { width: 40px; height: 43px; flex-shrink: 0; fill: currentColor; opacity: 0.92; }
 .nav-wordmark { grid-column: 2; justify-self: center; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); white-space: nowrap; }
