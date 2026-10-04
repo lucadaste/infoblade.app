@@ -172,7 +172,7 @@
 
   <!-- Stats -->
   <div class="stats-row" id="stats-row">
-    <div class="stat-card"><div class="stat-label">Overall Accuracy</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div id="stat-accuracy-ci" style="font-size:11px;color:var(--muted);margin-top:4px"></div></div>
+    <div class="stat-card"><div class="stat-label">Called Direction Correctly</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div id="stat-accuracy-ci" style="font-size:11px;color:var(--muted);margin-top:4px"></div></div>
     <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div></div>
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div></div>
   </div>
@@ -270,15 +270,24 @@
   function fmt(n) { return n == null ? '--' : n; }
 
   function renderStats(s) {
+    // Headline is the raw (non-alpha) number: did the call's direction turn
+    // out right. The alpha-adjusted number (did the pick also beat its
+    // market benchmark) is shown as context underneath, since that's a
+    // stricter, different question and reads misleadingly low on its own.
+    const headline = s.rawAccuracy ?? s.accuracy;
+    const headlineCI = s.rawAccuracy != null ? s.rawAccuracyCI : s.accuracyCI;
+
     const acc = document.getElementById('stat-accuracy');
     acc.classList.remove('skeleton');
     acc.style.height = acc.style.width = 'auto';
-    acc.textContent = s.accuracy != null ? s.accuracy + '%' : '--';
+    acc.textContent = headline != null ? headline + '%' : '--';
 
     const accCI = document.getElementById('stat-accuracy-ci');
-    if (s.accuracyCI && s.total > 0) {
-      const margin = Math.round((s.accuracyCI.upper - s.accuracyCI.lower) / 2);
-      accCI.textContent = `±${margin}% (n=${s.total}, 95% CI)`;
+    if (headlineCI && s.total > 0) {
+      const margin = Math.round((headlineCI.upper - headlineCI.lower) / 2);
+      let text = `±${margin}% (n=${s.total}, 95% CI)`;
+      if (s.accuracy != null) text += ` · ${s.accuracy}% beat the market`;
+      accCI.textContent = text;
     } else {
       accCI.textContent = '';
     }

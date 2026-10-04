@@ -680,15 +680,32 @@ async function handleStats(req, res, supabase) {
 
   const total = validated?.length ?? 0;
 
-  // Confidence-weighted accuracy: high-confidence correct predictions count more
+  // Confidence-weighted accuracy: high-confidence correct predictions count more.
+  // This is the alpha-adjusted number: a stock/crypto call only counts as
+  // correct if it beat its benchmark, not just moved the predicted direction
+  // (see lib/scoring.js). PM predictions have no alpha concept, so `correct`
+  // there is just whether the market resolved the way the call leaned.
   let weightedCorrect = 0, totalWeight = 0;
+  // Raw (non-alpha) direction accuracy: did the call's direction turn out
+  // right, independent of whether the pick beat the market. For stock/crypto
+  // this reads `analysis.raw_correct` (older rows graded before that field
+  // existed are skipped, not guessed at); PM predictions have no raw/alpha
+  // split so their `correct` is used directly.
+  let rawWeightedCorrect = 0, rawTotalWeight = 0;
   for (const p of validated ?? []) {
     const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
     totalWeight    += w;
     if (p.correct) weightedCorrect += w;
+
+    const rawCorrect = p.lean ? p.correct : p.analysis?.raw_correct;
+    if (typeof rawCorrect === 'boolean') {
+      rawTotalWeight    += w;
+      if (rawCorrect) rawWeightedCorrect += w;
+    }
   }
   const correct  = validated?.filter(p => p.correct === true).length ?? 0;
   const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
+  const rawAccuracy = rawTotalWeight > 0 ? Math.round(rawWeightedCorrect / rawTotalWeight * 100) : null;
   // 95% Wilson interval around the headline number, using the resolved
   // prediction count as n — a ballpark uncertainty band ("83% ± 10%
   // (n=48)" reads very differently from a bare "83%").
@@ -696,6 +713,11 @@ async function handleStats(req, res, supabase) {
   if (total > 0) {
     const ci = wilsonIntervalFromP((accuracy ?? 0) / 100, total);
     accuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
+  }
+  let rawAccuracyCI = null;
+  if (rawTotalWeight > 0) {
+    const ci = wilsonIntervalFromP((rawAccuracy ?? 0) / 100, total);
+    rawAccuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
   }
 
   // Fetch resolved + pending predictions. Also always include prediction-market
@@ -895,7 +917,7 @@ async function handleStats(req, res, supabase) {
   const pmEdge = await _pmEdgeStats(validated, supabase);
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, accuracyCI, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: { total, correct, incorrect: total - correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers, calibration, pmEdge,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
