@@ -325,22 +325,29 @@
       #ii-ai-panel { bottom: 220px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 244px)); }
     }
 
-    /* Wide desktops have real leftover space beside the page content — instead
-       of a closeable popup, the panel lives there permanently as part of the
-       page itself: no trigger icon, no close control. */
+    /* Home page only, on wide desktops with real leftover space beside the
+       page content: the panel lives there permanently as part of the page
+       itself — no card chrome, no trigger icon, no close control. Other
+       pages never get .ii-embedded, so they keep the normal icon popup at
+       any width. */
     @media (min-width: 1440px) {
-      #ii-ai-panel {
+      #ii-ai-panel.ii-embedded {
         top: 92px;
-        bottom: 16px;
+        bottom: 90px;
         right: 16px;
         width: 520px;
         max-height: none;
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
         transform: translateX(14px) scale(0.99);
         transform-origin: right center;
       }
-      #ii-ai-panel.ii-open { transform: translateX(0) scale(1); }
-      #ii-ai-panel.ii-embedded { box-shadow: none; }
+      #ii-ai-panel.ii-embedded.ii-open { transform: translateX(0) scale(1); }
       #ii-ai-panel.ii-embedded .ii-close-float { display: none; }
+      #ii-ai-panel.ii-embedded .ii-msgs { padding-top: 14px; }
+      #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; }
       #ii-chat-btn.ii-embed-hidden { display: none; }
     }
   `;
@@ -496,14 +503,14 @@
     }
   }
 
-  // Wide desktops have real empty space beside the page content (see the
-  // 1440px dock styles above). At that width the panel isn't a popup the
-  // user opens and dismisses — it's a permanent part of the page: no
-  // trigger icon, no close control, nothing to accidentally dismiss. Below
-  // that width (not enough room to hold it neatly) it reverts to the normal
-  // icon-triggered popup, live as the viewport is resized across it.
+  // Home page only, on wide desktops with real empty space beside the page
+  // content (see the 1440px dock styles above): the panel isn't a popup the
+  // user opens and dismisses there — it's a permanent part of the page, no
+  // trigger icon or close control. Every other page keeps the normal
+  // icon-triggered popup regardless of width. Live as the viewport is
+  // resized across the breakpoint.
   const embedMq = window.matchMedia('(min-width: 1440px)');
-  function isEmbedMode() { return embedMq.matches; }
+  function isEmbedMode() { return page === 'home.html' && embedMq.matches; }
 
   function applyResponsiveMode() {
     const embedded = isEmbedMode();
