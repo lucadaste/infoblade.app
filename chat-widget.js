@@ -155,15 +155,19 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 2.1em;
-      height: 2.1em;
+      /* Sized to the message text's line-height (1.6 * 14.5px font-size)
+         so a flex-start row top-aligns the icon flush with the first
+         line instead of needing a hand-tuned margin-top fudge factor —
+         any size bigger than one line's height can't be made to look
+         "lined up" with it no matter the offset. */
+      width: 1.6em;
+      height: 1.6em;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
       flex-shrink: 0;
-      margin-top: 0.14em;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
