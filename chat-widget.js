@@ -162,28 +162,26 @@
     }
     .ii-row-avatar {
       flex-shrink: 0;
-      margin-top: 1px;
+      margin-top: 2px;
       pointer-events: none;
     }
-    .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
-    @keyframes ii-avatar-pulse {
-      0%, 100% { transform: scale(1); opacity: 0.8; filter: drop-shadow(0 0 0 rgba(0,230,118,0)); }
-      50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 7px rgba(0,230,118,0.65)); }
+    .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
+    @keyframes ii-avatar-glow {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
     }
-    .ii-thinking-dots { display: inline-flex; align-items: center; gap: 3px; margin-left: 2px; }
-    .ii-thinking-dots span {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: currentColor;
-      opacity: 0.25;
-      animation: ii-dot-pulse 1.1s ease-in-out infinite;
+    .ii-thinking-shimmer {
+      background-image: linear-gradient(90deg, var(--muted) 0%, var(--muted) 38%, var(--ink) 50%, var(--muted) 62%, var(--muted) 100%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      animation: ii-shimmer-sweep 1.6s linear infinite;
     }
-    .ii-thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
-    .ii-thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes ii-dot-pulse {
-      0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
-      30% { opacity: 1; transform: scale(1); }
+    @keyframes ii-shimmer-sweep {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
     .ii-close-float {
       position: absolute;
@@ -442,11 +440,8 @@
 
   function makeThinkingText() {
     const span = document.createElement('span');
-    span.textContent = 'Thinking';
-    const dots = document.createElement('span');
-    dots.className = 'ii-thinking-dots';
-    dots.innerHTML = '<span></span><span></span><span></span>';
-    span.appendChild(dots);
+    span.className = 'ii-thinking-shimmer';
+    span.textContent = 'Thinking…';
     return span;
   }
 
