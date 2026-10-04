@@ -7,8 +7,22 @@ const SPORT_LABELS = {
   // gets reached instead of every UFC market silently falling through to the
   // generic fallback with no sport context at all.
   tennis: 'Tennis', golf: 'Golf', mma: 'MMA', ufc: 'MMA', boxing: 'Boxing',
+  // 'CFB'/'CBB' map through to LEAGUE_META.cfb/.cbb (lib/sports-teams.js) via
+  // normalizeSportTag, which is how a college-basketball market tells
+  // matchTeams() to prefer CBB_TEAM_LOOKUP over the football-default
+  // TEAM_LOOKUP for a school that fields both (e.g. "Duke").
+  'college-football': 'CFB', 'college-basketball': 'CBB',
   soccer: 'Soccer', basketball: 'Basketball', football: 'Football', baseball: 'Baseball',
 };
+// Checked in this fixed order, NOT the event's own tag array order (which
+// Polymarket doesn't guarantee) — so a specific tag like 'college-basketball'
+// always wins over a generic co-occurring one like 'basketball', instead of
+// whichever happens to appear first in that event's tags.
+const SPORT_TAG_PRIORITY = [
+  'college-football', 'college-basketball', 'ufc', 'mma',
+  'nba', 'nfl', 'mlb', 'nhl', 'mls', 'tennis', 'golf', 'boxing',
+  'soccer', 'basketball', 'football', 'baseball',
+];
 
 // Events matching any of these tags are excluded regardless of category
 const ESPORTS_TAGS = new Set([
@@ -191,9 +205,10 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     const volume24h = Math.round(parseFloat(event.volume24hr || 0));
     const volumeTotal = Math.round(parseFloat(event.volume || 0));
 
-    // Detect sport from Polymarket event tags
+    // Detect sport from Polymarket event tags — checked in our own fixed
+    // priority order (SPORT_TAG_PRIORITY), not this event's tag array order.
     const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
-    const sportTag  = eventTags.find(t => SPORT_LABELS[t]);
+    const sportTag  = SPORT_TAG_PRIORITY.find(t => eventTags.includes(t));
     const sport     = sportTag ? SPORT_LABELS[sportTag] : null;
     const resultCategory = isSearch ? (_categoryForTags(eventTags) || 'other') : category;
 
