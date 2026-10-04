@@ -6,6 +6,7 @@ import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence
 import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
+import { fetchQuantSignals } from '../lib/quant-signals.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -150,6 +151,21 @@ function _buildTechnicalSection(snapshot) {
   });
   return lines.length
     ? `\nLIVE TECHNICAL SNAPSHOT (Yahoo Finance):\n${lines.join('\n')}\nUse this to calibrate: if a stock is already near analyst targets, upside is limited; if it's below key MAs, technical headwinds exist regardless of positive news.\n`
+    : '';
+}
+
+function _buildQuantSection(snapshot) {
+  const lines = Object.entries(snapshot).map(([sym, d]) => {
+    const parts = [];
+    if (d.momentum1w  != null) parts.push(`1wk momentum ${d.momentum1w  > 0 ? '+' : ''}${d.momentum1w}%`);
+    if (d.momentum1m  != null) parts.push(`1mo momentum ${d.momentum1m  > 0 ? '+' : ''}${d.momentum1m}%`);
+    if (d.relStrength1m != null) parts.push(`${d.relStrength1m > 0 ? '+' : ''}${d.relStrength1m}pp vs benchmark (1mo)`);
+    if (d.rsi14 != null) parts.push(`RSI14 ${d.rsi14}${d.rsi14 >= 70 ? ' (overbought)' : d.rsi14 <= 30 ? ' (oversold)' : ''}`);
+    if (d.volRegime) parts.push(`volatility ${d.volRegime}${d.volCurrent != null ? ` (${d.volCurrent}% ann. vs ${d.volTrailingAvg}% trailing avg)` : ''}`);
+    return parts.length ? `- $${sym}: ${parts.join(', ')}` : null;
+  }).filter(Boolean);
+  return lines.length
+    ? `\nQUANT SIGNALS (daily price data, not news):\n${lines.join('\n')}\nUse this alongside the news, not instead of it: RSI above 70 or below 30 means a move may already be stretched and due to cool off or reverse, even if the news is still fresh. Positive relative strength vs. the benchmark means the stock is already outperforming the broader market/crypto trend, which supports (not guarantees) a bullish continuation case; negative relative strength supports a bearish one. Elevated volatility means price swings are wider than usual right now, so a given news catalyst can move the stock further than its historical pattern would suggest, in either direction, which should widen your uncertainty rather than just push confidence up or down.\n`
     : '';
 }
 
@@ -327,9 +343,10 @@ export async function runAnalysis({
   try {
     const candidateTickers = _extractTickerCandidates(headlines);
     const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-    const [relevantMarkets, technicalSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
+    const [relevantMarkets, technicalSnapshot, quantSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
       _fetchRelevantMarkets(topic),
       _fetchTickerSnapshot(candidateTickers),
+      fetchQuantSignals(candidateTickers),
       _fetchRedditSentiment(topic, isCryptoTopic),
       supabase
         ? supabase.from('source_reputation').select('source, attempts, correct')
@@ -363,6 +380,7 @@ export async function runAnalysis({
       : '';
 
     const technicalSection = _buildTechnicalSection(technicalSnapshot);
+    const quantSection = _buildQuantSection(quantSnapshot);
 
     const redditSection = redditPosts.length
       ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
@@ -440,7 +458,7 @@ Sources and factuality grades:
 ${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${redditSection}${trackRecordSection}${conflictSection}`;
+${marketsSection}${technicalSection}${quantSection}${redditSection}${trackRecordSection}${conflictSection}`;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
