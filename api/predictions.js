@@ -817,16 +817,19 @@ async function handleStats(req, res, supabase) {
   // with a higher realized correct-rate? Uses the same canonical `correct`
   // field as everything else. Buckets under MIN_CALIBRATION_N are flagged
   // insufficient rather than shown as a misleading point estimate.
+  // Raw 4 and 5 stars are merged into one bucket: the rubric makes 5 so hard
+  // to earn (multiple high-grade sources agreeing, or near-universal
+  // precedent) that it never accumulates enough volume to stand alone.
   const MIN_CALIBRATION_N = 10;
   const calibrationBuckets = {};
   for (const p of validated ?? []) {
     const stars = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
-    const bucket = Math.min(5, Math.max(1, Math.round(stars)));
+    const bucket = Math.min(4, Math.max(1, Math.round(stars)));
     if (!calibrationBuckets[bucket]) calibrationBuckets[bucket] = { n: 0, correct: 0 };
     calibrationBuckets[bucket].n++;
     if (p.correct) calibrationBuckets[bucket].correct++;
   }
-  const calibration = [1, 2, 3, 4, 5].map(confidence => {
+  const calibration = [1, 2, 3, 4].map(confidence => {
     const b = calibrationBuckets[confidence] || { n: 0, correct: 0 };
     const sufficient = b.n >= MIN_CALIBRATION_N;
     return {
