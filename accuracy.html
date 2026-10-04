@@ -59,19 +59,39 @@
     .cat-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
 
     /* Charts row */
-    .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
+    .charts-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 36px; align-items: stretch; }
     @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
-    .chart-wrap { background: var(--card); border-radius: 10px; padding: 24px; }
+    .chart-wrap { background: var(--card); border-radius: 14px; padding: 24px 24px 20px; display: flex; flex-direction: column; }
+    .chart-sub { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
-    /* Top tickers vertical list (inside chart card) */
-    .ticker-grid-vert { display: flex; flex-direction: column; gap: 8px; }
-    .ticker-row { display: flex; align-items: center; gap: 10px; }
-    .ticker-rank { font-family: 'Share Tech Mono', sans-serif; font-size: 10px; color: #3a3a3a; min-width: 22px; }
-    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 52px; }
+    /* Cumulative score hero */
+    .score-hero { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+    .score-hero-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -1px; line-height: 1; }
+    .score-hero-trend { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+    .score-hero-trend.pos { color: var(--accent); background: rgba(0,230,118,0.12); }
+    .score-hero-trend.neg { color: var(--red); background: rgba(255,82,82,0.1); }
+    .score-hero-range { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+
+    .chart-svg-wrap { position: relative; }
+    .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; }
+    .chart-crosshair { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--divider); pointer-events: none; opacity: 0; }
+    .chart-dot { position: absolute; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 50%; border: 2px solid var(--card); pointer-events: none; opacity: 0; }
+    .chart-tooltip { position: absolute; top: 0; transform: translate(-50%, -115%); background: var(--surface-2); border-radius: 7px; padding: 7px 10px; font-size: 11px; line-height: 1.5; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 5; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+    .chart-tooltip .tt-date { color: var(--muted); }
+    .chart-tooltip .tt-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; }
+
+    /* Top tickers leaderboard (inside chart card) */
+    .ticker-grid-vert { display: flex; flex-direction: column; }
+    .ticker-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+    .ticker-rank { font-family: 'Share Tech Mono', sans-serif; font-size: 10px; color: var(--muted); min-width: 16px; }
+    .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 50px; }
     .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
-    .ticker-bar-fill { height: 4px; border-radius: 2px; background: var(--accent); }
-    .ticker-count { font-size: 11px; color: var(--muted); min-width: 24px; text-align: right; }
+    .ticker-bar-fill { height: 4px; border-radius: 2px; }
+    .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 38px; text-align: right; }
+    .ticker-n { font-size: 10.5px; color: var(--muted); min-width: 40px; text-align: right; }
+    .ticker-more { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; padding: 10px 0 0; text-align: left; transition: color 0.15s; }
+    .ticker-more:hover { color: var(--ink); }
 
     /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
@@ -193,11 +213,12 @@
   <div class="charts-row">
     <div class="chart-wrap">
       <div class="section-title">Cumulative Score</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Running total weighted by confidence: a very-high-confidence call counts 5× more than a very-low one.</p>
+      <p class="chart-sub">Running total weighted by confidence: a very-high-confidence call counts 5× more than a very-low one.</p>
       <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
     </div>
     <div class="chart-wrap">
       <div class="section-title">Top Tickers by Win Rate</div>
+      <p class="chart-sub">Ranked by statistical confidence, not raw win rate — minimum 5 graded calls to qualify.</p>
       <div id="ticker-grid" class="ticker-grid-vert">
         <div class="no-data">Loading…</div>
       </div>
@@ -336,42 +357,137 @@
     }
   }
 
-  function renderCumulativeChart(cum) {
+  // One point per *day* (last value that day), not one per resolved
+  // prediction — hundreds of per-prediction points rendered as a raw
+  // polyline is what made this look like a noisy, AI-generated sparkline.
+  function _bucketDaily(cum) {
+    const byDate = new Map();
+    for (const c of cum) byDate.set(c.date, c.cumulative);
+    return Array.from(byDate, ([date, cumulative]) => ({ date, cumulative }));
+  }
+
+  // Smooth curve through every point (Catmull-Rom -> cubic Bezier) instead
+  // of a jagged polyline — this is the same smoothing finance apps use for
+  // a running-total line, where the day-to-day zig-zag isn't the story.
+  function _smoothPath(points) {
+    if (points.length < 2) return '';
+    let d = `M ${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
+    }
+    return d;
+  }
+
+  function _fmtChartDate(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderCumulativeChart(cumRaw) {
     const area = document.getElementById('cumulative-chart-area');
-    if (!cum || cum.length < 1) {
+    const cum = _bucketDaily(cumRaw || []);
+    if (!cum.length) {
       area.innerHTML = '<div class="chart-empty">No resolved predictions yet.</div>';
       return;
     }
+    const lastVal  = cum[cum.length - 1].cumulative;
+    const firstVal = cum[0].cumulative;
+    const color    = lastVal >= 0 ? 'var(--accent)' : 'var(--red)';
+    const trendPts = lastVal - firstVal;
+
+    const hero = `
+      <div class="score-hero">
+        <div class="score-hero-value" style="color:${color}">${lastVal >= 0 ? '+' : ''}${lastVal}<span style="font-size:15px;font-weight:500;color:var(--muted);margin-left:4px">pts</span></div>
+        ${cum.length > 1 ? `<div class="score-hero-trend ${trendPts >= 0 ? 'pos' : 'neg'}">${trendPts >= 0 ? '▲' : '▼'} ${Math.abs(trendPts)} pts since ${_fmtChartDate(cum[0].date)}</div>` : ''}
+      </div>`;
+
     if (cum.length === 1) {
-      const v = cum[0].cumulative;
-      area.innerHTML = `<div style="font-family:'Share Tech Mono',sans-serif;font-size:28px;font-weight:700;color:${v>=0?'var(--accent)':'var(--red)'};padding:20px 0">${v>=0?'+':''}${v} pts</div><div style="font-size:12px;color:var(--muted)">${cum[0].date} · 1 resolved prediction</div>`;
+      area.innerHTML = hero + `<div class="score-hero-range">${_fmtChartDate(cum[0].date)} · 1 day of resolved predictions</div>`;
       return;
     }
+
+    // Padded coordinate space so the line/dots never touch the card edge,
+    // and the stroke never clips at the top/bottom of its own range.
     const vals  = cum.map(c => c.cumulative);
     const min   = Math.min(0, ...vals);
     const max   = Math.max(0, ...vals);
     const range = max - min || 1;
-    const H = 120, W = 100;
-    const pts = cum.map((c, i) => {
-      const x = (i / (cum.length - 1)) * W;
-      const y = H - ((c.cumulative - min) / range) * H;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(' ');
-    const zeroY = (H - ((0 - min) / range) * H).toFixed(1);
-    const lastVal = vals[vals.length - 1];
-    const color = lastVal >= 0 ? 'var(--accent)' : 'var(--red)';
+    const H = 180, W = 100, PAD_X = 1.5, PAD_Y = 14;
+    const plotW = W - PAD_X * 2, plotH = H - PAD_Y * 2;
+    const points = cum.map((c, i) => ({
+      x: PAD_X + (i / (cum.length - 1)) * plotW,
+      y: PAD_Y + plotH - ((c.cumulative - min) / range) * plotH,
+    }));
+    const zeroY = (PAD_Y + plotH - ((0 - min) / range) * plotH).toFixed(2);
+    const linePath = _smoothPath(points);
+    const lastPt = points[points.length - 1];
+    const areaPath = `${linePath} L ${lastPt.x.toFixed(2)},${H} L ${points[0].x.toFixed(2)},${H} Z`;
+    const gradId = 'cumGrad';
+
     area.innerHTML = `
-      <svg viewBox="0 0 100 ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
-        <line x1="0" y1="${zeroY}" x2="100" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5"/>
-        <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="0.8" stroke-linejoin="round" stroke-linecap="round"/>
-        <circle cx="${(100).toFixed(1)}" cy="${(H - ((lastVal - min)/range)*H).toFixed(1)}" r="2" fill="${color}"/>
-      </svg>
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px">
-        <span>${cum[0].date}</span>
-        <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;color:${color}">${lastVal >= 0 ? 'Positive trend' : 'Negative trend'}</span>
-        <span>${cum[cum.length-1].date}</span>
+      <div class="chart-svg-wrap" id="cum-chart-wrap">
+        ${hero}
+        <svg id="cum-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
+          <defs>
+            <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${color}" stop-opacity="0.16"/>
+              <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line x1="${PAD_X}" y1="${zeroY}" x2="${W - PAD_X}" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5"/>
+          <path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>
+          <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          <circle cx="${lastPt.x.toFixed(2)}" cy="${lastPt.y.toFixed(2)}" r="3" fill="${color}" stroke="var(--card)" stroke-width="1.5"/>
+        </svg>
+        <div class="chart-crosshair" id="cum-crosshair"></div>
+        <div class="chart-dot" id="cum-dot"></div>
+        <div class="chart-tooltip" id="cum-tooltip"><span class="tt-date"></span> · <span class="tt-val"></span></div>
+        <div class="chart-axis-row"><span>${_fmtChartDate(cum[0].date)}</span><span>${_fmtChartDate(cum[cum.length - 1].date)}</span></div>
       </div>
     `;
+
+    // Hover: crosshair + dot + tooltip, snapped to the nearest day's point.
+    const wrap      = document.getElementById('cum-chart-wrap');
+    const svgEl      = document.getElementById('cum-svg');
+    const crosshair  = document.getElementById('cum-crosshair');
+    const dot        = document.getElementById('cum-dot');
+    const tooltip    = document.getElementById('cum-tooltip');
+    const ttDate     = tooltip.querySelector('.tt-date');
+    const ttVal      = tooltip.querySelector('.tt-val');
+
+    function move(clientX) {
+      const rect = svgEl.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      const idx  = Math.round(frac * (points.length - 1));
+      const pt   = points[idx];
+      const c    = cum[idx];
+      const px   = (pt.x / W) * rect.width;
+      const py   = ((pt.y / H) * rect.height) + (rect.top - wrap.getBoundingClientRect().top);
+      crosshair.style.left = px + 'px';
+      crosshair.style.opacity = '1';
+      dot.style.left = px + 'px';
+      dot.style.top  = py + 'px';
+      dot.style.background = c.cumulative >= 0 ? 'var(--accent)' : 'var(--red)';
+      dot.style.opacity = '1';
+      tooltip.style.left = px + 'px';
+      tooltip.style.top  = py + 'px';
+      tooltip.style.opacity = '1';
+      ttDate.textContent = _fmtChartDate(c.date);
+      ttVal.textContent  = (c.cumulative >= 0 ? '+' : '') + c.cumulative + ' pts';
+      ttVal.style.color  = c.cumulative >= 0 ? 'var(--accent)' : 'var(--red)';
+    }
+    function hide() {
+      crosshair.style.opacity = '0';
+      dot.style.opacity = '0';
+      tooltip.style.opacity = '0';
+    }
+    wrap.addEventListener('pointermove', e => move(e.clientX));
+    wrap.addEventListener('pointerleave', hide);
   }
 
   function renderPredCard(p) {
@@ -536,19 +652,35 @@
     }).join('');
   }
 
+  const TICKER_SHOWN = 8;
+
   function renderTickers(topTickers) {
     const el = document.getElementById('ticker-grid');
     if (!topTickers || !topTickers.length) {
       el.innerHTML = '<div class="no-data">No resolved predictions yet.</div>';
       return;
     }
-    el.innerHTML = topTickers.map((t, i) => `
+    const row = (t, i) => {
+      const color = accuracyColor(t.winRate);
+      return `
       <div class="ticker-row">
         <div class="ticker-rank">#${i + 1}</div>
-        <div class="ticker-sym">${t.ticker}</div>
-        <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%"></div></div>
-        <div class="ticker-count">${t.total}x</div>
-      </div>`).join('');
+        <div class="ticker-sym">${esc(t.ticker)}</div>
+        <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%;background:${color}"></div></div>
+        <div class="ticker-pct" style="color:${color}">${t.winRate}%</div>
+        <div class="ticker-n">n=${t.total}</div>
+      </div>`;
+    };
+    const shown = topTickers.slice(0, TICKER_SHOWN);
+    const rest  = topTickers.slice(TICKER_SHOWN);
+    el.innerHTML = shown.map(row).join('')
+      + (rest.length ? `<div id="ticker-rest" style="display:none">${rest.map(row).join('')}</div>
+         <button class="ticker-more" id="ticker-more-btn">Show ${rest.length} more</button>` : '');
+    const btn = document.getElementById('ticker-more-btn');
+    if (btn) btn.addEventListener('click', () => {
+      document.getElementById('ticker-rest').style.display = '';
+      btn.remove();
+    });
   }
 
   let _allPreds = [];
@@ -662,7 +794,7 @@
         if (el) { el.classList.remove('skeleton'); el.textContent = '--'; }
       });
       document.getElementById('cumulative-chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
-      document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
+      document.getElementById('ticker-grid').innerHTML = `<div class="error-msg">Could not load accuracy data.</div>`;
       document.getElementById('all-preds-list').innerHTML = `<div class="error-msg">Could not load predictions.</div>`;
       return null;
     }
