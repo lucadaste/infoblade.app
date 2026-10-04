@@ -154,15 +154,15 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
       flex-shrink: 0;
-      margin-top: 3px;
+      margin-top: 1px;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
@@ -325,9 +325,9 @@
       #ii-ai-panel { bottom: 220px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 244px)); }
     }
 
-    /* Wide desktops have real leftover space beside the page content — dock
-       the panel to the right edge, nearly full height, instead of leaving it
-       a small bottom-right popup. */
+    /* Wide desktops have real leftover space beside the page content — instead
+       of a closeable popup, the panel lives there permanently as part of the
+       page itself: no trigger icon, no close control. */
     @media (min-width: 1440px) {
       #ii-ai-panel {
         top: 92px;
@@ -339,6 +339,9 @@
         transform-origin: right center;
       }
       #ii-ai-panel.ii-open { transform: translateX(0) scale(1); }
+      #ii-ai-panel.ii-embedded { box-shadow: none; }
+      #ii-ai-panel.ii-embedded .ii-close-float { display: none; }
+      #ii-chat-btn.ii-embed-hidden { display: none; }
     }
   `;
   document.head.appendChild(style);
@@ -493,8 +496,24 @@
     }
   }
 
-  document.getElementById('ii-close-btn').addEventListener('click', () => setOpen(false));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && open) setOpen(false); });
+  // Wide desktops have real empty space beside the page content (see the
+  // 1440px dock styles above). At that width the panel isn't a popup the
+  // user opens and dismisses — it's a permanent part of the page: no
+  // trigger icon, no close control, nothing to accidentally dismiss. Below
+  // that width (not enough room to hold it neatly) it reverts to the normal
+  // icon-triggered popup, live as the viewport is resized across it.
+  const embedMq = window.matchMedia('(min-width: 1440px)');
+  function isEmbedMode() { return embedMq.matches; }
+
+  function applyResponsiveMode() {
+    const embedded = isEmbedMode();
+    panel.classList.toggle('ii-embedded', embedded);
+    floatBtn.classList.toggle('ii-embed-hidden', embedded);
+    if (embedded && !open) setOpen(true);
+  }
+
+  document.getElementById('ii-close-btn').addEventListener('click', () => { if (!isEmbedMode()) setOpen(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && open && !isEmbedMode()) setOpen(false); });
 
   // Close when clicking outside the panel and trigger button.
   // Uses composedPath (the click's ancestor chain captured at dispatch time)
@@ -504,7 +523,7 @@
   // this listener runs. A detached node always fails .contains(), so the
   // click looked "outside" and closed the panel it was just opened from.
   document.addEventListener('click', e => {
-    if (!open || window.matchMedia('(min-width: 1440px)').matches) return;
+    if (!open || isEmbedMode()) return;
     const navBtn = document.getElementById('ii-chat-btn');
     const path = e.composedPath ? e.composedPath() : [];
     if (!path.includes(panel) && !(navBtn && path.includes(navBtn))) {
@@ -514,12 +533,8 @@
 
   window.iiToggleChat = () => setOpen(!open);
 
-  // Wide desktops have real empty space beside the page content (see the
-  // 1440px dock styles above) — treat the panel as living there permanently
-  // instead of behind a click, rather than just resizing it once opened.
-  const wideDockMq = window.matchMedia('(min-width: 1440px)');
-  if (wideDockMq.matches) setOpen(true);
-  wideDockMq.addEventListener('change', e => { if (e.matches && !open) setOpen(true); });
+  applyResponsiveMode();
+  embedMq.addEventListener('change', applyResponsiveMode);
 
   function mdToHtml(raw) {
     const lines = raw.split('\n');
