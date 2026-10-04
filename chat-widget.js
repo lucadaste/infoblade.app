@@ -323,17 +323,24 @@
       #ii-ai-panel { bottom: 220px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 244px)); }
     }
 
-    /* Home page only, on wide desktops with real leftover space beside the
-       page content: the panel lives there permanently as part of the page
-       itself — no card chrome, no trigger icon, no close control. Other
-       pages never get .ii-embedded, so they keep the normal icon popup at
-       any width. */
-    @media (min-width: 1440px) {
+    /* Home page only, once there's enough width to hold both the page
+       content and the chat without cramping either: the panel lives
+       docked to the right permanently as part of the page itself — no
+       card chrome, no trigger icon, no close control. Other pages never
+       get .ii-embedded, so they keep the normal icon popup at any width.
+       --ii-chat-w scales the dock width down smoothly as the window
+       narrows (520px down to a 340px floor) instead of jumping at a fixed
+       breakpoint; home.html reads the same variable to shrink its own
+       content column by exactly that much, so the two never overlap. */
+    @media (min-width: 1024px) {
+      html.ii-chat-embedded {
+        --ii-chat-w: clamp(340px, 34vw, 520px);
+      }
       #ii-ai-panel.ii-embedded {
         top: 92px;
         bottom: 90px;
         right: 16px;
-        width: 520px;
+        width: var(--ii-chat-w);
         max-height: none;
         background: transparent;
         border: none;
@@ -498,20 +505,31 @@
     }
   }
 
-  // Home page only, on wide desktops with real empty space beside the page
-  // content (see the 1440px dock styles above): the panel isn't a popup the
-  // user opens and dismisses there — it's a permanent part of the page, no
-  // trigger icon or close control. Every other page keeps the normal
-  // icon-triggered popup regardless of width. Live as the viewport is
-  // resized across the breakpoint.
-  const embedMq = window.matchMedia('(min-width: 1440px)');
+  // Home page only, once there's enough width to hold both the page content
+  // and the chat without cramping either (see the dock styles above): the
+  // panel isn't a popup the user opens and dismisses there — it's a
+  // permanent part of the page, no trigger icon or close control. Every
+  // other page keeps the normal icon-triggered popup regardless of width.
+  // Live as the viewport is resized across the breakpoint.
+  const embedMq = window.matchMedia('(min-width: 1024px)');
   function isEmbedMode() { return page === 'home.html' && embedMq.matches; }
 
   function applyResponsiveMode() {
     const embedded = isEmbedMode();
+    const wasEmbedded = panel.classList.contains('ii-embedded');
     panel.classList.toggle('ii-embedded', embedded);
     floatBtn.classList.toggle('ii-embed-hidden', embedded);
-    if (embedded && !open) setOpen(true);
+    document.documentElement.classList.toggle('ii-chat-embedded', embedded);
+    if (embedded && !open) {
+      setOpen(true);
+    } else if (!embedded && wasEmbedded && open && history.length === 0) {
+      // Dropping out of the embedded layout (window narrowed past the point
+      // it fits) — go back to the closed icon rather than leaving a popup
+      // sitting open that nobody asked to open. Skip this if there's an
+      // actual conversation going, so narrowing the window mid-chat doesn't
+      // yank it away.
+      setOpen(false);
+    }
   }
 
   document.getElementById('ii-close-btn').addEventListener('click', () => { if (!isEmbedMode()) setOpen(false); });
