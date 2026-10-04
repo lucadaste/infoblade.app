@@ -94,6 +94,7 @@
     .historical-situation strong { color: var(--ink); font-weight: 700; }
     .market-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
     .market-question { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; flex: 1; }
+    .event-title { display: inline-block; font-family: 'Share Tech Mono', sans-serif; font-weight: 400; font-size: 13px; line-height: 1.3; color: var(--text-soft); margin-bottom: 4px; }
     .odds-block { flex-shrink: 0; text-align: right; }
     .odds-number { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 36px; letter-spacing: -1px; line-height: 1; }
     .odds-number.high { color: #2a9e4f; }
@@ -512,16 +513,25 @@
       card.className = 'market-card';
       card.style.animationDelay = `${index * 60}ms`;
 
+      const closeDate = market.endDate ? new Date(market.endDate) : null;
+      const closeDateText = closeDate && !isNaN(closeDate)
+        ? closeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : null;
       const closesText = market.daysLeft !== null
-        ? (market.daysLeft <= 0 ? 'Closing soon' : `Closes in ${market.daysLeft}d`)
+        ? (market.daysLeft <= 0 ? 'Closing soon' : `Closes in ${market.daysLeft}d`) + (closeDateText ? ` (${closeDateText})` : '')
         : 'No expiry set';
+
+      // Event title (e.g. "Chelsea vs. PSG — Exact Score") carries the real-world
+      // context — teams/competition — that the individual sub-market question
+      // (e.g. "Any Other Score?") often lacks on its own.
+      const showEventTitle = market.title && market.title.trim() && market.title.trim() !== market.question.trim();
 
       const isWatched = marketsWatchlist.some(m => m.slug === market.slug);
       const safeMarket = JSON.stringify({ question: market.question, slug: market.slug, yesPrice: market.yesPrice }).replace(/"/g, '&quot;');
       card.innerHTML = `
         ${isWatched ? '<div class="watchlist-badge">★ Watching</div>' : ''}
         <div class="market-header">
-          <div class="market-question">${market.sport ? `<span class="sport-badge">${esc(market.sport)}</span><br>` : ''}${esc(market.question)}</div>
+          <div class="market-question">${market.sport ? `<span class="sport-badge">${esc(market.sport)}</span><br>` : ''}${showEventTitle ? `<span class="event-title">${esc(market.title)}</span><br>` : ''}${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
             <div class="odds-label">${market.yesLabel ? esc(market.yesLabel) : 'Market odds'}</div>

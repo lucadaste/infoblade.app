@@ -175,6 +175,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
       volume24h,
       volumeTotal,
       daysLeft,
+      endDate,
       totalMarkets: ms.length,
       category: resultCategory,
       sport,
