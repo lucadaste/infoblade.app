@@ -346,8 +346,11 @@
        --ii-chat-w scales the dock width down smoothly as the window
        narrows (520px down to a 340px floor) instead of jumping at a fixed
        breakpoint; home.html reads the same variable to shrink its own
-       content column by exactly that much, so the two never overlap. */
-    @media (min-width: 1024px) {
+       content column by exactly that much, so the two never overlap.
+       1180px (not 1024) because below that the dashboard's own heading
+       ("Welcome back, <username>") has no room left to shrink into and
+       starts running under the dock. */
+    @media (min-width: 1180px) {
       html.ii-chat-embedded {
         --ii-chat-w: clamp(340px, 34vw, 520px);
       }
@@ -532,7 +535,7 @@
   // permanent part of the page, no trigger icon or close control. Every
   // other page keeps the normal icon-triggered popup regardless of width.
   // Live as the viewport is resized across the breakpoint.
-  const embedMq = window.matchMedia('(min-width: 1024px)');
+  const embedMq = window.matchMedia('(min-width: 1180px)');
   function isEmbedMode() { return page === 'home.html' && embedMq.matches; }
 
   function applyResponsiveMode() {

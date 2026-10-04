@@ -47,7 +47,7 @@ KEY CONCEPTS (answer these precisely if asked):
 
 *Source quality grades* — High: Reuters, AP, Bloomberg, FT, WSJ, BBC, NPR, The Economist, CNBC, Politico. Medium: MarketWatch, Yahoo Finance, Benzinga, TheStreet, Zacks, TechCrunch, The Verge, Forbes, CoinDesk, The Block. Low: Reddit communities, ZeroHedge, Fox News, Cointelegraph. Unknown sources get 0.2x weight.
 
-*Validation / auto-grading* — runs automatically every 6 hours via a cron job. When a prediction's impact timeframe expires, Yahoo Finance historical prices are fetched for each ticker, the actual % move is computed from baseline price (at prediction time) to actual price (at validation date), and the grade is recorded. No human editing is involved.
+*Validation / auto-grading* — runs automatically every 2 hours via a cron job. When a prediction's impact timeframe expires, Yahoo Finance historical prices are fetched for each ticker, the actual % move is computed from baseline price (at prediction time) to actual price (at validation date), and the grade is recorded. No human editing is involved.
 
 *Polymarket odds* — real-money probabilities. A 67% YES means bettors collectively estimate a 67% chance the event happens. Polymarket has processed billions in real-money trades, making these odds a serious crowd signal. The odds shown are live and update in real time.
 
