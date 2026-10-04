@@ -553,7 +553,7 @@
           <div class="market-question">${market.sport ? `<span class="sport-badge">${esc(market.sport)}</span><br>` : ''}${showEventTitle ? `<span class="event-title">${esc(market.title)}</span><br>` : ''}${esc(market.question)}</div>
           <div class="odds-block">
             <div class="odds-number ${oddsClass(market.yesPrice)}">${market.yesPrice}%</div>
-            <div class="odds-label">${market.yesLabel ? esc(market.yesLabel) : 'Market odds'}</div>
+            <div class="odds-label">${esc(market.yesLabel || (market.outcomeName ? (market.sport ? `${market.outcomeName} win` : market.outcomeName) : 'Market odds'))}</div>
             <div class="odds-bar-wrap"><div class="odds-bar-fill ${oddsClass(market.yesPrice)}" style="width:${market.yesPrice}%"></div></div>
           </div>
         </div>
