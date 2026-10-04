@@ -5,6 +5,21 @@ import { getSupabase, checkRateLimit, clientIp } from '../lib/http.js';
 // Module-level headline cache — shared across warm invocations, 5-min TTL
 const _headlineCache = new Map();
 
+// Image attachments (drag-and-drop in the chat widget) — Claude vision
+// support, scoped to a handful of small images per message rather than
+// documents/PDFs (a separate content-block type with its own constraints).
+const MAX_IMAGES = 2;
+const MAX_IMAGE_BASE64_CHARS = 2_200_000; // ~1.6MB raw after base64's ~4/3 expansion
+const ALLOWED_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+
+function sanitizeImages(images) {
+  if (!Array.isArray(images)) return [];
+  return images
+    .filter(img => img && ALLOWED_IMAGE_TYPES.has(img.mediaType) && typeof img.data === 'string' && img.data.length > 0 && img.data.length <= MAX_IMAGE_BASE64_CHARS)
+    .slice(0, MAX_IMAGES)
+    .map(img => ({ mediaType: img.mediaType, data: img.data }));
+}
+
 const PAGE_DESCRIPTIONS = {
   'stock-markets':      'The user is on the Stock Markets page. It groups live US financial news by topic, analyzes market impact, identifies winning/losing US-listed stocks and ETFs for each event, and shows the hit rate of similar past calls. Users can also search any individual stock ticker for a dedicated analysis.',
   'prediction-markets': 'The user is on the Prediction Markets page. It shows live Polymarket odds (20-80% only — the genuine uncertainty zone) with an AI lean (Yes/No), confidence level, and signal (Aligns with market / Contradicts market). Categories: Politics, Sports, Entertainment, Finance, Tech.',
@@ -247,10 +262,11 @@ export default async function handler(req, res) {
   const userAllowed = await checkRateLimit(supabase, `user:${user.id}`, 'chat', 20);
   if (!userAllowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
-  const { messages, pageContext, sessionId } = req.body || {};
+  const { messages, pageContext, sessionId, images } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required' });
   }
+  const safeImages = sanitizeImages(images);
 
   const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')?.content || '';
 
@@ -276,10 +292,24 @@ export default async function handler(req, res) {
   // Split into static (cacheable) + dynamic parts so Anthropic caches the large static prompt
   const dynamicContext = `\n\nCURRENT PAGE CONTEXT: ${pageDesc}${liveContext}`;
 
-  const trimmed = messages.slice(-12).map(m => ({
-    role: m.role === 'user' ? 'user' : 'assistant',
-    content: String(m.content).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, 2000)
-  }));
+  const recent = messages.slice(-12);
+  const trimmed = recent.map((m, i) => {
+    const role = m.role === 'user' ? 'user' : 'assistant';
+    const text = String(m.content).replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').slice(0, 2000);
+    // Images attach only to this turn's message, not resent for every
+    // follow-up — they're the last item in the array by construction.
+    const isCurrentTurn = i === recent.length - 1 && role === 'user';
+    if (isCurrentTurn && safeImages.length) {
+      return {
+        role,
+        content: [
+          ...safeImages.map(img => ({ type: 'image', source: { type: 'base64', media_type: img.mediaType, data: img.data } })),
+          { type: 'text', text: text || 'What do you see in this image?' },
+        ],
+      };
+    }
+    return { role, content: text };
+  });
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -315,8 +345,11 @@ export default async function handler(req, res) {
     // reply the user is waiting on, so it's logged but not surfaced.
     if (supabase && typeof sessionId === 'string' && sessionId) {
       const stamp = `${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      // Image bytes aren't persisted (history is a 7-day text log, not a file
+      // store) — just a marker so the transcript still makes sense on reload.
+      const imageNote = safeImages.length ? `\n\n[${safeImages.length} image${safeImages.length > 1 ? 's' : ''} attached]` : '';
       supabase.from('chat_messages').insert([
-        { id: `cm_${stamp}_u`, user_id: user.id, session_id: sessionId, role: 'user', content: lastUserMsg.slice(0, 4000), page_context: pageContext || null },
+        { id: `cm_${stamp}_u`, user_id: user.id, session_id: sessionId, role: 'user', content: (lastUserMsg.slice(0, 4000) + imageNote).trim(), page_context: pageContext || null },
         { id: `cm_${stamp}_a`, user_id: user.id, session_id: sessionId, role: 'assistant', content: reply.slice(0, 4000), page_context: pageContext || null },
       ]).then(({ error }) => { if (error) console.error('[chat] history save failed:', error); });
     }

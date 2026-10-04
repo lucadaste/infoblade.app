@@ -380,6 +380,72 @@
     #ii-send:hover { opacity: .8; }
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
 
+    .ii-attach-btn { align-self: flex-end; margin-bottom: 1px; }
+    .ii-attach-btn svg { width: 14px; height: 14px; }
+
+    .ii-attach-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 18px 0;
+      flex-shrink: 0;
+    }
+    .ii-attach-chip {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .ii-attach-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ii-attach-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.65);
+      color: #fff;
+      border: none;
+      font-size: 11px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ii-attach-remove:hover { background: rgba(0,0,0,0.85); }
+
+    .ii-msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; justify-content: flex-end; }
+    .ii-msg-images img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
+
+    .ii-drop-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.55);
+      border: 2px dashed var(--accent);
+      border-radius: 10px;
+      pointer-events: none;
+    }
+    .ii-drop-overlay span {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--ink);
+      background: var(--card);
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .ii-attach-row[hidden], .ii-drop-overlay[hidden] { display: none; }
+
     @media (max-width: 480px) {
       #ii-chat-btn { width: 50px; height: 50px; bottom: 148px; }
       #ii-ai-panel { bottom: 208px; max-height: min(480px, calc(100vh - 232px)); }
@@ -460,9 +526,17 @@
       <div class="ii-history-list" id="ii-history-list"></div>
     </div>
     <div class="ii-msgs" id="ii-msgs"></div>
+    <div class="ii-attach-row" id="ii-attach-row" hidden></div>
     <div class="ii-input-row">
+      <button class="ii-icon-btn ii-attach-btn" id="ii-attach-btn" aria-label="Attach image" title="Attach image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
+      </button>
+      <input type="file" id="ii-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
       <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
       <button id="ii-send">Send</button>
+    </div>
+    <div class="ii-drop-overlay" id="ii-drop-overlay" hidden>
+      <span>Drop image to attach</span>
     </div>
   `;
   document.body.appendChild(panel);
@@ -496,6 +570,10 @@
   const historyPanel = document.getElementById('ii-history-panel');
   const historyList  = document.getElementById('ii-history-list');
   const historyNewBtn = document.getElementById('ii-history-new');
+  const attachBtn    = document.getElementById('ii-attach-btn');
+  const fileInput    = document.getElementById('ii-file-input');
+  const attachRow    = document.getElementById('ii-attach-row');
+  const dropOverlay  = document.getElementById('ii-drop-overlay');
   let open = false;
   let history = [];
   let busy = false;
@@ -504,8 +582,99 @@
   let sessionId = null;     // set on first send of a conversation; carries that
                              // conversation's turns in chat_messages (see api/chat.js)
   let historyOpen = false;
+  let attachedImages = []; // { mediaType, data (base64, no data: prefix), previewUrl }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  // ── Image attachments (drag-and-drop or the paperclip button) ───────────────
+  const MAX_IMAGES = 2;
+  const MAX_IMAGE_DIM = 1600; // longest side, px — downscaled client-side so a
+                               // full-res phone photo never has to round-trip
+                               // at full size before being resized server-side.
+  const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+
+  function resizeImageFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > MAX_IMAGE_DIM || height > MAX_IMAGE_DIM) {
+            const scale = MAX_IMAGE_DIM / Math.max(width, height);
+            width = Math.round(width * scale);
+            height = Math.round(height * scale);
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          resolve({ mediaType: 'image/jpeg', data: dataUrl.split(',')[1], previewUrl: dataUrl });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderAttachRow() {
+    attachRow.innerHTML = '';
+    attachRow.hidden = attachedImages.length === 0;
+    attachedImages.forEach((img, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'ii-attach-chip';
+      const thumb = document.createElement('img');
+      thumb.src = img.previewUrl;
+      thumb.alt = '';
+      const rm = document.createElement('button');
+      rm.className = 'ii-attach-remove';
+      rm.setAttribute('aria-label', 'Remove image');
+      rm.textContent = '×';
+      rm.addEventListener('click', () => { attachedImages.splice(i, 1); renderAttachRow(); });
+      chip.appendChild(thumb);
+      chip.appendChild(rm);
+      attachRow.appendChild(chip);
+    });
+  }
+
+  async function addImageFiles(fileList) {
+    const files = Array.from(fileList).filter(f => ACCEPTED_IMAGE_TYPES.includes(f.type));
+    for (const file of files) {
+      if (attachedImages.length >= MAX_IMAGES) break;
+      try { attachedImages.push(await resizeImageFile(file)); } catch (e) { /* skip files the browser can't decode */ }
+    }
+    renderAttachRow();
+  }
+
+  attachBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => { addImageFiles(fileInput.files); fileInput.value = ''; });
+
+  // Drag-and-drop anywhere on the panel. dragDepth tracks nested
+  // enter/leave pairs (every child element fires its own), so the overlay
+  // doesn't flicker as the pointer crosses from the panel onto a message
+  // bubble and back while still dragging.
+  let dragDepth = 0;
+  panel.addEventListener('dragover', e => { if (e.dataTransfer?.types?.includes('Files')) e.preventDefault(); });
+  panel.addEventListener('dragenter', e => {
+    if (!e.dataTransfer?.types?.includes('Files')) return;
+    e.preventDefault();
+    dragDepth++;
+    dropOverlay.hidden = false;
+  });
+  panel.addEventListener('dragleave', () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) dropOverlay.hidden = true;
+  });
+  panel.addEventListener('drop', e => {
+    if (!e.dataTransfer?.files?.length) return;
+    e.preventDefault();
+    dragDepth = 0;
+    dropOverlay.hidden = true;
+    addImageFiles(e.dataTransfer.files);
+  });
 
   // One avatar, relocated into whichever row is "current" and FLIP-animated
   // between positions — it glides down to each new message rather than
@@ -697,11 +866,22 @@
     return `<div style="display:flex;flex-direction:column;gap:4px">${out.join('')}</div>`;
   }
 
-  function addMsg(role, text) {
+  function addMsg(role, text, imagePreviews) {
     if (role === 'user') {
       const d = document.createElement('div');
       d.className = 'ii-m ii-m-user';
-      d.textContent = text;
+      if (imagePreviews && imagePreviews.length) {
+        const row = document.createElement('div');
+        row.className = 'ii-msg-images';
+        imagePreviews.forEach(src => {
+          const im = document.createElement('img');
+          im.src = src;
+          im.alt = '';
+          row.appendChild(im);
+        });
+        d.appendChild(row);
+      }
+      if (text) d.appendChild(document.createTextNode(text));
       msgsEl.appendChild(d);
       msgsEl.scrollTop = msgsEl.scrollHeight;
       return d;
@@ -731,12 +911,15 @@
 
   async function send(text) {
     text = (text || inp.value).trim();
-    if (!text || busy) return;
+    const imagesToSend = attachedImages;
+    if ((!text && !imagesToSend.length) || busy) return;
 
     startersEl?.remove();
     inp.value = '';
     inp.style.height = 'auto';
-    addMsg('user', text);
+    addMsg('user', text, imagesToSend.map(img => img.previewUrl));
+    attachedImages = [];
+    renderAttachRow();
 
     // Auth gate — require sign-in
     const token = await window._auth?.getToken();
@@ -748,7 +931,7 @@
     busy = true;
     sendBtn.disabled = true;
 
-    history.push({ role: 'user', content: text });
+    history.push({ role: 'user', content: text || '(image attached)' });
     if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
     const thinking = addThinking();
@@ -756,7 +939,12 @@
       const res = await fetch(window.API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ messages: history, pageContext, sessionId }),
+        body: JSON.stringify({
+          messages: history,
+          pageContext,
+          sessionId,
+          images: imagesToSend.map(img => ({ mediaType: img.mediaType, data: img.data })),
+        }),
         signal: AbortSignal.timeout(35000)
       });
       const data = await res.json();
