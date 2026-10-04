@@ -154,8 +154,8 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 24px;
-      height: 24px;
+      width: 30px;
+      height: 30px;
       fill: var(--accent);
       transform-origin: center;
       display: block;
