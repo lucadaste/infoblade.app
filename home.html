@@ -433,20 +433,44 @@
   }
 
   // A plain chip of a saved symbol with no live data behind it (stocks have
-  // no logo/price source wired up yet, and anything the price/market-info
-  // fetch below couldn't resolve falls back to this too).
+  // no logo source wired up (no real per-ticker icon API in use anywhere on
+  // this site), and anything a price/market-info fetch below couldn't
+  // resolve falls back to this too).
   function wlPlainTile(sym, href) {
     return '<a class="wl-tile" href="' + href + '">' +
       '<span class="wl-tile-icon-fallback">' + esc(sym.charAt(0)) + '</span>' +
       '<span class="wl-tile-sym">' + esc(sym) + '</span></a>';
   }
 
+  // Stocks have no logo source, but do get a live price + daily % change via
+  // the same Robinhood/Yahoo batched-quote path api/sector-stocks.js uses
+  // for the sector pages (lib/quote-fetch.js), just for the user's own
+  // tickers instead of a fixed sector list.
   async function renderStocksGroup(symbols) {
     var shown = symbols.slice(0, 8);
     var extra = symbols.length - shown.length;
+    var quotes = {};
+    try {
+      var res = await fetch((window.API_BASE || '') + '/api/watchlist-stock-quotes?symbols=' + encodeURIComponent(shown.join(',')));
+      if (res.ok) quotes = (await res.json()).quotes || {};
+    } catch (_) {}
+
+    var tiles = shown.map(function (sym) {
+      var q = quotes[sym];
+      if (!q || typeof q.price !== 'number') return wlPlainTile(sym, '/feed.html');
+      var pct = q.changePct;
+      var hasPct = typeof pct === 'number';
+      var dirClass = hasPct ? (pct >= 0 ? 'dir-bullish' : 'dir-bearish') : '';
+      var sign = hasPct && pct >= 0 ? '+' : '';
+      return '<a class="wl-tile" href="/feed.html">' +
+        '<span class="wl-tile-icon-fallback">' + esc(sym.charAt(0)) + '</span>' +
+        '<span class="wl-tile-sym">' + esc(sym) + '</span>' +
+        '<span class="wl-tile-price ' + dirClass + '">$' + q.price.toLocaleString('en-US', { maximumFractionDigits: 2 }) + (hasPct ? ' ' + sign + pct.toFixed(1) + '%' : '') + '</span>' +
+        '</a>';
+    });
+
     return '<div class="wl-group"><div class="wl-group-label">Stocks</div><div class="wl-row">' +
-      shown.map(function (s) { return wlPlainTile(s, '/feed.html'); }).join('') +
-      (extra > 0 ? '<span class="wl-tile-more">+' + extra + ' more</span>' : '') +
+      tiles.join('') + (extra > 0 ? '<span class="wl-tile-more">+' + extra + ' more</span>' : '') +
       '</div></div>';
   }
 
