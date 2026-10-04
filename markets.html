@@ -311,6 +311,23 @@
       localStorage.setItem('ii_markets_watchlist', JSON.stringify(marketsWatchlist));
     }
 
+    // Fire-and-forget sync to the account-wide watchlist — mirrors the pattern
+    // watchlist.html uses for stocks/crypto. Not awaited: the local list (used
+    // for badges on this page) is the source of truth for the current session,
+    // this just keeps other devices and the home dashboard in sync.
+    async function _mwApi(method, body) {
+      const t = await window._auth?.getToken();
+      if (!t) return null;
+      try {
+        const r = await fetch('/api/user-watchlist?type=markets', {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+        return r.ok ? r.json() : null;
+      } catch (_) { return null; }
+    }
+
     function toggleMarketWatch(market, btn) {
       const idx = marketsWatchlist.findIndex(m => m.slug === market.slug);
       const card = btn.closest('.market-card');
@@ -321,6 +338,7 @@
         card.classList.remove('watchlist-match');
         const badge = card.querySelector('.watchlist-badge');
         if (badge) badge.remove();
+        _mwApi('DELETE', { symbol: market.slug });
       } else {
         marketsWatchlist.push({ question: market.question, slug: market.slug, yesPrice: market.yesPrice, savedAt: new Date().toISOString() });
         btn.textContent = '★ Watching';
@@ -332,6 +350,7 @@
           badge.textContent = '★ Watching';
           card.insertBefore(badge, card.firstChild);
         }
+        _mwApi('POST', { symbol: market.slug });
       }
       saveMarketsWatchlist();
     }
@@ -782,6 +801,28 @@
     </div>
   </nav>
   <script src="/auth.js"></script>
+  <script>
+  // Reconcile the local markets watchlist with the account-wide one on sign-in:
+  // push up anything saved locally before this page ever synced to the server,
+  // and pull in anything saved from another device.
+  window._onAuthReady(async function (user) {
+    if (!user) return;
+    const remote = await _mwApi('GET');
+    const remoteSlugs = new Set((remote && remote.symbols) || []);
+    const localSlugs = new Set(marketsWatchlist.map(function (m) { return m.slug; }));
+
+    localSlugs.forEach(function (slug) { if (!remoteSlugs.has(slug)) _mwApi('POST', { symbol: slug }); });
+
+    let changed = false;
+    remoteSlugs.forEach(function (slug) {
+      if (!localSlugs.has(slug)) {
+        marketsWatchlist.push({ question: '', slug: slug, yesPrice: null, savedAt: new Date().toISOString() });
+        changed = true;
+      }
+    });
+    if (changed) saveMarketsWatchlist();
+  });
+  </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
 </body>
