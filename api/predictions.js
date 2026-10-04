@@ -9,6 +9,7 @@ import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/st
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { pickPmMarket as _pickPmMarket, pmOutcome as _pmOutcome, pmWordScore as _pmWordScore } from '../lib/pm-resolution.js';
 import { getSupabase, setCors, secretMatches } from '../lib/http.js';
+import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
 
 // Grading (resolve / news-grade) writes to the DB and spends LLM/external-API
 // budget, so it must not be publicly triggerable. Vercel automatically sends
@@ -62,32 +63,15 @@ const _COIN_SYMS = COIN_SYMS;
 async function _fetchTickerHistory(ticker, startMs, endMs) {
   const p1 = Math.floor(startMs / 1000) - 7 * 86400; // 1 week buffer before
   const p2 = Math.floor(endMs   / 1000) + 7 * 86400; // 1 week buffer after
-  const yTicker = _COIN_SYMS.has(ticker) ? `${ticker}-USD` : ticker;
-  try {
-    const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=1d&period1=${p1}&period2=${p2}`;
-    const r = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible)', 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(12000),
-    });
-    if (!r.ok) return {};
-    const d = await r.json();
-    const result = d?.chart?.result?.[0];
-    if (!result) return {};
-    const tss = result.timestamp || result.timestamps || [];
-    // Prefer adjusted close: raw close shows a stock split or ex-dividend date
-    // as a fake large price move, which would corrupt pct_return-based scoring
-    // for any ticker with a split/big dividend during the prediction window.
-    // Yahoo's v8 chart endpoint returns `indicators.adjclose` alongside `quote`
-    // for interval=1d requests; fall back to raw close if it's ever absent.
-    const closes = result.indicators?.adjclose?.[0]?.adjclose
-                || result.indicators?.quote?.[0]?.close || [];
-    const map    = {};
-    for (let i = 0; i < tss.length; i++) {
-      if (closes[i] == null) continue;
-      map[new Date(tss[i] * 1000).toISOString().slice(0, 10)] = +closes[i].toFixed(4);
-    }
-    return map;
-  } catch (_) { return {}; }
+  const series = await fetchYahooChartSeries(ticker, p1, p2, { timeoutMs: 12000 });
+  if (!series) return {};
+  const { timestamps, closes } = series;
+  const map = {};
+  for (let i = 0; i < timestamps.length; i++) {
+    if (closes[i] == null) continue;
+    map[new Date(timestamps[i] * 1000).toISOString().slice(0, 10)] = +closes[i].toFixed(4);
+  }
+  return map;
 }
 
 // Look up the price closest to targetDate in a pre-fetched history map.
