@@ -61,7 +61,7 @@
     .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:var(--muted); letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
 
     [data-tip] { position: relative; }
-    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--divider); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: var(--ink); line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    [data-tip]::after { content: attr(data-tip); position: absolute; top: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--divider); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: var(--ink); line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     [data-tip]:hover::after, [data-tip]:focus::after { opacity: 1; visibility: visible; }
     .skel-card { background: var(--card); border-radius: 12px; padding: 36px 40px; border: 2px solid transparent; }
     .skel-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 6px; }
