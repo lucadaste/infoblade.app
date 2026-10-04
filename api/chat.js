@@ -247,7 +247,7 @@ export default async function handler(req, res) {
   const userAllowed = await checkRateLimit(supabase, `user:${user.id}`, 'chat', 20);
   if (!userAllowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
 
-  const { messages, pageContext } = req.body || {};
+  const { messages, pageContext, sessionId } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required' });
   }
@@ -309,6 +309,18 @@ export default async function handler(req, res) {
     }
 
     const reply = data.content?.[0]?.text || '';
+
+    // Persist this turn for the account-synced chat history feature (see
+    // api/chat-history.js). Best-effort: a save failure shouldn't block the
+    // reply the user is waiting on, so it's logged but not surfaced.
+    if (supabase && typeof sessionId === 'string' && sessionId) {
+      const stamp = `${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      supabase.from('chat_messages').insert([
+        { id: `cm_${stamp}_u`, user_id: user.id, session_id: sessionId, role: 'user', content: lastUserMsg.slice(0, 4000), page_context: pageContext || null },
+        { id: `cm_${stamp}_a`, user_id: user.id, session_id: sessionId, role: 'assistant', content: reply.slice(0, 4000), page_context: pageContext || null },
+      ]).then(({ error }) => { if (error) console.error('[chat] history save failed:', error); });
+    }
+
     return res.status(200).json({ reply });
   } catch (err) {
     console.error('[chat]', err.message);

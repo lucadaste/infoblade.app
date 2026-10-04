@@ -295,3 +295,27 @@ create index if not exists pm_briefings_created_at_idx on pm_briefings (created_
 create index if not exists pm_briefings_market_slug_idx on pm_briefings (market_slug);
 alter table pm_briefings enable row level security;
 -- Service-role key (server-side only) bypasses RLS automatically. No browser access.
+
+-- ── AI Informant chat history (account-synced, 7-day rolling window) ────────
+-- Each row is one message (user or assistant) in one conversation. session_id
+-- groups a conversation's messages so api/chat-history.js can list past
+-- conversations (one entry per session, its opening message as the preview)
+-- and reload a full transcript when picked from the clock icon in the chat
+-- widget. Written by api/chat.js right after each reply. Rows older than
+-- 7 days are deleted by the api/chat-history?cleanup=true cron (vercel.json)
+-- — this is a rolling window, not an archive, by design (matches what the
+-- UI promises: "last 7 days").
+create table if not exists chat_messages (
+  id           text primary key,
+  user_id      text not null,
+  session_id   text not null,
+  role         text not null check (role in ('user','assistant')),
+  content      text not null,
+  page_context text,
+  created_at   timestamptz not null default now()
+);
+create index if not exists chat_messages_user_id_idx    on chat_messages (user_id, created_at desc);
+create index if not exists chat_messages_session_id_idx on chat_messages (session_id);
+create index if not exists chat_messages_created_at_idx on chat_messages (created_at);
+alter table chat_messages enable row level security;
+-- Service-role key (server-side only) bypasses RLS automatically. No browser access.

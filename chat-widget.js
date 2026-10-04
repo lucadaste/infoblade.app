@@ -201,12 +201,14 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .ii-close-btn {
+    .ii-header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .ii-icon-btn {
       width: 26px;
       height: 26px;
       border-radius: 50%;
       background: var(--surface-2);
       border: 1px solid var(--border);
+      padding: 0;
       font-size: 15px;
       line-height: 1;
       color: var(--muted);
@@ -217,7 +219,57 @@
       flex-shrink: 0;
       transition: color 0.15s, background 0.15s;
     }
-    .ii-close-btn:hover { color: var(--ink); background: var(--card); }
+    .ii-icon-btn:hover { color: var(--ink); background: var(--card); }
+    .ii-icon-btn svg { width: 14px; height: 14px; }
+
+    .ii-history-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 22px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+    .ii-history-new {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .ii-history-new:hover { border-color: var(--accent); color: var(--accent); }
+    .ii-history-list { display: flex; flex-direction: column; gap: 6px; }
+    .ii-history-item {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-family: 'Space Grotesk', sans-serif;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .ii-history-item:hover { background: var(--hover-tint); border-color: var(--divider); }
+    .ii-history-item-preview {
+      font-size: 13px;
+      color: var(--ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ii-history-item-date { font-size: 11px; color: var(--muted); }
+    .ii-history-empty { color: var(--muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
     .ii-msgs {
       position: relative;
@@ -234,6 +286,7 @@
     .ii-msgs::-webkit-scrollbar { width: 3px; }
     .ii-msgs::-webkit-scrollbar-track { background: transparent; }
     .ii-msgs::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
+    .ii-msgs[hidden], .ii-history-panel[hidden] { display: none; }
 
     .ii-m {
       font-family: 'Space Grotesk', sans-serif;
@@ -395,7 +448,16 @@
   panel.innerHTML = `
     <div class="ii-header">
       <span class="ii-header-title">AI Informant</span>
-      <button class="ii-close-btn" id="ii-close-btn" aria-label="Close AI Informant">×</button>
+      <div class="ii-header-actions">
+        <button class="ii-icon-btn" id="ii-history-btn" aria-label="Chat history" title="Chat history">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
+        </button>
+        <button class="ii-icon-btn ii-close-btn" id="ii-close-btn" aria-label="Close AI Informant">×</button>
+      </div>
+    </div>
+    <div class="ii-history-panel" id="ii-history-panel" hidden>
+      <button class="ii-history-new" id="ii-history-new">+ New chat</button>
+      <div class="ii-history-list" id="ii-history-list"></div>
     </div>
     <div class="ii-msgs" id="ii-msgs"></div>
     <div class="ii-input-row">
@@ -427,14 +489,21 @@
   }
 
   // ── Logic ─────────────────────────────────────────────────────────────────
-  const msgsEl  = document.getElementById('ii-msgs');
-  const inp     = document.getElementById('ii-inp');
-  const sendBtn = document.getElementById('ii-send');
+  const msgsEl       = document.getElementById('ii-msgs');
+  const inp          = document.getElementById('ii-inp');
+  const sendBtn      = document.getElementById('ii-send');
+  const historyBtn   = document.getElementById('ii-history-btn');
+  const historyPanel = document.getElementById('ii-history-panel');
+  const historyList  = document.getElementById('ii-history-list');
+  const historyNewBtn = document.getElementById('ii-history-new');
   let open = false;
   let history = [];
   let busy = false;
   let introStarted = false;
   let startersEl = null;
+  let sessionId = null;     // set on first send of a conversation; carries that
+                             // conversation's turns in chat_messages (see api/chat.js)
+  let historyOpen = false;
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -680,13 +749,14 @@
     sendBtn.disabled = true;
 
     history.push({ role: 'user', content: text });
+    if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
     const thinking = addThinking();
     try {
       const res = await fetch(window.API_BASE + '/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ messages: history, pageContext }),
+        body: JSON.stringify({ messages: history, pageContext, sessionId }),
         signal: AbortSignal.timeout(35000)
       });
       const data = await res.json();
@@ -713,4 +783,93 @@
     inp.style.height = 'auto';
     inp.style.height = Math.min(inp.scrollHeight, 80) + 'px';
   });
+
+  // ── History (clock icon) ─────────────────────────────────────────────────
+  // Account-synced, last 7 days — see api/chat-history.js. The panel swaps
+  // in for .ii-msgs rather than overlaying it; there's no separate scroll
+  // area to manage and nothing to click outside of to dismiss.
+  function formatHistoryWhen(iso) {
+    const d = new Date(iso);
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay
+      ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+      : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
+  function setHistoryOpen(v) {
+    historyOpen = v;
+    historyPanel.hidden = !v;
+    msgsEl.hidden = v;
+  }
+
+  async function loadHistoryList() {
+    historyList.innerHTML = '';
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'ii-history-empty';
+    emptyMsg.textContent = 'Loading…';
+    historyList.appendChild(emptyMsg);
+
+    const token = await window._auth?.getToken();
+    if (!token) { emptyMsg.textContent = 'Sign in to see your chat history.'; return; }
+
+    try {
+      const res = await fetch(window.API_BASE + '/api/chat-history', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const sessions = data.sessions || [];
+      if (!sessions.length) { emptyMsg.textContent = 'No conversations in the last 7 days.'; return; }
+      historyList.innerHTML = '';
+      sessions.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = 'ii-history-item';
+        const preview = document.createElement('span');
+        preview.className = 'ii-history-item-preview';
+        preview.textContent = s.preview || '(empty)';
+        const when = document.createElement('span');
+        when.className = 'ii-history-item-date';
+        when.textContent = formatHistoryWhen(s.last_at);
+        btn.appendChild(preview);
+        btn.appendChild(when);
+        btn.addEventListener('click', () => loadSession(s.session_id));
+        historyList.appendChild(btn);
+      });
+    } catch (e) {
+      emptyMsg.textContent = 'Could not load history.';
+    }
+  }
+
+  async function loadSession(id) {
+    const token = await window._auth?.getToken();
+    if (!token) return;
+    try {
+      const res = await fetch(window.API_BASE + '/api/chat-history?session_id=' + encodeURIComponent(id), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const msgs = data.messages || [];
+      startersEl?.remove();
+      msgsEl.innerHTML = '';
+      history = msgs.map(m => ({ role: m.role, content: m.content }));
+      sessionId = id;
+      msgs.forEach(m => addMsg(m.role === 'user' ? 'user' : 'assistant', m.content));
+      setHistoryOpen(false);
+    } catch (e) { /* leave the history list open on failure */ }
+  }
+
+  function startNewChat() {
+    startersEl?.remove();
+    msgsEl.innerHTML = '';
+    history = [];
+    sessionId = null;
+    startersEl = buildStarters();
+    msgsEl.appendChild(startersEl);
+    setHistoryOpen(false);
+  }
+
+  historyBtn.addEventListener('click', () => {
+    setHistoryOpen(!historyOpen);
+    if (historyOpen) loadHistoryList();
+  });
+  historyNewBtn.addEventListener('click', startNewChat);
 })();

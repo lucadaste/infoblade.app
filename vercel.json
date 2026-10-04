@@ -68,6 +68,10 @@
     {
       "path": "/api/collect-price-snapshots",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/chat-history?cleanup=true",
+      "schedule": "0 4 * * *"
     }
   ]
 }
