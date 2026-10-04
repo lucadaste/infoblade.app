@@ -392,7 +392,9 @@
       var token = await window._auth.getToken();
       var allRes = await fetch((window.API_BASE || '') + '/api/user-watchlist?type=all', { headers: { 'Authorization': 'Bearer ' + token } });
       if (!allRes.ok) {
-        body.textContent = "Couldn't verify your session — try refreshing the page.";
+        body.textContent = allRes.status === 401
+          ? "Couldn't verify your session — try refreshing the page."
+          : "Couldn't load your watchlist right now.";
         return;
       }
       var all = await allRes.json();

@@ -45,8 +45,10 @@ export default async function handler(req, res) {
         sb.from('crypto_watchlists').select('symbol').eq('user_id', user.id),
         sb.from('market_watchlists').select('symbol').eq('user_id', user.id),
       ]);
-      const firstError = stocksRes.error || cryptoRes.error || marketsRes.error;
-      if (firstError) return dbError(firstError);
+      // A problem with one table (e.g. it doesn't exist yet) shouldn't take down the
+      // other two — log it and fall back to an empty list for that type instead of
+      // 500ing the whole dashboard.
+      [stocksRes, cryptoRes, marketsRes].forEach(r => { if (r.error) console.error('[user-watchlist]', r.error); });
       return res.status(200).json({
         stocks: (stocksRes.data || []).map(r => r.symbol),
         crypto: (cryptoRes.data || []).map(r => r.symbol),
