@@ -1,20 +1,29 @@
-// One-time cleanup for the "day"-before-"month"/"week" bug in
-// lib/timeframe.js's parseTimeframeDays (fixed in the same commit as this
-// script). A timeframe string like "Over the next 3 months (approximately
-// 65 trading days)" used to match on the word "day" first, fail to extract a
-// number from it, and silently fall back to the 7-day default — so a
-// 3-month-horizon prediction got validation_date locked ~7 days out instead
-// of ~90, and then graded the moment that week passed instead of waiting out
-// its real window.
+// One-time cleanup for parseTimeframeDays bugs in lib/timeframe.js — first
+// the original "day"-before-"month"/"week" branch order (a string like
+// "Over the next 3 months (approximately 65 trading days)" matched on "day"
+// first and fell back to a 7-day default), then a regression introduced
+// while fixing that: an unbounded range regex ((\d+)[^\d]+(\d+)\s*unit) let
+// two numbers from unrelated clauses get paired as a fake range (e.g.
+// "Immediate within 48 hours through 1 month" read 48 and 1 as a "48 to 1
+// months" range — avg 24.5 rounds to 25 months, 730 days, instead of the ~2
+// days the sentence actually means). That regression round-tripped through
+// this script's own --write once, so some rows in the DB right now hold a
+// validation_date computed by a parser that was itself buggy at the time.
+//
+// Rather than re-deriving "what the old buggy parser would have produced"
+// (which only catches rows the CURRENTLY-fixed parser disagrees with
+// relative to one specific prior bug, and would miss damage from a
+// different prior bug), this compares the CURRENTLY STORED validation_date
+// against what today's parseTimeframeDays produces right now. That makes it
+// correct regardless of which bug (if any) produced the stored value, and
+// safe to rerun after any future parser fix — a clean run finds 0 rows.
 //
 // This only affects stock/crypto predictions (lean IS NULL) — PM/market rows
 // set impact_timeframe directly from the Polymarket close date, not from a
-// free-text Claude string, so they were never exposed to this parser bug.
+// free-text Claude string, so they were never exposed to this parser.
 //
-// For every lean-IS-NULL row with an impact_timeframe, recomputes the
-// correct validation_date with the fixed parser and compares to what the old
-// (inlined below, unfixed) parser would have produced. Only rows where the
-// two disagree are touched:
+// Only rows whose stored validation_date differs from today's correct parse
+// by more than a day are touched:
 //   - still pending (correct IS NULL): validation_date is corrected in place.
 //   - already resolved, but the CORRECTED validation_date is still in the
 //     future: the row was graded before its real window elapsed — reopened
@@ -22,10 +31,10 @@
 //     grade's score/grade/ticker_moves stripped from analysis so the normal
 //     resolve cron regrades it cleanly once the real window passes).
 //   - already resolved, but the corrected validation_date has ALSO already
-//     passed: the bug shortened the window, but real time caught up with the
-//     correct window anyway before this script ran. Only the validation_date
-//     bookkeeping field is corrected — the existing grade is left alone
-//     rather than re-fetching price history for a window that already closed.
+//     passed: real time caught up with the correct window anyway before this
+//     script ran. Only the validation_date bookkeeping field is corrected —
+//     the existing grade is left alone rather than re-fetching price history
+//     for a window that already closed.
 //
 // Dry-run by default — prints what WOULD change. Pass --write to actually
 // update the database.
@@ -37,44 +46,13 @@ import { createClient } from '@supabase/supabase-js';
 import { parseTimeframeDays } from '../lib/timeframe.js';
 
 const WRITE = process.argv.includes('--write');
+const DIFF_THRESHOLD_MS = 1 * 86400000; // ignore sub-day drift (rounding noise)
 
 function getSupabase() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_KEY;
   if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY env vars required');
   return createClient(url, key);
-}
-
-// Exact copy of the pre-fix branch order (day/hour checked before week/month)
-// — kept here only so this one-time script can detect which historical rows
-// were actually affected. Not exported, not used anywhere else.
-function oldBuggyParseTimeframeDays(str) {
-  if (!str) return 30;
-  const s = str.toLowerCase();
-  const MAX_DAYS = 730;
-  if (s.includes('hour')) {
-    const h = s.match(/(\d+)/);
-    return Math.max(1, Math.round((h ? +h[1] : 24) / 24));
-  }
-  if (s.includes('day')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*day/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2), MAX_DAYS);
-    const single = s.match(/(\d+)\s*day/);
-    return Math.min(single ? +single[1] : 7, MAX_DAYS);
-  }
-  if (s.includes('week')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*week/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 7, MAX_DAYS);
-    const single = s.match(/(\d+)\s*week/);
-    return Math.min(single ? +single[1] * 7 : 14, MAX_DAYS);
-  }
-  if (s.includes('month')) {
-    const range = s.match(/(\d+)[^\d]+(\d+)\s*month/);
-    if (range) return Math.min(Math.round((+range[1] + +range[2]) / 2) * 30, MAX_DAYS);
-    const single = s.match(/(\d+)\s*month/);
-    return Math.min(single ? +single[1] * 30 : 30, MAX_DAYS);
-  }
-  return 30;
 }
 
 async function main() {
@@ -104,20 +82,21 @@ async function main() {
   for (const p of rows) {
     const tf = p.analysis?.impact_timeframe;
     if (!tf) continue;
-    const oldDays = oldBuggyParseTimeframeDays(tf);
-    const newDays = parseTimeframeDays(tf);
-    if (oldDays === newDays) continue; // not affected by the bug
-
+    const correctDays = parseTimeframeDays(tf);
     const createdMs = new Date(p.created_at).getTime();
-    const correctedValDate = new Date(createdMs + newDays * 86400000);
+    const correctedValDate = new Date(createdMs + correctDays * 86400000);
+
+    const storedMs = p.validation_date ? new Date(p.validation_date).getTime() : null;
+    if (storedMs != null && Math.abs(storedMs - correctedValDate.getTime()) <= DIFF_THRESHOLD_MS) continue;
+
     const isResolved = p.correct !== null && p.correct !== undefined;
 
     if (!isResolved) {
-      toFixPending.push({ p, tf, oldDays, newDays, correctedValDate });
+      toFixPending.push({ p, tf, correctDays, correctedValDate });
     } else if (correctedValDate.getTime() > nowMs) {
-      toReopen.push({ p, tf, oldDays, newDays, correctedValDate });
+      toReopen.push({ p, tf, correctDays, correctedValDate });
     } else {
-      toRelabelOnly.push({ p, tf, oldDays, newDays, correctedValDate });
+      toRelabelOnly.push({ p, tf, correctDays, correctedValDate });
     }
   }
 
@@ -126,13 +105,12 @@ async function main() {
   console.log(`  resolved too early — will be REOPENED for regrading:     ${toReopen.length}`);
   console.log(`  resolved, corrected window already elapsed too — date-only fix: ${toRelabelOnly.length}`);
 
-  const sample = [...toFixPending, ...toReopen, ...toRelabelOnly].slice(0, 15);
-  for (const { p, tf, oldDays, newDays, correctedValDate } of sample) {
-    console.log(`  [${p.id}] "${p.topic}" — tf="${tf}" oldDays=${oldDays} newDays=${newDays} correctedValDate=${correctedValDate.toISOString().slice(0,10)} resolved=${p.correct !== null}`);
+  const all = [...toFixPending, ...toReopen, ...toRelabelOnly];
+  const sample = all.slice(0, 20);
+  for (const { p, tf, correctDays, correctedValDate } of sample) {
+    console.log(`  [${p.id}] "${p.topic}" — tf="${tf}" storedValDate=${p.validation_date?.slice(0,10)} correctDays=${correctDays} correctedValDate=${correctedValDate.toISOString().slice(0,10)} resolved=${p.correct !== null}`);
   }
-  if (sample.length < toFixPending.length + toReopen.length + toRelabelOnly.length) {
-    console.log(`  ... and ${toFixPending.length + toReopen.length + toRelabelOnly.length - sample.length} more`);
-  }
+  if (sample.length < all.length) console.log(`  ... and ${all.length - sample.length} more`);
 
   if (!WRITE) {
     console.log('\nDry run only — pass --write to apply changes.');
