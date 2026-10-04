@@ -31,7 +31,10 @@ const PM_REPEAT_COOLDOWN_DAYS = parseInt(process.env.BASELINE_PM_COOLDOWN_DAYS, 
 const PM_BROWSE_PAGES = 5;   // 100 events per page, by 24h volume
 const PM_PER_CATEGORY = 60;
 
-const PM_CATEGORIES = ['sports', 'politics', 'finance', 'entertainment', 'tech'];
+// 'other' catches Polymarket events whose tags don't match any of the 5 named
+// categories (science, weather, world events, etc.) — see api/markets.js's
+// comment on 'other' for why this was previously invisible to the generator.
+const PM_CATEGORIES = ['sports', 'politics', 'finance', 'entertainment', 'tech', 'other'];
 
 // Same 4 horizons crypto.html's timeframe picker offers, weighted toward
 // shorter ones: graded results (and the dashboard) fill in sooner, while

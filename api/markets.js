@@ -43,6 +43,15 @@ const CATEGORY_TAGS = {
 
 const VALID_CATEGORIES = new Set(Object.keys(CATEGORY_TAGS));
 
+// 'other' is NOT a browsable category (not in VALID_CATEGORIES, so the public
+// GET handler below never accepts it from a user) — it's an internal-only
+// bucket the baseline generator (api/generate-baseline.js) uses to reach
+// Polymarket events whose tags don't match any of the 5 named categories
+// above. Without it those events are invisible to the automated predictor
+// even though api/market-analyze.js already has a working generic fallback
+// pipeline (fetchLegacyGeneric) for exactly this case — they just never got
+// discovered in the first place.
+
 function _categoryForTags(eventTags) {
   for (const [cat, tags] of Object.entries(CATEGORY_TAGS)) {
     if (tags.some(t => eventTags.includes(t))) return cat;
@@ -128,6 +137,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
     if (_isNonsenseTitle(event.title)) return false;
     if (isSearch) return true; // relevance already handled by public-search
+    if (category === 'other') return !Object.values(CATEGORY_TAGS).some(tags => tags.some(tag => eventTags.includes(tag)));
     return targetTags.some(tag => eventTags.includes(tag));
   });
 
