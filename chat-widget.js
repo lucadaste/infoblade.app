@@ -45,17 +45,17 @@
   style.textContent = `
     #ii-ai-panel {
       position: fixed;
-      bottom: 212px;
+      bottom: 214px;
       right: 16px;
       width: min(460px, calc(100vw - 32px));
-      max-height: min(620px, calc(100vh - 236px));
+      max-height: min(620px, calc(100vh - 238px));
       background: var(--card);
       z-index: 9998;
       display: flex;
       flex-direction: column;
       border-radius: 10px;
       border: 1px solid var(--border);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.4);
       opacity: 0;
       transform: translateY(8px) scale(0.97);
       transform-origin: bottom right;
@@ -70,13 +70,13 @@
 
     #ii-chat-btn {
       position: fixed;
-      bottom: 140px;
+      bottom: 148px;
       right: 16px;
       z-index: 9997;
-      width: 62px;
-      height: 62px;
+      width: 56px;
+      height: 56px;
       background: var(--card);
-      border-radius: 20px;
+      border-radius: 50%;
       border: none;
       cursor: pointer;
       overflow: visible;
@@ -85,7 +85,7 @@
       align-items: center;
       justify-content: center;
       transition: transform 0.2s, opacity 0.2s;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      box-shadow: 0 3px 14px rgba(0,0,0,0.35);
     }
     #ii-chat-btn:hover { transform: scale(1.06); }
     #ii-chat-btn.ii-hidden {
@@ -98,7 +98,7 @@
       position: absolute;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
-      width: 37px;
+      width: 32px;
       height: auto;
       fill: var(--accent);
     }
@@ -106,9 +106,9 @@
     #ii-chat-btn .ii-sweep {
       position: absolute;
       inset: 0;
-      border-radius: 20px;
+      border-radius: 50%;
       pointer-events: none;
-      background: linear-gradient(115deg, transparent 40%, rgba(0,230,118,0.9) 50%, transparent 60%);
+      background: linear-gradient(115deg, transparent 40%, rgba(0,230,118,0.55) 50%, transparent 60%);
       background-size: 280% 100%;
       background-position: 140% 0;
       opacity: 0;
@@ -299,20 +299,30 @@
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
 
     @media (max-width: 480px) {
-      #ii-chat-btn { width: 54px; height: 54px; bottom: 140px; }
-      #ii-ai-panel { bottom: 204px; max-height: min(480px, calc(100vh - 228px)); }
+      #ii-chat-btn { width: 50px; height: 50px; bottom: 148px; }
+      #ii-ai-panel { bottom: 208px; max-height: min(480px, calc(100vh - 232px)); }
       .ii-tooltip { display: none; }
     }
 
     @media (min-width: 1024px) {
-      #ii-chat-btn { bottom: 146px; }
-      #ii-ai-panel { bottom: 218px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 242px)); }
+      #ii-chat-btn { bottom: 154px; }
+      #ii-ai-panel { bottom: 220px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 244px)); }
     }
 
-    /* Wide desktops have real leftover space beside the page content — let
-       the panel use it instead of staying a small bottom-right popup. */
+    /* Wide desktops have real leftover space beside the page content — dock
+       the panel to the right edge, nearly full height, instead of leaving it
+       a small bottom-right popup. */
     @media (min-width: 1440px) {
-      #ii-ai-panel { width: min(420px, calc(100vw - 32px)); max-height: min(calc(100vh - 160px), 880px); bottom: 96px; }
+      #ii-ai-panel {
+        top: 92px;
+        bottom: 16px;
+        right: 16px;
+        width: 520px;
+        max-height: none;
+        transform: translateX(14px) scale(0.99);
+        transform-origin: right center;
+      }
+      #ii-ai-panel.ii-open { transform: translateX(0) scale(1); }
     }
   `;
   document.head.appendChild(style);
