@@ -146,28 +146,44 @@
     #ii-chat-btn.active .ii-tooltip { opacity: 0; }
 
     .ii-row {
-      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
       align-self: flex-start;
       max-width: 92%;
-      padding-left: 42px;
     }
-    .ii-row .ii-m-ai { max-width: none; }
+    .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
       width: 28px;
       height: 28px;
       fill: var(--accent);
       transform-origin: center;
+      display: block;
     }
     .ii-row-avatar {
-      position: absolute;
-      left: 6px;
-      top: 3px;
+      flex-shrink: 0;
+      margin-top: 2px;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
     @keyframes ii-avatar-pulse {
       0%, 100% { transform: scale(1); opacity: 0.8; filter: drop-shadow(0 0 0 rgba(0,230,118,0)); }
       50% { transform: scale(1.2); opacity: 1; filter: drop-shadow(0 0 7px rgba(0,230,118,0.65)); }
+    }
+    .ii-thinking-dots { display: inline-flex; align-items: center; gap: 3px; margin-left: 2px; }
+    .ii-thinking-dots span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.25;
+      animation: ii-dot-pulse 1.1s ease-in-out infinite;
+    }
+    .ii-thinking-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .ii-thinking-dots span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes ii-dot-pulse {
+      0%, 60%, 100% { opacity: 0.25; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1); }
     }
     .ii-close-float {
       position: absolute;
@@ -414,6 +430,16 @@
     avatarWrap.style.transform = '';
   }
 
+  function makeThinkingText() {
+    const span = document.createElement('span');
+    span.textContent = 'Thinking';
+    const dots = document.createElement('span');
+    dots.className = 'ii-thinking-dots';
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    span.appendChild(dots);
+    return span;
+  }
+
   async function typeText(el, text, speed = 14) {
     for (let i = 1; i <= text.length; i++) {
       el.textContent = text.slice(0, i);
@@ -432,8 +458,7 @@
     for (const line of lines) {
       const row = document.createElement('div');
       row.className = 'ii-row ii-m-thinking';
-      const thinkingText = document.createElement('span');
-      thinkingText.textContent = 'Thinking…';
+      const thinkingText = makeThinkingText();
       row.appendChild(thinkingText);
       msgsEl.appendChild(row);
       moveAvatarTo(row, true);
@@ -561,8 +586,7 @@
   function addThinking() {
     const row = document.createElement('div');
     row.className = 'ii-row ii-m-thinking';
-    const thinkingText = document.createElement('span');
-    thinkingText.textContent = 'Thinking…';
+    const thinkingText = makeThinkingText();
     row.appendChild(thinkingText);
     msgsEl.appendChild(row);
     moveAvatarTo(row, true);
