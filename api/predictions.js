@@ -515,7 +515,7 @@ async function _resolvePredictionMarkets(supabase, nowStr, nowMs) {
   for (let from = 0; from < 10000; from += 1000) {
     const { data, error } = await supabase
       .from('predictions')
-      .select('id, topic, created_at, validation_date, lean, lean_confidence, market_slug, market_odds_at_time')
+      .select('id, topic, created_at, validation_date, lean, lean_confidence, market_slug, market_odds_at_time, sources')
       .is('correct', null)
       .in('lean', ['Yes', 'No'])
       .order('created_at', { ascending: true })
@@ -621,7 +621,20 @@ async function _resolvePredictionMarkets(supabase, nowStr, nowMs) {
       if (slug !== undefined) update.market_slug = slug;
       // `correct IS NULL` guard: never overwrite a grade another pass already wrote.
       const { data, error } = await supabase.from('predictions').update(update).eq('id', pred.id).is('correct', null).select('id');
-      if (!error && data?.length) resolved++;
+      if (!error && data?.length) {
+        resolved++;
+        // Same feedback loop the stock/crypto resolver already runs (see
+        // _resolvePriceBased above) — without this, PM predictions (politics/
+        // sports/entertainment/finance markets) would read source_reputation
+        // via getSourceGrade() when generated but never write back their own
+        // outcome, so that half of the platform's predictions never taught the
+        // source-quality model anything.
+        if (pred.sources?.length) {
+          await Promise.allSettled(pred.sources.map(src =>
+            supabase.rpc('upsert_source_reputation', { p_source: src, p_correct: update.correct ? 1 : 0 })
+          ));
+        }
+      }
     }));
   }
 
