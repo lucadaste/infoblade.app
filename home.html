@@ -275,49 +275,78 @@
     try {
       var data = await fetchPredictions();
       var recent = data.recent || [];
+      // Older rows (before predictions started storing yes_probability /
+      // predicted_outcome) only have `lean` + `signal` — still a real call,
+      // just without a plain-language writeup, so they stay eligible rather
+      // than getting filtered out entirely.
       var candidates = recent.filter(function (p) {
-        return (p.lean === 'Yes' || p.lean === 'No') && p.correct == null && typeof p.yesProbability === 'number';
+        return (p.lean === 'Yes' || p.lean === 'No') && p.correct == null;
       });
       candidates.sort(function (a, b) {
         var aContradicts = a.signal === 'Contradicts market' ? 1 : 0;
         var bContradicts = b.signal === 'Contradicts market' ? 1 : 0;
         if (aContradicts !== bContradicts) return bContradicts - aContradicts;
-        var aEdge = Math.abs((a.lean === 'Yes' ? a.yesProbability : 100 - a.yesProbability) - 50);
-        var bEdge = Math.abs((b.lean === 'Yes' ? b.yesProbability : 100 - b.yesProbability) - 50);
-        return bEdge - aEdge;
+        var aHasProb = typeof a.yesProbability === 'number';
+        var bHasProb = typeof b.yesProbability === 'number';
+        if (aHasProb !== bHasProb) return (bHasProb ? 1 : 0) - (aHasProb ? 1 : 0);
+        if (aHasProb && bHasProb) {
+          var aEdge = Math.abs((a.lean === 'Yes' ? a.yesProbability : 100 - a.yesProbability) - 50);
+          var bEdge = Math.abs((b.lean === 'Yes' ? b.yesProbability : 100 - b.yesProbability) - 50);
+          if (aEdge !== bEdge) return bEdge - aEdge;
+        }
+        return new Date(b.createdAt) - new Date(a.createdAt);
       });
       var top = candidates[0];
       if (!top) {
         body.innerHTML = '<div class="pick-empty">No market call yet today — check back soon.</div>';
         return;
       }
-      var ours = top.lean === 'Yes' ? top.yesProbability : 100 - top.yesProbability;
-      var outcome = top.predictedOutcome
-        ? (top.predictedOutcome.charAt(0).toLowerCase() + top.predictedOutcome.slice(1))
-        : top.topic;
       var sigClass = top.signal === 'Aligns with market' ? 'aligns' : top.signal === 'Contradicts market' ? 'contradicts' : '';
       var sigHtml = top.signal ? '<div class="pick-badge ' + sigClass + '">' + esc(top.signal) + '</div>' : '';
+      var headline, desc;
+      if (typeof top.yesProbability === 'number') {
+        var ours = top.lean === 'Yes' ? top.yesProbability : 100 - top.yesProbability;
+        var outcome = top.predictedOutcome
+          ? (top.predictedOutcome.charAt(0).toLowerCase() + top.predictedOutcome.slice(1))
+          : top.topic;
+        headline = ours + '%';
+        desc = 'We think ' + esc(outcome) + '.';
+      } else {
+        headline = esc(top.lean.toUpperCase());
+        desc = esc(top.topic);
+      }
       body.innerHTML =
-        '<div class="pick-headline">' + ours + '%</div>' +
+        '<div class="pick-headline">' + headline + '</div>' +
         sigHtml +
-        '<div class="pick-desc">We think ' + esc(outcome) + '.</div>' +
+        '<div class="pick-desc">' + desc + '</div>' +
         '<a class="pick-cta" href="/markets.html">Full analysis &rarr;</a>';
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s prediction right now.</div>';
     }
   }
 
-  // Crypto Coin of the Day: best pending AI call on a coin; falls back to
-  // today's single biggest mover (among 32 tracked coins) when no call is
-  // pending, so this card is rarely empty.
+  // Crypto Coin of the Day: best pending AI call on a coin that's actually
+  // shown on crypto.html; falls back to today's single biggest mover among
+  // those same tracked coins when no eligible call is pending, so this card
+  // is rarely empty. The predictions engine recognizes more coins (42) than
+  // crypto.html displays (32) — without this check a pick can name a coin
+  // that doesn't exist anywhere else on the site.
   async function loadCryptoPick() {
     var body = document.getElementById('crypto-pick-body');
     try {
+      var res = await fetch((window.API_BASE || '') + '/api/crypto-prices');
+      if (!res.ok) throw new Error('bad status');
+      var data = await res.json();
+      var prices = data.prices || [];
+      var trackedSyms = {};
+      prices.forEach(function (c) { trackedSyms[(c.symbol || '').toUpperCase()] = true; });
+
       var predData = await fetchPredictions().catch(function () { return null; });
       var recent = (predData && predData.recent) || [];
       var candidates = recent.filter(function (p) {
-        return !p.lean && p.category === 'crypto-coin' && p.correct == null && p.confidence &&
-          ((p.winnerTickers && p.winnerTickers.length) || (p.loserTickers && p.loserTickers.length));
+        if (p.lean || p.category !== 'crypto-coin' || p.correct != null || !p.confidence) return false;
+        var coin = (p.winnerTickers && p.winnerTickers[0]) || (p.loserTickers && p.loserTickers[0]);
+        return coin && trackedSyms[coin];
       });
       candidates.sort(function (a, b) {
         return confNum(b.confidence) - confNum(a.confidence) ||
@@ -337,12 +366,9 @@
         return;
       }
 
-      var res = await fetch((window.API_BASE || '') + '/api/crypto-prices');
-      if (!res.ok) throw new Error('bad status');
-      var data = await res.json();
-      var prices = (data.prices || []).filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
-      prices.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
-      var mover = prices[0];
+      var movable = prices.filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
+      movable.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
+      var mover = movable[0];
       if (!mover) {
         body.innerHTML = '<div class="pick-empty">Crypto data unavailable right now.</div>';
         return;
