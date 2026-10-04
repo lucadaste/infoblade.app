@@ -2,7 +2,11 @@ import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 
 const SPORT_LABELS = {
   nba: 'NBA', nfl: 'NFL', mlb: 'MLB', nhl: 'NHL', mls: 'MLS',
-  tennis: 'Tennis', golf: 'Golf', mma: 'MMA', boxing: 'Boxing',
+  // Polymarket tags UFC events 'ufc', not 'mma' (confirmed live) — both map to
+  // the same label so INDIVIDUAL_SPORTS.mma (lib/sports-teams.js) actually
+  // gets reached instead of every UFC market silently falling through to the
+  // generic fallback with no sport context at all.
+  tennis: 'Tennis', golf: 'Golf', mma: 'MMA', ufc: 'MMA', boxing: 'Boxing',
   soccer: 'Soccer', basketball: 'Basketball', football: 'Football', baseball: 'Baseball',
 };
 
@@ -162,11 +166,21 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     if (daysLeft !== null && (daysLeft > daysCap || daysLeft < daysMin)) return null;
 
     let yesPrice = null;
+    let outcomeName = null;
     try {
       const prices = typeof primary.outcomePrices === 'string'
         ? JSON.parse(primary.outcomePrices)
         : primary.outcomePrices;
       yesPrice = Math.round(parseFloat(prices[0]) * 100);
+      const outcomes = typeof primary.outcomes === 'string'
+        ? JSON.parse(primary.outcomes)
+        : primary.outcomes;
+      // Polymarket pairs outcomePrices[0] with outcomes[0] — for a plain Yes/No
+      // market that's just "Yes" (self-explanatory next to the question), but for
+      // a named-outcome market (team matchups: ["Patriots","Bills"]) it's the one
+      // piece of data that actually says what the % is the odds of. Free and
+      // always present, unlike the AI-generated yesLabel below, which can fail.
+      if (outcomes && outcomes[0] && !/^yes$/i.test(outcomes[0])) outcomeName = String(outcomes[0]).slice(0, 60);
     } catch (_) {}
 
     if (yesPrice === null || isNaN(yesPrice)) return null;
@@ -196,6 +210,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
       totalMarkets: ms.length,
       category: resultCategory,
       sport,
+      outcomeName,
     };
   }).filter(Boolean)
     .sort((a, b) => b.volume24h - a.volume24h)

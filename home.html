@@ -44,9 +44,13 @@
     /* When chat-widget.js docks the AI chat permanently on this page (see
        --ii-chat-w there), shrink the content column by exactly its width so
        the two never overlap, down to as narrow as the picks grid can take
-       without cramping (it reflows itself via auto-fit below). */
-    @media (min-width: 1024px) {
-      html.ii-chat-embedded .dash-wrap { max-width: min(1040px, calc(100vw - var(--ii-chat-w, 520px) - 96px)); }
+       without cramping (it reflows itself via auto-fit below). .hero needs
+       the same treatment — it's a separate element above .dash-wrap, and
+       without its own cap the "Welcome back, <username>" heading ran full
+       width and could run under the docked chat. */
+    @media (min-width: 1180px) {
+      html.ii-chat-embedded .dash-wrap,
+      html.ii-chat-embedded .hero { max-width: min(1040px, calc(100vw - var(--ii-chat-w, 520px) - 96px)); }
     }
 
     .page-section { display: flex; flex-direction: column; gap: 14px; }
