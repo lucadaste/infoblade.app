@@ -184,32 +184,46 @@
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
-    .ii-close-float {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 28px;
-      height: 28px;
+    .ii-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 12px;
+      flex-shrink: 0;
+      border-radius: 10px 10px 0 0;
+    }
+    .ii-header-title {
+      font-family: 'Share Tech Mono', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .ii-close-btn {
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
       background: var(--surface-2);
       border: 1px solid var(--border);
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1;
       color: var(--muted);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 2;
+      flex-shrink: 0;
       transition: color 0.15s, background 0.15s;
     }
-    .ii-close-float:hover { color: var(--ink); background: var(--card); }
+    .ii-close-btn:hover { color: var(--ink); background: var(--card); }
 
     .ii-msgs {
       position: relative;
       flex: 1;
       overflow-y: auto;
-      padding: 48px 22px 14px;
+      padding: 8px 22px 14px;
       display: flex;
       flex-direction: column;
       gap: 18px;
@@ -345,15 +359,18 @@
         max-height: none;
         background: transparent;
         border: none;
+        border-left: 1px solid var(--border);
         border-radius: 0;
         box-shadow: none;
+        padding-left: 22px;
         transform: translateX(14px) scale(0.99);
         transform-origin: right center;
       }
       #ii-ai-panel.ii-embedded.ii-open { transform: translateX(0) scale(1); }
-      #ii-ai-panel.ii-embedded .ii-close-float { display: none; }
-      #ii-ai-panel.ii-embedded .ii-msgs { padding-top: 14px; }
-      #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; }
+      #ii-ai-panel.ii-embedded .ii-close-btn { display: none; }
+      #ii-ai-panel.ii-embedded .ii-header { padding-left: 0; padding-right: 0; }
+      #ii-ai-panel.ii-embedded .ii-msgs { padding-left: 0; padding-right: 0; }
+      #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; padding-left: 0; padding-right: 0; }
       #ii-chat-btn.ii-embed-hidden { display: none; }
     }
   `;
@@ -373,7 +390,10 @@
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'AI Informant');
   panel.innerHTML = `
-    <button class="ii-close-float" id="ii-close-btn" aria-label="Close AI Informant">×</button>
+    <div class="ii-header">
+      <span class="ii-header-title">AI Informant</span>
+      <button class="ii-close-btn" id="ii-close-btn" aria-label="Close AI Informant">×</button>
+    </div>
     <div class="ii-msgs" id="ii-msgs"></div>
     <div class="ii-input-row">
       <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
