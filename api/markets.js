@@ -133,9 +133,16 @@ export async function fetchCategoryMarkets(category, opts = {}) {
 
   const markets = filtered.map(event => {
     const ms = event.markets || [];
-    const primary = ms.length === 1
-      ? ms[0]
-      : [...ms].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
+    // Prefer a specific outcome (e.g. "PSG wins 2-1") over the generic "Other/Any
+    // other score" catch-all bucket as the event's headline market — "Other" is
+    // occasionally the single highest-volume sub-market, but it tells the user
+    // nothing about the actual event. Fall back to it only if it's all there is.
+    const isCatchAll = m => /\bother\b/i.test(m.groupItemTitle || m.question || '');
+    const specific = ms.filter(m => !isCatchAll(m));
+    const pool = specific.length > 0 ? specific : ms;
+    const primary = pool.length === 1
+      ? pool[0]
+      : [...pool].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
 
     if (!primary) return null;
 
