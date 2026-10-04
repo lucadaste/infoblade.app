@@ -151,18 +151,19 @@
       gap: 8px;
       align-self: flex-start;
       max-width: 92%;
+      font-size: 14.5px;
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 30px;
-      height: 30px;
+      width: 2.1em;
+      height: 2.1em;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 0.14em;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
