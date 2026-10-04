@@ -504,7 +504,7 @@
   // this listener runs. A detached node always fails .contains(), so the
   // click looked "outside" and closed the panel it was just opened from.
   document.addEventListener('click', e => {
-    if (!open) return;
+    if (!open || window.matchMedia('(min-width: 1440px)').matches) return;
     const navBtn = document.getElementById('ii-chat-btn');
     const path = e.composedPath ? e.composedPath() : [];
     if (!path.includes(panel) && !(navBtn && path.includes(navBtn))) {
@@ -513,6 +513,13 @@
   });
 
   window.iiToggleChat = () => setOpen(!open);
+
+  // Wide desktops have real empty space beside the page content (see the
+  // 1440px dock styles above) — treat the panel as living there permanently
+  // instead of behind a click, rather than just resizing it once opened.
+  const wideDockMq = window.matchMedia('(min-width: 1440px)');
+  if (wideDockMq.matches) setOpen(true);
+  wideDockMq.addEventListener('change', e => { if (e.matches && !open) setOpen(true); });
 
   function mdToHtml(raw) {
     const lines = raw.split('\n');
