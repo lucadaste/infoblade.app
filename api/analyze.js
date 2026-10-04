@@ -5,6 +5,7 @@ import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
+import { isValidTickerFormat } from '../lib/ticker-format.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 import { fetchQuantSignals } from '../lib/quant-signals.js';
 
@@ -493,8 +494,23 @@ ${marketsSection}${technicalSection}${quantSection}${redditSection}${trackRecord
     const _coinOnly = (tickers) => category === 'crypto-coin'
       ? tickers.map(t => String(t).toUpperCase()).filter(t => _COIN_SYMS.has(t))
       : tickers;
-    let winnerTickers   = _coinOnly(analysis.winners?.tickers || []);
-    let loserTickers    = _coinOnly(analysis.losers?.tickers  || []);
+    // Claude occasionally writes a full company name ("CrowdStrike",
+    // "Palantir") or an invented proxy string instead of an actual symbol.
+    // The resolver already silently drops anything not shaped like a ticker
+    // before grading (api/predictions.js), so a bad string here was never
+    // actually scored — it just sat in winner_tickers/loser_tickers looking
+    // like a real pick while invisibly not counting toward the prediction's
+    // score. Reject it here instead, at creation time, so it's visible in
+    // logs rather than discovered months later by audit (see the 2026-10
+    // grading audit).
+    const _tickerShapeOnly = (tickers) => {
+      const kept = [], dropped = [];
+      for (const t of tickers) (isValidTickerFormat(String(t).toUpperCase()) ? kept : dropped).push(t);
+      if (dropped.length) console.error('[analyze] dropping malformed ticker(s)', { topic, dropped });
+      return kept;
+    };
+    let winnerTickers   = _tickerShapeOnly(_coinOnly(analysis.winners?.tickers || []));
+    let loserTickers    = _tickerShapeOnly(_coinOnly(analysis.losers?.tickers  || []));
 
     if (category === 'crypto-coin') {
       // Every crypto-coin prediction is about exactly one coin: the one the client is

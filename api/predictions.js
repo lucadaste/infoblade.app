@@ -8,6 +8,7 @@ import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { pickPmMarket as _pickPmMarket, pmOutcome as _pmOutcome, pmWordScore as _pmWordScore } from '../lib/pm-resolution.js';
+import { isValidTickerFormat } from '../lib/ticker-format.js';
 import { getSupabase, setCors, secretMatches } from '../lib/http.js';
 import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
 
@@ -75,17 +76,23 @@ async function _fetchTickerHistory(ticker, startMs, endMs) {
 }
 
 // Look up the price closest to targetDate in a pre-fetched history map.
-// Returns null if no price within 5 trading days (7 calendar days).
+// Returns { price: null } if no price within 5 trading days (7 calendar
+// days). diffDays is returned even when the match is rejected, so a caller
+// can log how far off the nearest available data actually was — previously
+// a stale match hiding inside the 7-day tolerance left no trace of the gap
+// (see the 2026-10 grading audit, which found a prediction graded off a
+// price 3 days from its real validation date with nothing recording it).
 function _priceOnDate(historyMap, targetDate) {
   const keys = Object.keys(historyMap);
-  if (!keys.length) return null;
+  if (!keys.length) return { price: null, diffDays: null };
   const targetMs = targetDate.getTime();
   let best = null, bestDiff = Infinity;
   for (const k of keys) {
     const diff = Math.abs(new Date(k).getTime() - targetMs);
     if (diff < bestDiff) { bestDiff = diff; best = k; }
   }
-  return bestDiff <= 7 * 86400000 ? historyMap[best] : null;
+  const diffDays = +(bestDiff / 86400000).toFixed(2);
+  return { price: diffDays <= 7 ? historyMap[best] : null, diffDays };
 }
 
 // PM prediction grade/score/weight helpers.
@@ -250,7 +257,7 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
   let minMs = nowMs, maxMs = 0;
   for (const p of claimedReady) {
     for (const t of [...(p.winner_tickers || []), ...(p.loser_tickers || [])]) {
-      if (/^[A-Z^.]{1,7}$/.test(t)) uniqueTickers.add(t);
+      if (isValidTickerFormat(t)) uniqueTickers.add(t);
     }
     const createdMs = new Date(p.created_at).getTime();
     if (createdMs < minMs) minMs = createdMs;
@@ -272,6 +279,20 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
     if (i + 5 < tickerList.length) await new Promise(r => setTimeout(r, 300));
   }
 
+  // A failed benchmark fetch (SPY/BTC) silently strips alpha adjustment from
+  // EVERY prediction in this batch, not just one — worth one retry after the
+  // rest of the batch has had a chance to clear any transient rate limit,
+  // rather than accepting the whole batch grading without benchmark data.
+  for (const b of ALL_BENCHMARKS) {
+    if (Object.keys(histories[b] || {}).length) continue;
+    console.error('[predictions/resolve] benchmark history came back empty, retrying once', { ticker: b });
+    await new Promise(r => setTimeout(r, 1000));
+    histories[b] = await _fetchTickerHistory(b, minMs, maxMs);
+    if (!Object.keys(histories[b] || {}).length) {
+      console.error('[predictions/resolve] benchmark history still empty after retry — this batch will grade without alpha adjustment', { ticker: b });
+    }
+  }
+
   // ── 5. Score every prediction from the cached history ─────────────────────
   const updates = [];
   let skipped = 0;
@@ -284,21 +305,26 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
     const createdDate = new Date(pred.created_at);
     const valDate     = pred._vDate;
 
-    // Build baseline: stored price preferred; fall back to price at created_at from history
+    // Build baseline: stored price preferred; fall back to price at created_at from history.
+    // baseDateDiffDays stays unset for a stored (live-quote) baseline — the
+    // diff concept only applies to a price pulled from daily-close history.
     const baseline = { ...(pred.baseline_prices || {}) };
+    const baseDateDiffDays = {};
     for (const t of [...winners, ...losers]) {
       if (!baseline[t] && histories[t]) {
-        const p = _priceOnDate(histories[t], createdDate);
-        if (p != null) baseline[t] = p;
+        const { price, diffDays } = _priceOnDate(histories[t], createdDate);
+        if (price != null) { baseline[t] = price; baseDateDiffDays[t] = diffDays; }
       }
     }
 
-    // Actual price: price at the validation date from history
+    // Actual price: price at the validation date from history. Always comes
+    // from here (no live-quote alternative), so diffDays is always known.
     const actual = {};
+    const actualDateDiffDays = {};
     for (const t of [...winners, ...losers]) {
       if (histories[t]) {
-        const p = _priceOnDate(histories[t], valDate);
-        if (p != null) actual[t] = p;
+        const { price, diffDays } = _priceOnDate(histories[t], valDate);
+        if (price != null) { actual[t] = price; actualDateDiffDays[t] = diffDays; }
       }
     }
 
@@ -306,13 +332,17 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
     // fresh from history (not the ticker's own possibly-stored baseline) so
     // it's on equal footing regardless of where the ticker's baseline came
     // from. Missing/unavailable benchmark data just means no adjustment —
-    // computeAccuracyScore falls back to the raw return automatically.
+    // computeAccuracyScore falls back to the raw return automatically, but
+    // the move also gets tagged `benchmarkUnavailable` so that fallback is
+    // distinguishable later from a genuine alpha of 0 (see the 2026-10
+    // grading audit, which found ~27% of alpha-scored predictions had
+    // silently lost benchmark adjustment with no way to tell after the fact).
     const _benchmarkPctCache = {};
     function benchmarkPctFor(benchTicker) {
       if (!benchTicker || !histories[benchTicker]) return null;
       if (benchTicker in _benchmarkPctCache) return _benchmarkPctCache[benchTicker];
-      const bBase = _priceOnDate(histories[benchTicker], createdDate);
-      const bAct  = _priceOnDate(histories[benchTicker], valDate);
+      const { price: bBase } = _priceOnDate(histories[benchTicker], createdDate);
+      const { price: bAct }  = _priceOnDate(histories[benchTicker], valDate);
       const result = (bBase != null && bAct != null) ? (bAct - bBase) / bBase * 100 : null;
       _benchmarkPctCache[benchTicker] = result;
       return result;
@@ -322,16 +352,26 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
     for (const t of winners) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const benchPct = benchmarkPctFor(benchmarkFor(t, _COIN_SYMS.has(t)));
+      const expectedBenchmark = benchmarkFor(t, _COIN_SYMS.has(t));
+      const benchPct = benchmarkPctFor(expectedBenchmark);
       const alphaPct = benchPct != null ? +(pct - benchPct).toFixed(2) : undefined;
-      rawMoves[t] = { pct, alphaPct, direction: 'bullish', basePrice: baseline[t], actualPrice: actual[t] };
+      rawMoves[t] = {
+        pct, alphaPct, direction: 'bullish', basePrice: baseline[t], actualPrice: actual[t],
+        baseDateDiffDays: baseDateDiffDays[t], actualDateDiffDays: actualDateDiffDays[t],
+        benchmarkUnavailable: expectedBenchmark != null && benchPct == null,
+      };
     }
     for (const t of losers) {
       if (!baseline[t] || !actual[t]) continue;
       const pct = +((actual[t] - baseline[t]) / baseline[t] * 100).toFixed(2);
-      const benchPct = benchmarkPctFor(benchmarkFor(t, _COIN_SYMS.has(t)));
+      const expectedBenchmark = benchmarkFor(t, _COIN_SYMS.has(t));
+      const benchPct = benchmarkPctFor(expectedBenchmark);
       const alphaPct = benchPct != null ? +(pct - benchPct).toFixed(2) : undefined;
-      rawMoves[t] = { pct, alphaPct, direction: 'bearish', basePrice: baseline[t], actualPrice: actual[t] };
+      rawMoves[t] = {
+        pct, alphaPct, direction: 'bearish', basePrice: baseline[t], actualPrice: actual[t],
+        baseDateDiffDays: baseDateDiffDays[t], actualDateDiffDays: actualDateDiffDays[t],
+        benchmarkUnavailable: expectedBenchmark != null && benchPct == null,
+      };
     }
 
     const result = computeAccuracyScore(rawMoves);
