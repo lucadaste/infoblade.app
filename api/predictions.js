@@ -2,7 +2,7 @@ import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { SECTION_CATS as _SECTION_CATS, SECTION_LABELS as _SECTION_LABELS, categoryToSection as _categoryToSection } from '../lib/prediction-sections.js';
-import { computeAccuracyScore, SCORING_VERSION } from '../lib/scoring.js';
+import { computeAccuracyScore, SCORING_VERSION, HIT_THRESHOLD_PCT, hitRateBonus, classifyScore, tickerScore } from '../lib/scoring.js';
 import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
@@ -647,6 +647,28 @@ async function handleGraph(req, res, supabase) {
   }
 }
 
+// Pure direction accuracy for one prediction: did the pick's price move the
+// way it called, with NO benchmark/alpha adjustment anywhere in the
+// calculation (unlike `analysis.raw_correct`, which still inherits an
+// alpha-based hit-rate bonus from computeAccuracyScore — see lib/scoring.js
+// — and so barely differs from the alpha-adjusted `correct`). Recomputed
+// from the raw pct/direction already stored per ticker in
+// `analysis.ticker_moves` rather than trusting any stored "raw" field, since
+// those fields were never meant to be alpha-free. PM predictions have no
+// alpha concept to begin with, so their `correct` is already pure.
+function _pureDirectionCorrect(p) {
+  if (p.lean) return p.correct;
+  const moves = Object.values(p.analysis?.ticker_moves || {})
+    .filter(m => typeof m.pct === 'number' && (m.direction === 'bullish' || m.direction === 'bearish'));
+  if (!moves.length) return null;
+  const hitCount = moves.filter(m =>
+    m.direction === 'bullish' ? m.pct >= HIT_THRESHOLD_PCT : m.pct <= -HIT_THRESHOLD_PCT
+  ).length;
+  const bonus  = hitRateBonus(hitCount, moves.length);
+  const avgRaw = moves.reduce((sum, m) => sum + tickerScore(m.pct, m.direction), 0) / moves.length;
+  return classifyScore(avgRaw + bonus).correct;
+}
+
 async function handleStats(req, res, supabase) {
   const { data: validated, error: vErr } = await supabase
     .from('predictions')
@@ -687,17 +709,18 @@ async function handleStats(req, res, supabase) {
   // there is just whether the market resolved the way the call leaned.
   let weightedCorrect = 0, totalWeight = 0;
   // Raw (non-alpha) direction accuracy: did the call's direction turn out
-  // right, independent of whether the pick beat the market. For stock/crypto
-  // this reads `analysis.raw_correct` (older rows graded before that field
-  // existed are skipped, not guessed at); PM predictions have no raw/alpha
-  // split so their `correct` is used directly.
+  // right, independent of whether the pick beat the market. Recomputed fresh
+  // per prediction (see _pureDirectionCorrect) rather than trusting the
+  // stored `analysis.raw_correct`, which still has an alpha-based hit-rate
+  // bonus baked in. Rows with no ticker_moves to recompute from are skipped,
+  // not guessed at.
   let rawWeightedCorrect = 0, rawTotalWeight = 0;
   for (const p of validated ?? []) {
     const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
     totalWeight    += w;
     if (p.correct) weightedCorrect += w;
 
-    const rawCorrect = p.lean ? p.correct : p.analysis?.raw_correct;
+    const rawCorrect = _pureDirectionCorrect(p);
     if (typeof rawCorrect === 'boolean') {
       rawTotalWeight    += w;
       if (rawCorrect) rawWeightedCorrect += w;
