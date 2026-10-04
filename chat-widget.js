@@ -308,6 +308,12 @@
       #ii-chat-btn { bottom: 146px; }
       #ii-ai-panel { bottom: 218px; width: min(500px, calc(100vw - 32px)); max-height: min(660px, calc(100vh - 242px)); }
     }
+
+    /* Wide desktops have real leftover space beside the page content — let
+       the panel use it instead of staying a small bottom-right popup. */
+    @media (min-width: 1440px) {
+      #ii-ai-panel { width: min(420px, calc(100vw - 32px)); max-height: min(calc(100vh - 160px), 880px); bottom: 96px; }
+    }
   `;
   document.head.appendChild(style);
 
@@ -367,19 +373,35 @@
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  // Each AI row gets its own avatar icon, pinned to that row's top-left —
-  // a single floating icon that slid between rows used to visually overshoot
-  // past the last message into the input box whenever that row sat near the
-  // bottom of the scroll area. A per-row icon scrolls with its own message
-  // and can never land outside it.
-  function makeAvatarIcon(busy) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.setAttribute('viewBox', '0 0 432 466');
-    svg.setAttribute('aria-hidden', 'true');
-    svg.classList.add('ii-avatar', 'ii-row-avatar');
-    if (busy) svg.classList.add('ii-avatar-busy');
-    svg.innerHTML = '<use href="#ii-blade"></use>';
-    return svg;
+  // One avatar, relocated into whichever row is "current" and FLIP-animated
+  // between positions — it glides down to each new message rather than
+  // printing a new icon per row. Animating a `top` offset on a floating icon
+  // (the earlier approach) could land it past the row it was aiming for —
+  // moving the real element into the row makes that layout-impossible, and
+  // the transform transition keeps the same smooth glide.
+  const avatarWrap = document.createElement('div');
+  avatarWrap.className = 'ii-row-avatar';
+  const avatarEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  avatarEl.setAttribute('viewBox', '0 0 432 466');
+  avatarEl.setAttribute('aria-hidden', 'true');
+  avatarEl.classList.add('ii-avatar');
+  avatarEl.innerHTML = '<use href="#ii-blade"></use>';
+  avatarWrap.appendChild(avatarEl);
+
+  function moveAvatarTo(rowEl, busy) {
+    const prevRect = avatarWrap.isConnected ? avatarWrap.getBoundingClientRect() : null;
+    rowEl.prepend(avatarWrap);
+    avatarEl.classList.toggle('ii-avatar-busy', !!busy);
+    if (!prevRect) return;
+    const newRect = avatarWrap.getBoundingClientRect();
+    const dx = prevRect.left - newRect.left;
+    const dy = prevRect.top - newRect.top;
+    if (!dx && !dy) return;
+    avatarWrap.style.transition = 'none';
+    avatarWrap.style.transform = `translate(${dx}px, ${dy}px)`;
+    avatarWrap.getBoundingClientRect(); // force reflow so the jump above renders before animating
+    avatarWrap.style.transition = 'transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)';
+    avatarWrap.style.transform = '';
   }
 
   async function typeText(el, text, speed = 14) {
@@ -400,12 +422,11 @@
     for (const line of lines) {
       const row = document.createElement('div');
       row.className = 'ii-row ii-m-thinking';
-      const icon = makeAvatarIcon(true);
-      row.appendChild(icon);
       const thinkingText = document.createElement('span');
       thinkingText.textContent = 'Thinking…';
       row.appendChild(thinkingText);
       msgsEl.appendChild(row);
+      moveAvatarTo(row, true);
       msgsEl.scrollTop = msgsEl.scrollHeight;
       await sleep(500);
       row.classList.remove('ii-m-thinking');
@@ -414,7 +435,7 @@
       bubble.className = 'ii-m ii-m-ai';
       row.appendChild(bubble);
       await typeText(bubble, line);
-      icon.classList.remove('ii-avatar-busy');
+      moveAvatarTo(row, false);
       await sleep(250);
     }
     startersEl = buildStarters();
@@ -517,12 +538,12 @@
     }
     const row = document.createElement('div');
     row.className = 'ii-row';
-    row.appendChild(makeAvatarIcon(false));
     const bubble = document.createElement('div');
     bubble.className = 'ii-m ii-m-ai';
     bubble.innerHTML = mdToHtml(text);
     row.appendChild(bubble);
     msgsEl.appendChild(row);
+    moveAvatarTo(row, false);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return bubble;
   }
@@ -530,11 +551,11 @@
   function addThinking() {
     const row = document.createElement('div');
     row.className = 'ii-row ii-m-thinking';
-    row.appendChild(makeAvatarIcon(true));
     const thinkingText = document.createElement('span');
     thinkingText.textContent = 'Thinking…';
     row.appendChild(thinkingText);
     msgsEl.appendChild(row);
+    moveAvatarTo(row, true);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return row;
   }
@@ -568,16 +589,16 @@
         body: JSON.stringify({ messages: history, pageContext }),
         signal: AbortSignal.timeout(35000)
       });
-      thinking.remove();
       const data = await res.json();
       const reply = data.reply || data.error || 'Something went wrong. Try again.';
-      addMsg('assistant', reply);
+      addMsg('assistant', reply); // moves the avatar into the new row first — only then is it safe to remove the old one
+      thinking.remove();
       history.push({ role: 'assistant', content: reply });
     } catch (e) {
-      thinking.remove();
       addMsg('assistant', e.name === 'TimeoutError'
         ? 'The request timed out. Please try again.'
         : 'Connection error. Please try again.');
+      thinking.remove();
     }
     busy = false;
     sendBtn.disabled = false;
