@@ -128,7 +128,7 @@
       transform: translateY(-50%) translateX(4px);
       background: var(--ink);
       color: var(--paper);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 12px;
       font-weight: 600;
       white-space: nowrap;
@@ -194,8 +194,8 @@
       border-radius: 10px 10px 0 0;
     }
     .ii-header-title {
-      font-family: 'Share Tech Mono', sans-serif;
-      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
       font-size: 12px;
       letter-spacing: 0.8px;
       text-transform: uppercase;
@@ -236,7 +236,7 @@
     .ii-msgs::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
 
     .ii-m {
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 14.5px;
       line-height: 1.6;
       white-space: pre-wrap;
@@ -257,7 +257,7 @@
     .ii-m-thinking {
       color: var(--muted);
       font-size: 13.5px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       padding-top: 3px;
       padding-bottom: 3px;
     }
@@ -273,7 +273,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 9px 12px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 13px;
       color: var(--muted);
       cursor: pointer;
@@ -295,7 +295,7 @@
     }
     #ii-inp {
       flex: 1;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-size: 14px;
       border: 1px solid var(--border);
       border-radius: 7px;
@@ -316,7 +316,7 @@
       border: none;
       border-radius: 7px;
       padding: 0 16px;
-      font-family: 'Syne', sans-serif;
+      font-family: 'Space Grotesk', sans-serif;
       font-weight: 700;
       font-size: 13px;
       letter-spacing: .3px;
@@ -353,7 +353,7 @@
       }
       #ii-ai-panel.ii-embedded {
         top: 92px;
-        bottom: 90px;
+        bottom: 72px;
         right: 16px;
         width: var(--ii-chat-w);
         max-height: none;
@@ -362,7 +362,7 @@
         border-left: 1px solid var(--border);
         border-radius: 0;
         box-shadow: none;
-        padding-left: 22px;
+        padding-left: 24px;
         transform: translateX(14px) scale(0.99);
         transform-origin: right center;
       }
