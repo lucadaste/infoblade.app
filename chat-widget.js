@@ -154,15 +154,15 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 28px;
-      height: 28px;
+      width: 20px;
+      height: 20px;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 3px;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-pulse 1.3s ease-in-out infinite; }
