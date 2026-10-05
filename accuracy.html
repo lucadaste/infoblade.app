@@ -845,6 +845,7 @@
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       renderStats(data.summary);
+      renderBaselineNote(data.baselineGenerated);
       renderBySection(data.bySection);
       renderPmEdge(data.pmEdge);
       renderCumulativeChart(data.cumulativeTimeline);

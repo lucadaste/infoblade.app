@@ -738,6 +738,11 @@ async function handleStats(req, res, supabase) {
     .select('id', { count: 'exact', head: true })
     .is('correct', null);
   if (pErr) throw pErr;
+  const { count: pendingBaselineCount } = await supabase
+    .from('predictions')
+    .select('id', { count: 'exact', head: true })
+    .is('correct', null)
+    .eq('analysis->>baseline_generated', 'true');
   const pending = pendingCount;
 
   const { count: totalInDb } = await supabase
@@ -752,48 +757,66 @@ async function handleStats(req, res, supabase) {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'failed');
 
-  const total = validated?.length ?? 0;
+  // `generate-baseline`'s cron (api/generate-baseline.js) fills out the
+  // dashboard with cold, no-news/no-source directional guesses on every
+  // stock/coin so every section has volume — useful for coverage, but by
+  // 2026-09 it was already outproducing a full prior QUARTER of organic
+  // (real, news-driven) predictions in a single month. Blending it into the
+  // headline silently dilutes the "did InfoBlade's actual analysis call it
+  // right" number with a population that was never trying to be a genuine
+  // editorial call — see the 2026-10 grading audit. The headline below is
+  // organic-only; baseline-generated gets its own clearly separate summary
+  // further down so it's visible, not hidden, just not blended in.
+  const organicValidated  = (validated ?? []).filter(p => !p.analysis?.baseline_generated);
+  const baselineValidated = (validated ?? []).filter(p =>  p.analysis?.baseline_generated);
+  const total = organicValidated.length;
 
   // Confidence-weighted accuracy: high-confidence correct predictions count more.
   // This is the alpha-adjusted number: a stock/crypto call only counts as
   // correct if it beat its benchmark, not just moved the predicted direction
   // (see lib/scoring.js). PM predictions have no alpha concept, so `correct`
   // there is just whether the market resolved the way the call leaned.
-  let weightedCorrect = 0, totalWeight = 0;
-  // Raw (non-alpha) direction accuracy: did the call's direction turn out
-  // right, independent of whether the pick beat the market. Recomputed fresh
-  // per prediction (see _pureDirectionCorrect) rather than trusting the
-  // stored `analysis.raw_correct`, which still has an alpha-based hit-rate
-  // bonus baked in. Rows with no ticker_moves to recompute from are skipped,
-  // not guessed at.
-  let rawWeightedCorrect = 0, rawTotalWeight = 0;
-  for (const p of validated ?? []) {
-    const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
-    totalWeight    += w;
-    if (p.correct) weightedCorrect += w;
+  //
+  // Computes the same {accuracy, rawAccuracy, correct, CI} shape for any
+  // population — called once for the organic (headline) set and once for
+  // the baseline-generated set, so the two stay structurally identical and
+  // can't silently drift into different definitions of "accuracy."
+  function _accuracySummary(preds) {
+    let weightedCorrect = 0, totalWeight = 0, rawWeightedCorrect = 0, rawTotalWeight = 0;
+    for (const p of preds) {
+      const w = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
+      totalWeight += w;
+      if (p.correct) weightedCorrect += w;
 
-    const rawCorrect = _pureDirectionCorrect(p);
-    if (typeof rawCorrect === 'boolean') {
-      rawTotalWeight    += w;
-      if (rawCorrect) rawWeightedCorrect += w;
+      const rawCorrect = _pureDirectionCorrect(p);
+      if (typeof rawCorrect === 'boolean') {
+        rawTotalWeight += w;
+        if (rawCorrect) rawWeightedCorrect += w;
+      }
     }
+    const n = preds.length;
+    const correct = preds.filter(p => p.correct === true).length;
+    const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
+    const rawAccuracy = rawTotalWeight > 0 ? Math.round(rawWeightedCorrect / rawTotalWeight * 100) : null;
+    // 95% Wilson interval around the headline number, using the resolved
+    // prediction count as n — a ballpark uncertainty band ("83% ± 10%
+    // (n=48)" reads very differently from a bare "83%").
+    let accuracyCI = null;
+    if (n > 0) {
+      const ci = wilsonIntervalFromP((accuracy ?? 0) / 100, n);
+      accuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
+    }
+    let rawAccuracyCI = null;
+    if (rawTotalWeight > 0) {
+      const ci = wilsonIntervalFromP((rawAccuracy ?? 0) / 100, n);
+      rawAccuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
+    }
+    return { total: n, correct, incorrect: n - correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI };
   }
-  const correct  = validated?.filter(p => p.correct === true).length ?? 0;
-  const accuracy = totalWeight > 0 ? Math.round(weightedCorrect / totalWeight * 100) : null;
-  const rawAccuracy = rawTotalWeight > 0 ? Math.round(rawWeightedCorrect / rawTotalWeight * 100) : null;
-  // 95% Wilson interval around the headline number, using the resolved
-  // prediction count as n — a ballpark uncertainty band ("83% ± 10%
-  // (n=48)" reads very differently from a bare "83%").
-  let accuracyCI = null;
-  if (total > 0) {
-    const ci = wilsonIntervalFromP((accuracy ?? 0) / 100, total);
-    accuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
-  }
-  let rawAccuracyCI = null;
-  if (rawTotalWeight > 0) {
-    const ci = wilsonIntervalFromP((rawAccuracy ?? 0) / 100, total);
-    rawAccuracyCI = { lower: Math.round(ci.lower * 100), upper: Math.round(ci.upper * 100) };
-  }
+
+  const organicSummary  = _accuracySummary(organicValidated);
+  const baselineSummary = _accuracySummary(baselineValidated);
+  const { correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI } = organicSummary;
 
   // Fetch resolved + pending predictions. Also always include prediction-market
   // predictions (have lean/signal) so they're never pushed off the list by
@@ -992,7 +1015,19 @@ async function handleStats(req, res, supabase) {
   const pmEdge = await _pmEdgeStats(validated, supabase);
 
   return res.status(200).json({
-    summary: { total, correct, incorrect: total - correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI, pending: pending ?? 0, failed: failedCount ?? 0, totalInDb: totalInDb ?? 0 },
+    summary: {
+      total, correct, incorrect: total - correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI,
+      pending: (pending ?? 0) - (pendingBaselineCount ?? 0), failed: failedCount ?? 0, totalInDb: totalInDb ?? 0,
+      // Platform-wide pending count (organic + baseline-generated) — the
+      // "X pending, graded every 2 hours" banner is about system state, not
+      // the accuracy headline, so it stays unsegmented unlike `pending` above.
+      totalPending: pending ?? 0,
+    },
+    // Auto-generated, no-news/no-source baseline predictions (see
+    // api/generate-baseline.js), kept fully separate from the headline
+    // summary above rather than blended into it — see the comment where
+    // organicValidated/baselineValidated are split.
+    baselineGenerated: { ...baselineSummary, pending: pendingBaselineCount ?? 0 },
     timeline, cumulativeTimeline, bySection, byCategory, topTickers, calibration, pmEdge,
     recent: (recent ?? []).map(p => ({
       id: p.id, topic: p.topic, createdAt: p.created_at,
