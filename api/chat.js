@@ -1,6 +1,7 @@
 import { buildContextGraph, formatContextForChat } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { getSupabase, checkRateLimit, clientIp } from '../lib/http.js';
+import { fetchCategoryMarkets } from './markets.js';
 
 // Module-level headline cache — shared across warm invocations, 5-min TTL
 const _headlineCache = new Map();
@@ -102,7 +103,7 @@ SITE & ACCOUNT FEATURES (answer these precisely if asked; keep in mind these des
 
 *Main navigation* — the hamburger/menu icon opens links to Stock Markets, Prediction Markets, Crypto Markets, Watchlist, and Accuracy History (Track Record). On mobile, the same five sections are also reachable from the bottom nav bar.
 
-*Search* — each markets page (Stock Markets, Crypto Markets) has its own inline search box for finding a specific ticker or coin; there is no single global search across the whole site.
+*Search* — each markets page has its own search. Stock Markets and Crypto Markets have an inline search box for a specific ticker or coin. Prediction Markets has a "Search a market" bar at the top that finds any live Polymarket market (not just the toss-up ones shown by default). You (the AI Informant) can also search prediction markets directly, so users can just ask you.
 
 If a user asks about a UI element or setting not covered above, say plainly that you're not sure and suggest they check the account dropdown or the relevant page, rather than guessing at a button that may not exist.
 
@@ -150,10 +151,12 @@ HOW TO HELP USERS:
 - Discuss any US stock, ETF, sector, crypto asset, or market theme in depth
 - Help users think through an investment thesis or event they are tracking
 - Explain prediction market mechanics and how to read odds
+- Look up live prediction markets with the search_prediction_markets tool whenever the user asks about the odds or chances of a real-world event, "will X happen", who will win something, or what markets exist on a topic
 - Walk through what a specific prediction grade means and why
 
 RULES:
 - When live headlines are provided, lead with what you actually see in the news, then add broader context
+- When you use prediction market search: quote the live odds and 24h volume from the results, and say plainly these are the betting crowd's odds, not an Infoblade prediction. Never invent odds or markets that were not returned. If nothing relevant came back, say no live market matched. Matching markets are shown to the user as cards under your reply, so summarize the most relevant 1-3 rather than listing every result
 - Be conversational but analytical, like a sharp research analyst, not a disclaimer machine
 - Use markdown: **bold** for key terms, bullet points for lists, numbered lists for steps. NEVER use # or ## headings. Use **bold** instead to label sections
 - Do NOT use em dashes (—) anywhere in your response. Use commas, colons, or periods instead
@@ -238,6 +241,63 @@ function isMarketQuestion(text) {
   return marketTerms.some(term => lower.includes(term));
 }
 
+// Lets the model pull live Polymarket markets mid-conversation (the "all-in-one
+// stop" idea): same full-corpus search the Prediction Markets page uses, so
+// chat and page never disagree about what's out there.
+const MARKET_SEARCH_TOOL = {
+  name: 'search_prediction_markets',
+  description: 'Search live Polymarket prediction markets. Use when the user asks about the odds or chances of a real-world event, whether something will happen, who will win, or what markets exist on a topic. Returns live crowd odds (yesPrice is the % chance of the outcome in outcomeName, or of YES when outcomeName is absent), 24h volume in USD, and days until close.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: '1-4 search keywords naming the event, person, team or topic, e.g. "Fed rate cut", "Super Bowl", "Taylor Swift". No full sentences.' },
+    },
+    required: ['query'],
+  },
+};
+const MAX_TOOL_MARKETS = 6;
+const MAX_CARD_MARKETS = 4;
+
+async function searchMarketsForChat(query) {
+  const q = String(query || '').trim().slice(0, 100);
+  if (!q) return [];
+  const markets = await fetchCategoryMarkets('other', { isSearch: true, rawQuery: q, labels: false });
+  return markets.slice(0, MAX_TOOL_MARKETS).map(m => ({
+    title: m.title,
+    question: m.question,
+    yesPrice: m.yesPrice,
+    outcomeName: m.outcomeName || null,
+    volume24h: m.volume24h,
+    daysLeft: m.daysLeft,
+  }));
+}
+
+async function callClaude(system, messages, signal, toolChoice) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'prompt-caching-2024-07-31',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 800,
+      tools: [MARKET_SEARCH_TOOL],
+      ...(toolChoice ? { tool_choice: toolChoice } : {}),
+      system,
+      messages,
+    }),
+    signal,
+  });
+  return response.json();
+}
+
+function textOf(data) {
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+}
+
 export default async function handler(req, res) {
   const origin = process.env.ALLOWED_ORIGIN || 'https://infoblade.app';
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -312,33 +372,45 @@ export default async function handler(req, res) {
   });
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'prompt-caching-2024-07-31',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 800,
-        system: [
-          { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
-          { type: 'text', text: dynamicContext },
-        ],
-        messages: trimmed,
-      }),
-      signal: AbortSignal.timeout(30000),
-    });
+    // One 30s budget across both model calls and the market search, so the
+    // widget's 35s client timeout still fires after we've answered.
+    const signal = AbortSignal.timeout(30000);
+    const system = [
+      { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
+      { type: 'text', text: dynamicContext },
+    ];
 
-    const data = await response.json();
+    let data = await callClaude(system, trimmed, signal);
+    let cardMarkets = null;
+    let marketQuery = null;
+
+    // At most one search round: the follow-up call runs with tool_choice none,
+    // so a chat turn is never more than two model calls.
+    const toolUse = data.stop_reason === 'tool_use' && (data.content || []).find(b => b.type === 'tool_use' && b.name === MARKET_SEARCH_TOOL.name);
+    if (toolUse) {
+      marketQuery = String(toolUse.input?.query || '').trim().slice(0, 100);
+      let toolResult;
+      try {
+        const found = await searchMarketsForChat(marketQuery);
+        cardMarkets = found.slice(0, MAX_CARD_MARKETS);
+        toolResult = { type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify({ query: marketQuery, markets: found }) };
+      } catch (err) {
+        console.error('[chat] market search failed:', err.message);
+        toolResult = { type: 'tool_result', tool_use_id: toolUse.id, content: 'Market search is temporarily unavailable.', is_error: true };
+      }
+      data = await callClaude(system, [
+        ...trimmed,
+        { role: 'assistant', content: data.content },
+        { role: 'user', content: [toolResult] },
+      ], signal, { type: 'none' });
+    }
+
     if (data.error) {
       console.error('[chat] Anthropic error:', data.error.message);
       return res.status(500).json({ error: 'Chat service unavailable' });
     }
 
-    const reply = data.content?.[0]?.text || '';
+    const reply = textOf(data);
 
     // Persist this turn for the account-synced chat history feature (see
     // api/chat-history.js). Best-effort: a save failure shouldn't block the
@@ -354,7 +426,7 @@ export default async function handler(req, res) {
       ]).then(({ error }) => { if (error) console.error('[chat] history save failed:', error); });
     }
 
-    return res.status(200).json({ reply });
+    return res.status(200).json(cardMarkets?.length ? { reply, markets: cardMarkets, marketQuery } : { reply });
   } catch (err) {
     console.error('[chat]', err.message);
     return res.status(500).json({ error: 'Chat request failed' });

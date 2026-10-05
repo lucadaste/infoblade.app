@@ -432,6 +432,15 @@
 
     .ii-msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; justify-content: flex-end; }
     .ii-msg-images img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; display: block; }
+    .ii-mkts { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .ii-mkt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+    .ii-mkt-body { flex: 1; min-width: 0; }
+    .ii-mkt-title { font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .ii-mkt-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .ii-mkt-odds { flex-shrink: 0; text-align: right; font-family: 'Share Tech Mono', monospace; font-size: 16px; font-weight: 700; color: var(--ink); }
+    .ii-mkt-odds span { display: block; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ii-mkts-all { font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; margin-top: 2px; }
+    .ii-mkts-all:hover { text-decoration: underline; }
 
     .ii-drop-overlay {
       position: absolute;
@@ -877,7 +886,43 @@
     return `<div style="display:flex;flex-direction:column;gap:4px">${out.join('')}</div>`;
   }
 
-  function addMsg(role, text, imagePreviews) {
+  // Live Polymarket results the AI Informant pulled for this reply (see
+  // search_prediction_markets in api/chat.js). Odds only, no analysis: the
+  // footer link opens the same search on the Prediction Markets page.
+  function escHtml(v) {
+    return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function fmtVol(n) {
+    n = Number(n) || 0;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+    return `$${n}`;
+  }
+  function renderMarketCards(markets, query) {
+    const wrap = document.createElement('div');
+    wrap.className = 'ii-mkts';
+    wrap.innerHTML = markets.map(m => {
+      const meta = [`${fmtVol(m.volume24h)} 24h vol`];
+      if (m.daysLeft != null) meta.push(m.daysLeft <= 0 ? 'closes today' : `${m.daysLeft} day${m.daysLeft === 1 ? '' : 's'} left`);
+      return `<div class="ii-mkt">
+        <div class="ii-mkt-body">
+          <div class="ii-mkt-title">${escHtml(m.question || m.title)}</div>
+          <div class="ii-mkt-meta">${escHtml(meta.join(' · '))}</div>
+        </div>
+        <div class="ii-mkt-odds">${escHtml(m.yesPrice)}%<span>${escHtml(m.outcomeName || 'Yes')}</span></div>
+      </div>`;
+    }).join('');
+    if (query) {
+      const link = document.createElement('a');
+      link.className = 'ii-mkts-all';
+      link.href = `/markets.html?q=${encodeURIComponent(query)}`;
+      link.textContent = 'See all results on Prediction Markets →';
+      wrap.appendChild(link);
+    }
+    return wrap;
+  }
+
+  function addMsg(role, text, imagePreviews, markets, marketQuery) {
     if (role === 'user') {
       const d = document.createElement('div');
       d.className = 'ii-m ii-m-user';
@@ -902,6 +947,7 @@
     const bubble = document.createElement('div');
     bubble.className = 'ii-m ii-m-ai';
     bubble.innerHTML = mdToHtml(text);
+    if (Array.isArray(markets) && markets.length) bubble.appendChild(renderMarketCards(markets, marketQuery));
     row.appendChild(bubble);
     msgsEl.appendChild(row);
     moveAvatarTo(row, false);
@@ -960,7 +1006,7 @@
       });
       const data = await res.json();
       const reply = data.reply || data.error || 'Something went wrong. Try again.';
-      addMsg('assistant', reply); // moves the avatar into the new row first — only then is it safe to remove the old one
+      addMsg('assistant', reply, null, data.markets, data.marketQuery); // moves the avatar into the new row first — only then is it safe to remove the old one
       thinking.remove();
       history.push({ role: 'assistant', content: reply });
     } catch (e) {

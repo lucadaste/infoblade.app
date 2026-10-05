@@ -42,11 +42,16 @@
     .tf-chip:hover { border-color: var(--ink); color: var(--ink); }
     .tf-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); font-weight: 600; }
 
-    .search-box-wrap { position: relative; min-width: 260px; }
-    .search-box { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 34px 9px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--ink); outline: none; transition: border-color 0.15s; }
+    .market-search { padding: 28px 48px 0; background: var(--paper); }
+    .market-search-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+    .market-search-hint { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+    .search-box-wrap { position: relative; max-width: 640px; }
+    .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--muted); pointer-events: none; }
+    .search-box { width: 100%; font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 14px 42px 14px 46px; min-height: 48px; border-radius: 24px; border: 1px solid var(--border); background: var(--card); color: var(--ink); outline: none; transition: border-color 0.15s; }
     .search-box::placeholder { color: var(--muted); }
+    .search-box::-webkit-search-cancel-button, .search-box::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
     .search-box:focus { border-color: var(--accent); }
-    .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px; display: none; }
+    .search-clear { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px; display: none; }
     .search-clear.visible { display: block; }
     .search-clear:hover { color: var(--ink); }
 
@@ -159,13 +164,15 @@
       .hero-sub { font-size: 13px; }
       .hero-stats { display: none; }
       .filters { padding: 12px 16px; }
+      .market-search { padding: 20px 16px 0; }
     }
     @media (max-width: 768px) {
       .hero { padding: 32px 24px 24px; align-items: flex-start; }
       .hero-stats { display: none; }
       .filters { padding: 16px 24px; gap: 20px; flex-direction: column; }
       .filter-group { width: 100%; }
-      .search-box-wrap { min-width: 0; width: 100%; }
+      .market-search { padding: 24px 24px 0; }
+      .search-box-wrap { max-width: none; }
       .cat-chip { min-height: 44px; padding: 10px 18px; }
       .tf-chip { min-height: 44px; padding: 10px 16px; }
       .btn-analyze { min-height: 44px; }
@@ -232,14 +239,17 @@
     </div>
   </div>
 
-  <div class="filters">
-    <div class="filter-group">
-      <div class="filter-label">Search</div>
-      <div class="search-box-wrap">
-        <input type="text" id="market-search" class="search-box" placeholder="Search teams, people, politics…" autocomplete="off">
-        <button type="button" id="search-clear" class="search-clear" aria-label="Clear search">✕</button>
-      </div>
+  <div class="market-search">
+    <h2 class="market-search-title">Search a market</h2>
+    <p class="market-search-hint">Any live prediction market: elections, Fed rates, sports, awards…</p>
+    <div class="search-box-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" id="market-search" class="search-box" placeholder="Try &quot;Fed rate cut&quot; or &quot;Super Bowl&quot;" autocomplete="off" enterkeyhint="search" aria-label="Search prediction markets">
+      <button type="button" id="search-clear" class="search-clear" aria-label="Clear search">✕</button>
     </div>
+  </div>
+
+  <div class="filters">
     <div class="filter-group">
       <div class="filter-label">Category</div>
       <div class="cat-chips">
@@ -787,7 +797,20 @@
       if (currentCategory) loadMarkets(currentCategory, currentMaxDays, currentMinDays);
     });
 
-    selectCategory('sports', document.querySelector('[data-cat="sports"]'));
+    // ?q= deep link (used by the AI Informant's market cards) opens straight
+    // into search results instead of the default Sports browse.
+    const _initialQuery = (new URLSearchParams(location.search).get('q') || '').trim().slice(0, 100);
+    if (_initialQuery) {
+      currentCategory = 'sports';
+      renderTimeframeBar('sports');
+      searchInput.value = _initialQuery;
+      searchClearBtn.classList.add('visible');
+      isSearchActive = true;
+      _deactivateChips();
+      loadSearchResults(_initialQuery);
+    } else {
+      selectCategory('sports', document.querySelector('[data-cat="sports"]'));
+    }
   </script>
   <script src="/chat-widget.js"></script>
 
