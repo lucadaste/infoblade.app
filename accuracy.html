@@ -58,19 +58,6 @@
     .cat-stat { display: flex; justify-content: space-between; align-items: baseline; }
     .cat-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -1px; color: var(--accent); }
 
-    .calib-chart { background: var(--card); border-radius: 12px; padding: 24px 20px 16px; }
-    .calib-bars { display: flex; align-items: flex-end; gap: 20px; height: 140px; border-bottom: 1px solid var(--border); }
-    .calib-col { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
-    .calib-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; color: var(--ink); margin-bottom: 8px; }
-    .calib-bar-track { width: 100%; max-width: 36px; height: 100%; display: flex; align-items: flex-end; }
-    .calib-bar-fill { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.5s ease; }
-    .calib-bar-fill.insufficient { background: var(--border); }
-    .calib-labels { display: flex; gap: 20px; margin-top: 10px; }
-    .calib-col-label { flex: 1; min-width: 0; text-align: center; }
-    .calib-name { font-size: 12px; font-weight: 600; color: var(--ink); }
-    .calib-n { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    @media (max-width: 480px) { .calib-bars, .calib-labels { gap: 8px; } .calib-name { font-size: 10.5px; } }
-
     /* Charts row */
     .charts-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 36px; align-items: stretch; }
     @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
@@ -245,15 +232,6 @@
       <div id="ticker-grid" class="ticker-grid-vert">
         <div class="no-data">Loading…</div>
       </div>
-    </div>
-  </div>
-
-  <!-- Calibration: does a higher confidence rating actually mean higher realized accuracy? -->
-  <div style="margin-bottom:32px">
-    <div class="section-title">How Often We're Right, by How Sure the AI Was</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">When the AI says it's more sure, is it actually right more often? If so, these numbers should rise from left to right. Measured per named ticker, not per prediction, so a confident call isn't dragged down by averaging it with weaker tickers bundled into the same prediction.</p>
-    <div class="calib-chart" id="calibration-grid">
-      <div class="no-data" style="padding:12px 0">Loading…</div>
     </div>
   </div>
 
@@ -722,42 +700,6 @@
     }).join('');
   }
 
-  const CONF_LEVEL_LABELS = { 1: 'AI was unsure', 2: 'Leaning', 3: 'Fairly sure', 4: 'Very sure' };
-
-  function renderCalibration(calibration) {
-    const el = document.getElementById('calibration-grid');
-    if (!calibration || !calibration.length) {
-      el.innerHTML = '<div class="no-data">Calibration data appears after predictions are resolved.</div>';
-      return;
-    }
-    const bars = calibration.map(b => {
-      if (!b.sufficient) {
-        return `
-          <div class="calib-col">
-            <div class="calib-value" style="color:var(--muted)">—</div>
-            <div class="calib-bar-track"><div class="calib-bar-fill insufficient" style="height:4px"></div></div>
-          </div>`;
-      }
-      return `
-        <div class="calib-col">
-          <div class="calib-value">${b.realizedAccuracy}%</div>
-          <div class="calib-bar-track"><div class="calib-bar-fill" style="height:${Math.max(b.realizedAccuracy, 2)}%"></div></div>
-        </div>`;
-    }).join('');
-    const labels = calibration.map(b => {
-      const label = CONF_LEVEL_LABELS[b.confidence] || `Level ${b.confidence}`;
-      const sub = b.sufficient
-        ? `${b.n} call${b.n !== 1 ? 's' : ''} graded`
-        : `${b.n} call${b.n !== 1 ? 's' : ''} — need 10+`;
-      return `
-        <div class="calib-col-label">
-          <div class="calib-name">${label}</div>
-          <div class="calib-n">${sub}</div>
-        </div>`;
-    }).join('');
-    el.innerHTML = `<div class="calib-bars">${bars}</div><div class="calib-labels">${labels}</div>`;
-  }
-
   const TICKER_SHOWN = 8;
 
   function renderTickers(topTickers) {
@@ -893,7 +835,6 @@
       renderPmEdge(data.pmEdge);
       renderCumulativeChart(data.cumulativeTimeline);
       renderTickers(data.topTickers);
-      renderCalibration(data.calibration);
       renderAllPreds(data.recent);
       return data.summary;
     } catch (err) {
