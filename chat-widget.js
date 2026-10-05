@@ -172,10 +172,16 @@
       margin-top: -0.35em;
       pointer-events: none;
     }
-    .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
-    @keyframes ii-avatar-glow {
-      0%, 100% { opacity: 0.5; }
-      50% { opacity: 1; }
+    .ii-avatar-busy {
+      -webkit-mask-image: linear-gradient(115deg, #000 35%, rgba(0,0,0,0.3) 50%, #000 65%);
+      mask-image: linear-gradient(115deg, #000 35%, rgba(0,0,0,0.3) 50%, #000 65%);
+      -webkit-mask-size: 250% 100%;
+      mask-size: 250% 100%;
+      animation: ii-avatar-shimmer 1.6s linear infinite;
+    }
+    @keyframes ii-avatar-shimmer {
+      0% { -webkit-mask-position: 160% 0; mask-position: 160% 0; }
+      100% { -webkit-mask-position: -60% 0; mask-position: -60% 0; }
     }
     .ii-thinking-shimmer {
       background-image: linear-gradient(90deg, var(--muted) 0%, var(--muted) 38%, var(--ink) 50%, var(--muted) 62%, var(--muted) 100%);
