@@ -5,6 +5,7 @@ import { findSimilarSituations } from '../lib/situation-similarity.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 import { fetchMarketDetails } from '../lib/pm-resolution.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
+import { callMessages } from '../lib/anthropic.js';
 
 // Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
 // same outlet gets the same tier (and the same empirical-reputation
@@ -167,13 +168,30 @@ function _isContrarian(lean, direction) {
 // generator cron (api/generate-baseline.js), which calls this directly in-process.
 // Callers are expected to have already sanitized `question` etc. Returns either
 // the success payload or { error, status } for the caller to translate to HTTP.
-export async function runMarketAnalysis({
+//
+// Split around the Claude call like api/analyze.js: prepareMarketAnalysis
+// gathers evidence and builds the request (or returns { result } early),
+// finishMarketAnalysis parses and saves. The baseline generator sends the
+// prepared request through the Message Batches API and finishes it later.
+export async function runMarketAnalysis(args) {
+  const prep = await prepareMarketAnalysis(args);
+  if (prep.result) return prep.result;
+  try {
+    const data = await callMessages(prep.body);
+    return await finishMarketAnalysis(prep.ctx, data, args.supabase);
+  } catch (err) {
+    console.error('[runMarketAnalysis]', err.message);
+    return { error: 'Analysis failed', status: 500 };
+  }
+}
+
+export async function prepareMarketAnalysis({
   supabase, question, currentOdds, marketCategory = '', slug = null,
   daysLeft = null, baselineGenerated = false, sport = null,
 }) {
   // If market is already trading at extreme odds it's effectively resolved — skip analysis
   if (currentOdds !== undefined && (currentOdds >= 93 || currentOdds <= 7)) {
-    return {
+    return { result: {
       lean: 'Uncertain',
       lean_confidence: '1 — Market odds are already near-certain, so there is no meaningful call to make.',
       reasoning: `The market is already trading at ${currentOdds}% — the crowd has essentially decided this outcome. There is no meaningful prediction to make.`,
@@ -182,7 +200,7 @@ export async function runMarketAnalysis({
       signal_detail: 'Market odds indicate the outcome is already near-certain.',
       articlesFound: 0,
       predictionSaved: false,
-    };
+    } };
   }
 
   // ── Response cache: same question analyzed in the last 15 minutes ──────────
@@ -202,7 +220,7 @@ export async function runMarketAnalysis({
           .limit(1)
           .maybeSingle();
         if (cached?.analysis?.lean) {
-          return { ...cached.analysis, _cached: true };
+          return { result: { ...cached.analysis, _cached: true } };
         }
       } catch (_) { /* cache miss — fall through to generation */ }
     }
@@ -305,7 +323,7 @@ export async function runMarketAnalysis({
     }
 
     if (items.length === 0 && redditPosts.length < 3 && structuredItems.length === 0 && !gameContext) {
-      return {
+      return { result: {
         lean: 'Uncertain',
         lean_confidence: '1 — No relevant news, structured data, or live game signal found for this question.',
         reasoning: 'No relevant news or public discussion found for this question. The market odds are the best available signal.',
@@ -314,7 +332,7 @@ export async function runMarketAnalysis({
         signal_detail: 'No news coverage found to compare against the market odds.',
         articlesFound: 0,
         searchQuery
-      };
+      } };
     }
 
     const oddsContext = currentOdds !== undefined
@@ -401,30 +419,42 @@ Recent news (${items.length} articles):
 ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
 ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
 
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        // Server-side refusal fallback: if a safety classifier declines the
-        // request, the API re-runs it on a fallback model in the same call.
-        'anthropic-beta': 'server-side-fallback-2026-07-01',
-      },
-      body: JSON.stringify({
-        model: ANALYSIS_MODEL,
-        // Sonnet 5.5 always thinks before answering (adaptive thinking), and
-        // thinking counts toward max_tokens, so leave room well beyond the JSON.
-        max_tokens: 16000,
-        output_config: { effort: 'medium' },
-        fallbacks: 'default',
-        system: [{ type: 'text', text: systemRules, cache_control: CACHE_1H }],
-        messages: [{ role: 'user', content: prompt }]
-      }),
-      signal: AbortSignal.timeout(55000)
-    });
+    const body = {
+      model: ANALYSIS_MODEL,
+      // Sonnet 5.5 always thinks before answering (adaptive thinking), and
+      // thinking counts toward max_tokens, so leave room well beyond the JSON.
+      max_tokens: 16000,
+      output_config: { effort: 'medium' },
+      // Server-side refusal fallback: if a safety classifier declines the
+      // request, the API re-runs it on a fallback model in the same call.
+      fallbacks: 'default',
+      system: [{ type: 'text', text: systemRules, cache_control: CACHE_1H }],
+      messages: [{ role: 'user', content: prompt }]
+    };
+    const ctx = {
+      question, currentOdds: currentOdds ?? null, slug, daysLeft, category, baselineGenerated,
+      items: items.map(i => ({ title: i.title, source: i.source })),
+      searchQuery, sourceTypeMap, sourceVolumeMap,
+      hadProfile: !!profile, hadMarketRules: !!marketRules, hadMarketStats: !!marketStats,
+      gameContext: gameContext || null, historicalSituation: historicalSituation || null,
+      // Dated when the evidence and odds were captured, even if (batched) the
+      // answer arrives later — the model never sees anything newer.
+      predictedAt: new Date().toISOString(),
+    };
+    return { body, ctx };
+  } catch (err) {
+    console.error('[prepareMarketAnalysis]', err.message);
+    return { result: { error: 'Analysis failed', status: 500 } };
+  }
+}
 
-    const data = await apiRes.json();
+export async function finishMarketAnalysis(ctx, data, supabase) {
+  const {
+    question, currentOdds, slug, daysLeft, category, baselineGenerated, items, searchQuery,
+    sourceTypeMap, sourceVolumeMap, hadProfile, hadMarketRules, hadMarketStats,
+    gameContext, historicalSituation, predictedAt,
+  } = ctx;
+  try {
     if (data.error) {
       console.error('[runMarketAnalysis] Anthropic error:', data.error.message);
       return { error: 'Analysis failed', status: 500 };
@@ -456,8 +486,8 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
       ? analysis.predicted_outcome.trim().replace(/^we think\s+/i, '').replace(/[.\s]+$/, '').slice(0, 200) || null
       : null;
     analysis.pm_model_version = PM_MODEL_VERSION;
-    analysis.had_market_rules = !!marketRules;
-    analysis.had_market_stats = !!marketStats;
+    analysis.had_market_rules = hadMarketRules;
+    analysis.had_market_stats = hadMarketStats;
 
     // Close call: show a "know before you bet" briefing instead of a graded pick.
     const closeReason = _closeCallReason(modelLean, yesProbability, analysis.lean_confidence);
@@ -477,7 +507,7 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
     if (supabase && closeReason && closeReason !== 'model_uncertain') {
       const { error: briefErr } = await supabase.from('pm_briefings').insert({
         id:                  `pmb_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-        created_at:          new Date().toISOString(),
+        created_at:          predictedAt,
         topic:               question,
         market_slug:         slug || null,
         category,
@@ -496,14 +526,14 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
       // once the outcome is confirmed. A made-up date causes misleading "Jul 12"-style
       // display before grading.
       const validationDate = daysLeft != null
-        ? new Date(Date.now() + daysLeft * 86400000).toISOString()
+        ? new Date(new Date(predictedAt).getTime() + daysLeft * 86400000).toISOString()
         : null;
       const savedAnalysis = { ...analysis, lean, impact_timeframe: daysLeft ? `${daysLeft} days` : null, prompt_layout: PROMPT_LAYOUT_VERSION };
       if (baselineGenerated) savedAnalysis.baseline_generated = true;
       // Tag which sourcing methodology produced this row — see SOURCING_VERSION in
       // lib/market-source-profiles.js. Only set when the category-aware profile path
       // actually ran; absence marks a row as generated by the old generic fallback.
-      if (profile) savedAnalysis.sourcing_version = SOURCING_VERSION;
+      if (hadProfile) savedAnalysis.sourcing_version = SOURCING_VERSION;
 
       const momentum = await _computeOddsMomentum(supabase, slug, currentOdds ?? null);
       const contrarian = _isContrarian(lean, momentum.direction);
@@ -512,7 +542,7 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
 
       const row = {
         id:                  `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
-        created_at:          new Date().toISOString(),
+        created_at:          predictedAt,
         topic:               question,
         sources:             items.map(i => i.source),
         headlines:           items.map(i => i.title),
@@ -551,7 +581,7 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
 
     return { ...analysis, lean, articlesFound: items.length, searchQuery, predictionSaved, ...(gameContext ? { liveGame: gameContext } : {}), ...(historicalSituation ? { historicalSituation } : {}), ...(saveError ? { _saveError: saveError } : {}) };
   } catch (err) {
-    console.error('[runMarketAnalysis]', err.message);
+    console.error('[finishMarketAnalysis]', err.message);
     return { error: 'Analysis failed', status: 500 };
   }
 }

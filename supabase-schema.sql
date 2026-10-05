@@ -319,3 +319,26 @@ create index if not exists chat_messages_session_id_idx on chat_messages (sessio
 create index if not exists chat_messages_created_at_idx on chat_messages (created_at);
 alter table chat_messages enable row level security;
 -- Service-role key (server-side only) bypasses RLS automatically. No browser access.
+
+-- ── Background predictions waiting on a Message Batch (50% cheaper) ─────────
+-- api/generate-baseline.js prepares each background prediction (data fetched,
+-- prompt built), submits the Claude requests as one Message Batch, and stores
+-- one row here per request. A later cron run collects the finished batch,
+-- saves each prediction (dated submitted_at, when its data was gathered) and
+-- marks the row done. Pending rows count toward today's targets so the next
+-- run doesn't submit the same ticker/coin/market twice.
+create table if not exists baseline_batch_items (
+  id           text primary key,          -- the batch request's custom_id
+  batch_id     text not null,
+  kind         text not null check (kind in ('analysis','market')),
+  section      text not null,             -- stocks | crypto | prediction-markets
+  cover_key    text,                      -- ticker, coin symbol, or market slug
+  ctx          jsonb not null,            -- prepare-step state for the finish step
+  status       text not null default 'pending' check (status in ('pending','done','failed','stale')),
+  submitted_at timestamptz not null default now(),
+  finished_at  timestamptz
+);
+create index if not exists baseline_batch_items_status_idx on baseline_batch_items (status, batch_id);
+create index if not exists baseline_batch_items_submitted_idx on baseline_batch_items (submitted_at desc);
+alter table baseline_batch_items enable row level security;
+-- Service-role key (server-side only) bypasses RLS automatically. No browser access.

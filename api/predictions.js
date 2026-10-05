@@ -1167,12 +1167,21 @@ Respond ONLY with valid JSON, no markdown:
 // rather than showing a noisy one. Small payload, CDN-cached for an hour.
 const MIN_TRACK_RECORD_N = 20;
 
+// Split by horizon too: a 24-hour call and a 3-month call at the same
+// confidence level can have very different track records. 'short' is up to a
+// week between the call and its check date, 'long' anything longer.
+const SHORT_HORIZON_MS = 7.5 * 86400000;
+function _horizonOf(p) {
+  if (!p.validation_date || !p.created_at) return null;
+  return new Date(p.validation_date) - new Date(p.created_at) <= SHORT_HORIZON_MS ? 'short' : 'long';
+}
+
 async function handleTrackRecord(req, res, supabase) {
-  const buckets = {}; // section -> level -> { n, correct }
+  const buckets = {}; // section -> level -> { n, correct, byHorizon: { short|long: { n, correct } } }
   for (let from = 0; from < 50000; from += 1000) {
     const { data, error } = await supabase
       .from('predictions')
-      .select('category, lean, correct, cw:analysis->confidence_weight, conf:analysis->>confidence')
+      .select('category, lean, correct, created_at, validation_date, cw:analysis->confidence_weight, conf:analysis->>confidence')
       .not('correct', 'is', null)
       .range(from, from + 999);
     if (error) throw error;
@@ -1180,9 +1189,15 @@ async function handleTrackRecord(req, res, supabase) {
       if (p.lean) continue; // PM calls show their own probability instead
       const section = _categoryToSection(p.category || 'any');
       const level = Math.min(5, Math.max(1, Math.round(p.cw ?? _parseConfidenceStars(p.conf))));
-      const b = ((buckets[section] ||= {})[level] ||= { n: 0, correct: 0 });
+      const b = ((buckets[section] ||= {})[level] ||= { n: 0, correct: 0, byHorizon: {} });
       b.n++;
       if (p.correct) b.correct++;
+      const horizon = _horizonOf(p);
+      if (horizon) {
+        const h = (b.byHorizon[horizon] ||= { n: 0, correct: 0 });
+        h.n++;
+        if (p.correct) h.correct++;
+      }
     }
     if (!data || data.length < 1000) break;
   }
@@ -1190,7 +1205,11 @@ async function handleTrackRecord(req, res, supabase) {
   for (const [section, levels] of Object.entries(buckets)) {
     out[section] = {};
     for (const [level, b] of Object.entries(levels)) {
-      out[section][level] = { n: b.n, hitRate: b.n >= MIN_TRACK_RECORD_N ? Math.round(b.correct / b.n * 100) : null };
+      const rate = x => (x.n >= MIN_TRACK_RECORD_N ? Math.round(x.correct / x.n * 100) : null);
+      out[section][level] = {
+        n: b.n, hitRate: rate(b),
+        byHorizon: Object.fromEntries(Object.entries(b.byHorizon).map(([h, x]) => [h, { n: x.n, hitRate: rate(x) }])),
+      };
     }
   }
   res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');

@@ -10,6 +10,7 @@ import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-la
 import { fetchQuantSignals } from '../lib/quant-signals.js';
 import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
 import { fetchCryptoDerivs, formatDerivsForPrompt } from '../lib/crypto-derivs.js';
+import { callMessages } from '../lib/anthropic.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -356,7 +357,25 @@ const CRYPTO_LITE_MODEL     = 'claude-haiku-4-5-20251001';
 // sanitized/validated `topic` etc. — this function trusts its inputs.
 // Returns either the success payload (same shape the HTTP handler used to return
 // inline) or { error, status } for the caller to translate into an HTTP response.
-export async function runAnalysis({
+//
+// Split in two around the Claude call so the baseline generator can send the
+// same request through the Message Batches API (50% cheaper) and finish it on
+// a later cron run: prepareAnalysis gathers data and builds the request,
+// finishAnalysis parses the answer and saves. ctx is plain JSON so it can be
+// stored between runs.
+export async function runAnalysis(args) {
+  const prep = await prepareAnalysis(args);
+  if (prep.result) return prep.result;
+  try {
+    const data = await callMessages(prep.body);
+    return await finishAnalysis(prep.ctx, data, args.supabase);
+  } catch (err) {
+    console.error('[runAnalysis]', err.message);
+    return { error: 'Analysis failed', status: 500 };
+  }
+}
+
+export async function prepareAnalysis({
   supabase, topic, headlines, sources, sourceGrades, minGrade = 'medium',
   impactTimeframe, category = '', coinSymbol = '', userId = null,
   skipSave = false, baselineGenerated = false,
@@ -380,7 +399,7 @@ export async function runAnalysis({
       if (cached?.analysis?.direction) {
         const cachedTickers = [...new Set([...(cached.winner_tickers || []), ...(cached.loser_tickers || [])])];
         const snapshot = cachedTickers.length ? await _fetchTickerSnapshot(cachedTickers) : {};
-        return { ...cached.analysis, predictionId: cached.id, predictionSaved: true, technicalSnapshot: snapshot, sources, _cached: true };
+        return { result: { ...cached.analysis, predictionId: cached.id, predictionSaved: true, technicalSnapshot: snapshot, sources, _cached: true } };
       }
     } catch (_) { /* cache miss — fall through to generation */ }
   }
@@ -522,30 +541,40 @@ ${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSe
       : skipSave ? CRYPTO_LITE_MODEL
       : CRYPTO_ANALYSIS_MODEL;
     const thinkingModel = model === CRYPTO_ANALYSIS_MODEL;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01',
-        ...(thinkingModel ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}),
-      },
-      body: JSON.stringify({
-        model,
-        // Sonnet 5.5 thinks before answering and thinking counts toward
-        // max_tokens, so it needs headroom well beyond the JSON (same as
-        // api/market-analyze.js).
-        ...(thinkingModel
-          ? { max_tokens: 16000, output_config: { effort: 'medium' }, fallbacks: 'default' }
-          : { max_tokens: 1000 }),
-        system: [
-          { type: 'text', text: systemRules, cache_control: CACHE_1H },
-          { type: 'text', text: requestRules },
-        ],
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      signal: AbortSignal.timeout(55000),
-    });
+    const body = {
+      model,
+      // Sonnet 5.5 thinks before answering and thinking counts toward
+      // max_tokens, so it needs headroom well beyond the JSON (same as
+      // api/market-analyze.js).
+      ...(thinkingModel
+        ? { max_tokens: 16000, output_config: { effort: 'medium' }, fallbacks: 'default' }
+        : { max_tokens: 1000 }),
+      system: [
+        { type: 'text', text: systemRules, cache_control: CACHE_1H },
+        { type: 'text', text: requestRules },
+      ],
+      messages: [{ role: 'user', content: prompt }],
+    };
+    const ctx = {
+      topic, headlines, sources, sourceGrades, minGrade, impactTimeframe, category,
+      coinSymbol, userId, skipSave, baselineGenerated, isCoinCall, technicalSnapshot,
+      // The call is dated when its data was gathered, even if (batched) the
+      // answer arrives later — the model never sees anything newer.
+      predictedAt: new Date().toISOString(),
+    };
+    return { body, ctx };
+  } catch (err) {
+    console.error('[prepareAnalysis]', err.message);
+    return { result: { error: 'Analysis failed', status: 500 } };
+  }
+}
 
-    const data = await response.json();
+export async function finishAnalysis(ctx, data, supabase) {
+  const {
+    topic, headlines, sources, sourceGrades, minGrade, impactTimeframe, category,
+    coinSymbol, userId, skipSave, baselineGenerated, isCoinCall, technicalSnapshot, predictedAt,
+  } = ctx;
+  try {
     if (data.error) {
       console.error('[runAnalysis] Anthropic error:', data.error.message);
       return { error: 'Analysis service unavailable', status: 500 };
@@ -625,13 +654,14 @@ ${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSe
     if (supabase && !skipSave) {
       const record = {
         id:              predictionId,
+        created_at:      predictedAt,
         topic,
         category:        category || null,
         analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(isCoinCall ? { crypto_model_version: CRYPTO_MODEL_VERSION } : {}), ...(baselineGenerated ? { baseline_generated: true } : {}) },
         winner_tickers:  winnerTickers,
         loser_tickers:   loserTickers,
         baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),
-        validation_date: new Date(Date.now() + _parseTimeframeDays(category === 'crypto-coin' && impactTimeframe ? impactTimeframe : (analysis.impact_timeframe || impactTimeframe)) * 86400000).toISOString(),
+        validation_date: new Date(new Date(predictedAt).getTime() + _parseTimeframeDays(category === 'crypto-coin' && impactTimeframe ? impactTimeframe : (analysis.impact_timeframe || impactTimeframe)) * 86400000).toISOString(),
         correct:         null,
         notes:           null,
         sources,
@@ -650,7 +680,7 @@ ${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSe
     return { ...analysis, predictionId, predictionSaved: saveResult.saved, _saveError: saveResult.error || null, technicalSnapshot: fullSnapshot, sources };
 
   } catch (err) {
-    console.error('[runAnalysis]', err.message);
+    console.error('[finishAnalysis]', err.message);
     return { error: 'Analysis failed', status: 500 };
   }
 }

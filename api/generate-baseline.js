@@ -1,5 +1,6 @@
-import { runAnalysis } from './analyze.js';
-import { runMarketAnalysis } from './market-analyze.js';
+import { runAnalysis, prepareAnalysis, finishAnalysis } from './analyze.js';
+import { runMarketAnalysis, prepareMarketAnalysis, finishMarketAnalysis } from './market-analyze.js';
+import { callMessages, toBatchParams, submitBatch, getBatch, fetchBatchResults } from '../lib/anthropic.js';
 import { fetchCategoryMarkets, labelMarkets } from './markets.js';
 import { SECTOR_STOCKS } from './sector-stocks.js';
 import { COIN_INFO, CORE_COINS } from '../lib/coin-symbols.js';
@@ -30,6 +31,18 @@ const PM_BATCH_SIZE   = parseInt(process.env.BASELINE_PM_BATCH_SIZE, 10) || 6;
 const PM_REPEAT_COOLDOWN_DAYS = parseInt(process.env.BASELINE_PM_COOLDOWN_DAYS, 10) || 3;
 const PM_BROWSE_PAGES = 5;   // 100 events per page, by 24h volume
 const PM_PER_CATEGORY = 60;
+
+// Background predictions go through the Message Batches API (50% cheaper):
+// each run prepares requests and submits one batch, and a later run collects
+// the answers and saves them (baseline_batch_items tracks what's in flight).
+// BASELINE_USE_BATCH=0 switches back to calling Claude directly. Also falls
+// back automatically while the baseline_batch_items migration isn't run.
+const USE_BATCH = process.env.BASELINE_USE_BATCH !== '0';
+// An answer that comes back too long after its data was gathered is thrown
+// away rather than saved: for a 24-hour call, hours of delay would eat into
+// the window it predicts. Batches normally finish within minutes.
+const STALE_AFTER_MS       = 6 * 3600000;
+const STALE_AFTER_SHORT_MS = 2 * 3600000;
 
 // 'other' catches Polymarket events whose tags don't match any of the 5 named
 // categories (science, weather, world events, etc.) — see api/markets.js's
@@ -117,7 +130,129 @@ async function _runBatch(items, concurrency, fn) {
   return out;
 }
 
-async function _todaysBaselineState(supabase) {
+// Rows still waiting on a batch, or null when the table doesn't exist yet.
+async function _pendingBatchItems(supabase) {
+  const { data, error } = await supabase
+    .from('baseline_batch_items')
+    .select('id, batch_id, kind, section, cover_key, ctx, submitted_at')
+    .eq('status', 'pending')
+    .limit(2000);
+  if (error) return null;
+  return data || [];
+}
+
+function _isStale(item, answeredAt) {
+  const lateMs = new Date(answeredAt) - new Date(item.ctx?.predictedAt || item.submitted_at);
+  const short = item.kind === 'market'
+    ? item.ctx?.daysLeft != null && item.ctx.daysLeft <= 2
+    : /^1 day/.test(item.ctx?.impactTimeframe || '');
+  return lateMs > (short ? STALE_AFTER_SHORT_MS : STALE_AFTER_MS);
+}
+
+// Finish every pending request whose batch has ended: save the prediction
+// exactly as the direct path would (finishAnalysis / finishMarketAnalysis),
+// then mark the row done, failed (no usable answer) or stale (too late).
+async function _collectBatches(supabase, pending) {
+  const summary = { saved: 0, done: 0, failed: 0, stale: 0, inProgress: 0 };
+  const byBatch = new Map();
+  for (const item of pending) {
+    if (!byBatch.has(item.batch_id)) byBatch.set(item.batch_id, []);
+    byBatch.get(item.batch_id).push(item);
+  }
+  for (const [batchId, items] of byBatch) {
+    let batch, results;
+    try {
+      batch = await getBatch(batchId);
+      if (batch.processing_status !== 'ended') { summary.inProgress += items.length; continue; }
+      results = await fetchBatchResults(batch.results_url);
+    } catch (err) {
+      console.error('[generate-baseline] batch collect failed', { batchId, error: err.message });
+      continue;
+    }
+    const byId = new Map(results.map(r => [r.custom_id, r.result]));
+    const answeredAt = batch.ended_at || new Date().toISOString();
+    const outcomes = await _runBatch(items, 6, async item => {
+      const r = byId.get(item.id);
+      if (r?.type !== 'succeeded') return 'failed';
+      if (_isStale(item, answeredAt)) return 'stale';
+      const fin = item.kind === 'market'
+        ? await finishMarketAnalysis(item.ctx, r.message, supabase)
+        : await finishAnalysis(item.ctx, r.message, supabase);
+      if (fin?.error) return 'failed';
+      if (fin?.predictionSaved) summary.saved++;
+      return 'done';
+    });
+    const idsByStatus = {};
+    items.forEach((item, i) => {
+      const status = typeof outcomes[i] === 'string' ? outcomes[i] : 'failed';
+      (idsByStatus[status] ||= []).push(item.id);
+      summary[status]++;
+    });
+    for (const [status, ids] of Object.entries(idsByStatus)) {
+      const { error } = await supabase.from('baseline_batch_items')
+        .update({ status, finished_at: new Date().toISOString() }).in('id', ids);
+      if (error) console.error('[generate-baseline] batch status update failed', error.message);
+    }
+  }
+  return summary;
+}
+
+// Runs one section's jobs ({ kind, section, coverKey, args }). Direct: the same
+// runAnalysis / runMarketAnalysis user requests use. Batched: prepare now,
+// submit the Claude requests as one batch, finish on a later run. Markets with
+// a game in progress or less than a day left still go direct; their odds move
+// too fast to wait.
+async function _execJobs(supabase, jobs, concurrency, useBatch) {
+  if (!useBatch) {
+    return _runBatch(jobs, concurrency, j => (j.kind === 'market' ? runMarketAnalysis(j.args) : runAnalysis(j.args)));
+  }
+  const results = new Array(jobs.length);
+  const queue = [];
+  await _runBatch(jobs.map((job, i) => ({ job, i })), concurrency, async ({ job, i }) => {
+    try {
+      const prep = job.kind === 'market' ? await prepareMarketAnalysis(job.args) : await prepareAnalysis(job.args);
+      if (prep.result) { results[i] = prep.result; return; }
+      if (job.kind === 'market' && (prep.ctx.gameContext?.state === 'in' || (prep.ctx.daysLeft != null && prep.ctx.daysLeft < 1))) {
+        results[i] = await finishMarketAnalysis(prep.ctx, await callMessages(prep.body), supabase);
+        return;
+      }
+      queue.push({ i, job, prep });
+    } catch (err) {
+      results[i] = { error: err.message };
+    }
+  });
+  if (!queue.length) return results;
+
+  const stamp = Date.now().toString(36);
+  const ids = queue.map((_, k) => `bl_${stamp}_${k}_${Math.random().toString(36).slice(2, 8)}`);
+  try {
+    const batch = await submitBatch(queue.map((q, k) => ({ custom_id: ids[k], params: toBatchParams(q.prep.body) })));
+    const { error } = await supabase.from('baseline_batch_items').insert(queue.map((q, k) => ({
+      id: ids[k], batch_id: batch.id, kind: q.job.kind, section: q.job.section,
+      cover_key: q.job.coverKey || null, ctx: q.prep.ctx, submitted_at: q.prep.ctx.predictedAt,
+    })));
+    if (error) console.error('[generate-baseline] batch rows insert failed — batch will not be collected', { batchId: batch.id, error: error.message });
+    for (const q of queue) results[q.i] = { queued: true };
+  } catch (err) {
+    console.error('[generate-baseline] batch submit failed', err.message);
+    for (const q of queue) results[q.i] = { error: err.message };
+  }
+  return results;
+}
+
+// Exported for the batch dry-run harness (submit -> collect without a live cron).
+export { _execJobs as execBaselineJobs, _collectBatches as collectBaselineBatches };
+
+function _sectionSummary(attempted, results, extra = {}) {
+  return {
+    attempted,
+    saved: results.filter(r => r?.predictionSaved).length,
+    queued: results.filter(r => r?.queued).length,
+    ...extra,
+  };
+}
+
+async function _todaysBaselineState(supabase, pending = []) {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
 
@@ -169,6 +304,16 @@ async function _todaysBaselineState(supabase) {
     if (!rows || rows.length < 1000) break;
   }
 
+  // Requests still waiting on a batch count as made, so the next run neither
+  // over-fills today's target nor submits the same ticker/coin/market again.
+  for (const item of pending) {
+    if (new Date(item.submitted_at) >= startOfDay) counts[item.section] = (counts[item.section] || 0) + 1;
+    if (!item.cover_key) continue;
+    if (item.section === 'stocks') coveredTickers.add(item.cover_key);
+    if (item.section === 'crypto') coveredCoins.add(item.cover_key);
+    if (item.section === 'prediction-markets') coveredSlugs.add(item.cover_key);
+  }
+
   return { counts, coveredTickers, coveredCoins, coveredSlugs };
 }
 
@@ -189,28 +334,29 @@ function _sampleMarkets(markets, n) {
   return out;
 }
 
-async function _generateStocks(supabase, remaining, coveredTickers) {
+async function _generateStocks(supabase, remaining, coveredTickers, useBatch) {
   const candidates = SECTOR_STOCKS['any'].filter(t => !coveredTickers.has(t)).slice(0, Math.min(remaining, BATCH_SIZE));
   if (!candidates.length) return { attempted: 0, saved: 0 };
 
   const names = await _getStockNames();
   const allowOneDay = _stockOneDayHorizonIsSafe();
-  const results = await _runBatch(candidates, CONCURRENCY, async ticker => {
+  const jobs = candidates.map(ticker => {
     const name = names[ticker] || ticker;
     const tf = _pickTimeframe(allowOneDay);
-    return runAnalysis({
+    return { kind: 'analysis', section: 'stocks', coverKey: ticker, args: {
       supabase,
       topic: `${name} (${ticker}) stock market outlook ${tf.context}`,
       headlines: [], sources: [], sourceGrades: {}, minGrade: 'all',
       category: 'any', impactTimeframe: tf.validationTimeframe,
       baselineGenerated: true,
-    });
+    } };
   });
+  const results = await _execJobs(supabase, jobs, CONCURRENCY, useBatch);
 
-  return { attempted: candidates.length, saved: results.filter(r => r?.predictionSaved).length };
+  return _sectionSummary(candidates.length, results);
 }
 
-async function _generateCrypto(supabase, remaining, coveredCoins) {
+async function _generateCrypto(supabase, remaining, coveredCoins, useBatch) {
   // Core coins (deep markets, steady coverage — see lib/coin-symbols.js) go first,
   // so they're never crowded out by the long tail if a run's budget is tight.
   const candidates = COIN_INFO
@@ -219,21 +365,22 @@ async function _generateCrypto(supabase, remaining, coveredCoins) {
     .slice(0, Math.min(remaining, BATCH_SIZE));
   if (!candidates.length) return { attempted: 0, saved: 0 };
 
-  const results = await _runBatch(candidates, CONCURRENCY, async coin => {
+  const jobs = candidates.map(coin => {
     const tf = _pickTimeframe();
-    return runAnalysis({
+    return { kind: 'analysis', section: 'crypto', coverKey: coin.symbol, args: {
       supabase,
       topic: `${coin.name} (${coin.symbol}) cryptocurrency market outlook ${tf.context}`,
       headlines: [], sources: [], sourceGrades: {}, minGrade: 'all',
       category: 'crypto-coin', coinSymbol: coin.symbol, impactTimeframe: tf.validationTimeframe,
       baselineGenerated: true,
-    });
+    } };
   });
+  const results = await _execJobs(supabase, jobs, CONCURRENCY, useBatch);
 
-  return { attempted: candidates.length, saved: results.filter(r => r?.predictionSaved).length };
+  return _sectionSummary(candidates.length, results);
 }
 
-async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
+async function _generatePredictionMarkets(supabase, remaining, coveredSlugs, useBatch) {
   const perCategory = await Promise.all(
     PM_CATEGORIES.map(cat => fetchCategoryMarkets(cat, { pages: PM_BROWSE_PAGES, limit: PM_PER_CATEGORY, labels: false }).catch(() => []))
   );
@@ -251,20 +398,19 @@ async function _generatePredictionMarkets(supabase, remaining, coveredSlugs) {
   const batch = await labelMarkets(_sampleMarkets(candidates, Math.min(remaining, PM_BATCH_SIZE)));
   if (!batch.length) return { attempted: 0, saved: 0, pool: candidates.length };
 
-  const results = await _runBatch(batch, PM_BATCH_SIZE, async market => {
-    return runMarketAnalysis({
-      supabase,
-      question: market.question || market.title,
-      currentOdds: market.yesPrice,
-      marketCategory: market.category,
-      slug: market.slug,
-      daysLeft: market.daysLeft,
-      sport: market.sport,
-      baselineGenerated: true,
-    });
-  });
+  const jobs = batch.map(market => ({ kind: 'market', section: 'prediction-markets', coverKey: market.slug, args: {
+    supabase,
+    question: market.question || market.title,
+    currentOdds: market.yesPrice,
+    marketCategory: market.category,
+    slug: market.slug,
+    daysLeft: market.daysLeft,
+    sport: market.sport,
+    baselineGenerated: true,
+  } }));
+  const results = await _execJobs(supabase, jobs, PM_BATCH_SIZE, useBatch);
 
-  return { attempted: batch.length, saved: results.filter(r => r?.predictionSaved).length, pool: candidates.length };
+  return _sectionSummary(batch.length, results, { pool: candidates.length });
 }
 
 export default async function handler(req, res) {
@@ -284,7 +430,22 @@ export default async function handler(req, res) {
   try { supabase = getSupabase({ required: true }); } catch (e) { return res.status(500).json({ error: 'Database configuration error' }); }
 
   try {
-    const { counts, coveredTickers, coveredCoins, coveredSlugs } = await _todaysBaselineState(supabase);
+    // Collect finished batches first, so their predictions count toward today.
+    let useBatch = USE_BATCH;
+    let collected = null;
+    let pending = [];
+    if (useBatch) {
+      const before = await _pendingBatchItems(supabase);
+      if (before == null) {
+        console.warn('[generate-baseline] baseline_batch_items table missing — calling Claude directly until the migration runs');
+        useBatch = false;
+      } else {
+        if (before.length) collected = await _collectBatches(supabase, before);
+        pending = (await _pendingBatchItems(supabase)) || [];
+      }
+    }
+
+    const { counts, coveredTickers, coveredCoins, coveredSlugs } = await _todaysBaselineState(supabase, pending);
 
     const met = { attempted: 0, saved: 0, note: 'target already met today' };
 
@@ -293,13 +454,13 @@ export default async function handler(req, res) {
     // reliably blew through it (504 FUNCTION_INVOCATION_TIMEOUT in practice).
     const [stocks, crypto, predictionMarkets] = await Promise.all([
       counts.stocks < DAILY_TARGET
-        ? _generateStocks(supabase, DAILY_TARGET - counts.stocks, coveredTickers)
+        ? _generateStocks(supabase, DAILY_TARGET - counts.stocks, coveredTickers, useBatch)
         : Promise.resolve(met),
       counts.crypto < DAILY_TARGET
-        ? _generateCrypto(supabase, DAILY_TARGET - counts.crypto, coveredCoins)
+        ? _generateCrypto(supabase, DAILY_TARGET - counts.crypto, coveredCoins, useBatch)
         : Promise.resolve(met),
       counts['prediction-markets'] < PM_DAILY_TARGET
-        ? _generatePredictionMarkets(supabase, PM_DAILY_TARGET - counts['prediction-markets'], coveredSlugs)
+        ? _generatePredictionMarkets(supabase, PM_DAILY_TARGET - counts['prediction-markets'], coveredSlugs, useBatch)
         : Promise.resolve(met),
     ]);
 
@@ -307,6 +468,8 @@ export default async function handler(req, res) {
       target: DAILY_TARGET,
       pmTarget: PM_DAILY_TARGET,
       before: counts,
+      mode: useBatch ? 'batch' : 'direct',
+      ...(collected ? { collected } : {}),
       sections: { stocks, crypto, 'prediction-markets': predictionMarkets },
     };
 

@@ -14,6 +14,7 @@
   <title>infoblade | Home</title>
   <meta name="description" content="Your infoblade dashboard: stock, prediction market, and crypto picks of the day, plus your watchlist, in one place." />
   <script src="/api-base.js"></script>
+  <script src="/track-record.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -68,6 +69,8 @@
     .dir-bullish { color: #2a9e4f; }
     .dir-bearish { color: #c84040; }
     .pick-sub { font-size: 12.5px; color: var(--muted); }
+    .pick-sub .track-record { font-weight: 700; color: var(--ink); }
+    .pick-sub .track-record-sub { margin-left: 4px; }
     .pick-sub.dir-bullish, .pick-sub.dir-bearish { font-weight: 600; }
     .pick-desc { font-size: 13.5px; color: var(--text-soft); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .pick-cta { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; margin-top: auto; padding-top: 4px; }
@@ -299,7 +302,7 @@
       });
       var top = candidates[0];
       if (!top) {
-        body.innerHTML = '<div class="pick-empty">No high-confidence call yet today — check back soon.</div>';
+        body.innerHTML = '<div class="pick-empty">No strong call yet today — check back soon.</div>';
         return;
       }
       var bullish = !!(top.winnerTickers && top.winnerTickers.length);
@@ -308,9 +311,10 @@
       var dirClass = bullish ? 'dir-bullish' : 'dir-bearish';
       body.innerHTML =
         '<div class="pick-headline"><span class="' + dirClass + '">' + arrow + '</span> ' + esc(ticker) + '</div>' +
-        '<div class="pick-sub">Confidence ' + confNum(top.confidence) + '/5</div>' +
+        (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(top.confidence) || 3, 'stocks') + '</div>' : '') +
         '<div class="pick-desc">' + esc(top.topic) + '</div>' +
         '<a class="pick-cta" href="/feed.html">Full analysis &rarr;</a>';
+      if (window.TrackRecord) TrackRecord.fill(body);
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s stock pick right now.</div>';
     }
@@ -406,9 +410,10 @@
         var dirClass = bullish ? 'dir-bullish' : 'dir-bearish';
         body.innerHTML =
           '<div class="pick-headline"><span class="' + dirClass + '">' + arrow + '</span> ' + esc(coin) + '</div>' +
-          '<div class="pick-sub">Confidence ' + confNum(top.confidence) + '/5</div>' +
+          (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(top.confidence) || 3, 'crypto') + '</div>' : '') +
           '<div class="pick-desc">' + esc(top.topic) + '</div>' +
           '<a class="pick-cta" href="/crypto.html">Full analysis &rarr;</a>';
+        if (window.TrackRecord) TrackRecord.fill(body);
         return;
       }
 

@@ -7,6 +7,7 @@
   <title>infoblade | Stock Markets</title>
   <meta name="description" content="Daily AI analysis of market-moving news events. Every headline traced to affected sectors, specific stocks, and confidence ratings across 500+ global sources." />
   <script src="/api-base.js"></script>
+  <script src="/track-record.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -1112,10 +1113,12 @@
           ${sectorsHtml}
           ${winnersHtml}
           ${losersHtml}
-          ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(String(d.confidence))}</div>` : ''}
+          ${d.confidence ? `<div class="ar-confidence track-record-row">${renderTrackRecord(getConfScore(d.confidence), 'stocks', window.TrackRecord?.horizonOf(d.impact_timeframe))}</div>` : ''}
+          ${d.confidence && window.TrackRecord?.reasonText(d.confidence) ? `<div class="ar-row"><strong>Why</strong>${esc(TrackRecord.reasonText(d.confidence))}</div>` : ''}
         </div>
         ${sourcesHtml}
       </div>`;
+      fillTrackRecords(el);
     }
 
     function closeStockPanel() {
@@ -1160,29 +1163,13 @@
       return isNaN(n) ? 3 : Math.max(1, Math.min(5, n));
     };
 
-    // Track record instead of confidence stars: how often our past calls at this
-    // confidence level have actually been right (api/predictions.js?track-record).
-    // Loaded once per page; placeholders rendered before it arrives are filled
-    // in when it does. Rows with too little history are hidden, not guessed.
-    let _trackRecord = null;
-    fetch(window.API_BASE + '/api/predictions?track-record=true')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { _trackRecord = d?.sections || {}; fillTrackRecords(); })
-      .catch(() => { _trackRecord = {}; fillTrackRecords(); });
-
-    function renderTrackRecord(level, section = 'stocks') {
-      return `<span class="track-record-slot" data-level="${level}" data-section="${section}"></span>`;
+    // Track record instead of a confidence score: shared helper in
+    // /track-record.js ("64% of calls like this were right").
+    function renderTrackRecord(level, section = 'stocks', horizon = null) {
+      return window.TrackRecord ? TrackRecord.slot(level, section, horizon) : '';
     }
-
     function fillTrackRecords(root = document) {
-      if (!_trackRecord) return;
-      root.querySelectorAll('.track-record-slot:not([data-filled])').forEach(el => {
-        el.dataset.filled = '1';
-        const b = _trackRecord[el.dataset.section]?.[el.dataset.level];
-        const row = el.closest('.chain-row');
-        if (!b || b.hitRate == null) { if (row) row.style.display = 'none'; else el.remove(); return; }
-        el.innerHTML = `<span class="track-record" data-tip="Calls at this confidence level have been right ${b.hitRate}% of the time across ${b.n} graded predictions">${b.hitRate}%</span><span class="track-record-sub">hit rate on similar calls</span>`;
-      });
+      if (window.TrackRecord) TrackRecord.fill(root);
     }
 
     function loadWatchlist() {
@@ -1331,7 +1318,7 @@
         ${renderTechnicalSnapshot(analysis)}
         <div class="chain-row">
           <div class="chain-label">Track record</div>
-          <div class="chain-content">${renderTrackRecord(confScore)}</div>
+          <div class="chain-content">${renderTrackRecord(confScore, 'stocks', window.TrackRecord?.horizonOf(analysis.impact_timeframe || impact))}</div>
         </div>
       `;
       fillTrackRecords(card);
@@ -1399,7 +1386,7 @@
         ${renderTechnicalSnapshot(analysis)}
         <div class="chain-row">
           <div class="chain-label">Track record</div>
-          <div class="chain-content">${renderTrackRecord(confScore)}</div>
+          <div class="chain-content">${renderTrackRecord(confScore, 'stocks', window.TrackRecord?.horizonOf(analysis.impact_timeframe || impact))}</div>
         </div>
       `;
       fillTrackRecords(card);

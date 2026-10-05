@@ -7,6 +7,7 @@
   <title>infoblade | Crypto Markets</title>
   <meta name="description" content="Live prices and AI news analysis for 32 crypto assets. Fear and Greed index, real-time data, and news-driven signals for Bitcoin, Ethereum, Solana, and more." />
   <script src="/api-base.js"></script>
+  <script src="/track-record.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -143,6 +144,8 @@
     .pill-up { background: rgba(42,158,79,0.12); color: #2a9e4f; border: 1px solid rgba(42,158,79,0.25); }
     .pill-down { background: rgba(200,64,64,0.1); color: #c84040; border: 1px solid rgba(200,64,64,0.2); }
     .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
+    .track-record { font-family: 'Share Tech Mono', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .track-record-sub { font-size: 12px; color: var(--muted); margin-left: 6px; }
     .ar-equity-note { font-size: 11px; color: var(--muted); font-style: italic; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -790,7 +793,7 @@
         <div class="ar-block">
           ${dirBadge}
           ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
-          <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'" data-tip="Expand: timeframe, equity impact, and confidence details">Deep Analysis →</button>
+          <button class="btn-deep" onclick="this.style.display='none'; this.nextElementSibling.style.display='flex'" data-tip="Expand: timeframe, equity impact, and track record">Deep Analysis →</button>
           <div class="ar-details">
             ${d.impact_timeframe? `<div class="ar-row"><strong>Expected timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
             ${d.crowd_summary   ? `<div class="ar-row"><strong>Crowd signal</strong>${esc(d.crowd_summary)}</div>`          : ''}
@@ -801,10 +804,12 @@
               </div>
               <div class="ar-equity-note">Tickers shown are US-listed equities affected by this news (e.g. COIN, MSTR, RIOT)</div>
             ` : ''}
-            ${d.confidence ? `<div class="ar-confidence">Confidence: ${esc(d.confidence)}</div>` : ''}
+            ${d.confidence && window.TrackRecord ? `<div class="ar-confidence track-record-row">${TrackRecord.slot(TrackRecord.level(d.confidence), 'crypto', TrackRecord.horizonOf(TIMEFRAMES[currentTimeframe]?.validationTimeframe))}</div>` : ''}
+            ${d.confidence && window.TrackRecord?.reasonText(d.confidence) ? `<div class="ar-row"><strong>Why</strong>${esc(TrackRecord.reasonText(d.confidence))}</div>` : ''}
           </div>
           ${sourcesHtml}
         </div>`;
+      if (window.TrackRecord) TrackRecord.fill(el);
     }
 
     renderGrid();
