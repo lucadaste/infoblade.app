@@ -818,6 +818,15 @@ async function handleStats(req, res, supabase) {
   const baselineSummary = _accuracySummary(baselineValidated);
   const { correct, accuracy, accuracyCI, rawAccuracy, rawAccuracyCI } = organicSummary;
 
+  // How many of the organic (headline) predictions predate benchmark-relative
+  // scoring entirely (no scoring_version — see SCORING_VERSION in
+  // lib/scoring.js) and so never had to beat SPY/BTC to score "correct".
+  // `accuracy`/`accuracyCI` ("beat the market") and the cumulative score
+  // chart below still blend these in with real alpha-scored predictions —
+  // flagged here rather than silently excluded, since whether/how to
+  // separate them is a methodology call, not a bug fix (2026-10 audit).
+  const legacyCount = organicValidated.filter(p => !p.lean && !p.analysis?.scoring_version).length;
+
   // Fetch resolved + pending predictions. Also always include prediction-market
   // predictions (have lean/signal) so they're never pushed off the list by
   // high-volume stock/crypto pending predictions.
@@ -1041,6 +1050,7 @@ async function handleStats(req, res, supabase) {
       // "X pending, graded every 2 hours" banner is about system state, not
       // the accuracy headline, so it stays unsegmented unlike `pending` above.
       totalPending: pending ?? 0,
+      legacyCount,
     },
     // Auto-generated, no-news/no-source baseline predictions (see
     // api/generate-baseline.js), kept fully separate from the headline
@@ -1065,6 +1075,10 @@ async function handleStats(req, res, supabase) {
       yesProbability: p.analysis?.yes_probability ?? null,
       predictedOutcome: p.analysis?.predicted_outcome || null,
       analysis: { resolved_outcome: p.analysis?.resolved_outcome || null },
+      // null (no scoring_version at all) means this was graded before
+      // benchmark-relative scoring existed — see legacyCount above.
+      scoringVersion: p.lean ? null : (p.analysis?.scoring_version ?? null),
+      baselineGenerated: !!p.analysis?.baseline_generated,
     }))
   });
 }

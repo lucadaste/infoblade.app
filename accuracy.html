@@ -262,6 +262,7 @@
     <div class="section-title" style="margin-bottom:10px;font-size:13px">How to read the score</div>
     <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 12px">
       Every prediction earns a score from <strong style="color:var(--ink)">-100</strong> to <strong style="color:var(--ink)">+100</strong> points based on how right — or wrong — the call turned out to be. <strong style="color:var(--accent)">Positive</strong> means the call was correct; <strong style="color:var(--red)">negative</strong> means it wasn't. The size of the number is the size of the win or loss, not just whether it happened: a strong, clearly-correct call scores near +100, a narrow miss scores near 0. Stock and crypto picks are also weighed against the overall market (the S&P 500 or Bitcoin) — a stock only earns credit for beating the market, not just for rising alongside it.
+      <span id="legacy-methodology-note"></span>
     </p>
     <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
       <span style="font-family:'Share Tech Mono',sans-serif;font-size:18px;font-weight:700;color:var(--accent)">+85</span>
@@ -377,6 +378,18 @@
     if (s.failed > 0) {
       failedNote.style.display = 'block';
       failedNote.textContent = `${fmt(s.failed)} prediction${s.failed !== 1 ? 's' : ''} couldn't be graded (price data unavailable) and won't be retried further.`;
+    }
+
+    // "Beat the market" and the cumulative score chart below still blend in
+    // predictions from before benchmark-relative scoring existed, which
+    // never had to clear that bar — flagged here rather than silently
+    // excluded (2026-10 audit; whether to separate them is a methodology
+    // call, not a bug fix).
+    const legacyNote = document.getElementById('legacy-methodology-note');
+    if (legacyNote) {
+      legacyNote.textContent = s.legacyCount > 0
+        ? ` ${fmt(s.legacyCount)} older prediction${s.legacyCount !== 1 ? 's' : ''} below predate benchmark-relative scoring and are included at their original, non-benchmark-adjusted grade.`
+        : '';
     }
   }
 
@@ -566,6 +579,15 @@
     const _CAT_BADGE = { 'crypto-coin':'Crypto', crypto:'Stocks', 'prediction-markets':'Markets', politics:'Markets', sports:'Markets', entertainment:'Markets', finance:'Markets', tech:'Markets' };
     const catLabel   = (p.lean || p.signal) ? 'Markets' : (_CAT_BADGE[p.category] || 'Stocks');
     const catBadge   = `<span style="font-size:10px;font-family:'Share Tech Mono',sans-serif;padding:2px 7px;border-radius:4px;background:rgba(167,139,250,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);letter-spacing:0.5px;text-transform:uppercase;font-weight:600">${catLabel}</span>`;
+    // Methodology transparency (2026-10 audit): flag anything that isn't a
+    // real, benchmark-scored editorial call, right on the card itself — not
+    // just in an aggregate footnote — so every headline stat stays
+    // traceable to what's actually behind it.
+    const methodNote = p.baselineGenerated
+      ? '<span style="font-size:11px;color:var(--muted)" title="No news/sources — auto-generated to keep this section populated">Auto-generated</span>'
+      : (p.scoringVersion == null && !p.lean
+          ? '<span style="font-size:11px;color:var(--muted)" title="Graded before benchmark-relative (alpha) scoring existed">Pre-benchmark scoring</span>'
+          : '');
 
     // ── Prediction market card (no tickers — show lean + signal instead) ──
     const isPM = !p.winnerTickers?.length && !p.loserTickers?.length && (p.lean || p.signal);
@@ -607,6 +629,7 @@
               <span>${date}</span>
               ${!isPending && validDate ? `<span>→ ${validDate}</span>` : ''}
               ${tf}
+              ${methodNote}
             </div>
           </div>
           <div style="flex-shrink:0">${gradeHtml}</div>
@@ -639,6 +662,7 @@
             <span>${date}</span>
             ${validDate ? `<span>→ ${validDate}</span>` : ''}
             ${tf}
+            ${methodNote}
           </div>
         </div>
         <div style="flex-shrink:0">${gradeHtml}</div>
