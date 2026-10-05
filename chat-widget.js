@@ -316,6 +316,11 @@
     .ii-m-thinking {
       color: var(--muted);
       font-size: 13.5px;
+      /* Matches .ii-m's 1.6 line-height ratio — without this it fell back
+         to the browser's default "normal" line-height, which made this
+         row's line box shorter than the one the avatar's margin-top is
+         centered against, throwing off the icon/text alignment here only. */
+      line-height: 1.6;
       font-family: 'Space Grotesk', sans-serif;
       padding-top: 3px;
       padding-bottom: 3px;
