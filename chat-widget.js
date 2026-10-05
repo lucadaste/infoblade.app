@@ -257,16 +257,6 @@
       gap: 2px;
       min-height: 0;
     }
-    .ii-history-head {
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.6px;
-      text-transform: uppercase;
-      color: var(--muted);
-      padding: 4px 10px 8px;
-      flex-shrink: 0;
-    }
     .ii-history-new {
       background: none;
       border: none;
@@ -304,6 +294,7 @@
       transition: background 0.15s;
     }
     .ii-history-item:hover { background: var(--hover-tint); }
+    .ii-history-item:not(:last-child) { border-bottom: 1px solid var(--divider); }
     .ii-history-item-preview {
       font-size: 13.5px;
       color: var(--ink);
@@ -581,7 +572,6 @@
       </div>
     </div>
     <div class="ii-history-panel" id="ii-history-panel" hidden>
-      <div class="ii-history-head">Chat history</div>
       <button class="ii-history-new" id="ii-history-new">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         New chat
