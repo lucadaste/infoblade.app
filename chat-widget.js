@@ -250,50 +250,59 @@
     .ii-history-panel {
       flex: 1;
       overflow-y: auto;
-      padding: 4px 22px 14px;
+      padding: 6px 12px 14px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 2px;
       min-height: 0;
     }
     .ii-history-new {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: none;
+      border: none;
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 9px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 13px;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--ink);
       cursor: pointer;
       text-align: left;
       flex-shrink: 0;
-      transition: border-color 0.15s, color 0.15s;
+      transition: background 0.15s;
     }
-    .ii-history-new:hover { border-color: var(--accent); color: var(--accent); }
-    .ii-history-list { display: flex; flex-direction: column; gap: 6px; }
+    .ii-history-new:hover { background: var(--hover-tint); }
+    .ii-history-new svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .ii-history-list { display: flex; flex-direction: column; gap: 1px; }
     .ii-history-item {
       background: none;
-      border: 1px solid var(--border);
+      border: none;
       border-radius: 8px;
-      padding: 10px 12px;
+      padding: 9px 10px;
       cursor: pointer;
       text-align: left;
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
       font-family: 'Space Grotesk', sans-serif;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.15s;
     }
-    .ii-history-item:hover { background: var(--hover-tint); border-color: var(--divider); }
+    .ii-history-item:hover { background: var(--hover-tint); }
     .ii-history-item-preview {
-      font-size: 13px;
+      font-size: 13.5px;
       color: var(--ink);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
+      flex: 1;
     }
-    .ii-history-item-date { font-size: 11px; color: var(--muted); }
+    .ii-history-item-date { font-size: 11px; color: var(--muted); flex-shrink: 0; }
     .ii-history-empty { color: var(--muted); font-size: 13px; padding: 16px 0; text-align: center; }
 
     .ii-msgs {
@@ -561,7 +570,10 @@
       </div>
     </div>
     <div class="ii-history-panel" id="ii-history-panel" hidden>
-      <button class="ii-history-new" id="ii-history-new">+ New chat</button>
+      <button class="ii-history-new" id="ii-history-new">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
       <div class="ii-history-list" id="ii-history-list"></div>
     </div>
     <div class="ii-msgs" id="ii-msgs"></div>
