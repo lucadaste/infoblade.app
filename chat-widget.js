@@ -355,6 +355,17 @@
       padding-top: 3px;
       padding-bottom: 3px;
     }
+    .ii-m-paused {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-family: 'Space Grotesk', sans-serif;
+      padding-top: 3px;
+      padding-bottom: 3px;
+    }
+    .ii-m-paused svg { width: 13px; height: 13px; flex-shrink: 0; }
 
     .ii-starters {
       display: flex;
@@ -978,6 +989,17 @@
     sessionId = saved.sessionId || null;
     introStarted = true;
     history.forEach(m => addMsg(m.role === 'user' ? 'user' : 'assistant', m.content));
+    // The tab got closed, or the page navigated away, mid-reply — there was
+    // never a chance to append the assistant's turn locally. The reply
+    // itself wasn't lost (api/chat.js keeps generating and saves it
+    // server-side regardless), so point at where it'll show up instead of
+    // leaving what looks like an ignored message; the placeholder keeps
+    // local history correctly alternating for the next turn sent from here.
+    if (history[history.length - 1]?.role === 'user') {
+      history.push({ role: 'assistant', content: '(response interrupted)' });
+      appendPausedRow();
+      saveChatState();
+    }
   })();
 
   applyResponsiveMode();
@@ -1111,6 +1133,26 @@
     return row;
   }
 
+  // Shown whenever a turn stops being watched before Claude finished
+  // replying — the Stop button, a page navigation, or the tab closing all
+  // leave the generation running server-side (see api/chat.js), so the
+  // complete answer is never actually lost, just not here. Points at where
+  // it'll show up instead of leaving a dangling, seemingly-ignored message.
+  const PAUSE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+
+  function appendPausedRow() {
+    const row = document.createElement('div');
+    row.className = 'ii-row';
+    const el = document.createElement('div');
+    el.className = 'ii-m-paused';
+    el.innerHTML = `${PAUSE_ICON}<span>Paused — see Past Conversations for the full reply</span>`;
+    row.appendChild(el);
+    msgsEl.appendChild(row);
+    moveAvatarTo(row, false);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return row;
+  }
+
   // The actual network turn: fetch + stream the reply. Broken out of send()
   // so an interrupted turn (stopGeneration()) can be awaited to completion
   // — including writing its partial reply to history — before the next
@@ -1210,16 +1252,21 @@
       saveChatState();
     } catch (e) {
       if (myAbort.signal.reason === 'user-stop') {
-        // Interrupted — keep whatever streamed so far on screen and in
-        // history (so the model's next turn still has it as context),
-        // same as a stopped turn in Claude Code.
-        if (bubble && raw) {
-          bubble.innerHTML = mdToHtml(raw) + '<div style="font-size:11px;color:var(--muted);margin-top:4px">Stopped</div>';
+        // Interrupted — but not actually cancelled server-side (see
+        // api/chat.js), so the real reply still lands in account history
+        // even though this view stopped watching. Keep whatever streamed
+        // so far on screen, and push an entry into local history so the
+        // next turn's request still alternates user/assistant correctly;
+        // the paused row makes clear more may be waiting in history.
+        if (bubble) {
+          bubble.innerHTML = mdToHtml(raw); // drop the trailing cursor
           history.push({ role: 'assistant', content: raw });
-          saveChatState();
         } else {
           thinking.remove();
+          history.push({ role: 'assistant', content: '(response interrupted)' });
         }
+        appendPausedRow();
+        saveChatState();
       } else {
         const fallback = myAbort.signal.reason === 'timeout'
           ? 'The request timed out. Please try again.'

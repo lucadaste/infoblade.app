@@ -455,14 +455,16 @@ export default async function handler(req, res) {
 
   try {
     // One 30s budget across both model calls and the market search, so the
-    // widget's 35s client timeout still fires after we've answered. Also
-    // tied to the client connection itself — when the widget's stop button
-    // interrupts a reply, it aborts the fetch, which closes this connection;
-    // without listening for that, the Claude call (and its cost) would just
-    // keep running server-side after the browser stopped listening.
-    const clientAbort = new AbortController();
-    req.on('close', () => clientAbort.abort());
-    const signal = AbortSignal.any([AbortSignal.timeout(30000), clientAbort.signal]);
+    // widget's 35s client timeout still fires after we've answered.
+    // Deliberately NOT tied to the client connection: the widget's stop
+    // button, a page navigation, and the browser tab closing all look
+    // identical from here (the connection just drops), and in every one of
+    // those cases the reply should still finish and get saved to the
+    // user's account history below — not be thrown away because nobody's
+    // listening to this particular response anymore. The function keeps
+    // running to completion regardless of the client; only the res.write
+    // calls below start silently no-op'ing once that connection is gone.
+    const signal = AbortSignal.timeout(30000);
     const system = [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
       { type: 'text', text: dynamicContext },
