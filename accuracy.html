@@ -36,13 +36,13 @@
     /* Stats row */
     .stats-row { display: flex; gap: 2px; margin-bottom: 36px; }
     .stat-card { background: var(--card); padding: 24px 28px; flex: 1; }
-    .stat-card:first-child { border-radius: 10px 0 0 10px; }
-    .stat-card:last-child  { border-radius: 0 10px 10px 0; }
+    .stat-card:first-child { border-radius: 12px 0 0 12px; }
+    .stat-card:last-child  { border-radius: 0 12px 12px 0; }
     .stat-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
     .stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(26px, 4vw, 40px); letter-spacing: -2px; line-height: 1; }
     .stat-value.green { color: var(--accent); }
     .stat-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-    @media (max-width: 600px) { .stats-row { flex-direction: column; gap: 2px; } .stat-card:first-child { border-radius: 10px 10px 0 0; } .stat-card:last-child { border-radius: 0 0 10px 10px; } }
+    @media (max-width: 600px) { .stats-row { flex-direction: column; gap: 2px; } .stat-card:first-child { border-radius: 12px 12px 0 0; } .stat-card:last-child { border-radius: 0 0 12px 12px; } }
 
     /* Section header */
     .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 18px; letter-spacing: -0.3px; }
@@ -51,7 +51,7 @@
     .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 36px; }
     @media (max-width: 900px) { .cat-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px) { .cat-grid { grid-template-columns: 1fr; } }
-    .cat-card { background: var(--card); border-radius: 8px; padding: 16px 18px; }
+    .cat-card { background: var(--card); border-radius: 12px; padding: 16px 18px; }
     .cat-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; margin-bottom: 12px; }
     .cat-bar-wrap { background: var(--border); border-radius: 2px; height: 3px; margin-bottom: 10px; }
     .cat-bar-fill { height: 3px; border-radius: 2px; background: var(--accent); transition: width 0.5s ease; }
@@ -61,7 +61,7 @@
     /* Charts row */
     .charts-row { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 36px; align-items: stretch; }
     @media (max-width: 800px) { .charts-row { grid-template-columns: 1fr; } }
-    .chart-wrap { background: var(--card); border-radius: 14px; padding: 24px 24px 20px; display: flex; flex-direction: column; }
+    .chart-wrap { background: var(--card); border-radius: 12px; padding: 24px 24px 20px; display: flex; flex-direction: column; }
     .chart-sub { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 40px 0; }
 
@@ -95,7 +95,7 @@
 
     /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
-    .pred-card { background: var(--card); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
+    .pred-card { background: var(--card); border-radius: 12px; padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; }
     .pred-topic { font-size: 14px; font-weight: 500; line-height: 1.45; margin-bottom: 6px; }
     .pred-meta { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 10px; }
     .pred-tickers { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -133,7 +133,7 @@
     .filter-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
     /* Validation banner */
-    .val-banner { background: var(--card); border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+    .val-banner { background: var(--card); border-radius: 12px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
     .val-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: dot-pulse 2s ease-out infinite; flex-shrink: 0; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -201,6 +201,14 @@
        price-data failures (see MAX_RESOLVE_RETRIES in api/predictions.js) -->
   <div id="stat-failed-note" style="display:none;font-size:12px;color:var(--muted);margin:-10px 0 20px"></div>
 
+  <!-- Auto-generated, no-news/no-source baseline predictions (see
+       api/generate-baseline.js) are deliberately kept out of the headline
+       above — they're cold directional guesses used to keep every section
+       populated, not real editorial calls, so blending them in would dilute
+       what "Called Direction Correctly" actually measures. Shown here,
+       separately, so the full picture stays visible rather than hidden. -->
+  <div id="stat-baseline-note" style="display:none;font-size:12px;color:var(--muted);margin:-10px 0 20px"></div>
+
   <!-- Per-section breakdown -->
   <div class="section-title">Accuracy by Section</div>
   <div class="cat-grid" id="section-grid">
@@ -235,7 +243,7 @@
   </div>
 
   <!-- How to read the per-prediction score -->
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:32px">
+  <div style="background:var(--card);border-radius:12px;padding:18px 20px;margin-bottom:32px">
     <div class="section-title" style="margin-bottom:10px;font-size:13px">How to read the score</div>
     <p style="font-size:13px;color:var(--muted);line-height:1.7;margin:0 0 12px">
       Every prediction earns a score from <strong style="color:var(--ink)">-100</strong> to <strong style="color:var(--ink)">+100</strong> points based on how right — or wrong — the call turned out to be. <strong style="color:var(--accent)">Positive</strong> means the call was correct; <strong style="color:var(--red)">negative</strong> means it wasn't. The size of the number is the size of the win or loss, not just whether it happened: a strong, clearly-correct call scores near +100, a narrow miss scores near 0. Stock and crypto picks are also weighed against the overall market (the S&P 500 or Bitcoin) — a stock only earns credit for beating the market, not just for rising alongside it.
@@ -355,6 +363,16 @@
       failedNote.style.display = 'block';
       failedNote.textContent = `${fmt(s.failed)} prediction${s.failed !== 1 ? 's' : ''} couldn't be graded (price data unavailable) and won't be retried further.`;
     }
+  }
+
+  // Separate, clearly-labeled summary for auto-generated baseline predictions
+  // (see api/generate-baseline.js) — never blended into renderStats above.
+  function renderBaselineNote(b) {
+    const note = document.getElementById('stat-baseline-note');
+    if (!b || !b.total) { note.style.display = 'none'; return; }
+    note.style.display = 'block';
+    const acc = b.rawAccuracy != null ? `${b.rawAccuracy}% direction accuracy` : 'not yet enough resolved to score';
+    note.textContent = `Separately: ${fmt(b.total)} auto-generated baseline prediction${b.total !== 1 ? 's' : ''} (no news/sources, used to keep every section populated) — ${acc}${b.pending ? `, ${fmt(b.pending)} still pending` : ''}. Not counted in the figures above.`;
   }
 
   // One point per *day* (last value that day), not one per resolved
@@ -781,10 +799,11 @@
   // (see api/predictions.js). This just reports current DB state, it never
   // triggers a resolve pass — that used to fire up to 5x per page load with
   // no auth, which is what we're avoiding.
-  function showPendingNote(totalInDb, alreadyResolved) {
-    const pending = (totalInDb ?? 0) - (alreadyResolved ?? 0);
-    if (pending <= 0) return;
-    showValBanner(`${pending} prediction${pending !== 1 ? 's' : ''} pending — graded automatically every 2 hours`, false);
+  function showPendingNote(totalPending) {
+    const pending = totalPending ?? 0;
+    showValBanner(pending > 0
+      ? `${pending} prediction${pending !== 1 ? 's' : ''} pending — graded automatically every 2 hours`
+      : 'Live — predictions graded automatically every 2 hours against real price data', false);
   }
 
   async function loadStats() {
@@ -814,7 +833,7 @@
 
   // ── Run: load stats, then just report pending count (no client-triggered grading) ──
   const summary = await loadStats();
-  showPendingNote(summary?.totalInDb, summary?.total);
+  showPendingNote(summary?.totalPending);
 })();
 </script>
 <script src="/chat-widget.js"></script>
