@@ -748,11 +748,51 @@
     }
   }
 
+  // Short one-liners shown instead of the full two-line walkthrough once a
+  // signed-in user has seen that walkthrough INTRO_FULL_SHOWS times (see
+  // fetchIntroShownCount / api/chat-intro.js). Keeps repeat visits snappy
+  // instead of replaying the same onboarding copy forever.
+  const QUIRKY_INTROS = [
+    "Back again. What's moving?",
+    "Markets never sleep. Neither do I. What are we looking at?",
+    "Ticker, headline, or just a hunch — I'll take any of the three.",
+    "What's on your radar today?",
+    "Give me a ticker and I'll give you a take.",
+    "Let's find the signal in the noise.",
+    "Drop something: a ticker, a rumor, a theme.",
+    "What are we digging into this time?",
+    "I've got data, you've got questions. Go.",
+    "Something caught your eye? Let's break it down.",
+  ];
+
+  const INTRO_FULL_SHOWS = 3;
+
+  // Signed-in users get a persistent, account-wide count from api/chat-intro.js
+  // so the full intro fades out after a few visits regardless of device.
+  // Signed-out (or offline/error) always falls back to the full intro.
+  async function fetchIntroShownCount() {
+    const token = await window._auth?.getToken();
+    if (!token) return 0;
+    try {
+      const res = await fetch(window.API_BASE + '/api/chat-intro', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) return 0;
+      const data = await res.json();
+      return data.count || 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   async function playIntro() {
-    const lines = [
-      "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
-      "You can also ask me how anything on this site works, what the data means, or anything else.",
-    ];
+    const shownCount = await fetchIntroShownCount();
+    const lines = shownCount < INTRO_FULL_SHOWS
+      ? [
+          "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
+          "You can also ask me how anything on this site works, what the data means, or anything else.",
+        ]
+      : [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]];
     inp.disabled = true;
     sendBtn.disabled = true;
     for (const line of lines) {

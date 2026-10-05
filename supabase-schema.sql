@@ -320,6 +320,20 @@ create index if not exists chat_messages_created_at_idx on chat_messages (create
 alter table chat_messages enable row level security;
 -- Service-role key (server-side only) bypasses RLS automatically. No browser access.
 
+-- ── AI Informant intro-message counter (per Clerk user, permanent) ──────────
+-- Tracks how many times a signed-in user has opened the chat widget, so
+-- chat-widget.js can show the full two-line intro the first few times and a
+-- short quirky one-liner after that. Deliberately separate from chat_messages
+-- (a 7-day rolling log) since this counter must persist indefinitely. Read
+-- and incremented by api/chat-intro.js.
+create table if not exists chat_intro_views (
+  user_id     text primary key,
+  shown_count int not null default 0,
+  updated_at  timestamptz not null default now()
+);
+alter table chat_intro_views enable row level security;
+-- Service-role key (server-side only) bypasses RLS automatically. No browser access.
+
 -- ── Background predictions waiting on a Message Batch (50% cheaper) ─────────
 -- api/generate-baseline.js prepares each background prediction (data fetched,
 -- prompt built), submits the Claude requests as one Message Batch, and stores
