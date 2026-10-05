@@ -246,6 +246,7 @@
     }
     .ii-icon-btn:hover { color: var(--ink); background: var(--card); }
     .ii-icon-btn svg { width: 14px; height: 14px; }
+    .ii-icon-btn.ii-active { color: var(--accent); background: var(--hover-tint); border-color: var(--accent); }
 
     .ii-history-panel {
       flex: 1;
@@ -255,6 +256,16 @@
       flex-direction: column;
       gap: 2px;
       min-height: 0;
+    }
+    .ii-history-head {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 4px 10px 8px;
+      flex-shrink: 0;
     }
     .ii-history-new {
       background: none;
@@ -561,7 +572,7 @@
   panel.setAttribute('aria-label', 'AI Informant');
   panel.innerHTML = `
     <div class="ii-header">
-      <span class="ii-header-title">AI Informant</span>
+      <span class="ii-header-title" id="ii-header-title">AI Informant</span>
       <div class="ii-header-actions">
         <button class="ii-icon-btn" id="ii-history-btn" aria-label="Chat history" title="Chat history">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
@@ -570,6 +581,7 @@
       </div>
     </div>
     <div class="ii-history-panel" id="ii-history-panel" hidden>
+      <div class="ii-history-head">Chat history</div>
       <button class="ii-history-new" id="ii-history-new">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
         New chat
@@ -618,6 +630,7 @@
   const inp          = document.getElementById('ii-inp');
   const sendBtn      = document.getElementById('ii-send');
   const historyBtn   = document.getElementById('ii-history-btn');
+  const headerTitle  = document.getElementById('ii-header-title');
   const historyPanel = document.getElementById('ii-history-panel');
   const historyList  = document.getElementById('ii-history-list');
   const historyNewBtn = document.getElementById('ii-history-new');
@@ -1187,10 +1200,22 @@
       : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
+  const HISTORY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>';
+  const BACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+
+  // The clock icon doubles as the exit from the history view: while it's
+  // open the button swaps to a back arrow, gets an active highlight, and
+  // the header title changes, so there's always a visible way out even in
+  // embedded (no close-button) mode.
   function setHistoryOpen(v) {
     historyOpen = v;
     historyPanel.hidden = !v;
     msgsEl.hidden = v;
+    historyBtn.innerHTML = v ? BACK_ICON : HISTORY_ICON;
+    historyBtn.classList.toggle('ii-active', v);
+    historyBtn.setAttribute('aria-label', v ? 'Back to chat' : 'Chat history');
+    historyBtn.setAttribute('title', v ? 'Back to chat' : 'Chat history');
+    headerTitle.textContent = v ? 'Chat History' : 'AI Informant';
   }
 
   async function loadHistoryList() {
