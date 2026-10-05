@@ -83,18 +83,22 @@
     .chart-tooltip .tt-date { color: var(--muted); }
     .chart-tooltip .tt-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; }
 
-    /* Top tickers leaderboard (inside chart card) */
-    .ticker-grid-vert { display: flex; flex-direction: column; }
-    .ticker-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; margin: 0 -8px; border-radius: 8px; transition: background 0.12s; }
-    .ticker-row:hover { background: var(--hover-tint); }
+    /* Top tickers leaderboard (inside chart card) — scrolls once it outgrows
+       ~8 rows instead of paging behind a "show more" button, so the full
+       ranked list is one scroll away rather than a click away. */
+    .ticker-grid-vert { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+    .ticker-grid-vert::-webkit-scrollbar { width: 6px; }
+    .ticker-grid-vert::-webkit-scrollbar-track { background: transparent; }
+    .ticker-grid-vert::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .ticker-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; margin: 0 -8px; border-radius: 8px; text-decoration: none; color: inherit; transition: background 0.12s; }
+    .ticker-row:hover, .ticker-row:focus-visible { background: var(--hover-tint); }
+    .ticker-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
     .ticker-rank { font-family: 'Share Tech Mono', sans-serif; font-size: 10px; color: var(--muted); min-width: 16px; }
     .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 50px; }
     .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 3px; height: 6px; }
     .ticker-bar-fill { height: 6px; border-radius: 3px; transition: width 0.4s ease; }
     .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 38px; text-align: right; }
     .ticker-n { font-size: 10.5px; color: var(--muted); min-width: 40px; text-align: right; }
-    .ticker-more { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; padding: 10px 0 0; text-align: left; transition: color 0.15s; }
-    .ticker-more:hover { color: var(--ink); }
 
     /* Predictions list */
     .pred-list { display: flex; flex-direction: column; gap: 10px; }
@@ -734,7 +738,14 @@
     }).join('');
   }
 
-  const TICKER_SHOWN = 8;
+  // Stocks/ETFs and prediction-market tickers live on the stock-analysis
+  // panel (feed.html); crypto coins have their own page with their own
+  // analysis panel (crypto.html) — route each ticker to whichever already
+  // has a built-out, curated view for it rather than building a third one.
+  function _tickerHref(t) {
+    const base = t.section === 'crypto' ? '/crypto.html' : '/feed.html';
+    return `${base}?ticker=${encodeURIComponent(t.ticker)}`;
+  }
 
   function renderTickers(topTickers) {
     const el = document.getElementById('ticker-grid');
@@ -746,24 +757,15 @@
       const color = accuracyColor(t.winRate);
       const wins  = Math.round(t.winRate / 100 * t.total);
       return `
-      <div class="ticker-row" title="${wins} of ${t.total} graded calls correct">
+      <a class="ticker-row" href="${_tickerHref(t)}" title="${wins} of ${t.total} graded calls correct — view ${esc(t.ticker)}">
         <div class="ticker-rank">#${i + 1}</div>
         <div class="ticker-sym">${esc(t.ticker)}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%;background:${color}"></div></div>
         <div class="ticker-pct" style="color:${color}">${t.winRate}%</div>
         <div class="ticker-n">n=${t.total}</div>
-      </div>`;
+      </a>`;
     };
-    const shown = topTickers.slice(0, TICKER_SHOWN);
-    const rest  = topTickers.slice(TICKER_SHOWN);
-    el.innerHTML = shown.map(row).join('')
-      + (rest.length ? `<div id="ticker-rest" style="display:none">${rest.map(row).join('')}</div>
-         <button class="ticker-more" id="ticker-more-btn">Show ${rest.length} more</button>` : '');
-    const btn = document.getElementById('ticker-more-btn');
-    if (btn) btn.addEventListener('click', () => {
-      document.getElementById('ticker-rest').style.display = '';
-      btn.remove();
-    });
+    el.innerHTML = topTickers.map(row).join('');
   }
 
   let _allPreds = [];

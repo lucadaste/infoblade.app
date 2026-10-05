@@ -816,6 +816,16 @@
     loadFearGreed();
     loadPrices();
 
+    // Deep link from elsewhere on the site (e.g. accuracy.html's ticker
+    // leaderboard): ?ticker=SYM jumps straight into that coin's analysis
+    // panel, same as clicking its grid card.
+    (function () {
+      const ticker = new URLSearchParams(window.location.search).get('ticker');
+      if (!ticker) return;
+      const coin = COINS.find(c => c.symbol === ticker.toUpperCase());
+      if (coin) selectCoin(coin);
+    })();
+
 
 
     // Crypto watchlist

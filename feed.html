@@ -1921,6 +1921,20 @@
   window._onAuthReady(function() {
     if (pageMode === 'stocks') setMode('stocks');
   });
+
+  // Deep link from elsewhere on the site (e.g. accuracy.html's ticker
+  // leaderboard): ?ticker=SYM[&name=Company] jumps straight into that
+  // ticker's analysis panel, same as picking it from the search box.
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const ticker = params.get('ticker');
+    if (!ticker) return;
+    const name = params.get('name') || ticker;
+    window._onAuthReady(function () {
+      setMode('stocks');
+      selectSuggestion(ticker.toUpperCase(), name);
+    });
+  })();
   </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>

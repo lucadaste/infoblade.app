@@ -909,8 +909,9 @@ async function handleStats(req, res, supabase) {
   // ticker's leaderboard win rate shouldn't be built from cold auto-guesses.
   const tickerStats = {};
   for (const p of organicValidated) {
+    const section = _categoryToSection(p.category || 'any');
     for (const t of [...new Set([...(p.winner_tickers || []), ...(p.loser_tickers || [])])]) {
-      if (!tickerStats[t]) tickerStats[t] = { wins: 0, total: 0 };
+      if (!tickerStats[t]) tickerStats[t] = { wins: 0, total: 0, section };
       tickerStats[t].total++;
       if (p.correct) tickerStats[t].wins++;
     }
@@ -929,6 +930,7 @@ async function handleStats(req, res, supabase) {
       winRate: Math.round(s.wins / s.total * 100),
       total: s.total,
       wilsonLower: wilsonLowerBound(s.wins, s.total),
+      section: s.section,
     }))
     .sort((a, b) => b.wilsonLower - a.wilsonLower || b.total - a.total)
     .slice(0, 15);
