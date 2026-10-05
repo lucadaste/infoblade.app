@@ -565,7 +565,7 @@
     <div class="ii-header">
       <span class="ii-header-title" id="ii-header-title">AI Informant</span>
       <div class="ii-header-actions">
-        <button class="ii-icon-btn" id="ii-history-btn" aria-label="Chat history" title="Chat history">
+        <button class="ii-icon-btn" id="ii-history-btn" aria-label="Past conversations" title="Past conversations">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.8"/></svg>
         </button>
         <button class="ii-icon-btn ii-close-btn" id="ii-close-btn" aria-label="Close AI Informant">×</button>
@@ -1203,9 +1203,9 @@
     msgsEl.hidden = v;
     historyBtn.innerHTML = v ? BACK_ICON : HISTORY_ICON;
     historyBtn.classList.toggle('ii-active', v);
-    historyBtn.setAttribute('aria-label', v ? 'Back to chat' : 'Chat history');
-    historyBtn.setAttribute('title', v ? 'Back to chat' : 'Chat history');
-    headerTitle.textContent = v ? 'Chat History' : 'AI Informant';
+    historyBtn.setAttribute('aria-label', v ? 'Back to chat' : 'Past conversations');
+    historyBtn.setAttribute('title', v ? 'Back to chat' : 'Past conversations');
+    headerTitle.textContent = v ? 'Past Conversations' : 'AI Informant';
   }
 
   async function loadHistoryList() {
@@ -1216,7 +1216,7 @@
     historyList.appendChild(emptyMsg);
 
     const token = await window._auth?.getToken();
-    if (!token) { emptyMsg.textContent = 'Sign in to see your chat history.'; return; }
+    if (!token) { emptyMsg.textContent = 'Sign in to see your past conversations.'; return; }
 
     try {
       const res = await fetch(window.API_BASE + '/api/chat-history', {
