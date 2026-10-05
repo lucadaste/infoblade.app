@@ -667,7 +667,11 @@
   function saveChatState() {
     try {
       if (!history.length) { sessionStorage.removeItem(STORAGE_KEY); return; }
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionId, history, open }));
+      // Deliberately not saving `open`: landing on a new page always starts
+      // with the chat minimized (see restoreChatState below), even if it
+      // was open on the page you navigated from. Home's embedded dock is
+      // the one exception, and that's forced open independently of this.
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionId, history }));
     } catch (e) { /* private browsing / storage disabled — conversation just won't survive a reload */ }
   }
 
@@ -962,8 +966,11 @@
   // Restore an in-progress conversation that survived a reload within this
   // tab (see saveChatState above) — e.g. navigating to another page, or the
   // browser reclaiming a backgrounded tab's memory and reloading it on
-  // return. Runs before applyResponsiveMode() so the embedded-dock open
-  // logic below sees the restored `open` state instead of overriding it.
+  // return. The panel itself always starts minimized on whatever page you
+  // land on, even if it was open where you came from — the conversation is
+  // just sitting there ready the next time it's opened. Home's embedded
+  // dock is the one exception, and applyResponsiveMode() below forces that
+  // open on its own regardless of this.
   (function restoreChatState() {
     const saved = loadChatState();
     if (!saved || !Array.isArray(saved.history) || !saved.history.length) return;
@@ -971,7 +978,6 @@
     sessionId = saved.sessionId || null;
     introStarted = true;
     history.forEach(m => addMsg(m.role === 'user' ? 'user' : 'assistant', m.content));
-    if (saved.open) setOpen(true);
   })();
 
   applyResponsiveMode();

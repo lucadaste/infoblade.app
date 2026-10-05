@@ -85,11 +85,12 @@
 
     /* Top tickers leaderboard (inside chart card) */
     .ticker-grid-vert { display: flex; flex-direction: column; }
-    .ticker-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+    .ticker-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; margin: 0 -8px; border-radius: 8px; transition: background 0.12s; }
+    .ticker-row:hover { background: var(--hover-tint); }
     .ticker-rank { font-family: 'Share Tech Mono', sans-serif; font-size: 10px; color: var(--muted); min-width: 16px; }
     .ticker-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 50px; }
-    .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 2px; height: 4px; }
-    .ticker-bar-fill { height: 4px; border-radius: 2px; }
+    .ticker-bar-wrap { flex: 1; background: var(--border); border-radius: 3px; height: 6px; }
+    .ticker-bar-fill { height: 6px; border-radius: 3px; transition: width 0.4s ease; }
     .ticker-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; min-width: 38px; text-align: right; }
     .ticker-n { font-size: 10.5px; color: var(--muted); min-width: 40px; text-align: right; }
     .ticker-more { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 12px; cursor: pointer; padding: 10px 0 0; text-align: left; transition: color 0.15s; }
@@ -223,8 +224,9 @@
   <div class="charts-row">
     <div class="chart-wrap">
       <div class="section-title">Cumulative Score</div>
-      <p class="chart-sub">Running total where the calls the AI was surest about count more than the ones it was unsure about.</p>
+      <p class="chart-sub">Running total where the calls the AI was surest about count more than the ones it was unsure about. Auto-generated baseline predictions are excluded.</p>
       <div id="cumulative-chart-area"><div class="chart-empty">Loading…</div></div>
+      <p id="cum-legacy-note" style="display:none;font-size:11px;color:var(--muted);margin:10px 0 0"></p>
     </div>
     <div class="chart-wrap">
       <div class="section-title">Top Tickers by Win Rate</div>
@@ -369,6 +371,16 @@
         ? ` ${fmt(s.legacyCount)} older prediction${s.legacyCount !== 1 ? 's' : ''} below predate benchmark-relative scoring and are included at their original, non-benchmark-adjusted grade.`
         : '';
     }
+
+    const cumLegacyNote = document.getElementById('cum-legacy-note');
+    if (cumLegacyNote) {
+      if (s.legacyCount > 0) {
+        cumLegacyNote.style.display = 'block';
+        cumLegacyNote.textContent = `Includes ${fmt(s.legacyCount)} pre-benchmark prediction${s.legacyCount !== 1 ? 's' : ''} scored before the market-relative methodology below existed.`;
+      } else {
+        cumLegacyNote.style.display = 'none';
+      }
+    }
   }
 
   // Separate, clearly-labeled summary for auto-generated baseline predictions
@@ -470,9 +482,9 @@
           <line x1="${PAD_X}" y1="${zeroY}" x2="${W - PAD_X}" y2="${zeroY}" stroke="var(--border)" stroke-width="0.5"/>
           <path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>
           <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-          <circle cx="${lastPt.x.toFixed(2)}" cy="${lastPt.y.toFixed(2)}" r="3" fill="${color}" stroke="var(--card)" stroke-width="1.5"/>
         </svg>
         <div class="chart-crosshair" id="cum-crosshair"></div>
+        <div class="chart-dot" id="cum-end-dot" style="background:${color};opacity:1"></div>
         <div class="chart-dot" id="cum-dot"></div>
         <div class="chart-tooltip" id="cum-tooltip"><span class="tt-date"></span> · <span class="tt-val"></span></div>
         <div class="chart-axis-row"><span>${_fmtChartDate(cum[0].date)}</span><span>${_fmtChartDate(cum[cum.length - 1].date)}</span></div>
@@ -486,16 +498,38 @@
     const svgEl      = document.getElementById('cum-svg');
     const crosshair  = document.getElementById('cum-crosshair');
     const dot        = document.getElementById('cum-dot');
+    const endDot     = document.getElementById('cum-end-dot');
     const tooltip    = document.getElementById('cum-tooltip');
     const ttDate     = tooltip.querySelector('.tt-date');
     const ttVal      = tooltip.querySelector('.tt-val');
 
+    // SVG points live in the stretched viewBox (100x180, preserveAspectRatio
+    // none) — never draw a shape in that space (it renders as a squashed
+    // ellipse). Always convert to real rendered pixels first.
+    function pxpy(idx) {
+      const pt = points[idx];
+      const rect = svgEl.getBoundingClientRect();
+      return {
+        px: (pt.x / W) * rect.width,
+        py: ((pt.y / H) * rect.height) + (rect.top - wrap.getBoundingClientRect().top),
+      };
+    }
+    // Last-point marker is drawn in pixel space, not as an SVG circle, so it
+    // stays a true circle instead of the stretched oval the raw viewBox would
+    // produce under preserveAspectRatio="none".
+    function placeEndDot() {
+      const { px, py } = pxpy(points.length - 1);
+      endDot.style.left = px + 'px';
+      endDot.style.top  = py + 'px';
+    }
+    placeEndDot();
+    const _ro = new ResizeObserver(placeEndDot);
+    _ro.observe(svgEl);
+
     function showAt(idx) {
       idx = Math.max(0, Math.min(points.length - 1, idx));
-      const pt = points[idx], c = cum[idx];
-      const rect = svgEl.getBoundingClientRect();
-      const px   = (pt.x / W) * rect.width;
-      const py   = ((pt.y / H) * rect.height) + (rect.top - wrap.getBoundingClientRect().top);
+      const c = cum[idx];
+      const { px, py } = pxpy(idx);
       crosshair.style.left = px + 'px';
       crosshair.style.opacity = '1';
       dot.style.left = px + 'px';
@@ -528,8 +562,8 @@
     wrap.addEventListener('pointerleave', hide);
 
     // Keyboard: Left/Right steps one day at a time, Home/End jump to the
-    // ends. Starts at the most recent point (same one the static circle
-    // marker highlights) so a first keypress lands somewhere meaningful.
+    // ends. Starts at the most recent point (same one the end-dot marker
+    // highlights) so a first keypress lands somewhere meaningful.
     let focusedIdx = points.length - 1;
     wrap.addEventListener('focus', () => showAt(focusedIdx));
     wrap.addEventListener('blur', hide);
@@ -710,8 +744,9 @@
     }
     const row = (t, i) => {
       const color = accuracyColor(t.winRate);
+      const wins  = Math.round(t.winRate / 100 * t.total);
       return `
-      <div class="ticker-row">
+      <div class="ticker-row" title="${wins} of ${t.total} graded calls correct">
         <div class="ticker-rank">#${i + 1}</div>
         <div class="ticker-sym">${esc(t.ticker)}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%;background:${color}"></div></div>

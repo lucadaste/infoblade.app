@@ -878,8 +878,11 @@ async function handleStats(req, res, supabase) {
     }))
     .sort((a, b) => a.month.localeCompare(b.month));
 
-  // Cumulative weighted score timeline (running total, oldest-first)
-  const validatedAsc = [...(validated ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  // Cumulative weighted score timeline (running total, oldest-first).
+  // Organic-only, same as the headline accuracy above — baseline-generated
+  // cold guesses would otherwise dominate the curve by sheer volume without
+  // ever having tried to be a real editorial call (see organicValidated).
+  const validatedAsc = [...organicValidated].sort((a, b) => a.created_at.localeCompare(b.created_at));
   let cumulative = 0;
   const cumulativeTimeline = validatedAsc.map(p => {
     const s = p.analysis?.accuracy_score ?? p.analysis?.score ?? 0;
@@ -902,8 +905,10 @@ async function handleStats(req, res, supabase) {
     .map(([cat, s]) => ({ category: cat, total: s.total, correct: s.correct, accuracy: Math.round(s.correct / s.total * 100) }))
     .sort((a, b) => b.total - a.total);
 
+  // Organic-only, same reasoning as the cumulative timeline above — a
+  // ticker's leaderboard win rate shouldn't be built from cold auto-guesses.
   const tickerStats = {};
-  for (const p of validated ?? []) {
+  for (const p of organicValidated) {
     for (const t of [...new Set([...(p.winner_tickers || []), ...(p.loser_tickers || [])])]) {
       if (!tickerStats[t]) tickerStats[t] = { wins: 0, total: 0 };
       tickerStats[t].total++;
