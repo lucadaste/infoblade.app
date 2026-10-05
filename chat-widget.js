@@ -778,7 +778,7 @@
     "Something caught your eye? Let's break it down.",
   ];
 
-  const INTRO_FULL_SHOWS = 3;
+  const INTRO_FULL_SHOWS = 2;
 
   // Signed-in users get a persistent, account-wide count from api/chat-intro.js
   // so the full intro fades out after a few visits regardless of device.
