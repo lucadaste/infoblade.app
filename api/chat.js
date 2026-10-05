@@ -488,17 +488,27 @@ export default async function handler(req, res) {
     }
 
     // Persist this turn for the account-synced chat history feature (see
-    // api/chat-history.js). Best-effort: a save failure shouldn't block the
-    // reply the user is waiting on, so it's logged but not surfaced.
+    // api/chat-history.js), and flag the account as having chatted before
+    // (see api/chat-intro.js) so the full intro never shows again. Awaited
+    // — not fire-and-forget — because a serverless invocation can be frozen
+    // right after res.end() returns, which was silently dropping these
+    // writes most of the time. Best-effort in the sense that a failure is
+    // logged, not surfaced: it shouldn't block the reply the user already got.
     if (supabase && typeof sessionId === 'string' && sessionId) {
       const stamp = `${Date.now()}_${Math.floor(Math.random() * 100000)}`;
       // Image bytes aren't persisted (history is a 7-day text log, not a file
       // store) — just a marker so the transcript still makes sense on reload.
       const imageNote = safeImages.length ? `\n\n[${safeImages.length} image${safeImages.length > 1 ? 's' : ''} attached]` : '';
-      supabase.from('chat_messages').insert([
+      const { error: historyError } = await supabase.from('chat_messages').insert([
         { id: `cm_${stamp}_u`, user_id: user.id, session_id: sessionId, role: 'user', content: (lastUserMsg.slice(0, 4000) + imageNote).trim(), page_context: pageContext || null },
         { id: `cm_${stamp}_a`, user_id: user.id, session_id: sessionId, role: 'assistant', content: reply.slice(0, 4000), page_context: pageContext || null },
-      ]).then(({ error }) => { if (error) console.error('[chat] history save failed:', error); });
+      ]);
+      if (historyError) console.error('[chat] history save failed:', historyError);
+
+      const { error: introError } = await supabase
+        .from('chat_intro_views')
+        .upsert({ user_id: user.id, shown_count: 1, updated_at: new Date().toISOString() });
+      if (introError) console.error('[chat] intro flag save failed:', introError);
     }
 
     send({ type: 'done', markets: cardMarkets?.length ? cardMarkets : null, marketQuery });

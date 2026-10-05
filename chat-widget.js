@@ -640,6 +640,39 @@
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+  // ── In-progress conversation persistence ────────────────────────────────
+  // sessionStorage (not localStorage) is the point: it survives a page
+  // navigation or a backgrounded-tab reload within the same browser tab,
+  // but is dropped by the browser the moment that tab/window actually
+  // closes — exactly "keep it until the user leaves the site."
+  const STORAGE_KEY = 'ii_chat_state';
+
+  function saveChatState() {
+    try {
+      if (!history.length) { sessionStorage.removeItem(STORAGE_KEY); return; }
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionId, history, open }));
+    } catch (e) { /* private browsing / storage disabled — conversation just won't survive a reload */ }
+  }
+
+  function loadChatState() {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function clearChatState() {
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
+  }
+
+  // Signing out on a shared device shouldn't leave the previous account's
+  // conversation sitting there for the next person to open. Deferred to
+  // `load`: on every page but home.html this script tag runs before
+  // auth.js, so window._onAuthChange doesn't exist yet at setup time.
+  window.addEventListener('load', () => {
+    window._onAuthChange?.(user => { if (!user) clearChatState(); });
+  });
+
   // ── Image attachments (drag-and-drop or the paperclip button) ───────────────
   const MAX_IMAGES = 2;
   const MAX_IMAGE_DIM = 1600; // longest side, px — downscaled client-side so a
@@ -777,9 +810,9 @@
   }
 
   // Short one-liners shown instead of the full two-line walkthrough once a
-  // signed-in user has seen that walkthrough INTRO_FULL_SHOWS times (see
-  // fetchIntroShownCount / api/chat-intro.js). Keeps repeat visits snappy
-  // instead of replaying the same onboarding copy forever.
+  // signed-in user has ever sent the AI Informant a message (see
+  // fetchHasChatted / api/chat-intro.js). Keeps repeat visits snappy instead
+  // of replaying the same onboarding copy forever.
   const QUIRKY_INTROS = [
     "Back again. What's moving?",
     "Markets never sleep. Neither do I. What are we looking at?",
@@ -793,34 +826,33 @@
     "Something caught your eye? Let's break it down.",
   ];
 
-  const INTRO_FULL_SHOWS = 2;
-
-  // Signed-in users get a persistent, account-wide count from api/chat-intro.js
-  // so the full intro fades out after a few visits regardless of device.
-  // Signed-out (or offline/error) always falls back to the full intro.
-  async function fetchIntroShownCount() {
+  // Signed-in users get a persistent, account-wide flag from api/chat-intro.js
+  // so the full intro retires for good the first time they ever send a
+  // message, regardless of device. Signed-out (or offline/error) always
+  // falls back to the full intro.
+  async function fetchHasChatted() {
     const token = await window._auth?.getToken();
-    if (!token) return 0;
+    if (!token) return false;
     try {
       const res = await fetch(window.API_BASE + '/api/chat-intro', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!res.ok) return 0;
+      if (!res.ok) return false;
       const data = await res.json();
-      return data.count || 0;
+      return !!data.hasChatted;
     } catch (e) {
-      return 0;
+      return false;
     }
   }
 
   async function playIntro() {
-    const shownCount = await fetchIntroShownCount();
-    const lines = shownCount < INTRO_FULL_SHOWS
-      ? [
+    const hasChatted = await fetchHasChatted();
+    const lines = hasChatted
+      ? [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]]
+      : [
           "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
           "You can also ask me how anything on this site works, what the data means, or anything else.",
-        ]
-      : [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]];
+        ];
     inp.disabled = true;
     sendBtn.disabled = true;
     for (const line of lines) {
@@ -859,6 +891,7 @@
       introStarted = true;
       playIntro();
     }
+    saveChatState();
   }
 
   // Home page only, once there's enough width to hold both the page content
@@ -908,6 +941,21 @@
   });
 
   window.iiToggleChat = () => setOpen(!open);
+
+  // Restore an in-progress conversation that survived a reload within this
+  // tab (see saveChatState above) — e.g. navigating to another page, or the
+  // browser reclaiming a backgrounded tab's memory and reloading it on
+  // return. Runs before applyResponsiveMode() so the embedded-dock open
+  // logic below sees the restored `open` state instead of overriding it.
+  (function restoreChatState() {
+    const saved = loadChatState();
+    if (!saved || !Array.isArray(saved.history) || !saved.history.length) return;
+    history = saved.history;
+    sessionId = saved.sessionId || null;
+    introStarted = true;
+    history.forEach(m => addMsg(m.role === 'user' ? 'user' : 'assistant', m.content));
+    if (saved.open) setOpen(true);
+  })();
 
   applyResponsiveMode();
   embedMq.addEventListener('change', applyResponsiveMode);
@@ -1064,6 +1112,7 @@
 
     history.push({ role: 'user', content: text || '(image attached)' });
     if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    saveChatState();
 
     const thinking = addThinking();
     let bubble = null;
@@ -1153,6 +1202,7 @@
       }
       msgsEl.scrollTop = msgsEl.scrollHeight;
       history.push({ role: 'assistant', content: raw });
+      saveChatState();
     } catch (e) {
       const fallback = e.name === 'TimeoutError'
         ? 'The request timed out. Please try again.'
@@ -1260,6 +1310,7 @@
       sessionId = id;
       msgs.forEach(m => addMsg(m.role === 'user' ? 'user' : 'assistant', m.content));
       setHistoryOpen(false);
+      saveChatState();
     } catch (e) { /* leave the history list open on failure */ }
   }
 
@@ -1268,6 +1319,7 @@
     msgsEl.innerHTML = '';
     history = [];
     sessionId = null;
+    clearChatState();
     startersEl = buildStarters();
     msgsEl.appendChild(startersEl);
     setHistoryOpen(false);

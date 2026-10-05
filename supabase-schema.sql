@@ -320,12 +320,14 @@ create index if not exists chat_messages_created_at_idx on chat_messages (create
 alter table chat_messages enable row level security;
 -- Service-role key (server-side only) bypasses RLS automatically. No browser access.
 
--- ── AI Informant intro-message counter (per Clerk user, permanent) ──────────
--- Tracks how many times a signed-in user has opened the chat widget, so
--- chat-widget.js can show the full two-line intro the first few times and a
--- short quirky one-liner after that. Deliberately separate from chat_messages
--- (a 7-day rolling log) since this counter must persist indefinitely. Read
--- and incremented by api/chat-intro.js.
+-- ── AI Informant "has chatted before" flag (per Clerk user, permanent) ──────
+-- shown_count is 0 until a signed-in user sends the AI Informant its first
+-- message, then flips to 1 forever — chat-widget.js uses that to show the
+-- full two-line intro only before that first message, and a short quirky
+-- one-liner on every visit after. Deliberately separate from chat_messages
+-- (a 7-day rolling log) since this must persist indefinitely. Written
+-- (awaited) by api/chat.js when it persists that first message; read-only
+-- from api/chat-intro.js.
 create table if not exists chat_intro_views (
   user_id     text primary key,
   shown_count int not null default 0,

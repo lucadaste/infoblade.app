@@ -2,11 +2,11 @@ import { getClerkUser } from '../lib/auth.js';
 import { getSupabase, setCors } from '../lib/http.js';
 
 // Backs the chat widget's intro message (see chat-widget.js playIntro()):
-// the first few times a signed-in user opens the AI Informant, they get the
-// full two-line walkthrough; after that, a short quirky one-liner. Returns
-// how many times the intro has already been shown, then increments it for
-// next time. Best-effort — a save failure just means the count doesn't
-// advance, not a broken chat.
+// a signed-in user gets the full two-line walkthrough until the first time
+// they actually send the AI Informant a message, then a short quirky
+// one-liner for good on every future visit. The "they've chatted before"
+// flag itself is written by api/chat.js when it persists that first message
+// (awaited there, not here) — this endpoint only reads it.
 export default async function handler(req, res) {
   setCors(res, { methods: 'GET, OPTIONS', headers: 'Content-Type, Authorization' });
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -25,12 +25,5 @@ export default async function handler(req, res) {
     .maybeSingle();
   if (readError) { console.error('[chat-intro]', readError); return res.status(500).json({ error: 'Could not load intro state' }); }
 
-  const count = existing?.shown_count || 0;
-
-  supabase
-    .from('chat_intro_views')
-    .upsert({ user_id: user.id, shown_count: count + 1, updated_at: new Date().toISOString() })
-    .then(({ error }) => { if (error) console.error('[chat-intro] save failed:', error); });
-
-  return res.status(200).json({ count });
+  return res.status(200).json({ hasChatted: !!existing && existing.shown_count > 0 });
 }
