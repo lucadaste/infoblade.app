@@ -444,12 +444,25 @@ export default async function handler(req, res) {
     'Connection': 'keep-alive',
     'X-Accel-Buffering': 'no',
   });
-  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+  // Guarded against the connection already being gone (widget stop button,
+  // or the user just closing the tab): writing to a destroyed socket can
+  // emit an 'error' instead of throwing synchronously, which with no
+  // listener attached would otherwise crash the function.
+  const send = (obj) => {
+    if (res.writableEnded) return;
+    try { res.write(`data: ${JSON.stringify(obj)}\n\n`); } catch (e) { /* client gone */ }
+  };
 
   try {
     // One 30s budget across both model calls and the market search, so the
-    // widget's 35s client timeout still fires after we've answered.
-    const signal = AbortSignal.timeout(30000);
+    // widget's 35s client timeout still fires after we've answered. Also
+    // tied to the client connection itself — when the widget's stop button
+    // interrupts a reply, it aborts the fetch, which closes this connection;
+    // without listening for that, the Claude call (and its cost) would just
+    // keep running server-side after the browser stopped listening.
+    const clientAbort = new AbortController();
+    req.on('close', () => clientAbort.abort());
+    const signal = AbortSignal.any([AbortSignal.timeout(30000), clientAbort.signal]);
     const system = [
       { type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } },
       { type: 'text', text: dynamicContext },
@@ -512,10 +525,10 @@ export default async function handler(req, res) {
     }
 
     send({ type: 'done', markets: cardMarkets?.length ? cardMarkets : null, marketQuery });
-    res.end();
+    if (!res.writableEnded) res.end();
   } catch (err) {
     console.error('[chat]', err.message);
     send({ type: 'error', error: 'Chat request failed' });
-    res.end();
+    if (!res.writableEnded) res.end();
   }
 }

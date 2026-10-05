@@ -420,6 +420,12 @@
     }
     #ii-send:hover { opacity: .8; }
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
+    /* A reply is streaming — click to interrupt it, same idea as the
+       stop/pause control in Claude Code. Stays enabled (never disabled)
+       so it's always clickable, and the textarea stays usable too — typing
+       and sending here interrupts the streaming reply instead of queuing
+       behind it. */
+    #ii-send.ii-send-stop { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
 
     .ii-attach-btn { align-self: flex-end; margin-bottom: 1px; }
     .ii-attach-btn svg { width: 14px; height: 14px; }
@@ -637,6 +643,17 @@
                              // conversation's turns in chat_messages (see api/chat.js)
   let historyOpen = false;
   let attachedImages = []; // { mediaType, data (base64, no data: prefix), previewUrl }
+  let activeAbort = null;          // AbortController for the in-flight /api/chat request, if any
+  let pendingTurn = Promise.resolve(); // the running turn's runTurn() promise — send()
+                                        // awaits this before starting a new turn, so an
+                                        // interrupted turn always finishes writing its
+                                        // partial reply to history before the next one begins
+
+  // Stops the in-flight response, same as the stop/pause control in Claude
+  // Code — the partial reply stays on screen instead of being discarded.
+  function stopGeneration() {
+    activeAbort?.abort('user-stop');
+  }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -1088,32 +1105,13 @@
     return row;
   }
 
-  async function send(text) {
-    text = (text || inp.value).trim();
-    const imagesToSend = attachedImages;
-    if ((!text && !imagesToSend.length) || busy) return;
-
-    startersEl?.remove();
-    inp.value = '';
-    inp.style.height = 'auto';
-    addMsg('user', text, imagesToSend.map(img => img.previewUrl));
-    attachedImages = [];
-    renderAttachRow();
-
-    // Auth gate — require sign-in
-    const token = await window._auth?.getToken();
-    if (!token) {
-      addMsg('assistant', '**AI Informant requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click the account icon in the top-right corner to get started.');
-      return;
-    }
-
-    busy = true;
-    sendBtn.disabled = true;
-
-    history.push({ role: 'user', content: text || '(image attached)' });
-    if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-    saveChatState();
-
+  // The actual network turn: fetch + stream the reply. Broken out of send()
+  // so an interrupted turn (stopGeneration()) can be awaited to completion
+  // — including writing its partial reply to history — before the next
+  // turn starts building its request. Returns normally in every case
+  // (fetch/stream errors and user-stops are handled inside); send() always
+  // runs its cleanup right after awaiting this.
+  async function runTurn(token, imagesToSend) {
     const thinking = addThinking();
     let bubble = null;
     let raw = '';
@@ -1135,6 +1133,10 @@
       msgsEl.scrollTop = msgsEl.scrollHeight;
     };
 
+    const myAbort = new AbortController();
+    activeAbort = myAbort;
+    const timeoutId = setTimeout(() => myAbort.abort('timeout'), 35000);
+
     try {
       const res = await fetch(window.API_BASE + '/api/chat', {
         method: 'POST',
@@ -1145,16 +1147,13 @@
           sessionId,
           images: imagesToSend.map(img => ({ mediaType: img.mediaType, data: img.data })),
         }),
-        signal: AbortSignal.timeout(35000)
+        signal: myAbort.signal,
       });
       if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({}));
         ensureBubble();
         raw = data.error || 'Something went wrong. Try again.';
         bubble.innerHTML = mdToHtml(raw);
-        busy = false;
-        sendBtn.disabled = false;
-        inp.focus();
         return;
       }
 
@@ -1204,18 +1203,81 @@
       history.push({ role: 'assistant', content: raw });
       saveChatState();
     } catch (e) {
-      const fallback = e.name === 'TimeoutError'
-        ? 'The request timed out. Please try again.'
-        : 'Connection error. Please try again.';
-      if (bubble) {
-        bubble.innerHTML = mdToHtml(raw || fallback);
+      if (myAbort.signal.reason === 'user-stop') {
+        // Interrupted — keep whatever streamed so far on screen and in
+        // history (so the model's next turn still has it as context),
+        // same as a stopped turn in Claude Code.
+        if (bubble && raw) {
+          bubble.innerHTML = mdToHtml(raw) + '<div style="font-size:11px;color:var(--muted);margin-top:4px">Stopped</div>';
+          history.push({ role: 'assistant', content: raw });
+          saveChatState();
+        } else {
+          thinking.remove();
+        }
       } else {
-        addMsg('assistant', fallback);
-        thinking.remove();
+        const fallback = myAbort.signal.reason === 'timeout'
+          ? 'The request timed out. Please try again.'
+          : 'Connection error. Please try again.';
+        if (bubble) {
+          bubble.innerHTML = mdToHtml(raw || fallback);
+        } else {
+          addMsg('assistant', fallback);
+          thinking.remove();
+        }
       }
+    } finally {
+      clearTimeout(timeoutId);
+      if (activeAbort === myAbort) activeAbort = null;
     }
+  }
+
+  async function send(text) {
+    text = (text || inp.value).trim();
+    const imagesToSend = attachedImages;
+
+    if (!text && !imagesToSend.length) {
+      if (busy) stopGeneration(); // Stop clicked with nothing queued up next
+      return;
+    }
+
+    // Sending while a reply is still streaming interrupts it and starts
+    // this one immediately — like typing over a running Claude Code turn —
+    // instead of being ignored. Awaiting pendingTurn lets the interrupted
+    // turn finish writing its partial reply to history first, so the new
+    // request's context stays correctly ordered.
+    if (busy) {
+      stopGeneration();
+      await pendingTurn;
+    }
+
+    startersEl?.remove();
+    inp.value = '';
+    inp.style.height = 'auto';
+    addMsg('user', text, imagesToSend.map(img => img.previewUrl));
+    attachedImages = [];
+    renderAttachRow();
+
+    // Auth gate — require sign-in
+    const token = await window._auth?.getToken();
+    if (!token) {
+      addMsg('assistant', '**AI Informant requires an infoblade account.**\n\nCreating a free profile takes about 10 seconds — click the account icon in the top-right corner to get started.');
+      return;
+    }
+
+    busy = true;
+    sendBtn.textContent = 'Stop';
+    sendBtn.classList.add('ii-send-stop');
+
+    history.push({ role: 'user', content: text || '(image attached)' });
+    if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    saveChatState();
+
+    pendingTurn = runTurn(token, imagesToSend);
+    await pendingTurn;
+
     busy = false;
-    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send';
+    sendBtn.classList.remove('ii-send-stop');
     inp.focus();
   }
 
