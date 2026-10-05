@@ -196,6 +196,19 @@
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
     }
+    .ii-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1em;
+      margin-left: 1px;
+      vertical-align: text-bottom;
+      background: var(--accent);
+      animation: ii-cursor-blink 0.8s step-end infinite;
+    }
+    @keyframes ii-cursor-blink {
+      0%, 50% { opacity: 1; }
+      50.01%, 100% { opacity: 0; }
+    }
     .ii-header {
       display: flex;
       align-items: center;
@@ -1038,6 +1051,26 @@
     if (!sessionId) sessionId = `cs_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
     const thinking = addThinking();
+    let bubble = null;
+    let raw = '';
+
+    // Lazily swaps the "Thinking…" row for the real message bubble the
+    // moment the first token arrives — same avatar hand-off order as
+    // addMsg: move the avatar into the new row first, only then is it
+    // safe to remove the old one.
+    const ensureBubble = () => {
+      if (bubble) return;
+      const row = document.createElement('div');
+      row.className = 'ii-row';
+      bubble = document.createElement('div');
+      bubble.className = 'ii-m ii-m-ai';
+      row.appendChild(bubble);
+      msgsEl.appendChild(row);
+      moveAvatarTo(row, false);
+      thinking.remove();
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+    };
+
     try {
       const res = await fetch(window.API_BASE + '/api/chat', {
         method: 'POST',
@@ -1050,16 +1083,71 @@
         }),
         signal: AbortSignal.timeout(35000)
       });
-      const data = await res.json();
-      const reply = data.reply || data.error || 'Something went wrong. Try again.';
-      addMsg('assistant', reply, null, data.markets, data.marketQuery); // moves the avatar into the new row first — only then is it safe to remove the old one
-      thinking.remove();
-      history.push({ role: 'assistant', content: reply });
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        ensureBubble();
+        raw = data.error || 'Something went wrong. Try again.';
+        bubble.innerHTML = mdToHtml(raw);
+        busy = false;
+        sendBtn.disabled = false;
+        inp.focus();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      let finalMarkets = null, finalQuery = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const chunk = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          const line = chunk.split('\n').find(l => l.startsWith('data:'));
+          if (!line) continue;
+          let evt;
+          try { evt = JSON.parse(line.slice(5).trim()); } catch { continue; }
+
+          if (evt.type === 'text') {
+            ensureBubble();
+            raw += evt.text;
+            bubble.innerHTML = mdToHtml(raw) + '<span class="ii-cursor"></span>';
+            msgsEl.scrollTop = msgsEl.scrollHeight;
+          } else if (evt.type === 'status') {
+            const shimmer = thinking.querySelector('.ii-thinking-shimmer');
+            if (shimmer) shimmer.textContent = evt.text;
+          } else if (evt.type === 'error') {
+            ensureBubble();
+            raw = evt.error || 'Something went wrong. Try again.';
+            bubble.innerHTML = mdToHtml(raw);
+          } else if (evt.type === 'done') {
+            finalMarkets = evt.markets;
+            finalQuery = evt.marketQuery;
+          }
+        }
+      }
+
+      ensureBubble();
+      bubble.innerHTML = mdToHtml(raw || 'Something went wrong. Try again.'); // drop the trailing cursor
+      if (Array.isArray(finalMarkets) && finalMarkets.length) {
+        bubble.appendChild(renderMarketCards(finalMarkets, finalQuery));
+      }
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+      history.push({ role: 'assistant', content: raw });
     } catch (e) {
-      addMsg('assistant', e.name === 'TimeoutError'
+      const fallback = e.name === 'TimeoutError'
         ? 'The request timed out. Please try again.'
-        : 'Connection error. Please try again.');
-      thinking.remove();
+        : 'Connection error. Please try again.';
+      if (bubble) {
+        bubble.innerHTML = mdToHtml(raw || fallback);
+      } else {
+        addMsg('assistant', fallback);
+        thinking.remove();
+      }
     }
     busy = false;
     sendBtn.disabled = false;

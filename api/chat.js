@@ -155,6 +155,9 @@ HOW TO HELP USERS:
 - Walk through what a specific prediction grade means and why
 
 RULES:
+- Default to short, direct answers: a few sentences or a short bullet list. Do not dump the entire platform overview or every detail you know on a simple question. Answer exactly what was asked first
+- If there's clearly more worth saying beyond the short answer, end with a brief one-line offer to go deeper (e.g. "Want the specifics on any of these?") instead of including it all up front. Don't tack this offer on when the short answer already fully covers it
+- Reserve longer, multi-section answers for when the user's question is itself broad or explicitly asks for a full rundown
 - When live headlines are provided, lead with what you actually see in the news, then add broader context
 - When you use prediction market search: quote the live odds and 24h volume from the results, and say plainly these are the betting crowd's odds, not an Infoblade prediction. Never invent odds or markets that were not returned. If nothing relevant came back, say no live market matched. Matching markets are shown to the user as cards under your reply, so summarize the most relevant 1-3 rather than listing every result
 - Be conversational but analytical, like a sharp research analyst, not a disclaimer machine
@@ -272,7 +275,10 @@ async function searchMarketsForChat(query) {
   }));
 }
 
-async function callClaude(system, messages, signal, toolChoice) {
+// Streams a single Claude turn as parsed SSE events (Anthropic's wire
+// format), so the caller can forward text deltas to the client as they
+// arrive instead of waiting for the full reply.
+async function* streamClaude(system, messages, signal, toolChoice) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -283,7 +289,8 @@ async function callClaude(system, messages, signal, toolChoice) {
     },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 800,
+      max_tokens: 600,
+      stream: true,
       tools: [MARKET_SEARCH_TOOL],
       ...(toolChoice ? { tool_choice: toolChoice } : {}),
       system,
@@ -291,11 +298,67 @@ async function callClaude(system, messages, signal, toolChoice) {
     }),
     signal,
   });
-  return response.json();
+  if (!response.ok || !response.body) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Anthropic stream error ${response.status}: ${errText.slice(0, 300)}`);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buf.indexOf('\n\n')) !== -1) {
+      const raw = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const dataLine = raw.split('\n').find(l => l.startsWith('data:'));
+      if (!dataLine) continue;
+      const jsonStr = dataLine.slice(5).trim();
+      if (!jsonStr) continue;
+      try { yield JSON.parse(jsonStr); } catch { /* ignore malformed event */ }
+    }
+  }
 }
 
-function textOf(data) {
-  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+// Consumes one streamed turn, forwarding text deltas via onText as they
+// arrive, and returns the accumulated text plus any tool_use block so the
+// caller can decide whether a follow-up turn (market search) is needed.
+async function runClaudeTurn(system, messages, signal, toolChoice, onText) {
+  let textAccum = '';
+  let stopReason = null;
+  let currentBlock = null;
+  let toolUse = null;
+  for await (const evt of streamClaude(system, messages, signal, toolChoice)) {
+    if (evt.type === 'content_block_start') {
+      currentBlock = { type: evt.content_block.type };
+      if (evt.content_block.type === 'tool_use') {
+        currentBlock.id = evt.content_block.id;
+        currentBlock.name = evt.content_block.name;
+        currentBlock.jsonBuf = '';
+      }
+    } else if (evt.type === 'content_block_delta') {
+      if (evt.delta.type === 'text_delta') {
+        textAccum += evt.delta.text;
+        onText(evt.delta.text);
+      } else if (evt.delta.type === 'input_json_delta' && currentBlock) {
+        currentBlock.jsonBuf += evt.delta.partial_json;
+      }
+    } else if (evt.type === 'content_block_stop') {
+      if (currentBlock?.type === 'tool_use') {
+        let input = {};
+        try { input = JSON.parse(currentBlock.jsonBuf || '{}'); } catch { /* leave empty */ }
+        toolUse = { id: currentBlock.id, name: currentBlock.name, input };
+      }
+      currentBlock = null;
+    } else if (evt.type === 'message_delta') {
+      if (evt.delta?.stop_reason) stopReason = evt.delta.stop_reason;
+    } else if (evt.type === 'error') {
+      throw new Error(evt.error?.message || 'Anthropic stream error');
+    }
+  }
+  return { stopReason, toolUse, text: textAccum };
 }
 
 export default async function handler(req, res) {
@@ -371,6 +434,18 @@ export default async function handler(req, res) {
     return { role, content: text };
   });
 
+  // From here on the response is a Server-Sent-Events stream: text deltas
+  // arrive as they're generated so the widget can render them like a real
+  // typing animation instead of waiting for the full reply, then one final
+  // "done" event carries the market cards (if any).
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  const send = (obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+
   try {
     // One 30s budget across both model calls and the market search, so the
     // widget's 35s client timeout still fires after we've answered.
@@ -380,37 +455,37 @@ export default async function handler(req, res) {
       { type: 'text', text: dynamicContext },
     ];
 
-    let data = await callClaude(system, trimmed, signal);
+    const onText = (chunk) => send({ type: 'text', text: chunk });
+    const first = await runClaudeTurn(system, trimmed, signal, undefined, onText);
     let cardMarkets = null;
     let marketQuery = null;
+    let reply = first.text;
 
     // At most one search round: the follow-up call runs with tool_choice none,
     // so a chat turn is never more than two model calls.
-    const toolUse = data.stop_reason === 'tool_use' && (data.content || []).find(b => b.type === 'tool_use' && b.name === MARKET_SEARCH_TOOL.name);
-    if (toolUse) {
-      marketQuery = String(toolUse.input?.query || '').trim().slice(0, 100);
-      let toolResult;
+    if (first.stopReason === 'tool_use' && first.toolUse?.name === MARKET_SEARCH_TOOL.name) {
+      marketQuery = String(first.toolUse.input?.query || '').trim().slice(0, 100);
+      send({ type: 'status', text: 'Searching prediction markets…' });
+      let toolResultContent;
       try {
         const found = await searchMarketsForChat(marketQuery);
         cardMarkets = found.slice(0, MAX_CARD_MARKETS);
-        toolResult = { type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify({ query: marketQuery, markets: found }) };
+        toolResultContent = JSON.stringify({ query: marketQuery, markets: found });
       } catch (err) {
         console.error('[chat] market search failed:', err.message);
-        toolResult = { type: 'tool_result', tool_use_id: toolUse.id, content: 'Market search is temporarily unavailable.', is_error: true };
+        toolResultContent = 'Market search is temporarily unavailable.';
       }
-      data = await callClaude(system, [
+      const assistantContent = [];
+      if (first.text) assistantContent.push({ type: 'text', text: first.text });
+      assistantContent.push({ type: 'tool_use', id: first.toolUse.id, name: first.toolUse.name, input: first.toolUse.input });
+
+      const second = await runClaudeTurn(system, [
         ...trimmed,
-        { role: 'assistant', content: data.content },
-        { role: 'user', content: [toolResult] },
-      ], signal, { type: 'none' });
+        { role: 'assistant', content: assistantContent },
+        { role: 'user', content: [{ type: 'tool_result', tool_use_id: first.toolUse.id, content: toolResultContent }] },
+      ], signal, { type: 'none' }, onText);
+      reply += second.text;
     }
-
-    if (data.error) {
-      console.error('[chat] Anthropic error:', data.error.message);
-      return res.status(500).json({ error: 'Chat service unavailable' });
-    }
-
-    const reply = textOf(data);
 
     // Persist this turn for the account-synced chat history feature (see
     // api/chat-history.js). Best-effort: a save failure shouldn't block the
@@ -426,9 +501,11 @@ export default async function handler(req, res) {
       ]).then(({ error }) => { if (error) console.error('[chat] history save failed:', error); });
     }
 
-    return res.status(200).json(cardMarkets?.length ? { reply, markets: cardMarkets, marketQuery } : { reply });
+    send({ type: 'done', markets: cardMarkets?.length ? cardMarkets : null, marketQuery });
+    res.end();
   } catch (err) {
     console.error('[chat]', err.message);
-    return res.status(500).json({ error: 'Chat request failed' });
+    send({ type: 'error', error: 'Chat request failed' });
+    res.end();
   }
 }
