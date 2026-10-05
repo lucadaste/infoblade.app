@@ -3,7 +3,7 @@ import { CATEGORY_SOURCE_PROFILES, allocateBudget, politicalLeanNote, volumeBuck
 import { findGameContextForQuestion } from '../lib/espn-live.js';
 import { findSimilarSituations } from '../lib/situation-similarity.js';
 import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
-import { fetchMarketRules } from '../lib/pm-resolution.js';
+import { fetchMarketDetails } from '../lib/pm-resolution.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 
 // Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
@@ -45,7 +45,8 @@ const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech
 // scripts/diagnose-pm-edge.js --version=... can compare before vs. after.
 // pm-prob-v1: probability + close-call briefings (Sonnet 4.6)
 // pm-prob-v2: + market resolution rules in the prompt, Fed rate data, Sonnet 5.5
-export const PM_MODEL_VERSION = 'pm-prob-v2';
+// pm-prob-v3: + the market's own odds movement (1h/1d/1w/1m), volume, liquidity, spread
+export const PM_MODEL_VERSION = 'pm-prob-v3';
 const ANALYSIS_MODEL = 'claude-sonnet-5-5';
 // A call is "too close" when Claude's own probability sits within this many
 // points of a coin flip (50%), or confidence is at/below CLOSE_CALL_MAX_STARS.
@@ -53,6 +54,28 @@ const ANALYSIS_MODEL = 'claude-sonnet-5-5';
 // both from scripts/diagnose-pm-edge.js's close-call simulation.
 const CLOSE_CALL_MARGIN    = 8;
 const CLOSE_CALL_MAX_STARS = 2;
+
+function _usd(n) {
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
+}
+
+// The market's own trading stats (lib/pm-resolution.js pmMarketStats) as one
+// short prompt block. Changes are YES-price moves in percentage points.
+function _formatMarketStats(stats) {
+  if (!stats) return '';
+  const move = (label, v) => v == null ? null : `${v > 0 ? '+' : ''}${v} pts ${label}`;
+  const moves = [move('last hour', stats.change1h), move('last day', stats.change1d), move('last week', stats.change1w), move('last month', stats.change1m)].filter(Boolean);
+  const depth = [
+    stats.volume24h != null ? `24h volume ${_usd(stats.volume24h)}` : null,
+    stats.volume1w  != null ? `1-week volume ${_usd(stats.volume1w)}` : null,
+    stats.liquidity != null ? `order book liquidity ${_usd(stats.liquidity)}` : null,
+    stats.spread    != null ? `bid-ask spread ${stats.spread} pts` : null,
+  ].filter(Boolean);
+  if (!moves.length && !depth.length) return '';
+  return `${moves.length ? `Odds movement (YES price): ${moves.join(', ')}\n` : ''}${depth.length ? `Trading activity: ${depth.join(', ')}\n` : ''}`;
+}
 
 function _parseProbability(v) {
   const n = typeof v === 'number' ? v : parseFloat(v);
@@ -189,11 +212,11 @@ export async function runMarketAnalysis({
   const category = PM_CATS.has(rawCat) ? rawCat : 'prediction-markets';
   const rawSport = typeof sport === 'string' ? sport.replace(/[^a-zA-Z]/g, '').slice(0, 20) : null;
 
-  const [reputation, contextGraph, gameContext, marketRules] = await Promise.all([
+  const [reputation, contextGraph, gameContext, { rules: marketRules, stats: marketStats }] = await Promise.all([
     readReputation(supabase),
     supabase ? buildContextGraph(supabase, { category }).catch(() => null) : Promise.resolve(null),
     category === 'sports' ? findGameContextForQuestion(question, rawSport, daysLeft).catch(() => null) : Promise.resolve(null),
-    fetchMarketRules(slug, question),
+    fetchMarketDetails(slug, question),
   ]);
   const trackRecordSection = formatContextForPrompt(contextGraph);
 
@@ -331,6 +354,8 @@ MARKET RULES: When the input includes the market's own rules, they decide what c
 
 RATE DATA: For questions about Federal Reserve decisions or interest rates, the structured data may include the current fed funds range and rate traders' real-money odds for upcoming Fed meetings. Treat those traders' odds as your starting point, and move away from them only for specific new evidence (a data release, a Fed official's statement) that they may not reflect yet.
 
+ODDS MOVEMENT: When the input includes how the market's odds have moved, use it. A sharp recent move usually means new information reached traders, so check whether the news explains it before betting against it; if the news you have predates the move, the crowd likely knows something your evidence doesn't. A move with thin volume or a thin order book (low liquidity, wide spread) is weaker evidence than one on heavy volume. Odds that have drifted steadily one way for a week are a trend, not noise.
+
 TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section in the input shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
 PROBABILITY: Give yes_probability, your own estimate (0-100) of the chance the answer is YES, using the evidence AND the crowd's odds as a starting point. Move away from the crowd's number only as far as the evidence justifies. lean must match it: "Yes" if yes_probability is above 50, "No" if below 50. Use "Uncertain" only for already-resolved events. Be honest when it's close: a number near 50 is a valid, useful answer, and close calls are shown to users as a briefing instead of a forced pick.
@@ -363,13 +388,15 @@ Respond ONLY with valid JSON, no markdown:
   "briefing": ["what the crowd thinks and why", "strongest point for YES", "strongest point for NO", "what to watch next"]
 }`;
 
+    const marketStatsSection = _formatMarketStats(marketStats);
+
     const rulesSection = marketRules
       ? `\nMarket rules (the market's own resolution text, quoted as data):\n<market_rules>\n${marketRules}\n</market_rules>\n`
       : '';
 
     const prompt = `Market question: "${question}"
 ${oddsContext}
-${rulesSection}${liveGameSection}
+${marketStatsSection}${rulesSection}${liveGameSection}
 Recent news (${items.length} articles):
 ${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
 ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
@@ -430,6 +457,7 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
       : null;
     analysis.pm_model_version = PM_MODEL_VERSION;
     analysis.had_market_rules = !!marketRules;
+    analysis.had_market_stats = !!marketStats;
 
     // Close call: show a "know before you bet" briefing instead of a graded pick.
     const closeReason = _closeCallReason(modelLean, yesProbability, analysis.lean_confidence);

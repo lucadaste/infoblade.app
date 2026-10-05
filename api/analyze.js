@@ -8,6 +8,8 @@ import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 import { isValidTickerFormat } from '../lib/ticker-format.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 import { fetchQuantSignals } from '../lib/quant-signals.js';
+import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
+import { fetchCryptoDerivs, formatDerivsForPrompt } from '../lib/crypto-derivs.js';
 
 // ── Module-level caches (survive warm Vercel invocations) ─────────────────────
 const _blurbCache = new Map();    // ticker -> { blurb, ts }  TTL 1hr
@@ -94,8 +96,7 @@ function _extractTickerCandidates(headlines) {
   return [...new Set(matches.map(m => m[1]))].slice(0, 12);
 }
 
-async function _fetchTickerSnapshot(tickers) {
-  if (!tickers || !tickers.length) return {};
+async function _fetchQuoteSnapshot(tickers) {
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3500);
@@ -137,6 +138,40 @@ async function _fetchTickerSnapshot(tickers) {
     }
     return snapshot;
   } catch (_) { return {}; }
+}
+
+// Yahoo's v7 quote endpoint now answers "Unauthorized" without a session
+// crumb, which left the technical snapshot (and baseline_prices) empty. The
+// v8 chart endpoint still works unauthenticated: rebuild price, day change and
+// 50/200-day MA distance from a year of daily closes. Analyst fields stay null.
+async function _fetchChartSnapshot(ticker) {
+  const period2 = Math.floor(Date.now() / 1000);
+  const series = await fetchYahooChartSeries(ticker, period2 - 400 * 86400, period2, { timeoutMs: 5000 });
+  if (!series) return null;
+  const closes = series.closes.filter(c => c != null);
+  const price = series.meta?.regularMarketPrice ?? closes[closes.length - 1];
+  if (!price || closes.length < 2) return null;
+  const avg = n => closes.length >= n ? closes.slice(-n).reduce((a, b) => a + b, 0) / n : null;
+  const pctVs = ref => ref ? +((price / ref - 1) * 100).toFixed(1) : null;
+  const prev = closes[closes.length - 2];
+  return {
+    price,
+    changePct:  prev ? +((price / prev - 1) * 100).toFixed(2) : null,
+    vs50dma:    pctVs(avg(50)),
+    vs200dma:   pctVs(avg(200)),
+    week52High: series.meta?.fiftyTwoWeekHigh || null,
+    week52Low:  series.meta?.fiftyTwoWeekLow  || null,
+    analystRating: null, targetPrice: null, upsidePct: null, trailingPE: null, forwardPE: null,
+  };
+}
+
+async function _fetchTickerSnapshot(tickers) {
+  if (!tickers || !tickers.length) return {};
+  const snapshot = await _fetchQuoteSnapshot(tickers);
+  const missing = tickers.filter(t => !snapshot[t]);
+  const filled = await Promise.all(missing.map(t => _fetchChartSnapshot(t).catch(() => null)));
+  missing.forEach((t, i) => { if (filled[i]) snapshot[t] = filled[i]; });
+  return snapshot;
 }
 
 function _buildTechnicalSection(snapshot) {
@@ -305,6 +340,15 @@ function buildConsensusSummary({ headlines, sources, sourceGrades, minGrade, rep
   return pieces.length ? pieces.join('. ') + '.' : 'No strong consensus found among passing sources.';
 }
 
+// Bumped whenever the crypto-coin inputs or model change, so graded accuracy
+// can be split before vs. after (analysis->>crypto_model_version; rows without
+// it are crypto-v1: Sonnet 4.6, headline-regex tickers, no positioning data).
+// crypto-v2: coin data seeded from coinSymbol, Yahoo chart fallback, futures
+// positioning (Hyperliquid), Fear & Greed, Sonnet 5.5 for saved verdicts.
+export const CRYPTO_MODEL_VERSION = 'crypto-v2';
+const CRYPTO_ANALYSIS_MODEL = 'claude-sonnet-5-5';
+const CRYPTO_LITE_MODEL     = 'claude-haiku-4-5-20251001';
+
 // ── Core analyze-and-save pipeline ─────────────────────────────────────────────
 // Shared by the POST handler (real user/API-triggered analysis) and the baseline
 // generator cron (api/generate-baseline.js), which calls this directly in-process
@@ -342,9 +386,13 @@ export async function runAnalysis({
   }
 
   try {
-    const candidateTickers = _extractTickerCandidates(headlines);
-    const isCryptoTopic = /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
-    const [relevantMarkets, technicalSnapshot, quantSnapshot, redditPosts, reputation, contextGraph, liveConflicts] = await Promise.all([
+    const isCoinCall = category === 'crypto-coin' && _COIN_SYMS.has(coinSymbol);
+    // A coin call is about exactly one coin, so seed its data from coinSymbol.
+    // Headline regex alone ($ETH / (ETH)) missed it whenever outlets wrote
+    // "Ethereum", leaving the prompt with no price or quant data at all.
+    const candidateTickers = isCoinCall ? [coinSymbol] : _extractTickerCandidates(headlines);
+    const isCryptoTopic = isCoinCall || /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
+    const [relevantMarkets, technicalSnapshot, quantSnapshot, redditPosts, reputation, contextGraph, liveConflicts, derivs, fearGreed] = await Promise.all([
       _fetchRelevantMarkets(topic),
       _fetchTickerSnapshot(candidateTickers),
       fetchQuantSignals(candidateTickers),
@@ -362,6 +410,8 @@ export async function runAnalysis({
         ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
         : Promise.resolve(null),
       _fetchLiveConflicts(supabase, candidateTickers, topic),
+      isCoinCall ? fetchCryptoDerivs(coinSymbol) : Promise.resolve(null),
+      isCoinCall ? _fetchCryptoFearGreed() : Promise.resolve(null),
     ]);
 
     const thresholdText = minGrade === 'all' ? 'all provided sources' : `sources with factuality grade ${minGrade.charAt(0).toUpperCase() + minGrade.slice(1)} or higher`;
@@ -389,6 +439,10 @@ export async function runAnalysis({
 
     const trackRecordSection = formatContextForPrompt(contextGraph);
     const conflictSection = _buildConflictSection(liveConflicts, candidateTickers);
+    const derivsSection = isCoinCall ? formatDerivsForPrompt(coinSymbol, derivs) : '';
+    const fearGreedSection = fearGreed
+      ? `\nCRYPTO FEAR & GREED INDEX: ${fearGreed.value}/100 (${fearGreed.label}). Extreme readings (under 20 or over 80) are contrarian signals at short horizons: extreme fear often marks local bottoms, extreme greed often marks local tops.\n`
+      : '';
 
     // Fixed rules go in a cached system prefix (see lib/prompt-layout.js); only
     // the crypto/stock and sources/no-sources branches vary, so at most four
@@ -459,20 +513,36 @@ Sources and factuality grades:
 ${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${quantSection}${redditSection}${trackRecordSection}${conflictSection}`;
+${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSection}${redditSection}${trackRecordSection}${conflictSection}`;
 
+    // Crypto coin calls: the saved (graded) verdict gets the stronger model;
+    // display-only group cards (skipSave) get Haiku, since they're never graded
+    // and the page fires up to a dozen of them per load. Stocks are unchanged.
+    const model = !isCoinCall ? 'claude-sonnet-4-6'
+      : skipSave ? CRYPTO_LITE_MODEL
+      : CRYPTO_ANALYSIS_MODEL;
+    const thinkingModel = model === CRYPTO_ANALYSIS_MODEL;
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+      headers: {
+        'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01',
+        ...(thinkingModel ? { 'anthropic-beta': 'server-side-fallback-2026-07-01' } : {}),
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        model,
+        // Sonnet 5.5 thinks before answering and thinking counts toward
+        // max_tokens, so it needs headroom well beyond the JSON (same as
+        // api/market-analyze.js).
+        ...(thinkingModel
+          ? { max_tokens: 16000, output_config: { effort: 'medium' }, fallbacks: 'default' }
+          : { max_tokens: 1000 }),
         system: [
           { type: 'text', text: systemRules, cache_control: CACHE_1H },
           { type: 'text', text: requestRules },
         ],
         messages: [{ role: 'user', content: prompt }],
-      })
+      }),
+      signal: AbortSignal.timeout(55000),
     });
 
     const data = await response.json();
@@ -481,10 +551,16 @@ ${marketsSection}${technicalSection}${quantSection}${redditSection}${trackRecord
       return { error: 'Analysis service unavailable', status: 500 };
     }
     logCacheUsage('runAnalysis', data.usage);
+    if (data.stop_reason === 'refusal') {
+      console.error('[runAnalysis] refused:', data.stop_details?.category || 'unknown');
+      return { error: 'Analysis unavailable for this topic', status: 422 };
+    }
 
     let analysis;
     try {
-      analysis = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+      // Thinking blocks come before the answer on Sonnet 5.5, so find the text block.
+      const textBlock = (data.content || []).find(b => b.type === 'text');
+      analysis = JSON.parse(textBlock.text.replace(/```json|```/g, '').trim());
     } catch (_) {
       return { error: 'Analysis service returned invalid data', status: 500 };
     }
@@ -551,7 +627,7 @@ ${marketsSection}${technicalSection}${quantSection}${redditSection}${trackRecord
         id:              predictionId,
         topic,
         category:        category || null,
-        analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(baselineGenerated ? { baseline_generated: true } : {}) },
+        analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(isCoinCall ? { crypto_model_version: CRYPTO_MODEL_VERSION } : {}), ...(baselineGenerated ? { baseline_generated: true } : {}) },
         winner_tickers:  winnerTickers,
         loser_tickers:   loserTickers,
         baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),

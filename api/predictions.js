@@ -139,10 +139,22 @@ async function _pmEdgeStats(validated, supabase) {
   const ours = graded.filter(p => p.correct).length;
 
   let crowdN = 0, crowdCorrect = 0;
+  // Brier score (mean squared error of the YES probability vs. the 0/1
+  // outcome; 0 = perfect, 0.25 = always saying 50%). Scored on the same rows
+  // for both sides, so it only counts calls that stored a probability
+  // (pm-prob-v1 onward). Same formula as scripts/diagnose-pm-edge.js.
+  let brierN = 0, modelSq = 0, crowdSq = 0;
   for (const p of graded) {
     const odds = p.market_odds_at_time;
-    if (odds == null || odds === 50) continue;
     const outcome = p.analysis?.resolved_outcome || (p.correct ? p.lean : (p.lean === 'Yes' ? 'No' : 'Yes'));
+    const hit = outcome === 'Yes' ? 1 : 0;
+    const prob = p.analysis?.yes_probability;
+    if (odds != null && typeof prob === 'number') {
+      brierN++;
+      modelSq += (prob / 100 - hit) ** 2;
+      crowdSq += (odds / 100 - hit) ** 2;
+    }
+    if (odds == null || odds === 50) continue;
     crowdN++;
     if ((odds > 50 ? 'Yes' : 'No') === outcome) crowdCorrect++;
   }
@@ -166,6 +178,9 @@ async function _pmEdgeStats(validated, supabase) {
     crowdN,
     crowdAccuracy: crowdN ? Math.round(crowdCorrect / crowdN * 100) : null,
     calls, briefings, callRate,
+    brierN,
+    modelBrier: brierN ? +(modelSq / brierN).toFixed(4) : null,
+    crowdBrier: brierN ? +(crowdSq / brierN).toFixed(4) : null,
   };
 }
 

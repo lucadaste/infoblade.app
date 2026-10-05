@@ -591,7 +591,19 @@
       : `Prediction markets: we're right`;
     const diff = e.accuracy - e.crowdAccuracy;
     const diffColor = diff > 0 ? 'var(--accent)' : diff < 0 ? 'var(--red)' : 'var(--muted)';
-    el.innerHTML = `${lead} <strong style="color:${diffColor}">${e.accuracy}%</strong>, vs. <strong style="color:var(--ink)">${e.crowdAccuracy}%</strong> for the crowd. <span style="font-size:11px">(Crowd = always picking the side the market favored, ${e.crowdN} graded markets.)</span>`;
+    // Brier: how far our probabilities were from what happened, vs. the crowd's
+    // odds on the same markets. Shown as a plain % so it reads without knowing
+    // the metric; the raw scores are in the footnote.
+    let brier = '';
+    if (e.brierN >= 10 && e.modelBrier != null && e.crowdBrier > 0) {
+      const pct = Math.round((1 - e.modelBrier / e.crowdBrier) * 100);
+      const bColor = pct > 0 ? 'var(--accent)' : pct < 0 ? 'var(--red)' : 'var(--muted)';
+      const sentence = pct > 0 ? `Our odds landed <strong style="color:${bColor}">${pct}% closer</strong> to what actually happened than the crowd's.`
+        : pct < 0 ? `Our odds landed <strong style="color:${bColor}">${-pct}% further</strong> from what actually happened than the crowd's.`
+        : `Our odds landed <strong style="color:${bColor}">just as close</strong> to what actually happened as the crowd's.`;
+      brier = ` ${sentence} <span style="font-size:11px">(Brier score ${e.modelBrier.toFixed(3)} vs. ${e.crowdBrier.toFixed(3)} on ${e.brierN} markets; lower is better, 0.25 = coin flip.)</span>`;
+    }
+    el.innerHTML = `${lead} <strong style="color:${diffColor}">${e.accuracy}%</strong>, vs. <strong style="color:var(--ink)">${e.crowdAccuracy}%</strong> for the crowd. <span style="font-size:11px">(Crowd = always picking the side the market favored, ${e.crowdN} graded markets.)</span>${brier}`;
     el.style.display = '';
   }
 
