@@ -155,21 +155,21 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      width: 2em;
-      height: 2em;
+      width: 2.3em;
+      height: 2.3em;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
-      /* Avatar (2em) is taller than one line of message text (line-height
+      /* Avatar (2.3em) is taller than one line of message text (line-height
          1.6 * 14.5px font-size), so centering it on the row's own height
          would need align-items: center — but that drags it to the middle
          of multi-paragraph replies instead of pinning to the first line.
          Staying flex-start and centering the avatar against just the
          first line via margin-top keeps both: (lineHeight - avatarHeight) / 2. */
       flex-shrink: 0;
-      margin-top: -0.2em;
+      margin-top: -0.35em;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
