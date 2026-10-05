@@ -74,6 +74,8 @@
     .score-hero-range { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
 
     .chart-svg-wrap { position: relative; }
+    .chart-svg-wrap:focus { outline: none; }
+    .chart-svg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
     .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; }
     .chart-crosshair { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--divider); pointer-events: none; opacity: 0; }
     .chart-dot { position: absolute; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 50%; border: 2px solid var(--card); pointer-events: none; opacity: 0; }
@@ -447,8 +449,12 @@
     const areaPath = `${linePath} L ${lastPt.x.toFixed(2)},${H} L ${points[0].x.toFixed(2)},${H} Z`;
     const gradId = 'cumGrad';
 
+    const lastCum = cum[cum.length - 1];
     area.innerHTML = `
-      <div class="chart-svg-wrap" id="cum-chart-wrap">
+      <div class="chart-svg-wrap" id="cum-chart-wrap" tabindex="0" role="slider" aria-orientation="horizontal"
+           aria-label="Cumulative score by day" aria-valuemin="0" aria-valuemax="${points.length - 1}"
+           aria-valuenow="${points.length - 1}"
+           aria-valuetext="${esc(_fmtChartDate(lastCum.date))}: ${lastCum.cumulative >= 0 ? '+' : ''}${lastCum.cumulative} points">
         ${hero}
         <svg id="cum-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
           <defs>
@@ -469,7 +475,9 @@
       </div>
     `;
 
-    // Hover: crosshair + dot + tooltip, snapped to the nearest day's point.
+    // Crosshair + dot + tooltip, snapped to the nearest day's point — shown
+    // on hover (pointermove) AND on keyboard focus (arrow keys), so the
+    // per-day detail isn't reachable by a mouse alone.
     const wrap      = document.getElementById('cum-chart-wrap');
     const svgEl      = document.getElementById('cum-svg');
     const crosshair  = document.getElementById('cum-crosshair');
@@ -478,12 +486,10 @@
     const ttDate     = tooltip.querySelector('.tt-date');
     const ttVal      = tooltip.querySelector('.tt-val');
 
-    function move(clientX) {
+    function showAt(idx) {
+      idx = Math.max(0, Math.min(points.length - 1, idx));
+      const pt = points[idx], c = cum[idx];
       const rect = svgEl.getBoundingClientRect();
-      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const idx  = Math.round(frac * (points.length - 1));
-      const pt   = points[idx];
-      const c    = cum[idx];
       const px   = (pt.x / W) * rect.width;
       const py   = ((pt.y / H) * rect.height) + (rect.top - wrap.getBoundingClientRect().top);
       crosshair.style.left = px + 'px';
@@ -498,14 +504,41 @@
       ttDate.textContent = _fmtChartDate(c.date);
       ttVal.textContent  = (c.cumulative >= 0 ? '+' : '') + c.cumulative + ' pts';
       ttVal.style.color  = c.cumulative >= 0 ? 'var(--accent)' : 'var(--red)';
+      // Screen readers announce aria-valuetext changes on a focused slider
+      // automatically — no separate live region needed.
+      wrap.setAttribute('aria-valuenow', String(idx));
+      wrap.setAttribute('aria-valuetext', `${_fmtChartDate(c.date)}: ${c.cumulative >= 0 ? '+' : ''}${c.cumulative} points`);
+      return idx;
     }
     function hide() {
       crosshair.style.opacity = '0';
       dot.style.opacity = '0';
       tooltip.style.opacity = '0';
     }
-    wrap.addEventListener('pointermove', e => move(e.clientX));
+    function indexFromClientX(clientX) {
+      const rect = svgEl.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      return Math.round(frac * (points.length - 1));
+    }
+    wrap.addEventListener('pointermove', e => showAt(indexFromClientX(e.clientX)));
     wrap.addEventListener('pointerleave', hide);
+
+    // Keyboard: Left/Right steps one day at a time, Home/End jump to the
+    // ends. Starts at the most recent point (same one the static circle
+    // marker highlights) so a first keypress lands somewhere meaningful.
+    let focusedIdx = points.length - 1;
+    wrap.addEventListener('focus', () => showAt(focusedIdx));
+    wrap.addEventListener('blur', hide);
+    wrap.addEventListener('keydown', e => {
+      let next = focusedIdx;
+      if (e.key === 'ArrowLeft')       next = focusedIdx - 1;
+      else if (e.key === 'ArrowRight') next = focusedIdx + 1;
+      else if (e.key === 'Home')       next = 0;
+      else if (e.key === 'End')        next = points.length - 1;
+      else return;
+      e.preventDefault();
+      focusedIdx = showAt(next);
+    });
   }
 
   function renderPredCard(p) {
