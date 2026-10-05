@@ -155,19 +155,21 @@
     }
     .ii-row .ii-m-ai { max-width: none; min-width: 0; }
     .ii-avatar {
-      /* Sized to the message text's line-height (1.6 * 14.5px font-size)
-         so a flex-start row top-aligns the icon flush with the first
-         line instead of needing a hand-tuned margin-top fudge factor —
-         any size bigger than one line's height can't be made to look
-         "lined up" with it no matter the offset. */
-      width: 1.6em;
-      height: 1.6em;
+      width: 2em;
+      height: 2em;
       fill: var(--accent);
       transform-origin: center;
       display: block;
     }
     .ii-row-avatar {
+      /* Avatar (2em) is taller than one line of message text (line-height
+         1.6 * 14.5px font-size), so centering it on the row's own height
+         would need align-items: center — but that drags it to the middle
+         of multi-paragraph replies instead of pinning to the first line.
+         Staying flex-start and centering the avatar against just the
+         first line via margin-top keeps both: (lineHeight - avatarHeight) / 2. */
       flex-shrink: 0;
+      margin-top: -0.2em;
       pointer-events: none;
     }
     .ii-avatar-busy { animation: ii-avatar-glow 1.8s ease-in-out infinite; }
