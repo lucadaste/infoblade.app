@@ -165,7 +165,7 @@
 
     /* Stock mode — coin-card grid matching crypto page exactly */
     .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; }
+    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; cursor: pointer; }
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-top { display: flex; align-items: center; gap: 10px; }
@@ -812,6 +812,7 @@
           card.className = 'coin-card' + (isSelected ? ' selected' : '');
           card.style.animationDelay = `${i * 40}ms`;
           card._tickerData = td || null;
+          card.onclick = () => goToStock(sym, name);
           card.innerHTML = `
             <div class="coin-top">
               <div class="coin-logo-placeholder">${esc((sym.startsWith('^')?sym.slice(1):sym).slice(0,3))}</div>
@@ -822,10 +823,10 @@
             </div>
             <div class="coin-price">${esc(priceStr)}</div>
             ${changeHtml}
-            <button class="btn-coin" onclick="selectStockCard('${esc(sym)}','${esc(name)}',this)">
+            <button class="btn-coin" onclick="event.stopPropagation(); selectStockCard('${esc(sym)}','${esc(name)}',this)">
               ${isSelected ? '★ Analyzing' : 'Analyze →'}
             </button>
-            <button class="btn-coin-watch${isWatched ? ' watching' : ''}" onclick="toggleStockWatch('${esc(sym)}',this)">
+            <button class="btn-coin-watch${isWatched ? ' watching' : ''}" onclick="event.stopPropagation(); toggleStockWatch('${esc(sym)}',this)">
               ${isWatched ? '★ Watching' : '☆ Watch'}
             </button>`;
           grid.appendChild(card);
@@ -834,6 +835,13 @@
       } catch(err) {
         grid.innerHTML = `<div class="grid-empty"><h3>Failed to load stocks</h3><p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p></div>`;
       }
+    }
+
+    // Clicking a grid card (anywhere but its Analyze/Watch buttons, which
+    // stop propagation) opens the full quote page — price, chart, key
+    // stats. "Analyze →" stays here and opens the in-page news panel below.
+    function goToStock(ticker, name) {
+      window.location.href = `/stock.html?ticker=${encodeURIComponent(ticker)}&name=${encodeURIComponent(name)}`;
     }
 
     async function selectStockCard(ticker, name, btn) {

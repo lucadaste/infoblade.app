@@ -738,13 +738,12 @@
     }).join('');
   }
 
-  // Stocks/ETFs and prediction-market tickers live on the stock-analysis
-  // panel (feed.html); crypto coins have their own page with their own
-  // analysis panel (crypto.html) — route each ticker to whichever already
-  // has a built-out, curated view for it rather than building a third one.
+  // Stocks/ETFs get the full quote page (price, chart, key stats, AI call);
+  // crypto coins route to their own page's existing analysis panel instead —
+  // route each ticker to whichever already has a built-out, curated view.
   function _tickerHref(t) {
-    const base = t.section === 'crypto' ? '/crypto.html' : '/feed.html';
-    return `${base}?ticker=${encodeURIComponent(t.ticker)}`;
+    if (t.section === 'crypto') return `/crypto.html?ticker=${encodeURIComponent(t.ticker)}`;
+    return `/stock.html?ticker=${encodeURIComponent(t.ticker)}`;
   }
 
   function renderTickers(topTickers) {
