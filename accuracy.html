@@ -238,7 +238,7 @@
   <!-- Calibration: does a higher confidence rating actually mean higher realized accuracy? -->
   <div style="margin-bottom:32px">
     <div class="section-title">How Often We're Right, by How Sure the AI Was</div>
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">When the AI says it's more sure, is it actually right more often? If so, these numbers should rise from left to right.</p>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">When the AI says it's more sure, is it actually right more often? If so, these numbers should rise from left to right. Measured per named ticker, not per prediction, so a confident call isn't dragged down by averaging it with weaker tickers bundled into the same prediction.</p>
     <div class="cat-grid" id="calibration-grid">
       <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
     </div>
@@ -701,7 +701,7 @@
             <div class="cat-name">${label}</div>
             <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:0%"></div></div>
             <div class="cat-stat"><span class="cat-pct" style="color:var(--muted)">—</span></div>
-            <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} — insufficient data (need 10+)</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} call${b.n !== 1 ? 's' : ''} — insufficient data (need 10+)</div>
           </div>`;
       }
       const accColor = accuracyColor(b.realizedAccuracy);
@@ -710,7 +710,7 @@
           <div class="cat-name">${label}</div>
           <div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${b.realizedAccuracy}%;background:${accColor}"></div></div>
           <div class="cat-stat"><span class="cat-pct" style="color:${accColor}">${b.realizedAccuracy}%</span></div>
-          <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} prediction${b.n !== 1 ? 's' : ''} graded</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">${b.n} call${b.n !== 1 ? 's' : ''} graded</div>
         </div>`;
     }).join('');
   }

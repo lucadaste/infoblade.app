@@ -934,9 +934,19 @@ async function handleStats(req, res, supabase) {
   const bySection = _sectionStats(validated ?? [], pendingBySection);
 
   // Calibration: does a higher confidence star rating actually correlate
-  // with a higher realized correct-rate? Uses the same canonical `correct`
-  // field as everything else. Buckets under MIN_CALIBRATION_N are flagged
-  // insufficient rather than shown as a misleading point estimate.
+  // with a higher realized hit rate? Deliberately NOT the same per-prediction
+  // `correct` used everywhere else: that field averages every named ticker
+  // in a prediction into one win/loss, so a confident, well-sourced call
+  // bundled with several weaker "sympathy" tickers gets dragged down by
+  // them, and since basket size itself rises with confidence (2026-10 audit
+  // found ~2.3 tickers/prediction at 1-star vs ~6.9 at 4-star), that
+  // dilution lands harder on exactly the buckets this chart is supposed to
+  // show improving — the per-prediction view showed confidence calibration
+  // as flat/inverted even though the per-ticker signal below rises cleanly.
+  // Counting each named ticker's own raw directional hit (or, for a
+  // prediction-market lean with no basket concept, the single call's
+  // correct) removes that confound. Buckets under MIN_CALIBRATION_N are
+  // flagged insufficient rather than shown as a misleading point estimate.
   // Raw 4 and 5 stars are merged into one bucket: the rubric makes 5 so hard
   // to earn (multiple high-grade sources agreeing, or near-universal
   // precedent) that it never accumulates enough volume to stand alone.
@@ -945,17 +955,26 @@ async function handleStats(req, res, supabase) {
   for (const p of validated ?? []) {
     const stars = p.analysis?.confidence_weight ?? _parseConfidenceStars(p.analysis?.confidence);
     const bucket = Math.min(4, Math.max(1, Math.round(stars)));
-    if (!calibrationBuckets[bucket]) calibrationBuckets[bucket] = { n: 0, correct: 0 };
-    calibrationBuckets[bucket].n++;
-    if (p.correct) calibrationBuckets[bucket].correct++;
+    if (!calibrationBuckets[bucket]) calibrationBuckets[bucket] = { n: 0, hits: 0 };
+    const b = calibrationBuckets[bucket];
+    if (p.lean) {
+      b.n++;
+      if (p.correct) b.hits++;
+      continue;
+    }
+    const moves = Object.values(p.analysis?.ticker_moves || {}).filter(m => typeof m.pct === 'number');
+    for (const m of moves) {
+      b.n++;
+      if (m.direction === 'bullish' ? m.pct >= HIT_THRESHOLD_PCT : m.pct <= -HIT_THRESHOLD_PCT) b.hits++;
+    }
   }
   const calibration = [1, 2, 3, 4].map(confidence => {
-    const b = calibrationBuckets[confidence] || { n: 0, correct: 0 };
+    const b = calibrationBuckets[confidence] || { n: 0, hits: 0 };
     const sufficient = b.n >= MIN_CALIBRATION_N;
     return {
       confidence,
       n: b.n,
-      realizedAccuracy: sufficient ? Math.round(b.correct / b.n * 100) : null,
+      realizedAccuracy: sufficient ? Math.round(b.hits / b.n * 100) : null,
       sufficient,
     };
   });
