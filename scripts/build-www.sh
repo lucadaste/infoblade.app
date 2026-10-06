@@ -22,6 +22,7 @@ cp "$ROOT/chat-widget.js"      "$WWW/"
 cp "$ROOT/sentiment-widget.js" "$WWW/"
 cp "$ROOT/auth.js"        "$WWW/"
 cp "$ROOT/track-record.js" "$WWW/"
+cp "$ROOT/swipe-nav.js"   "$WWW/"
 
 # Brand assets (logo, favicons)
 if [ -d "$ROOT/images" ]; then
