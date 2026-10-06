@@ -953,10 +953,13 @@
   // content and the chat without cramping either (see the dock styles
   // above): the panel isn't a popup the user opens and dismisses there —
   // it's a permanent part of the page, no trigger icon or close control.
-  // Stock Markets (feed.html) earns the same treatment, but only once the
-  // user has actually asked the AI something through the page's own search
-  // bar (see iiSetFeedDock below) — unlike home's dashboard, this page is
-  // mostly sector/ticker browsing, so the dock shouldn't claim width before
+  // stock.html and coin.html (single-ticker quote pages) get the same
+  // always-on treatment — their content column is narrow and left-aligned,
+  // so wide viewports otherwise sit mostly empty on the right. Stock
+  // Markets (feed.html) earns the dock too, but only once the user has
+  // actually asked the AI something through the page's own search bar
+  // (see iiSetFeedDock below) — unlike these pages, feed.html is mostly
+  // sector/ticker browsing, so the dock shouldn't claim width before
   // there's a reason to. Every other page keeps the normal icon-triggered
   // popup regardless of width. Live as the viewport is resized across the
   // breakpoint.
@@ -964,7 +967,8 @@
   let feedDockEnabled = false;
   function isEmbedMode() {
     if (!embedMq.matches) return false;
-    return page === 'home.html' || (page === 'feed.html' && feedDockEnabled);
+    if (page === 'home.html' || page === 'stock.html' || page === 'coin.html') return true;
+    return page === 'feed.html' && feedDockEnabled;
   }
 
   // Lets feed.html turn on the permanent dock once a question has been
