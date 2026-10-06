@@ -4,16 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
+  <script>if (/[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <title>infoblade | Crypto Markets</title>
   <meta name="description" content="Live prices and AI news analysis for 32 crypto assets. Fear and Greed index, real-time data, and news-driven signals for Bitcoin, Ethereum, Solana, and more." />
   <script src="/api-base.js"></script>
   <script src="/track-record.js"></script>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-HEEV7Y9WQZ');
+    if (!document.documentElement.classList.contains('is-embedded')) {
+      gtag('js', new Date());
+      gtag('config', 'G-HEEV7Y9WQZ');
+      var _gtagScript = document.createElement('script');
+      _gtagScript.async = true;
+      _gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ';
+      document.head.appendChild(_gtagScript);
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -878,6 +884,6 @@
   <script src="/auth.js"></script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
-  <script src="/swipe-nav.js"></script>
+  <script src="/tab-shell.js"></script>
 </body>
 </html>

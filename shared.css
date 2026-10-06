@@ -19,7 +19,17 @@
 }
 html { max-width: 100%; }
 body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top, 0px); transition: background 0.2s ease, color 0.2s ease; }
-body.swipe-exit { opacity: 0.4; transition: opacity 0.1s ease; }
+
+/* ── Tab shell (swipeable Home/Stocks/Markets/Crypto/Track Record) ─────────── */
+/* An embedded pane is a full copy of one of the 5 pages, loaded in an iframe
+   purely for its content — its own header/footer/bottom-nav would duplicate
+   the shell's, so they're hidden and the page's top padding is reclaimed. */
+html.is-embedded nav:not(.bottom-nav), html.is-embedded .bottom-nav, html.is-embedded footer { display: none !important; }
+html.is-embedded body { padding-top: 0 !important; }
+.tab-scroll { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.tab-scroll::-webkit-scrollbar { display: none; }
+.tab-pane { flex: 0 0 100%; min-width: 100%; max-width: 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+.tab-pane iframe.tab-iframe { display: block; width: 100%; border: 0; }
 
 /* ── Navigation ───────────────────────────────────────────────────────────── */
 nav:not(.bottom-nav) { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 100; }
@@ -57,6 +67,13 @@ nav:not(.bottom-nav):has(.nav-links.open, .ib-account-dropdown.open, #nav-menu.o
 .nav-chat-btn.active::after { background: #181818; }
 .nav-chat-btn.active { color: #00e676; }
 @keyframes chat-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+/* Quick-access watchlist shortcut, always visible in the header (the
+   burger-menu link alone was easy to miss). */
+.nav-watch-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ink); text-decoration: none; flex-shrink: 0; transition: background 0.15s ease, color 0.15s ease; }
+.nav-watch-btn svg { width: 19px; height: 19px; }
+.nav-watch-btn:hover { background: var(--hover-tint); color: var(--accent); }
+.nav-watch-btn.active { color: var(--accent); }
 
 /* ── Auth Badge ───────────────────────────────────────────────────────────── */
 #auth-badge { display: none; align-items: center; gap: 8px; }

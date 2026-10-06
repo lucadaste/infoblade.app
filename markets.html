@@ -4,15 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
+  <script>if (/[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <title>infoblade | Prediction Markets</title>
   <meta name="description" content="AI analysis meets Polymarket. See whether crowd odds on live prediction markets align or contradict what the news is actually saying." />
   <script src="/api-base.js"></script>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-HEEV7Y9WQZ');
+    if (!document.documentElement.classList.contains('is-embedded')) {
+      gtag('js', new Date());
+      gtag('config', 'G-HEEV7Y9WQZ');
+      var _gtagScript = document.createElement('script');
+      _gtagScript.async = true;
+      _gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ';
+      document.head.appendChild(_gtagScript);
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -193,6 +199,7 @@
     <a class="nav-wordmark" href="/">info<span>blade</span></a>
     <div class="nav-right">
       <div class="nav-buttons">
+        <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
         <div id="auth-badge"></div>
       </div>
       <div class="nav-menu-wrap">
@@ -848,6 +855,6 @@
   </script>
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
-  <script src="/swipe-nav.js"></script>
+  <script src="/tab-shell.js"></script>
 </body>
 </html>

@@ -1,4 +1,5 @@
 (function () {
+  if (document.documentElement.classList.contains('is-embedded')) return;
   const BANNER_ID = 'ii-offline-banner';
 
   function getBanner() { return document.getElementById(BANNER_ID); }

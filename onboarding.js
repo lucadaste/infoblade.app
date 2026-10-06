@@ -1,4 +1,5 @@
 (function () {
+  if (document.documentElement.classList.contains('is-embedded')) return;
   const STORAGE_KEY = 'ii_onboarded_v1';
   if (localStorage.getItem(STORAGE_KEY)) return;
   // A never-onboarded visitor landing straight on the sign-in modal (e.g. the
