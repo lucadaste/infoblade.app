@@ -859,12 +859,34 @@
     "Something caught your eye? Let's break it down.",
   ];
 
+  // auth.js resolves window._auth asynchronously (fetch config, load Clerk,
+  // clerk.load()) — home.html's dock calls playIntro() the instant the page
+  // loads (see applyResponsiveMode() below), which otherwise reliably beats
+  // that, making every returning user see the full first-time intro forever.
+  // window._onAuthReady is exposed synchronously for exactly this race (see
+  // auth.js's own comment on it; same pattern as index.html's _waitForAuth).
+  function waitForAuth(maxMs) {
+    maxMs = maxMs || 4000;
+    return new Promise(resolve => {
+      let done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; resolve(window._auth || null); } }, maxMs);
+      if (!window._onAuthReady) { clearTimeout(timer); resolve(window._auth || null); return; }
+      window._onAuthReady(() => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(window._auth);
+      });
+    });
+  }
+
   // Signed-in users get a persistent, account-wide flag from api/chat-intro.js
   // so the full intro retires for good the first time they ever send a
   // message, regardless of device. Signed-out (or offline/error) always
   // falls back to the full intro.
   async function fetchHasChatted() {
-    const token = await window._auth?.getToken();
+    const auth = await waitForAuth();
+    const token = await auth?.getToken();
     if (!token) return false;
     try {
       const res = await fetch(window.API_BASE + '/api/chat-intro', {
