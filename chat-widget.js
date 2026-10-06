@@ -93,6 +93,12 @@
       transform: scale(0.5);
       pointer-events: none;
     }
+    /* feed.html's ask bar already covers "start a conversation" — the
+       bubble only earns its keep once there's one to return to. Unlike
+       .ii-hidden above (which fades out), this is a flat display:none so
+       it doesn't reserve layout space at any viewport width, not just the
+       docked one. */
+    #ii-chat-btn.ii-bubble-hidden { display: none; }
 
     #ii-chat-btn .ii-blade-icon {
       position: absolute;
@@ -586,7 +592,6 @@
       #ii-ai-panel.ii-embedded .ii-header { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-msgs { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; padding-left: 0; padding-right: 0; }
-      #ii-chat-btn.ii-embed-hidden { display: none; }
     }
   `;
   document.head.appendChild(style);
@@ -1024,11 +1029,22 @@
     else send(text);
   };
 
+  // feed.html already has its own entry point into the AI Informant — the
+  // unified ask bar up top — so the floating bubble there would just be a
+  // second button doing the same job. Keep it out of the way until there's
+  // an actual reason for it: an in-progress conversation (asked via the bar,
+  // or restored from a prior page in this tab) to jump back into. Every
+  // other page has no such bar, so the bubble is the only entry point and
+  // always shows.
+  function feedBubbleIdle() {
+    return page === 'feed.html' && !feedDockEnabled && history.length === 0;
+  }
+
   function applyResponsiveMode() {
     const embedded = isEmbedMode();
     const wasEmbedded = panel.classList.contains('ii-embedded');
     panel.classList.toggle('ii-embedded', embedded);
-    floatBtn.classList.toggle('ii-embed-hidden', embedded);
+    floatBtn.classList.toggle('ii-bubble-hidden', embedded || feedBubbleIdle());
     document.documentElement.classList.toggle('ii-chat-embedded', embedded);
     if (embedded && !open) {
       setOpen(true);
