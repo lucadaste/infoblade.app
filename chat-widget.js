@@ -649,6 +649,7 @@
   let history = [];
   let busy = false;
   let introStarted = false;
+  let introPromise = null;  // lets iiAsk below wait out the first-open intro before sending
   let startersEl = null;
   let sessionId = null;     // set on first send of a conversation; carries that
                              // conversation's turns in chat_messages (see api/chat.js)
@@ -921,19 +922,51 @@
     }
     if (open && !introStarted) {
       introStarted = true;
-      playIntro();
+      introPromise = playIntro();
     }
     saveChatState();
   }
 
-  // Home page only, once there's enough width to hold both the page content
-  // and the chat without cramping either (see the dock styles above): the
-  // panel isn't a popup the user opens and dismisses there — it's a
-  // permanent part of the page, no trigger icon or close control. Every
-  // other page keeps the normal icon-triggered popup regardless of width.
-  // Live as the viewport is resized across the breakpoint.
+  // Home page, always, once there's enough width to hold both the page
+  // content and the chat without cramping either (see the dock styles
+  // above): the panel isn't a popup the user opens and dismisses there —
+  // it's a permanent part of the page, no trigger icon or close control.
+  // Stock Markets (feed.html) earns the same treatment, but only once the
+  // user has actually asked the AI something through the page's own search
+  // bar (see iiSetFeedDock below) — unlike home's dashboard, this page is
+  // mostly sector/ticker browsing, so the dock shouldn't claim width before
+  // there's a reason to. Every other page keeps the normal icon-triggered
+  // popup regardless of width. Live as the viewport is resized across the
+  // breakpoint.
   const embedMq = window.matchMedia('(min-width: 1180px)');
-  function isEmbedMode() { return page === 'home.html' && embedMq.matches; }
+  let feedDockEnabled = false;
+  function isEmbedMode() {
+    if (!embedMq.matches) return false;
+    return page === 'home.html' || (page === 'feed.html' && feedDockEnabled);
+  }
+
+  // Lets feed.html turn on the permanent dock once a question has been
+  // asked through its own search bar, instead of this script guessing from
+  // the URL alone. Re-runs layout immediately so the page reflows without
+  // waiting for a resize event.
+  window.iiSetFeedDock = function (v) {
+    feedDockEnabled = !!v;
+    applyResponsiveMode();
+  };
+
+  // Opens the panel (embedded dock or popup, whichever applies) and sends
+  // text as if the user had typed and submitted it themselves — the hook
+  // feed.html's unified search bar uses to hand a question straight to the
+  // AI Informant. If this is the very first time the panel's ever been
+  // opened, setOpen() just kicked off the animated, input-disabling intro —
+  // sending immediately would race it and interleave DOM writes, so wait
+  // for it to finish typing first.
+  window.iiAsk = function (text) {
+    const firstOpen = !open && !introStarted;
+    if (!open) setOpen(true);
+    if (firstOpen && introPromise) introPromise.then(() => send(text));
+    else send(text);
+  };
 
   function applyResponsiveMode() {
     const embedded = isEmbedMode();

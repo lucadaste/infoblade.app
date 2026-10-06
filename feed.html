@@ -31,6 +31,25 @@
     .hero-stat-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
+    /* ── Unified ask bar — ticker lookups and free-form questions in one box ── */
+    .ask-wrap { padding: 0 48px 28px; }
+    .ask-box { position: relative; display: flex; align-items: center; gap: 10px; max-width: 760px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 18px; transition: border-color 0.15s; }
+    .ask-box:focus-within { border-color: var(--accent); }
+    .ask-icon { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
+    .ask-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 12px 0; }
+    .ask-input::placeholder { color: var(--muted); }
+    .ask-send { flex-shrink: 0; background: var(--accent); color: #111111; border: none; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.15s; }
+    .ask-send:hover { opacity: 0.85; }
+    .ask-send svg { width: 16px; height: 16px; }
+    .ask-hint { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+    /* Once a question has gone to the AI Informant, chat-widget.js docks the
+       panel to the right the same way it does on home.html (see
+       window.iiSetFeedDock there) — shrink the content column by exactly
+       its width so the two never overlap. */
+    @media (min-width: 1180px) {
+      html.ii-chat-embedded #page-body { max-width: calc(100vw - var(--ii-chat-w, 520px) - 96px); }
+    }
+
     .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; background: var(--paper); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
@@ -320,6 +339,7 @@
   })();
   </script>
 
+  <div id="page-body">
   <div class="hero">
     <div>
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
@@ -340,6 +360,18 @@
         <div class="hero-stat-lbl">Sectors</div>
       </div>
     </div>
+  </div>
+
+  <div class="ask-wrap">
+    <div class="ask-box">
+      <svg class="ask-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="text" id="ask-input" class="ask-input" placeholder="Ask about a ticker, a sector, or any market question…" autocomplete="off" oninput="handleAskInput()" onkeydown="handleAskKey(event)" />
+      <button type="button" class="ask-send" onclick="submitAsk()" aria-label="Ask">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+      </button>
+      <div class="search-suggestions" id="ask-suggestions" style="display:none"></div>
+    </div>
+    <p class="ask-hint">A ticker opens its full analysis below. Anything else goes to the AI Informant.</p>
   </div>
 
   <!-- Primary mode switcher -->
@@ -478,6 +510,7 @@
       <div id="sap-live-situation"></div>
       <div class="ap-content" id="sap-content"></div>
     </div>
+  </div>
   </div>
 
   <footer>
@@ -769,7 +802,75 @@
         const box = document.getElementById('search-suggestions');
         if (box) box.style.display = 'none';
       }
+      if (!e.target.closest('.ask-box')) {
+        const askBox = document.getElementById('ask-suggestions');
+        if (askBox) askBox.style.display = 'none';
+      }
     });
+
+    // ── Unified ask bar — a ticker jumps straight into the existing
+    // per-stock analysis panel; anything else is a question for the AI
+    // Informant, which already reads live headlines, sector mapping and the
+    // platform's own track record (see api/chat.js) — no separate pipeline
+    // needed here, just handing it the text.
+    function handleAskInput() {
+      const q = document.getElementById('ask-input').value.trim().toLowerCase();
+      const box = document.getElementById('ask-suggestions');
+      if (!q) { box.style.display = 'none'; return; }
+      const matches = [];
+      for (const {s, n} of TICKERS) {
+        const tl = s.toLowerCase(), nl = n.toLowerCase();
+        let base = 0;
+        if (tl === q)                                          base = 10000;
+        else if (tl.startsWith(q))                              base = 5000;
+        else if (nl.split(' ').some(w => w.startsWith(q)))      base = 2000;
+        if (!base) continue;
+        matches.push({ s, n, score: base + (_popularityRank[s] || 0) });
+      }
+      matches.sort((a, b) => b.score - a.score);
+      const top = matches.slice(0, 6);
+      if (!top.length) { box.style.display = 'none'; return; }
+      box.innerHTML = top.map(t =>
+        `<div class="sug-item" data-ticker="${esc(t.s)}" data-name="${esc(t.n)}">
+          <span class="sug-ticker">${esc(t.s)}</span>
+          <span class="sug-name">${esc(t.n)}</span>
+        </div>`
+      ).join('');
+      box.querySelectorAll('.sug-item').forEach(el => {
+        el.addEventListener('click', () => {
+          box.style.display = 'none';
+          goToTicker(el.dataset.ticker, el.dataset.name);
+        });
+      });
+      box.style.display = 'block';
+    }
+
+    function handleAskKey(e) {
+      if (e.key === 'Escape') document.getElementById('ask-suggestions').style.display = 'none';
+      else if (e.key === 'Enter') { e.preventDefault(); submitAsk(); }
+    }
+
+    function goToTicker(ticker, name) {
+      document.getElementById('ask-input').value = '';
+      setMode('stocks');
+      selectSuggestion(ticker, name);
+    }
+
+    function submitAsk() {
+      const input = document.getElementById('ask-input');
+      const q = input.value.trim();
+      if (!q) return;
+      document.getElementById('ask-suggestions').style.display = 'none';
+
+      // Exact ticker match (case-insensitive) → the fast structured path.
+      // Everything else → the AI Informant.
+      const exact = TICKERS.find(t => t.s.toUpperCase() === q.toUpperCase());
+      if (exact) { goToTicker(exact.s, exact.n); return; }
+
+      input.value = '';
+      window.iiSetFeedDock?.(true);
+      window.iiAsk?.(q);
+    }
 
     async function loadStockGrid() {
       const grid = document.getElementById('stock-coin-grid');
