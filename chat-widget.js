@@ -1,4 +1,5 @@
 (function () {
+  if (document.documentElement.classList.contains('is-embedded')) return;
   if (document.getElementById('ii-ai-panel')) return;
 
   const PAGE_CONTEXTS = {
@@ -34,7 +35,23 @@
 
   const page = window.location.pathname.split('/').pop() || '';
   const pageContext = PAGE_CONTEXTS[page] || 'general';
-  const starters = PAGE_STARTERS[pageContext] || [
+
+  // stock.html / coin.html carry the ticker in the URL, not a global — read it
+  // straight from the query string so the dock can open already knowing what
+  // the visitor is looking at, instead of a one-size-fits-all greeting.
+  let tickerCtx = null;
+  if (page === 'stock.html' || page === 'coin.html') {
+    const qp = new URLSearchParams(window.location.search);
+    const sym = (qp.get('ticker') || qp.get('symbol') || '').toUpperCase().replace(/[^A-Z.\-]/g, '').slice(0, 10);
+    if (sym) tickerCtx = { symbol: sym, name: (qp.get('name') || sym).slice(0, 60) };
+  }
+  if (tickerCtx) document.documentElement.classList.add('ii-quote-dock');
+
+  const starters = tickerCtx ? [
+    `What's moving ${tickerCtx.symbol} today?`,
+    `What's the outlook for ${tickerCtx.name}?`,
+    "How accurate are these predictions?",
+  ] : PAGE_STARTERS[pageContext] || [
     "How does this site work?",
     "What's the difference between the three sections?",
     "How accurate are these predictions?",
@@ -592,6 +609,14 @@
       #ii-ai-panel.ii-embedded .ii-header { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-msgs { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; padding-left: 0; padding-right: 0; }
+
+      /* stock.html/coin.html: a single ticker's chart+stats column is much
+         narrower than home.html's dashboard, so the dock doesn't need to
+         match home's width to avoid crowding it — give the quote more room
+         and keep the chat as a slim sidebar instead. */
+      html.ii-chat-embedded.ii-quote-dock {
+        --ii-chat-w: clamp(260px, 24vw, 360px);
+      }
     }
   `;
   document.head.appendChild(style);
@@ -935,14 +960,7 @@
     }
   }
 
-  async function playIntro() {
-    const hasChatted = await fetchHasChatted();
-    const lines = hasChatted
-      ? [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]]
-      : [
-          "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
-          "You can also ask me how anything on this site works, what the data means, or anything else.",
-        ];
+  async function typeIntroLines(lines) {
     inp.disabled = true;
     sendBtn.disabled = true;
     for (const line of lines) {
@@ -963,10 +981,36 @@
       moveAvatarTo(row, false);
       await sleep(250);
     }
-    startersEl = buildStarters();
-    msgsEl.appendChild(startersEl);
     inp.disabled = false;
     sendBtn.disabled = false;
+  }
+
+  async function playIntro() {
+    const hasChatted = await fetchHasChatted();
+
+    // Ticker pages, signed in: skip the generic walkthrough and ask the real
+    // question on the visitor's behalf, so the first thing they see is an
+    // actual compiled report for this stock — not a canned "drop me a
+    // ticker" line when they very clearly already have. Reuses the same
+    // live-news-aware /api/chat pipeline a typed question would hit.
+    const token = await window._auth?.getToken();
+    if (tickerCtx && token) {
+      await typeIntroLines([`Pulling together today's news and outlook for ${tickerCtx.name} (${tickerCtx.symbol})…`]);
+      await send(`What's the latest news, trend, and outlook for ${tickerCtx.name} (${tickerCtx.symbol})?`);
+      return;
+    }
+
+    const lines = tickerCtx
+      ? [`Looking at ${tickerCtx.name} (${tickerCtx.symbol}) — sign in and I'll pull together the latest news and outlook for it. You can also ask me anything else about the site or markets.`]
+      : hasChatted
+      ? [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]]
+      : [
+          "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
+          "You can also ask me how anything on this site works, what the data means, or anything else.",
+        ];
+    await typeIntroLines(lines);
+    startersEl = buildStarters();
+    msgsEl.appendChild(startersEl);
   }
 
   function setOpen(v) {
