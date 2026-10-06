@@ -70,10 +70,13 @@ nav:not(.bottom-nav):has(.nav-links.open, .ib-account-dropdown.open, #nav-menu.o
 
 /* Quick-access watchlist shortcut, always visible in the header (the
    burger-menu link alone was easy to miss). */
-.nav-watch-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ink); text-decoration: none; flex-shrink: 0; transition: background 0.15s ease, color 0.15s ease; }
+.nav-watch-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; color: var(--ink); text-decoration: none; flex-shrink: 0; transition: background 0.15s ease, color 0.15s ease; }
 .nav-watch-btn svg { width: 19px; height: 19px; }
 .nav-watch-btn:hover { background: var(--hover-tint); color: var(--accent); }
 .nav-watch-btn.active { color: var(--accent); }
+/* Same hover-tooltip treatment as the AI Informant's ii-tooltip. */
+.nav-watch-tooltip { position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%) translateY(-4px); background: var(--ink); color: var(--paper); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; white-space: nowrap; padding: 6px 10px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity 0.15s ease, transform 0.15s ease; z-index: 50; }
+.nav-watch-btn:hover .nav-watch-tooltip, .nav-watch-btn:focus-visible .nav-watch-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── Auth Badge ───────────────────────────────────────────────────────────── */
 #auth-badge { display: none; align-items: center; gap: 8px; }

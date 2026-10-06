@@ -97,22 +97,30 @@
     .wl-group-label { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
     .wl-row { display: flex; flex-wrap: wrap; gap: 10px; }
 
-    /* Stock / crypto chip: icon + symbol (+ live price for crypto) */
-    .wl-tile { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border-radius: 10px; padding: 7px 12px 7px 8px; text-decoration: none; color: var(--ink); transition: filter 0.15s; }
-    .wl-tile:hover { filter: brightness(1.12); }
+    /* Stock / crypto chip: icon + symbol (+ live price for crypto), plus a
+       remove (×) button so the watchlist can be fully managed right here
+       instead of only on the dedicated /watchlist.html page. */
+    .wl-tile { display: flex; align-items: center; gap: 2px; background: var(--surface-2); border-radius: 10px; padding: 7px 7px 7px 8px; }
+    .wl-tile-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); transition: filter 0.15s; }
+    .wl-tile-link:hover { filter: brightness(1.12); }
     .wl-tile-icon { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
     .wl-tile-icon-fallback { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--border); color: var(--muted); font-size: 10px; font-weight: 700; font-family: 'Share Tech Mono', sans-serif; }
     .wl-tile-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
     .wl-tile-price { font-size: 11.5px; color: var(--muted); }
     .wl-tile-price.dir-bullish { color: #2a9e4f; }
     .wl-tile-price.dir-bearish { color: #c84040; }
-    .wl-tile-more { color: var(--muted); font-size: 12.5px; align-self: center; }
+    .wl-tile-remove { width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease; }
+    .wl-tile:hover .wl-tile-remove, .wl-tile-remove:focus-visible { opacity: 1; }
+    .wl-tile-remove:hover { background: var(--hover-tint); color: #c84040; }
 
     /* Prediction-market row: question + current odds, no icon (none exists) */
     .wl-market-list { display: flex; flex-direction: column; gap: 9px; }
-    .wl-market-row { display: flex; align-items: center; gap: 12px; text-decoration: none; color: inherit; }
+    .wl-market-row { display: flex; align-items: center; gap: 8px; }
+    .wl-market-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
     .wl-market-q { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-market-odds { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
+    .wl-market-row .wl-tile-remove { opacity: 0; }
+    .wl-market-row:hover .wl-tile-remove, .wl-market-row .wl-tile-remove:focus-visible { opacity: 1; }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -123,7 +131,7 @@
     <a class="nav-wordmark" href="/home.html">info<span>blade</span></a>
     <div class="nav-right">
       <div class="nav-buttons">
-        <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
+        <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg><span class="nav-watch-tooltip" role="tooltip">Watchlist</span></a>
         <div id="auth-badge"></div>
       </div>
       <div class="nav-menu-wrap">
@@ -448,59 +456,98 @@
   // no logo source wired up (no real per-ticker icon API in use anywhere on
   // this site), and anything a price/market-info fetch below couldn't
   // resolve falls back to this too).
-  function wlPlainTile(sym, href) {
-    return '<a class="wl-tile" href="' + href + '">' +
+  function wlPlainTile(type, sym, href) {
+    return '<div class="wl-tile"><a class="wl-tile-link" href="' + href + '">' +
       '<span class="wl-tile-icon-fallback">' + esc(sym.charAt(0)) + '</span>' +
-      '<span class="wl-tile-sym">' + esc(sym) + '</span></a>';
+      '<span class="wl-tile-sym">' + esc(sym) + '</span></a>' +
+      wlRemoveBtn(type, sym) + '</div>';
   }
+
+  function wlRemoveBtn(type, symbol) {
+    return '<button class="wl-tile-remove" data-wl-type="' + esc(type) + '" data-wl-symbol="' + esc(symbol) + '" aria-label="Remove ' + esc(symbol) + '" title="Remove">&times;</button>';
+  }
+
+  // Fire-and-forget-free (awaited) removal: this panel reads straight from
+  // the server on every load, so a removal has to hit the server too, not
+  // just localStorage, or it would reappear on the next refresh. The
+  // localStorage mirrors are still updated so coin.html/stock.html/
+  // crypto.html/markets.html (which read those on load) stay in sync
+  // without needing their own reload.
+  async function removeWatchItem(type, symbol) {
+    try {
+      var t = await window._auth.getToken();
+      await fetch((window.API_BASE || '') + '/api/user-watchlist?type=' + type, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+        body: JSON.stringify({ symbol: symbol }),
+      });
+    } catch (_) {}
+    try {
+      if (type === 'stocks') {
+        var wl = JSON.parse(localStorage.getItem('ii_watchlist')) || { sectors: [], tickers: [] };
+        wl.tickers = (wl.tickers || []).filter(function (t) { return t !== symbol; });
+        localStorage.setItem('ii_watchlist', JSON.stringify(wl));
+      } else if (type === 'crypto') {
+        var c = JSON.parse(localStorage.getItem('ii_crypto_watchlist')) || [];
+        localStorage.setItem('ii_crypto_watchlist', JSON.stringify(c.filter(function (s) { return s !== symbol; })));
+      } else if (type === 'markets') {
+        var m = JSON.parse(localStorage.getItem('ii_markets_watchlist')) || [];
+        localStorage.setItem('ii_markets_watchlist', JSON.stringify(m.filter(function (x) { return x.slug !== symbol; })));
+      }
+    } catch (_) {}
+    loadWatchlistSummary();
+  }
+
+  document.getElementById('wl-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('.wl-tile-remove');
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    removeWatchItem(btn.dataset.wlType, btn.dataset.wlSymbol);
+  });
 
   // Stocks have no logo source, but do get a live price + daily % change via
   // the same Robinhood/Yahoo batched-quote path api/sector-stocks.js uses
   // for the sector pages (lib/quote-fetch.js), just for the user's own
   // tickers instead of a fixed sector list.
   async function renderStocksGroup(symbols) {
-    var shown = symbols.slice(0, 8);
-    var extra = symbols.length - shown.length;
     var quotes = {};
     try {
-      var res = await fetch((window.API_BASE || '') + '/api/watchlist-stock-quotes?symbols=' + encodeURIComponent(shown.join(',')));
+      var res = await fetch((window.API_BASE || '') + '/api/watchlist-stock-quotes?symbols=' + encodeURIComponent(symbols.join(',')));
       if (res.ok) quotes = (await res.json()).quotes || {};
     } catch (_) {}
 
-    var tiles = shown.map(function (sym) {
+    var tiles = symbols.map(function (sym) {
       var q = quotes[sym];
-      if (!q || typeof q.price !== 'number') return wlPlainTile(sym, '/feed.html');
+      if (!q || typeof q.price !== 'number') return wlPlainTile('stocks', sym, '/feed.html');
       var pct = q.changePct;
       var hasPct = typeof pct === 'number';
       var dirClass = hasPct ? (pct >= 0 ? 'dir-bullish' : 'dir-bearish') : '';
       var sign = hasPct && pct >= 0 ? '+' : '';
-      return '<a class="wl-tile" href="/feed.html">' +
+      return '<div class="wl-tile"><a class="wl-tile-link" href="/feed.html">' +
         '<span class="wl-tile-icon-fallback">' + esc(sym.charAt(0)) + '</span>' +
         '<span class="wl-tile-sym">' + esc(sym) + '</span>' +
         '<span class="wl-tile-price ' + dirClass + '">$' + q.price.toLocaleString('en-US', { maximumFractionDigits: 2 }) + (hasPct ? ' ' + sign + pct.toFixed(1) + '%' : '') + '</span>' +
-        '</a>';
+        '</a>' + wlRemoveBtn('stocks', sym) + '</div>';
     });
 
     return '<div class="wl-group"><div class="wl-group-label">Stocks</div><div class="wl-row">' +
-      tiles.join('') + (extra > 0 ? '<span class="wl-tile-more">+' + extra + ' more</span>' : '') +
-      '</div></div>';
+      tiles.join('') + '</div></div>';
   }
 
   // Crypto has real icons + live prices via the same CoinGecko feed the
   // Crypto Coin of the Day pick uses — only for the 32 coins it tracks, so
   // anything outside that list quietly falls back to a plain tile.
   async function renderCryptoGroup(symbols) {
-    var shown = symbols.slice(0, 8);
-    var extra = symbols.length - shown.length;
     var bySym = {};
     try {
       var data = await fetchCryptoPrices();
       (data.prices || []).forEach(function (c) { bySym[(c.symbol || '').toUpperCase()] = c; });
     } catch (_) {}
 
-    var tiles = shown.map(function (sym) {
+    var tiles = symbols.map(function (sym) {
       var c = bySym[sym];
-      if (!c) return wlPlainTile(sym, '/crypto.html');
+      if (!c) return wlPlainTile('crypto', sym, '/crypto.html');
       var pct = c.price_change_percentage_24h;
       var hasPct = typeof pct === 'number';
       var dirClass = hasPct ? (pct >= 0 ? 'dir-bullish' : 'dir-bearish') : '';
@@ -508,16 +555,15 @@
       var priceStr = typeof c.current_price === 'number'
         ? '$' + c.current_price.toLocaleString('en-US', { maximumFractionDigits: c.current_price < 1 ? 4 : 2 })
         : '';
-      return '<a class="wl-tile" href="/crypto.html">' +
+      return '<div class="wl-tile"><a class="wl-tile-link" href="/crypto.html">' +
         '<img class="wl-tile-icon" src="' + esc(c.image || '') + '" alt="" loading="lazy">' +
         '<span class="wl-tile-sym">' + esc(sym) + '</span>' +
         (priceStr ? '<span class="wl-tile-price ' + dirClass + '">' + priceStr + (hasPct ? ' ' + sign + pct.toFixed(1) + '%' : '') + '</span>' : '') +
-        '</a>';
+        '</a>' + wlRemoveBtn('crypto', sym) + '</div>';
     });
 
     return '<div class="wl-group"><div class="wl-group-label">Crypto</div><div class="wl-row">' +
-      tiles.join('') + (extra > 0 ? '<span class="wl-tile-more">+' + extra + ' more</span>' : '') +
-      '</div></div>';
+      tiles.join('') + '</div></div>';
   }
 
   // Prediction-market slugs are all the Supabase-synced watchlist stores
@@ -525,26 +571,23 @@
   // market was saved only ever lived in localStorage on that one device, so
   // re-fetch them from Polymarket by slug to show something on any device.
   async function renderMarketsGroup(slugs) {
-    var shown = slugs.slice(0, 5);
-    var extra = slugs.length - shown.length;
     var bySlug = {};
     try {
-      var res = await fetch((window.API_BASE || '') + '/api/watchlist-market-info?slugs=' + encodeURIComponent(shown.join(',')));
+      var res = await fetch((window.API_BASE || '') + '/api/watchlist-market-info?slugs=' + encodeURIComponent(slugs.join(',')));
       if (res.ok) {
         var data = await res.json();
         (data.markets || []).forEach(function (m) { bySlug[m.slug] = m; });
       }
     } catch (_) {}
 
-    var rows = shown.map(function (slug) {
+    var rows = slugs.map(function (slug) {
       var m = bySlug[slug];
       var question = m ? m.question : slug;
-      return '<a class="wl-market-row" href="/markets.html">' +
+      return '<div class="wl-market-row"><a class="wl-market-link" href="/markets.html">' +
         '<span class="wl-market-q">' + esc(question) + '</span>' +
         (m && typeof m.yesPrice === 'number' ? '<span class="wl-market-odds">' + m.yesPrice + '% YES</span>' : '') +
-        '</a>';
+        '</a>' + wlRemoveBtn('markets', slug) + '</div>';
     });
-    if (extra > 0) rows.push('<a class="wl-market-row" href="/watchlist.html"><span class="wl-market-q">+' + extra + ' more saved</span></a>');
 
     return '<div class="wl-group"><div class="wl-group-label">Prediction Markets</div><div class="wl-market-list">' +
       rows.join('') + '</div></div>';
