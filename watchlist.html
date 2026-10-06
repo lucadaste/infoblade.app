@@ -123,6 +123,7 @@
     <a class="nav-wordmark" href="/">info<span>blade</span></a>
     <div class="nav-right">
       <div class="nav-buttons">
+        <a class="nav-watch-btn active" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
         <div id="auth-badge"></div>
       </div>
       <div class="nav-menu-wrap">
@@ -517,13 +518,24 @@
     async function _loadFromSupabase() {
       const all = await _api('GET', 'all');
       if (all?.stocks) {
-        const sectors = all.stocks.filter(s => s.startsWith('SECTOR:')).map(s => s.slice(7));
-        const tickers = all.stocks.filter(s => !s.startsWith('SECTOR:'));
+        // Merge rather than overwrite: a star tapped on coin.html/stock.html
+        // moments ago may not have finished syncing to the server yet, so a
+        // blind overwrite here would wipe it back out of localStorage.
+        const local = getWL();
+        const remoteSectors = all.stocks.filter(s => s.startsWith('SECTOR:')).map(s => s.slice(7));
+        const remoteTickers = all.stocks.filter(s => !s.startsWith('SECTOR:'));
+        const sectors = Array.from(new Set([...(local.sectors || []), ...remoteSectors]));
+        const tickers = Array.from(new Set([...(local.tickers || []), ...remoteTickers]));
         localStorage.setItem('ii_watchlist', JSON.stringify({ sectors, tickers }));
+        sectors.forEach(s => { if (!remoteSectors.includes(s)) _api('POST', 'stocks', { symbol: 'SECTOR:' + s }); });
+        tickers.forEach(t => { if (!remoteTickers.includes(t)) _api('POST', 'stocks', { symbol: t }); });
         window.renderStocks?.();
       }
       if (all?.crypto) {
-        localStorage.setItem('ii_crypto_watchlist', JSON.stringify(all.crypto));
+        const localCrypto = getCryptoWL();
+        const merged = Array.from(new Set([...localCrypto, ...all.crypto]));
+        localStorage.setItem('ii_crypto_watchlist', JSON.stringify(merged));
+        merged.forEach(c => { if (!all.crypto.includes(c)) _api('POST', 'crypto', { symbol: c }); });
         window.renderCrypto?.();
       }
     }

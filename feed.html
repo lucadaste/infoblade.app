@@ -404,6 +404,7 @@
     <a class="nav-wordmark" href="/">info<span>blade</span></a>
     <div class="nav-right">
       <div class="nav-buttons">
+        <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
         <div id="auth-badge"></div>
       </div>
       <div class="nav-menu-wrap">
@@ -796,6 +797,22 @@
     const _anyNameMap = Object.fromEntries(SECTOR_STOCKS['any'].map(([s, n]) => [s, n]));
 
     let watchlist = { sectors: [], tickers: [] };
+    // Fire-and-forget sync to the account-wide watchlist — same pattern
+    // markets.html uses. Without this, toggling a watch here only ever wrote
+    // to localStorage, so the next visit to watchlist.html (which pulls the
+    // server copy and overwrites localStorage with it) silently erased it.
+    async function _swApi(method, body) {
+      const t = await window._auth?.getToken();
+      if (!t) return null;
+      try {
+        const r = await fetch('/api/user-watchlist?type=stocks', {
+          method,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+        return r.ok ? r.json() : null;
+      } catch (_) { return null; }
+    }
     let pageMode = 'sector';   // 'sector' | 'stocks'
     let stockSector = 'any';   // selected sector chip in stock mode
     let stockImpact = '1 month'; // impact window for stock analysis
@@ -1378,11 +1395,13 @@
         watchlist.tickers = watchlist.tickers.filter(t => t !== sym);
         btn.textContent = '☆ Watch';
         btn.classList.remove('watching');
+        _swApi('DELETE', { symbol: sym });
       } else {
         watchlist.tickers.push(sym);
         btn.textContent = '★ Watching';
         btn.classList.add('watching');
         if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: sym });
+        _swApi('POST', { symbol: sym });
       }
       localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
       renderWatchRail();
@@ -1560,9 +1579,11 @@
     function toggleTickerWatch(ticker) {
       if (watchlist.tickers.includes(ticker)) {
         watchlist.tickers = watchlist.tickers.filter(t => t !== ticker);
+        _swApi('DELETE', { symbol: ticker });
       } else {
         watchlist.tickers.push(ticker);
         if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker });
+        _swApi('POST', { symbol: ticker });
       }
       localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
       renderWatchRail();
@@ -2295,6 +2316,23 @@
   // Recheck gate when auth state resolves (handles sign-in while on stocks tab)
   window._onAuthReady(function() {
     if (pageMode === 'stocks') setMode('stocks');
+  });
+
+  // Reconcile the local stock watchlist with the account-wide one on sign-in:
+  // push up anything saved locally before this page ever synced to the server,
+  // and pull in anything saved from another device.
+  window._onAuthReady(async function (user) {
+    if (!user) return;
+    const remote = await _swApi('GET');
+    const remoteTickers = new Set((remote && remote.symbols) || []);
+    const localTickers = new Set(watchlist.tickers);
+    localTickers.forEach(function (t) { if (!remoteTickers.has(t)) _swApi('POST', { symbol: t }); });
+    let changed = false;
+    remoteTickers.forEach(function (t) {
+      if (t.startsWith('SECTOR:')) return;
+      if (!localTickers.has(t)) { watchlist.tickers.push(t); changed = true; }
+    });
+    if (changed) { localStorage.setItem('ii_watchlist', JSON.stringify(watchlist)); renderWatchRail(); }
   });
 
   // Deep link from elsewhere on the site (e.g. accuracy.html's ticker

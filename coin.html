@@ -99,6 +99,7 @@
   <a class="nav-wordmark" href="/">info<span>blade</span></a>
   <div class="nav-right">
     <div class="nav-buttons">
+      <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
       <div id="auth-badge"></div>
     </div>
     <div class="nav-menu-wrap">
@@ -220,12 +221,30 @@
     btn.textContent = watching ? '★ Watching' : '☆ Watch';
     btn.classList.toggle('watching', watching);
   }
+  // Fire-and-forget sync to the account-wide watchlist — same pattern
+  // markets.html uses. Without this, toggling a watch here only ever wrote
+  // to localStorage, so the next visit to watchlist.html (which pulls the
+  // server copy and overwrites localStorage with it) silently erased it.
+  async function _cwApi(method, body) {
+    const t = await window._auth?.getToken();
+    if (!t) return null;
+    try {
+      const r = await fetch('/api/user-watchlist?type=crypto', {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+      });
+      return r.ok ? r.json() : null;
+    } catch (_) { return null; }
+  }
   window.toggleWatch = function () {
     if (watchlist.includes(SYMBOL)) {
       watchlist = watchlist.filter(s => s !== SYMBOL);
+      _cwApi('DELETE', { symbol: SYMBOL });
     } else {
       watchlist.push(SYMBOL);
       if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: SYMBOL });
+      _cwApi('POST', { symbol: SYMBOL });
     }
     localStorage.setItem('ii_crypto_watchlist', JSON.stringify(watchlist));
     syncWatchBtn();
@@ -445,6 +464,24 @@
 </script>
 <script src="/chat-widget.js"></script>
 <script src="/auth.js"></script>
+<script>
+// Reconcile the local crypto watchlist with the account-wide one on sign-in:
+// push up anything saved locally before this page ever synced to the server,
+// and pull in anything saved from another device.
+window._onAuthReady(async function (user) {
+  if (!user) return;
+  const remote = await _cwApi('GET');
+  const remoteSymbols = new Set((remote && remote.symbols) || []);
+  const localSymbols = new Set(watchlist);
+  localSymbols.forEach(function (s) { if (!remoteSymbols.has(s)) _cwApi('POST', { symbol: s }); });
+  let changed = false;
+  remoteSymbols.forEach(function (s) { if (!localSymbols.has(s)) { watchlist.push(s); changed = true; } });
+  if (changed) {
+    localStorage.setItem('ii_crypto_watchlist', JSON.stringify(watchlist));
+    syncWatchBtn();
+  }
+});
+</script>
 
 <nav class="bottom-nav" aria-label="Mobile navigation">
   <div class="bottom-nav-inner">
