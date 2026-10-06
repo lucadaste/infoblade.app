@@ -22,6 +22,11 @@ const RH_HEADERS = { 'User-Agent': UA, 'Accept': 'application/json', 'Accept-Lan
 
 const SYMBOL_ALIASES = { 'SPX': '^GSPC' };
 const CNBC_SYMBOL_MAP = { 'SPX': '.SPX' };
+// No Robinhood instrument tracks the raw index, but its tracking ETF moves
+// within fractions of a percent of it — used only to shape the chart line
+// when Yahoo's own series fails (see _buildIndexResponse); the index's own
+// real price/change (from CNBC) is never touched by this.
+const INDEX_PROXY_ETF = { 'SPX': 'SPY' };
 
 const RANGES = {
   '1d':  { label: '1D' },
@@ -45,19 +50,24 @@ const RH_RANGE = {
 function _num(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : null; }
 function _round(n, d = 2) { return n == null ? null : +n.toFixed(d); }
 
+async function _rhQuote(ticker) {
+  const res = await fetch(`https://api.robinhood.com/quotes/?symbols=${encodeURIComponent(ticker)}&bounds=trading`, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`Robinhood quote HTTP ${res.status}`);
+  const data = await res.json();
+  return data?.results?.[0] || null;
+}
+
+async function _rhHistoricals(ticker, rangeKey) {
+  const rh = RH_RANGE[rangeKey];
+  const url = `https://api.robinhood.com/marketdata/historicals/${encodeURIComponent(ticker)}/?interval=${rh.interval}&span=${rh.span}${rh.bounds ? `&bounds=${rh.bounds}` : ''}`;
+  const res = await fetch(url, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`Robinhood historicals HTTP ${res.status}`);
+  return res.json();
+}
+
 // ── Equity / ETF path (Robinhood) ───────────────────────────────────────────
 async function _buildEquityResponse(ticker, rangeKey) {
-  const rh = RH_RANGE[rangeKey];
-  const histUrl = `https://api.robinhood.com/marketdata/historicals/${encodeURIComponent(ticker)}/?interval=${rh.interval}&span=${rh.span}${rh.bounds ? `&bounds=${rh.bounds}` : ''}`;
-  const [quoteRes, histRes] = await Promise.all([
-    fetch(`https://api.robinhood.com/quotes/?symbols=${encodeURIComponent(ticker)}&bounds=trading`, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) }),
-    fetch(histUrl, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) }),
-  ]);
-  if (!quoteRes.ok) throw new Error(`Robinhood quote HTTP ${quoteRes.status}`);
-  if (!histRes.ok)  throw new Error(`Robinhood historicals HTTP ${histRes.status}`);
-  const quoteData = await quoteRes.json();
-  const histData  = await histRes.json();
-  const q = quoteData?.results?.[0];
+  const [q, histData] = await Promise.all([_rhQuote(ticker), _rhHistoricals(ticker, rangeKey)]);
   if (!q) throw new Error('No Robinhood quote for ticker');
 
   const price      = _num(q.last_trade_price) ?? _num(q.last_extended_hours_trade_price);
@@ -98,7 +108,7 @@ async function _buildEquityResponse(ticker, rangeKey) {
     ticker, price: _round(price), changePct, changeAbs, prevClose: _round(prevClose),
     open: openPrice, dayHigh, dayLow, week52High, week52Low, volume,
     currency: 'USD', exchangeName: null,
-    asOf: Date.now(), range: rangeKey, series,
+    asOf: Date.now(), range: rangeKey, series, seriesApprox: false,
   };
 }
 
@@ -185,11 +195,34 @@ async function _buildIndexResponse(rawTicker, rangeKey) {
 
   if (price == null) throw new Error('No index quote available');
 
+  // Yahoo's chart series is best-effort and sometimes just fails (see the
+  // module comment). When it does, shape the line from the index's tracking
+  // ETF instead — scaled so its right edge lands exactly on the real index
+  // price above, and every other point is in the same proportion the ETF
+  // actually moved. A close approximation of the index's own path, not the
+  // index's own ticks — flagged via `seriesApprox` so the UI can say so
+  // rather than silently presenting it as the genuine thing.
+  let seriesApprox = false;
+  const proxyTicker = INDEX_PROXY_ETF[rawTicker];
+  if (series.length < 2 && proxyTicker) {
+    try {
+      const proxyHist = await _rhHistoricals(proxyTicker, rangeKey);
+      const proxySeries = (proxyHist.historicals || [])
+        .map(h => ({ t: new Date(h.begins_at).getTime(), c: _num(h.close_price) }))
+        .filter(p => p.c != null && !isNaN(p.t));
+      if (proxySeries.length >= 2) {
+        const scale = price / proxySeries[proxySeries.length - 1].c;
+        series = proxySeries.map(p => ({ t: p.t, c: _round(p.c * scale, 2) }));
+        seriesApprox = true;
+      }
+    } catch (_) { /* best-effort — leave series empty, UI handles that */ }
+  }
+
   return {
     ticker: rawTicker, price: _round(price), changePct, changeAbs, prevClose: _round(prevClose),
     open: null, dayHigh: null, dayLow: null, week52High: null, week52Low: null, volume: null,
     currency: 'USD', exchangeName: null,
-    asOf: Date.now(), range: rangeKey, series,
+    asOf: Date.now(), range: rangeKey, series, seriesApprox,
   };
 }
 

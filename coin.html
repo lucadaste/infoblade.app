@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
-  <title>infoblade | Stock</title>
-  <meta name="description" content="Live price, today's chart, and AI-driven analysis for any stock or ETF on infoblade." />
+  <title>infoblade | Coin</title>
+  <meta name="description" content="Live price, chart, and AI-driven analysis for any crypto coin on infoblade." />
   <script src="/api-base.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
@@ -34,10 +34,11 @@
 
     /* Header */
     .s-head-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-    .s-logo { width: 42px; height: 42px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); flex-shrink: 0; }
+    .s-logo { width: 42px; height: 42px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); flex-shrink: 0; overflow: hidden; }
+    .s-logo img { width: 100%; height: 100%; object-fit: contain; }
     .s-name-wrap { flex: 1; min-width: 0; }
     .s-name { font-size: 15px; font-weight: 500; }
-    .s-exchange { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; letter-spacing: 0.3px; }
+    .s-rank { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; letter-spacing: 0.3px; }
     .s-watch-btn { background: none; border: 1px solid var(--divider); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 7px 14px; transition: all 0.2s; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; flex-shrink: 0; }
     .s-watch-btn:hover { border-color: var(--accent); color: var(--accent); }
     .s-watch-btn.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
@@ -63,7 +64,6 @@
     .chart-svg-wrap:focus { outline: none; }
     .chart-svg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
     .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; }
-    .chart-approx-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
     .chart-crosshair { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--divider); pointer-events: none; opacity: 0; }
     .chart-dot { position: absolute; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 50%; border: 2px solid var(--card); pointer-events: none; opacity: 0; }
     .chart-tooltip { position: absolute; top: 0; transform: translate(-50%, -115%); background: var(--surface-2); border-radius: 7px; padding: 7px 10px; font-size: 11px; line-height: 1.5; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 5; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
@@ -76,6 +76,7 @@
     .stat-tile { background: var(--card); border-radius: 10px; padding: 12px 14px; }
     .stat-tile-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
     .stat-tile-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+    .stat-tile-val.neg { color: var(--red); }
 
     /* AI CTA */
     .ai-cta { background: var(--card); border-radius: 12px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
@@ -102,9 +103,9 @@
       <button class="nav-burger" id="nav-burger" aria-label="Menu"><span></span><span></span><span></span></button>
       <ul class="nav-links">
         <li><a href="/home.html">Home</a></li>
-        <li><a href="/feed.html" class="active">Stock Markets</a></li>
+        <li><a href="/feed.html">Stock Markets</a></li>
         <li><a href="/markets.html">Prediction Markets</a></li>
-        <li><a href="/crypto.html">Crypto Markets</a></li>
+        <li><a href="/crypto.html" class="active">Crypto Markets</a></li>
         <li><a href="/accuracy.html">Track Record</a></li>
         <li><a href="/watchlist.html">Watchlist</a></li>
       </ul>
@@ -121,7 +122,7 @@
 </script>
 
 <div class="main">
-  <a class="back-link" href="/feed.html">← Stocks</a>
+  <a class="back-link" href="/crypto.html">← Crypto</a>
 
   <div id="s-error" style="display:none" class="error-msg"></div>
 
@@ -130,7 +131,7 @@
       <div class="s-logo" id="s-logo">—</div>
       <div class="s-name-wrap">
         <div class="s-name skeleton" id="s-name" style="height:17px;width:140px">&nbsp;</div>
-        <div class="s-exchange" id="s-exchange"></div>
+        <div class="s-rank" id="s-rank"></div>
       </div>
       <button class="s-watch-btn" id="s-watch-btn" onclick="toggleWatch()">☆ Watch</button>
     </div>
@@ -159,7 +160,7 @@
     <div class="ai-cta">
       <div class="ai-cta-text">
         <div class="ai-cta-title">AI Analysis</div>
-        <div class="ai-cta-sub">Today's news mapped to likely price impact, plus infoblade's overall directional call — the full breakdown lives on the Stocks page.</div>
+        <div class="ai-cta-sub">Today's news mapped to likely price impact, plus infoblade's overall directional call — the full breakdown lives on the Crypto page.</div>
       </div>
       <a class="ai-cta-btn" id="ai-cta-link" href="#">Full AI Analysis →</a>
     </div>
@@ -169,72 +170,67 @@
 <script>
 (function(){
   const params = new URLSearchParams(window.location.search);
-  const TICKER = (params.get('ticker') || '').toUpperCase().replace(/[^A-Z.\-]/g, '').slice(0, 10);
-  const NAME   = params.get('name') || TICKER;
+  const SYMBOL = (params.get('symbol') || params.get('ticker') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 10);
 
-  if (!TICKER) {
+  if (!SYMBOL) {
     document.getElementById('s-content').style.display = 'none';
     const err = document.getElementById('s-error');
     err.style.display = 'block';
-    err.textContent = 'No ticker specified.';
+    err.textContent = 'No coin specified.';
     return;
   }
 
-  document.title = `infoblade | ${TICKER}`;
-  // Real logo when the CDN has one for this symbol, falling back to the
-  // same letter-circle placeholder the grid cards use when it doesn't.
-  (function () {
-    const logoEl = document.getElementById('s-logo');
-    logoEl.textContent = TICKER.slice(0, 3);
-    const img = document.createElement('img');
-    img.alt = '';
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:50%';
-    img.onerror = () => { img.remove(); logoEl.textContent = TICKER.slice(0, 3); };
-    img.onload  = () => { logoEl.textContent = ''; logoEl.appendChild(img); };
-    img.src = `https://assets.parqet.com/logos/symbol/${encodeURIComponent(TICKER)}?format=png`;
-  })();
-  document.getElementById('s-name').textContent = NAME;
-  document.getElementById('s-name').classList.remove('skeleton');
-  document.getElementById('s-name').style.cssText = '';
-  document.getElementById('ai-cta-link').href = `/feed.html?ticker=${encodeURIComponent(TICKER)}&name=${encodeURIComponent(NAME)}`;
+  document.title = `infoblade | ${SYMBOL}`;
+  document.getElementById('ai-cta-link').href = `/crypto.html?ticker=${encodeURIComponent(SYMBOL)}`;
 
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtPrice(p) {
     if (p == null) return '—';
-    return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (p >= 1000)   return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    if (p >= 1)      return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (p >= 0.01)   return '$' + p.toFixed(4);
+    if (p >= 0.0001) return '$' + p.toFixed(6);
+    return '$' + p.toFixed(8);
   }
-  function fmtVolume(v) {
+  function fmtBig(v) {
+    if (v == null) return '—';
+    if (v >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
+    if (v >= 1e9)  return '$' + (v / 1e9).toFixed(2) + 'B';
+    if (v >= 1e6)  return '$' + (v / 1e6).toFixed(2) + 'M';
+    if (v >= 1e3)  return '$' + (v / 1e3).toFixed(1) + 'K';
+    return '$' + v;
+  }
+  function fmtSupply(v) {
     if (v == null) return '—';
     if (v >= 1e9) return (v / 1e9).toFixed(2) + 'B';
     if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
     if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
-    return String(v);
+    return String(Math.round(v));
   }
 
-  // ── Watchlist (same localStorage shape feed.html's grid uses, so a watch
-  // toggled here or there stays in sync). ──────────────────────────────────
-  let watchlist = { sectors: [], tickers: [] };
-  try { const s = localStorage.getItem('ii_watchlist'); if (s) watchlist = JSON.parse(s); } catch (_) {}
+  // ── Watchlist — same localStorage key + flat-array shape crypto.html's
+  // grid already uses, so a watch toggled here or there stays in sync. ────
+  let watchlist = [];
+  try { const s = localStorage.getItem('ii_crypto_watchlist'); if (s) watchlist = JSON.parse(s); } catch (_) {}
   function syncWatchBtn() {
     const btn = document.getElementById('s-watch-btn');
-    const watching = watchlist.tickers.includes(TICKER);
+    const watching = watchlist.includes(SYMBOL);
     btn.textContent = watching ? '★ Watching' : '☆ Watch';
     btn.classList.toggle('watching', watching);
   }
   window.toggleWatch = function () {
-    if (watchlist.tickers.includes(TICKER)) {
-      watchlist.tickers = watchlist.tickers.filter(t => t !== TICKER);
+    if (watchlist.includes(SYMBOL)) {
+      watchlist = watchlist.filter(s => s !== SYMBOL);
     } else {
-      watchlist.tickers.push(TICKER);
-      if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: TICKER });
+      watchlist.push(SYMBOL);
+      if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: SYMBOL });
     }
-    localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+    localStorage.setItem('ii_crypto_watchlist', JSON.stringify(watchlist));
     syncWatchBtn();
   };
   syncWatchBtn();
 
-  // ── Catmull-Rom smoothed path, same technique as accuracy.html's chart —
-  // one curve through every point instead of a jagged polyline. ───────────
+  // ── Catmull-Rom smoothed path, same technique as accuracy.html/stock.html. ──
   function smoothPath(points) {
     if (points.length < 2) return '';
     let d = `M ${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
@@ -250,7 +246,6 @@
     return d;
   }
 
-  const INDEX_PROXY_LABEL = { 'SPX': 'SPY (S&P 500 ETF)' };
   let currentRange = '1d';
   const RANGE_FMT = {
     '1d':  p => new Date(p.t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
@@ -261,7 +256,7 @@
     '5y':  p => new Date(p.t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
   };
 
-  function renderChart(series, approx) {
+  function renderChart(series) {
     const area = document.getElementById('chart-area');
     if (!series || series.length < 2) {
       area.innerHTML = '<div class="chart-empty">No chart data for this range.</div>';
@@ -283,11 +278,11 @@
     const linePath = smoothPath(points);
     const lastPt = points[points.length - 1];
     const areaPath = `${linePath} L ${lastPt.x.toFixed(2)},${H} L ${points[0].x.toFixed(2)},${H} Z`;
-    const gradId = 'sChartGrad';
+    const gradId = 'cChartGrad';
 
     area.innerHTML = `
       <div class="chart-svg-wrap" id="s-chart-wrap" tabindex="0" role="slider" aria-orientation="horizontal"
-           aria-label="${esc(TICKER)} price" aria-valuemin="0" aria-valuemax="${points.length - 1}"
+           aria-label="${esc(SYMBOL)} price" aria-valuemin="0" aria-valuemax="${points.length - 1}"
            aria-valuenow="${points.length - 1}">
         <svg id="s-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="width:100%;height:${H}px;display:block;overflow:visible">
           <defs>
@@ -304,8 +299,7 @@
         <div class="chart-dot" id="s-dot"></div>
         <div class="chart-tooltip" id="s-tooltip"><span class="tt-date"></span> · <span class="tt-val"></span></div>
         <div class="chart-axis-row"><span>${esc(fmt(series[0]))}</span><span>${esc(fmt(series[series.length - 1]))}</span></div>
-      </div>
-      ${approx ? `<div class="chart-approx-note">Shaped from ${esc(INDEX_PROXY_LABEL[TICKER] || 'a tracking ETF')} — ${esc(TICKER)} has no direct tick data, so this line approximates its path rather than plotting the index itself.</div>` : ''}`;
+      </div>`;
 
     const wrap     = document.getElementById('s-chart-wrap');
     const svgEl    = document.getElementById('s-svg');
@@ -382,45 +376,55 @@
   }
 
   function renderStats(q) {
+    const athDate = q.athDate ? new Date(q.athDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
     const tiles = [
-      ['Open',          fmtPrice(q.open)],
-      ['Day Range',     (q.dayLow != null && q.dayHigh != null) ? `${fmtPrice(q.dayLow)} – ${fmtPrice(q.dayHigh)}` : '—'],
-      ['Prev Close',    fmtPrice(q.prevClose)],
-      ['52-Week Range', (q.week52Low != null && q.week52High != null) ? `${fmtPrice(q.week52Low)} – ${fmtPrice(q.week52High)}` : '—'],
-      ['Volume',        fmtVolume(q.volume)],
-      ['Currency',      q.currency || '—'],
+      ['Market Cap',  fmtBig(q.marketCap)],
+      ['24h Volume',  fmtBig(q.volume24h)],
+      ['24h Range',   (q.low24h != null && q.high24h != null) ? `${fmtPrice(q.low24h)} – ${fmtPrice(q.high24h)}` : '—'],
+      ['All-Time High', q.ath != null ? fmtPrice(q.ath) : '—', q.athChangePct],
+      ['Circulating Supply', fmtSupply(q.circulatingSupply)],
+      ['Since ATH', athDate || '—'],
     ];
-    document.getElementById('stat-grid').innerHTML = tiles.map(([label, val]) => `
+    document.getElementById('stat-grid').innerHTML = tiles.map(([label, val, pct]) => `
       <div class="stat-tile">
         <div class="stat-tile-label">${esc(label)}</div>
-        <div class="stat-tile-val">${esc(val)}</div>
+        <div class="stat-tile-val">${esc(val)}${pct != null ? ` <span class="stat-tile-val${pct < 0 ? ' neg' : ''}" style="font-size:11px">(${pct > 0 ? '+' : ''}${pct}%)</span>` : ''}</div>
       </div>`).join('');
   }
 
   async function loadData(range) {
     try {
-      const res = await fetch(window.API_BASE + `/api/ticker-quote?ticker=${encodeURIComponent(TICKER)}&range=${encodeURIComponent(range)}`);
+      const res = await fetch(window.API_BASE + `/api/coin-quote?symbol=${encodeURIComponent(SYMBOL)}&range=${encodeURIComponent(range)}`);
       const q = await res.json();
       if (q.error) throw new Error(q.error);
+
+      if (q.image) {
+        document.getElementById('s-logo').innerHTML = `<img src="${esc(q.image)}" alt="">`;
+      } else {
+        document.getElementById('s-logo').textContent = SYMBOL.slice(0, 3);
+      }
+      document.getElementById('s-name').textContent = q.name || SYMBOL;
+      document.getElementById('s-name').classList.remove('skeleton');
+      document.getElementById('s-name').style.cssText = '';
+      document.getElementById('s-rank').textContent = q.marketCapRank ? `Rank #${q.marketCapRank} · ${SYMBOL}` : SYMBOL;
 
       document.getElementById('s-price').textContent = fmtPrice(q.price);
       document.getElementById('s-price').classList.remove('skeleton');
       document.getElementById('s-price').style.cssText = '';
-      document.getElementById('s-exchange').textContent = q.exchangeName || '';
 
       const chEl = document.getElementById('s-change');
       if (q.changePct != null) {
         const pos = q.changePct >= 0;
         chEl.style.display = '';
         chEl.className = 's-change ' + (pos ? 'pos' : 'neg');
-        chEl.textContent = `${pos ? '+' : ''}${q.changeAbs != null ? fmtPrice(Math.abs(q.changeAbs)) : ''} (${pos ? '+' : ''}${q.changePct}%)`;
+        chEl.textContent = `${pos ? '+' : ''}${q.changeAbs != null ? fmtPrice(Math.abs(q.changeAbs)) : ''} (${pos ? '+' : ''}${q.changePct}%) 24h`;
       }
       document.getElementById('s-asof').textContent = q.asOf ? `As of ${new Date(q.asOf).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
 
       renderStats(q);
-      renderChart(q.series, q.seriesApprox);
+      renderChart(q.series);
     } catch (err) {
-      document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load price data for ${esc(TICKER)}.</div>`;
+      document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load price data for ${esc(SYMBOL)}.</div>`;
     }
   }
 
@@ -443,9 +447,9 @@
 <nav class="bottom-nav" aria-label="Mobile navigation">
   <div class="bottom-nav-inner">
     <a href="/" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg><span>Home</span></a>
-    <a href="/feed.html" class="bn-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 18 8.5 10.5 13.5 15.5 23 6"/><path d="M17 6 23 6 23 12"/></svg><span>Stocks</span></a>
+    <a href="/feed.html" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M1 18 8.5 10.5 13.5 15.5 23 6"/><path d="M17 6 23 6 23 12"/></svg><span>Stocks</span></a>
     <a href="/markets.html" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><ellipse cx="12" cy="18.5" rx="4.5" ry="1.4"/><path d="M14.4 6.4c.28.95.95 1.62 1.9 1.9-.95.28-1.62.95-1.9 1.9-.28-.95-.95-1.62-1.9-1.9.95-.28 1.62-.95 1.9-1.9Z" fill="currentColor" stroke="none"/></svg><span>Markets</span></a>
-    <a href="/crypto.html" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="currentColor" stroke="none">₿</text></svg><span>Crypto</span></a>
+    <a href="/crypto.html" class="bn-item active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><text x="12" y="16" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" fill="currentColor" stroke="none">₿</text></svg><span>Crypto</span></a>
     <a href="/accuracy.html" class="bn-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="5.5"/><path d="m9.7 8.5 1.6 1.6 3-3.2"/><path d="M9 13.2 6.7 20l4-2 1-1.2Z" fill="currentColor" stroke="none"/><path d="M15 13.2 17.3 20l-4-2-1-1.2Z" fill="currentColor" stroke="none"/></svg><span>Track Record</span></a>
   </div>
 </nav>

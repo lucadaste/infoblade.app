@@ -523,6 +523,19 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    // Real ticker logo layered over the letter-circle placeholder — the img
+    // sits on top and covers it entirely when it loads; onerror just removes
+    // the img, revealing the placeholder underneath. No fallback bookkeeping.
+    function _logoHtml(sym) {
+      const initials = esc((sym.startsWith('^') ? sym.slice(1) : sym).slice(0, 3));
+      return `<div class="coin-logo-placeholder" style="position:relative">
+        ${initials}
+        <img src="https://assets.parqet.com/logos/symbol/${encodeURIComponent(sym)}?format=png" alt="" loading="lazy"
+             style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;background:var(--border)"
+             onerror="this.remove()">
+      </div>`;
+    }
+
     // ── Loading widget bootstrap ──────────────────────────────────────────────
     !function(){function s(e){if(e._lw)return;e._lw=1;var m,i=0;try{m=JSON.parse(e.dataset.messages||'[]')}catch(x){m=[]}if(!m.length)return;var t=e.querySelector('.lw-msg');if(!t)return;var tid=setInterval(function(){if(!document.contains(e)){clearInterval(tid);return;}t.style.opacity='0';t.style.transform='translateY(3px)';setTimeout(function(){if(!document.contains(e))return;i=(i+1)%m.length;t.textContent=m[i];t.style.opacity='1';t.style.transform='translateY(0)';},220);},2600);}new MutationObserver(function(ms){ms.forEach(function(mu){mu.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.classList&&n.classList.contains('lw-auto'))s(n);if(n.querySelectorAll)n.querySelectorAll('.lw-auto').forEach(s);})})}).observe(document.body,{childList:true,subtree:true});}();
 
@@ -916,7 +929,7 @@
           card.onclick = () => goToStock(sym, name);
           card.innerHTML = `
             <div class="coin-top">
-              <div class="coin-logo-placeholder">${esc((sym.startsWith('^')?sym.slice(1):sym).slice(0,3))}</div>
+              ${_logoHtml(sym)}
               <div>
                 <div class="coin-name">${esc(name)}</div>
                 <div class="coin-symbol">${esc(sym)}</div>

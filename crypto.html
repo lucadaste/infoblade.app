@@ -62,7 +62,7 @@
     .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; }
+    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; cursor: pointer; }
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-card.watchlist-match { border-color: rgba(0,230,118,0.4); }
@@ -411,6 +411,7 @@
         const card = document.createElement('div');
         card.className = 'coin-card' + (isSelected ? ' selected' : '') + (isWatchlisted ? ' watchlist-match' : '');
         card.style.animationDelay = `${Math.min(i * 20, 280)}ms`;
+        card.onclick = () => { window.location.href = `/coin.html?symbol=${encodeURIComponent(coin.symbol)}`; };
 
         const logoHtml = p?.image
           ? `<img class="coin-logo" src="${esc(p.image)}" alt="${esc(coin.symbol)}" loading="lazy" onerror="this.style.display='none'">`
@@ -436,10 +437,10 @@
           </div>
           ${priceHtml}
           ${changeHtml}
-          <button class="btn-coin" onclick="selectCoin(${safeJson})" data-tip="Fetch live news and predict price direction">
+          <button class="btn-coin" onclick="event.stopPropagation(); selectCoin(${safeJson})" data-tip="Fetch live news and predict price direction">
             ${isSelected ? '★ Analyzing' : 'Analyze →'}
           </button>
-          <button class="btn-coin-watch ${isWatchlisted ? 'watching' : ''}" onclick="toggleCoinWatch('${esc(coin.symbol)}',this)">
+          <button class="btn-coin-watch ${isWatchlisted ? 'watching' : ''}" onclick="event.stopPropagation(); toggleCoinWatch('${esc(coin.symbol)}',this)">
             ${isWatchlisted ? '★ Watching' : '☆ Watch'}
           </button>
         `;

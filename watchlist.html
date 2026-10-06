@@ -68,6 +68,8 @@
     /* ── Ticker / coin chips ─────────────────────────────── */
     .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
     .chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,230,118,0.06); border: 1px solid rgba(0,230,118,0.2); border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
+    .chip-link { color: inherit; text-decoration: none; }
+    .chip-link:hover { text-decoration: underline; }
     .chip-remove { background: none; border: none; color: rgba(0,230,118,0.4); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; transition: color 0.15s; display: flex; align-items: center; }
     .chip-remove:hover { color: #ff6060; }
     .empty-note { font-size: 13px; color: #3a3a3a; font-style: italic; }
@@ -301,7 +303,7 @@
       if (wl.tickers && wl.tickers.length > 0) {
         tickerSection.style.display = '';
         chips.innerHTML = wl.tickers.map(t =>
-          `<div class="chip">${esc(t)}<button class="chip-remove" data-remove-ticker="${esc(t)}" title="Remove">×</button></div>`
+          `<div class="chip"><a class="chip-link" href="/stock.html?ticker=${encodeURIComponent(t)}">${esc(t)}</a><button class="chip-remove" data-remove-ticker="${esc(t)}" title="Remove">×</button></div>`
         ).join('');
         document.getElementById('ticker-count').textContent = wl.tickers.length;
       } else {
@@ -375,7 +377,7 @@
       document.getElementById('coin-count').textContent = coins.length;
       if (coins.length > 0) {
         chips.innerHTML = coins.map(c =>
-          `<div class="chip">${esc(c)}<button class="chip-remove" data-remove-coin="${esc(c)}" title="Remove">×</button></div>`
+          `<div class="chip"><a class="chip-link" href="/coin.html?symbol=${encodeURIComponent(c)}">${esc(c)}</a><button class="chip-remove" data-remove-coin="${esc(c)}" title="Remove">×</button></div>`
         ).join('');
       } else {
         chips.innerHTML = '<span class="empty-note">No coins watched yet. Search above to add one.</span>';
