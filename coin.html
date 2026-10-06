@@ -57,8 +57,9 @@
     .range-chip:hover { border-color: var(--ink); color: var(--ink); }
     .range-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
-    /* Chart card */
-    .s-chart-wrap { background: var(--card); border-radius: 12px; padding: 20px 20px 14px; margin-bottom: 20px; }
+    /* Chart — full-bleed on the page background, not boxed; it's the one
+       thing on this page that should feel like data, not a dashboard widget */
+    .s-chart-wrap { margin-bottom: 28px; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 60px 0; }
     .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
     .chart-svg-wrap { position: relative; }
@@ -71,20 +72,20 @@
     .chart-tooltip .tt-date { color: var(--muted); }
     .chart-tooltip .tt-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; }
 
-    /* Key stats */
-    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+    /* Key stats — a flat data sheet, not six stamped-out dashboard tiles */
+    .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 22px; column-gap: 16px; margin: 0 0 36px; }
     @media (max-width: 560px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
-    .stat-tile { background: var(--card); border-radius: 10px; padding: 12px 14px; }
-    .stat-tile-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    .stat-tile-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+    .stat-tile-label { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .stat-tile-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
     .stat-tile-val.neg { color: var(--red); }
 
-    /* AI CTA */
-    .ai-cta { background: var(--card); border-radius: 12px; padding: 18px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
+    /* AI CTA — the one deliberately accented moment on the page, so it
+       doesn't read as just another gray card like everywhere else on the site */
+    .ai-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; padding: 18px 20px 18px 18px; border-left: 2px solid var(--accent); background: linear-gradient(90deg, rgba(0,230,118,0.07), transparent 70%); }
     .ai-cta-text { flex: 1; min-width: 200px; }
-    .ai-cta-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 4px; }
-    .ai-cta-sub { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-    .ai-cta-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); text-decoration: none; white-space: nowrap; transition: all 0.15s; }
+    .ai-cta-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--accent); letter-spacing: 0.3px; text-transform: uppercase; }
+    .ai-cta-sub { font-size: 13px; color: var(--text-soft); line-height: 1.55; }
+    .ai-cta-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; text-decoration: none; white-space: nowrap; transition: all 0.15s; }
     .ai-cta-btn:hover { background: var(--accent); color: #111; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
