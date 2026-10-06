@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
+  <script>if (/[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <style id="ii-auth-hide">html { opacity: 0; transition: opacity .2s ease; }</style>
   <script>
     // If we already know from last visit that this browser was signed in,
@@ -15,12 +16,17 @@
   <meta name="description" content="Your infoblade dashboard: stock, prediction market, and crypto picks of the day, plus your watchlist, in one place." />
   <script src="/api-base.js"></script>
   <script src="/track-record.js"></script>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-HEEV7Y9WQZ');
+    if (!document.documentElement.classList.contains('is-embedded')) {
+      gtag('js', new Date());
+      gtag('config', 'G-HEEV7Y9WQZ');
+      var _gtagScript = document.createElement('script');
+      _gtagScript.async = true;
+      _gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ';
+      document.head.appendChild(_gtagScript);
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -117,6 +123,7 @@
     <a class="nav-wordmark" href="/home.html">info<span>blade</span></a>
     <div class="nav-right">
       <div class="nav-buttons">
+        <a class="nav-watch-btn" href="/watchlist.html" aria-label="Watchlist" title="Watchlist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg></a>
         <div id="auth-badge"></div>
       </div>
       <div class="nav-menu-wrap">
@@ -313,7 +320,7 @@
         '<div class="pick-headline"><span class="' + dirClass + '">' + arrow + '</span> ' + esc(ticker) + '</div>' +
         (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(top.confidence) || 3, 'stocks') + '</div>' : '') +
         '<div class="pick-desc">' + esc(top.topic) + '</div>' +
-        '<a class="pick-cta" href="/feed.html">Full analysis &rarr;</a>';
+        '<a class="pick-cta" href="/stock.html?ticker=' + encodeURIComponent(ticker) + '">Full analysis &rarr;</a>';
       if (window.TrackRecord) TrackRecord.fill(body);
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s stock pick right now.</div>';
@@ -371,7 +378,7 @@
         '<div class="pick-headline">' + headline + '</div>' +
         sigHtml +
         '<div class="pick-desc">' + desc + '</div>' +
-        '<a class="pick-cta" href="/markets.html">Full analysis &rarr;</a>';
+        '<a class="pick-cta" href="/markets.html?q=' + encodeURIComponent(top.topic) + '">Full analysis &rarr;</a>';
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s prediction right now.</div>';
     }
@@ -412,7 +419,7 @@
           '<div class="pick-headline"><span class="' + dirClass + '">' + arrow + '</span> ' + esc(coin) + '</div>' +
           (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(top.confidence) || 3, 'crypto') + '</div>' : '') +
           '<div class="pick-desc">' + esc(top.topic) + '</div>' +
-          '<a class="pick-cta" href="/crypto.html">Full analysis &rarr;</a>';
+          '<a class="pick-cta" href="/coin.html?symbol=' + encodeURIComponent(coin) + '">Full analysis &rarr;</a>';
         if (window.TrackRecord) TrackRecord.fill(body);
         return;
       }
@@ -431,7 +438,7 @@
         '<div class="pick-headline">' + esc((mover.symbol || '').toUpperCase()) + '</div>' +
         '<div class="pick-sub ' + cls + '">' + sign + pct.toFixed(1) + '% today</div>' +
         '<div class="pick-desc">Today\'s biggest mover among 32 tracked coins.</div>' +
-        '<a class="pick-cta" href="/crypto.html">Open Crypto Markets &rarr;</a>';
+        '<a class="pick-cta" href="/coin.html?symbol=' + encodeURIComponent((mover.symbol || '').toUpperCase()) + '">Full analysis &rarr;</a>';
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s crypto pick right now.</div>';
     }
@@ -578,6 +585,6 @@
   <script src="/onboarding.js"></script>
   <script src="/offline.js"></script>
   <script src="/chat-widget.js"></script>
-  <script src="/swipe-nav.js"></script>
+  <script src="/tab-shell.js"></script>
 </body>
 </html>
