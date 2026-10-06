@@ -389,8 +389,6 @@
     .ii-sq:hover { background: rgba(0,230,118,0.08); border-color: var(--accent); color: var(--ink); }
 
     .ii-input-row {
-      display: flex;
-      gap: 9px;
       padding: 14px 18px;
       padding-bottom: max(14px, env(safe-area-inset-bottom));
       border-top: 1px solid var(--border);
@@ -398,14 +396,26 @@
       flex-shrink: 0;
       border-radius: 0 0 10px 10px;
     }
+    .ii-input-box {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      background: var(--paper);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 6px 4px 6px;
+      transition: border-color 0.15s;
+    }
+    .ii-input-box:focus-within { border-color: var(--accent); }
     #ii-inp {
       flex: 1;
+      min-width: 0;
       font-family: 'Space Grotesk', sans-serif;
       font-size: 14px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 9px 12px;
-      background: var(--paper);
+      border: none;
+      padding: 10px 2px;
+      background: none;
       color: var(--ink);
       resize: none;
       outline: none;
@@ -414,21 +424,22 @@
       overflow-y: auto;
     }
     #ii-inp::placeholder { color: var(--muted); }
-    #ii-inp:focus { border-color: var(--divider); background: var(--paper); }
     #ii-send {
+      flex-shrink: 0;
       background: var(--accent);
       color: #111111;
       border: none;
-      border-radius: 7px;
-      padding: 0 16px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: .3px;
+      border-radius: 10px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      flex-shrink: 0;
+      margin-bottom: 2px;
       transition: opacity .15s;
     }
+    #ii-send svg { width: 16px; height: 16px; }
     #ii-send:hover { opacity: .8; }
     #ii-send:disabled { opacity: .3; cursor: not-allowed; }
     /* A reply is streaming — click to interrupt it, same idea as the
@@ -438,8 +449,23 @@
        behind it. */
     #ii-send.ii-send-stop { background: var(--card); color: var(--ink); border: 1px solid var(--border); }
 
-    .ii-attach-btn { align-self: flex-end; margin-bottom: 1px; }
-    .ii-attach-btn svg { width: 14px; height: 14px; }
+    .ii-attach-btn {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: color .15s, background .15s;
+    }
+    .ii-attach-btn:hover { color: var(--ink); background: var(--card); }
+    .ii-attach-btn svg { width: 17px; height: 17px; }
 
     .ii-attach-row {
       display: flex;
@@ -598,12 +624,16 @@
     <div class="ii-msgs" id="ii-msgs"></div>
     <div class="ii-attach-row" id="ii-attach-row" hidden></div>
     <div class="ii-input-row">
-      <button class="ii-icon-btn ii-attach-btn" id="ii-attach-btn" aria-label="Attach image" title="Attach image">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
-      </button>
-      <input type="file" id="ii-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
-      <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
-      <button id="ii-send">Send</button>
+      <div class="ii-input-box">
+        <button class="ii-attach-btn" id="ii-attach-btn" aria-label="Attach image" title="Attach image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"/></svg>
+        </button>
+        <input type="file" id="ii-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple style="display:none">
+        <textarea id="ii-inp" rows="1" placeholder="Ask anything…"></textarea>
+        <button id="ii-send" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </button>
+      </div>
     </div>
     <div class="ii-drop-overlay" id="ii-drop-overlay" hidden>
       <span>Drop image to attach</span>
@@ -1377,7 +1407,8 @@
     }
 
     busy = true;
-    sendBtn.textContent = 'Stop';
+    sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>';
+    sendBtn.setAttribute('aria-label', 'Stop');
     sendBtn.classList.add('ii-send-stop');
 
     history.push({ role: 'user', content: text || '(image attached)' });
@@ -1388,7 +1419,8 @@
     await pendingTurn;
 
     busy = false;
-    sendBtn.textContent = 'Send';
+    sendBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>';
+    sendBtn.setAttribute('aria-label', 'Send');
     sendBtn.classList.remove('ii-send-stop');
     inp.focus();
   }
