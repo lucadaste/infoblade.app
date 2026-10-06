@@ -163,16 +163,85 @@
     .pill.pill-watched .pill-star { opacity: 1; }
     #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: var(--card); border: 1px solid var(--divider); border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; line-height: 1.6; color: var(--text-soft); pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.1s ease; }
 
-    /* Page mode bar — primary two-tab switcher */
-    .page-mode-bar { display: flex; border-bottom: 2px solid var(--border); background: var(--paper); }
-    .pmode-tab { flex: 1; padding: 24px 48px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.15s; position: relative; bottom: -2px; text-align: left; }
-    .pmode-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--muted); transition: color 0.15s; display: block; }
-    .pmode-desc { font-size: 13px; color: var(--muted); font-weight: 400; display: block; margin-top: 5px; line-height: 1.4; }
-    .pmode-tab.active { border-bottom-color: var(--accent); }
-    .pmode-tab.active .pmode-title { color: var(--ink); }
-    .pmode-tab.active .pmode-desc { color: var(--muted); }
-    .pmode-tab:hover:not(.active) .pmode-title { color: var(--text-soft); }
-    .pmode-tab:hover:not(.active) .pmode-desc { color: var(--muted); }
+    /* Back link — the only way out of stock mode now that the two-tab switcher is gone;
+       mode changes automatically (search a ticker, click a card) instead of being tab-driven. */
+    .back-to-feed { position: relative; z-index: 20; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 5px; padding: 7px 14px; margin: 20px 48px 0; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .back-to-feed:hover { color: var(--ink); border-color: var(--ink); }
+
+    /* ── Page layout: main column + a watchlist/movers rail, so the wide
+       right-hand gutter that opened up once the two-tab switcher was removed
+       isn't just dead space ── */
+    .page-layout { display: flex; align-items: flex-start; gap: 8px; }
+    .main-col { flex: 1; min-width: 0; }
+
+    .ticker-rail-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin: 0 48px 12px; }
+    .ticker-rail { display: flex; gap: 10px; overflow-x: auto; padding: 0 48px 6px; margin-bottom: 20px; }
+    .ticker-rail:empty { margin-bottom: 0; }
+    .ticker-rail-card { flex-shrink: 0; width: 148px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+    .ticker-rail-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .trc-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .trc-name { font-size: 11px; color: var(--muted); margin: 2px 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .trc-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; }
+    .trc-chg { font-size: 11.5px; font-weight: 600; margin-top: 2px; }
+
+    .watch-rail { width: 272px; flex-shrink: 0; position: sticky; top: 24px; padding: 44px 48px 0 32px; border-left: 1px solid var(--border); margin-left: 8px; }
+    .watch-head, .movers-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+    .watch-title { font-size: 10.5px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+    .watch-manage { font-size: 11px; color: var(--muted); text-decoration: none; }
+    .watch-manage:hover { color: var(--ink); }
+    .watch-item { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-top: 1px solid var(--border); cursor: pointer; }
+    .watch-item:first-child { border-top: none; }
+    .watch-item:hover .watch-sym { color: var(--accent); }
+    .watch-id { min-width: 0; flex: 1; }
+    .watch-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; transition: color 0.15s; }
+    .watch-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+    .watch-figs { text-align: right; flex-shrink: 0; }
+    .watch-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; }
+    .watch-chg { font-size: 11px; font-weight: 600; }
+    .watch-note { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-top: 14px; }
+
+    .movers-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+    .mover-tabs { display: flex; gap: 4px; }
+    .mover-tab { font-family: 'Share Tech Mono', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 3px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+    .mover-tab.active { background: var(--surface-2); color: var(--ink); border-color: var(--border); }
+    .mover-list { display: none; }
+    .mover-list.show { display: block; }
+    .mover-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--border); cursor: pointer; }
+    .mover-item:first-child { border-top: none; }
+    .mover-item:hover .mover-sym { color: var(--accent); }
+    .mover-rank { font-size: 11px; color: var(--muted); width: 14px; flex-shrink: 0; }
+    .mover-id { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; }
+    .mover-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; transition: color 0.15s; flex-shrink: 0; }
+    .mover-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mover-figs { text-align: right; flex-shrink: 0; }
+    .mover-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .mover-price { font-size: 10.5px; color: var(--muted); }
+
+    /* Abbreviated watchlist + movers for narrow widths, surfaced near the top
+       instead of a thin right-hand column that stops being viable */
+    .mobile-strip { padding: 4px 48px 0; }
+    .strip-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .strip-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+    .strip-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+    .strip-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--ink); cursor: pointer; white-space: nowrap; }
+    .strip-chip .star { color: var(--accent); opacity: 0.8; font-size: 10px; }
+    .strip-div { width: 1px; align-self: stretch; background: var(--border); flex-shrink: 0; margin: 0 2px; }
+
+    @media (max-width: 1050px) {
+      .watch-rail { display: none !important; }
+      .mobile-strip { display: block !important; }
+    }
+    @media (max-width: 900px) {
+      .ticker-rail-label, .ticker-rail { margin-left: 24px; margin-right: 24px; padding-left: 0; padding-right: 0; }
+      .mobile-strip { padding-left: 24px; padding-right: 24px; }
+      .back-to-feed { margin-left: 24px; margin-right: 24px; }
+    }
+    @media (max-width: 480px) {
+      .ticker-rail-label, .ticker-rail { margin-left: 16px; margin-right: 16px; }
+      .mobile-strip { padding-left: 16px; padding-right: 16px; }
+      .back-to-feed { margin-left: 16px; margin-right: 16px; }
+    }
+
     /* Auth gate for Individual Stocks */
     #stock-section { position: relative; }
     #stock-auth-gate { display: none; position: absolute; inset: 0; min-height: 420px; z-index: 10; background: var(--paper); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 40px 24px; }
@@ -247,8 +316,6 @@
     .ar-source-item { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     @media (max-width: 1100px) { .coin-grid { grid-template-columns: repeat(3, 1fr); } }
     @media (max-width: 768px) {
-      .pmode-tab { padding: 16px 20px; }
-      .pmode-desc { display: none; }
       .coin-grid { grid-template-columns: repeat(2, 1fr); }
       .coin-card { padding: 14px; }
       .ap-header { padding: 16px 24px; }
@@ -258,8 +325,6 @@
 
     @media (max-width: 900px) {
       .hero { padding: 28px 24px 20px; }
-      .pmode-tab { padding: 18px 28px; }
-      .pmode-desc { font-size: 12px; }
       .filters { padding: 16px 24px; gap: 10px; }
       .feed-container { padding: 28px 24px 60px; }
       .event-card { padding: 24px 28px; }
@@ -292,7 +357,6 @@
     }
     @media (max-width: 480px) {
       .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .pmode-tab { padding: 12px 16px; }
       .cat-chip { font-size: 10px; padding: 5px 9px; }
       .hero h1 { font-size: clamp(22px, 6vw, 32px); }
       .hero { padding: 16px 16px 14px; }
@@ -305,6 +369,25 @@
       .quick-cats { gap: 6px; }
       .filters { padding: 12px 16px; gap: 6px; }
     }
+
+    /* tactile press — buttons/cards/rows scale down slightly on tap, like a native app.
+       Placed last so it wins the specificity tie against earlier :hover rules
+       (e.g. .coin-card:hover) when a card is pressed while hovered. */
+    .back-to-feed, .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
+    .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .quick-cat, .pill, .btn-load, .tf-btn {
+      transition: transform 0.1s ease, border-color 0.15s, color 0.15s, background-color 0.15s;
+    }
+    .back-to-feed:active, .ticker-rail-card:active, .watch-item:active, .mover-item:active, .mover-tab:active,
+    .strip-chip:active, .coin-card:active, .btn-coin:active, .btn-coin-watch:active, .cat-chip:active,
+    .quick-cat:active, .pill:active, .btn-load:active, .tf-btn:active { transform: scale(0.96); }
+    @media (prefers-reduced-motion: reduce) {
+      .back-to-feed, .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
+      .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .quick-cat, .pill, .btn-load, .tf-btn { transition: none; }
+    }
+
+    /* tabular numerals so price columns line up digit-for-digit */
+    .coin-price, .trc-price, .watch-price, .mover-price, .mover-pct, .hero-stat-val,
+    .strip-chip, .trc-sym, .watch-sym, .mover-sym { font-variant-numeric: tabular-nums; }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -374,16 +457,18 @@
     <p class="ask-hint">A ticker opens its full analysis below. Anything else goes to the AI Informant.</p>
   </div>
 
-  <!-- Primary mode switcher -->
-  <div class="page-mode-bar">
-    <button class="pmode-tab active" id="pmode-sector" onclick="setMode('sector')">
-      <span class="pmode-title">Sector Analysis</span>
-      <span class="pmode-desc">AI scans global news by sector: macro, tech, energy, financials and more</span>
-    </button>
-    <button class="pmode-tab" id="pmode-stocks" onclick="setMode('stocks')">
-      <span class="pmode-title">Individual Stocks & ETFs</span>
-      <span class="pmode-desc">Pick any stock or ETF for a full AI breakdown of how today's news affects it</span>
-    </button>
+  <div class="page-layout">
+  <div class="main-col">
+
+  <div class="mobile-strip" id="mobile-strip" style="display:none">
+    <div class="strip-group" id="strip-watching" style="display:none">
+      <span class="strip-label">Watching</span>
+      <div class="strip-row" id="strip-watching-row"></div>
+    </div>
+    <div class="strip-group" id="strip-movers" style="display:none">
+      <span class="strip-label">Top movers</span>
+      <div class="strip-row" id="strip-movers-row"></div>
+    </div>
   </div>
 
   <!-- ═══ SECTOR ANALYSIS MODE ═══ -->
@@ -430,6 +515,8 @@
 
     <div class="main-layout">
       <div class="feed-container">
+        <div class="ticker-rail-label" id="ticker-rail-label" style="display:none">Stocks in play today</div>
+        <div class="ticker-rail" id="ticker-rail"></div>
         <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
         <div id="feed"></div>
         <div class="feed-pending" id="feed-pending"><span></span><span></span><span></span></div>
@@ -460,6 +547,7 @@
 
   <!-- ═══ INDIVIDUAL STOCKS MODE ═══ -->
   <div id="stock-section" style="display:none">
+    <button class="back-to-feed" onclick="setMode('sector')">← Back to Stock Markets feed</button>
     <div id="stock-auth-gate">
       <h2>Account required</h2>
       <p>Individual stock analysis is available to infoblade account holders. Create a free profile or sign in to continue.</p>
@@ -510,6 +598,31 @@
       <div id="sap-live-situation"></div>
       <div class="ap-content" id="sap-content"></div>
     </div>
+  </div>
+
+  </div>
+
+  <aside class="watch-rail" id="watch-rail">
+    <div class="watch-head">
+      <span class="watch-title">Your Watchlist</span>
+      <a class="watch-manage" href="/watchlist.html">Manage</a>
+    </div>
+    <div id="watch-rail-list"></div>
+    <p class="watch-note" id="watch-rail-empty">Star a ticker anywhere on the site and it lands here.</p>
+
+    <div class="movers-block">
+      <div class="movers-head">
+        <span class="watch-title">Top Movers</span>
+        <div class="mover-tabs">
+          <button class="mover-tab active" data-list="gainers" onclick="setMoversTab('gainers',this)">Gainers</button>
+          <button class="mover-tab" data-list="losers" onclick="setMoversTab('losers',this)">Losers</button>
+        </div>
+      </div>
+      <div class="mover-list show" id="mover-gainers"></div>
+      <div class="mover-list" id="mover-losers"></div>
+    </div>
+  </aside>
+
   </div>
   </div>
 
@@ -674,6 +787,7 @@
     // Popularity rank for search suggestions: higher = more popular
     const _popularityRank = {};
     SECTOR_STOCKS['any'].forEach(([sym], i) => { _popularityRank[sym] = SECTOR_STOCKS['any'].length - i; });
+    const _anyNameMap = Object.fromEntries(SECTOR_STOCKS['any'].map(([s, n]) => [s, n]));
 
     let watchlist = { sectors: [], tickers: [] };
     let pageMode = 'sector';   // 'sector' | 'stocks'
@@ -689,8 +803,6 @@
 
     function setMode(mode) {
       pageMode = mode;
-      document.getElementById('pmode-sector').classList.toggle('active', mode === 'sector');
-      document.getElementById('pmode-stocks').classList.toggle('active', mode === 'stocks');
       document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
       document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
       document.getElementById('hero-sub').innerHTML = _heroSub[mode] || _heroSub.sector;
@@ -1267,6 +1379,7 @@
         if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: sym });
       }
       localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+      renderWatchRail();
     }
 
     function handleImpactChange() {
@@ -1301,6 +1414,136 @@
       } catch(e) {}
     }
 
+    // ── Stocks-in-play rail inside the sector feed, plus the watchlist/movers
+    // rail — all reuse the same live /api/sector-stocks data the old
+    // Individual Stocks grid already fetched, so nothing here is fabricated.
+    function _priceChgHtml(td) {
+      const priceStr = td?.price != null
+        ? `$${td.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '—';
+      const chg = td?.changePct;
+      const chgStr = chg != null ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '—';
+      const chgClass = chg != null ? (chg >= 0 ? 'pos' : 'neg') : '';
+      return { priceStr, chgStr, chgClass };
+    }
+
+    async function loadTickerRail(sector) {
+      const label = document.getElementById('ticker-rail-label');
+      const rail  = document.getElementById('ticker-rail');
+      try {
+        const res  = await fetch(`/api/sector-stocks?sector=${encodeURIComponent(sector)}`);
+        const data = await res.json();
+        const tdMap = new Map((data.tickers || []).map(t => [t.ticker, t]));
+        const stocks  = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
+        const nameMap = Object.fromEntries(stocks.map(([s, n]) => [s, n]));
+        const renderList = (data.popularitySorted && sector === 'any')
+          ? (data.tickers || []).map(t => [t.ticker, nameMap[t.ticker] || t.ticker])
+          : stocks;
+        const top = renderList.slice(0, 10);
+        if (!top.length) { rail.innerHTML = ''; label.style.display = 'none'; return; }
+        rail.innerHTML = top.map(([sym, name]) => {
+          const { priceStr, chgStr, chgClass } = _priceChgHtml(tdMap.get(sym));
+          return `<div class="ticker-rail-card" onclick="goToStock('${esc(sym)}','${esc(name)}')">
+            <div class="trc-sym">${esc(sym)}</div>
+            <div class="trc-name">${esc(name)}</div>
+            <div class="trc-price">${esc(priceStr)}</div>
+            <div class="trc-chg ${chgClass}">${esc(chgStr)}</div>
+          </div>`;
+        }).join('');
+        label.style.display = 'block';
+      } catch (_) {
+        rail.innerHTML = '';
+        label.style.display = 'none';
+      }
+    }
+
+    let _anySectorData = null;
+    async function fetchAnySectorData() {
+      if (_anySectorData) return _anySectorData;
+      try {
+        const res  = await fetch(`/api/sector-stocks?sector=any`);
+        const data = await res.json();
+        _anySectorData = data.tickers || [];
+      } catch (_) { _anySectorData = []; }
+      return _anySectorData;
+    }
+
+    async function renderWatchRail() {
+      const list  = document.getElementById('watch-rail-list');
+      const empty = document.getElementById('watch-rail-empty');
+      const stripGroup = document.getElementById('strip-watching');
+      const stripRow   = document.getElementById('strip-watching-row');
+      if (!watchlist.tickers.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        stripGroup.style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      const data  = await fetchAnySectorData();
+      const tdMap = new Map(data.map(t => [t.ticker, t]));
+      const row = (sym) => {
+        const name = _anyNameMap[sym] || sym;
+        const { priceStr, chgStr, chgClass } = _priceChgHtml(tdMap.get(sym));
+        return { sym, name, priceStr, chgStr, chgClass };
+      };
+      list.innerHTML = watchlist.tickers.map(sym => {
+        const r = row(sym);
+        return `<div class="watch-item" onclick="goToStock('${esc(r.sym)}','${esc(r.name)}')">
+          <div class="watch-id"><div class="watch-sym">${esc(r.sym)}</div><div class="watch-name">${esc(r.name)}</div></div>
+          <div class="watch-figs"><div class="watch-price">${esc(r.priceStr)}</div><div class="watch-chg ${r.chgClass}">${esc(r.chgStr)}</div></div>
+        </div>`;
+      }).join('');
+      stripGroup.style.display = 'flex';
+      stripRow.innerHTML = watchlist.tickers.slice(0, 5).map(sym => {
+        const r = row(sym);
+        return `<button class="strip-chip" onclick="goToStock('${esc(r.sym)}','${esc(r.name)}')"><span class="star">★</span>${esc(r.sym)} <span class="${r.chgClass}">${esc(r.chgStr)}</span></button>`;
+      }).join('');
+    }
+
+    async function renderMovers() {
+      const data = await fetchAnySectorData();
+      const withChg = data.filter(t => t.changePct != null && t.price != null);
+      const gainers = [...withChg].sort((a, b) => b.changePct - a.changePct).slice(0, 5);
+      const losers  = [...withChg].sort((a, b) => a.changePct - b.changePct).slice(0, 5);
+
+      const renderList = (items) => items.map((td, i) => {
+        const name = _anyNameMap[td.ticker] || td.ticker;
+        const { priceStr, chgStr, chgClass } = _priceChgHtml(td);
+        return `<div class="mover-item" onclick="goToStock('${esc(td.ticker)}','${esc(name)}')">
+          <span class="mover-rank">${i + 1}</span>
+          <div class="mover-id"><span class="mover-sym">${esc(td.ticker)}</span><span class="mover-name">${esc(name)}</span></div>
+          <div class="mover-figs"><div class="mover-pct ${chgClass}">${esc(chgStr)}</div><div class="mover-price">${esc(priceStr)}</div></div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('mover-gainers').innerHTML = renderList(gainers) || '<p class="watch-note">No data yet.</p>';
+      document.getElementById('mover-losers').innerHTML  = renderList(losers)  || '<p class="watch-note">No data yet.</p>';
+
+      const stripGroup = document.getElementById('strip-movers');
+      const stripRow   = document.getElementById('strip-movers-row');
+      if (gainers.length || losers.length) {
+        stripGroup.style.display = 'flex';
+        const chip = (td) => {
+          const { chgStr, chgClass } = _priceChgHtml(td);
+          const name = _anyNameMap[td.ticker] || td.ticker;
+          return `<button class="strip-chip" onclick="goToStock('${esc(td.ticker)}','${esc(name)}')">${esc(td.ticker)} <span class="${chgClass}">${esc(chgStr)}</span></button>`;
+        };
+        stripRow.innerHTML = gainers.slice(0, 3).map(chip).join('')
+          + (gainers.length && losers.length ? '<span class="strip-div"></span>' : '')
+          + losers.slice(0, 3).map(chip).join('');
+      } else {
+        stripGroup.style.display = 'none';
+      }
+    }
+
+    function setMoversTab(which, btn) {
+      document.querySelectorAll('.mover-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.mover-list').forEach(l => l.classList.remove('show'));
+      document.getElementById('mover-' + which).classList.add('show');
+    }
+
     function checkWatchlistMatch(analysis) {
       if (watchlist.tickers.length === 0) return { match: false, matchedTickers: [] };
       const allTickers = [...(analysis.winners?.tickers || []), ...(analysis.losers?.tickers || [])];
@@ -1316,6 +1559,7 @@
         if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker });
       }
       localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+      renderWatchRail();
 
       // Update all pills with this ticker in-place
       document.querySelectorAll(`.pill[data-ticker="${ticker}"]`).forEach(pill => {
@@ -1756,6 +2000,7 @@
 
       const category = document.getElementById('filter-category').value;
       const params = new URLSearchParams({ category, timeframe });
+      loadTickerRail(category);
       document.getElementById('page-title').textContent = "Live sector news";
       label.textContent = "Today's analysis";
 
@@ -1908,6 +2153,8 @@
     }
 
     loadWatchlist();
+    renderWatchRail();
+    renderMovers();
 
     // Purge old stock-mode cache keys (they used the old buildCard format)
     try {
