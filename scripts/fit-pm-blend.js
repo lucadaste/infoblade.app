@@ -10,6 +10,8 @@
 // grader uses, lib/pm-resolution.js), so briefings, which are never graded,
 // still count. Nothing is written anywhere.
 //
+// Also breaks results down by known crowd mistake (lib/crowd-traps.js).
+//
 // Usage: node scripts/fit-pm-blend.js [--split=0.7] [--since=2026-10-08]
 // Requires SUPABASE_URL and SUPABASE_SERVICE_KEY in the environment.
 
@@ -171,6 +173,28 @@ async function main() {
   const blindRight = disagree.filter(r => (r.blind > 50 ? 1 : 0) === r.y).length;
   console.log(`\nBlind AI disagreed with the crowd's favorite on ${disagree.length} of ${evalSet.length} (${pct(disagree.length, evalSet.length)})`);
   console.log(`  …and was right on ${blindRight} of those (${pct(blindRight, disagree.length)}). The crowd was right on the rest.`);
+
+  // The known crowd mistakes (lib/crowd-traps.js, plus Claude's rules_gap
+  // flag): is the blind AI actually ahead of the crowd where they apply?
+  // Scored on every resolved row — each slice is small, and the question is
+  // the AI's own skill there, not the blend's.
+  const trapsOf = r => [
+    ...(Array.isArray(r.analysis?.crowd_traps) ? r.analysis.crowd_traps : []),
+    ...((r.analysis?.rules_gap || r.analysis?.blind?.rules_gap) ? ['rules_gap'] : []),
+  ];
+  const tagged = resolved.filter(r => Array.isArray(r.analysis?.crowd_traps));
+  if (tagged.length) {
+    console.log(`\nBy crowd trap (all ${tagged.length} resolved rows tagged pm-prob-v4+, lower Brier is better):`);
+    const groups = [['none apply', tagged.filter(r => !trapsOf(r).length)]];
+    for (const key of ['longshot', 'thin_market', 'fresh_news', 'rules_gap']) groups.push([key, tagged.filter(r => trapsOf(r).includes(key))]);
+    for (const [label, g] of groups) {
+      if (!g.length) { console.log(`  ${label.padEnd(12)} n=0`); continue; }
+      const gy = g.map(r => r.y);
+      const dis = g.filter(r => r.market !== 50 && r.blind !== 50 && (r.market > 50) !== (r.blind > 50));
+      const disRight = dis.filter(r => (r.blind > 50 ? 1 : 0) === r.y).length;
+      console.log(`  ${label.padEnd(12)} n=${String(g.length).padStart(4)}   crowd ${f4(brier(g.map(r => r.market), gy))}   blind AI ${f4(brier(g.map(r => r.blind), gy))}   disagreed ${dis.length}, right on ${pct(disRight, dis.length)}`);
+    }
+  }
 
   if (evalSet.length < MIN_TEST) {
     console.log(`\nNOTE: only ${evalSet.length} scored rows (want ${MIN_TEST}+, ideally a few hundred). Treat everything above as noise for now.`);

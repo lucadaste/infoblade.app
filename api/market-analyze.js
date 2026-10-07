@@ -6,6 +6,7 @@ import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 import { fetchMarketDetails } from '../lib/pm-resolution.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 import { callMessages } from '../lib/anthropic.js';
+import { detectCrowdTraps, isFresh, FRESH_HOURS } from '../lib/crowd-traps.js';
 
 // Grading lives in lib/source-quality.js, shared with api/analyze.js, so the
 // same outlet gets the same tier (and the same empirical-reputation
@@ -47,7 +48,9 @@ const PM_CATS = new Set(['politics', 'sports', 'entertainment', 'finance', 'tech
 // pm-prob-v1: probability + close-call briefings (Sonnet 4.6)
 // pm-prob-v2: + market resolution rules in the prompt, Fed rate data, Sonnet 5.5
 // pm-prob-v3: + the market's own odds movement (1h/1d/1w/1m), volume, liquidity, spread
-export const PM_MODEL_VERSION = 'pm-prob-v3';
+// pm-prob-v4: + "where the crowd may be wrong" list (lib/crowd-traps.js), NEW
+//             markers on last-6h news, rules_gap field
+export const PM_MODEL_VERSION = 'pm-prob-v4';
 const ANALYSIS_MODEL = 'claude-sonnet-5-5';
 
 // ── Blind estimate ──────────────────────────────────────────────────────────
@@ -61,7 +64,9 @@ const ANALYSIS_MODEL = 'claude-sonnet-5-5';
 // Saved to analysis.blind on predictions and pm_briefings rows; nothing a
 // user sees reads it.
 // pm-blind-v1: same model/effort as the main call, no market prices in input
-export const PM_BLIND_VERSION = 'pm-blind-v1';
+// pm-blind-v2: + NEW markers on last-6h news, rules_gap field (the longshot /
+//              thin-market traps reveal the price, so they stay out of here)
+export const PM_BLIND_VERSION = 'pm-blind-v2';
 // A call is "too close" when Claude's own probability sits within this many
 // points of a coin flip (50%), or confidence is at/below CLOSE_CALL_MAX_STARS.
 // Those get a "know before you bet" briefing instead of a graded Yes/No. Tune
@@ -104,13 +109,18 @@ MARKET RULES: When the input includes the market's own rules, they decide what c
 
 BASE RATES: Start from how often outcomes like this usually happen (incumbents winning, favorites covering, bills passing by a deadline, deadlines being met), then move for the specific evidence. Most things that need something new to happen by a deadline do not happen.
 
+FRESH NEWS: Items marked NEW were published in the last ${FRESH_HOURS} hours. Give them full weight when they change the picture: recent developments are where an independent read can be ahead of everyone else.
+
+RULES GAP: If the market rules are given and they decide this market differently from how a casual reader of the question would assume (a deadline, a threshold, what counts, who settles it), describe that in one plain sentence in rules_gap and price the outcome as the rules define it. Otherwise set rules_gap to null.
+
 ALREADY RESOLVED: If the evidence clearly shows the outcome is already known, set already_resolved to true.
 
 Respond ONLY with valid JSON, no markdown:
 {
   "yes_probability": 0-100,
   "already_resolved": false,
-  "reasoning": "1-2 plain sentences on what drives your number"
+  "reasoning": "1-2 plain sentences on what drives your number",
+  "rules_gap": "one sentence, or null"
 }`;
 
 // Same evidence as the main prompt minus every market price (see
@@ -124,7 +134,7 @@ function _buildBlindBody({ question, rulesSection, liveGameSection, items, struc
   const prompt = `Market question: "${question}"
 ${rulesSection}${liveGameSection}
 Recent news (${items.length} articles):
-${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
+${_newsLines(items)}
 ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
   return {
     model: ANALYSIS_MODEL,
@@ -136,7 +146,19 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
   };
 }
 
-// { probability, reasoning, version } or null when there's no usable answer
+// One news line per item, shared by the main and blind prompts so both see
+// the same evidence and the same NEW markers.
+function _newsLines(items) {
+  return items.map(i => `- ${isFresh(i.date) ? '[NEW] ' : ''}"${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n');
+}
+
+function _parseRulesGap(v) {
+  if (typeof v !== 'string') return null;
+  const t = v.trim();
+  return t && !/^(null|none|n\/a)$/i.test(t) ? t.slice(0, 300) : null;
+}
+
+// { probability, reasoning, rules_gap, version } or null when there's no usable answer
 // (failed/refused request, bad JSON, or the model says it already resolved).
 function _parseBlind(data) {
   if (!data || data.error || data.stop_reason === 'refusal') return null;
@@ -151,6 +173,7 @@ function _parseBlind(data) {
   return {
     probability,
     reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning.trim().slice(0, 400) : null,
+    rules_gap: _parseRulesGap(parsed.rules_gap),
     version: PM_BLIND_VERSION,
   };
 }
@@ -379,7 +402,7 @@ export async function prepareMarketAnalysis({
         const empirical = rep && rep.attempts >= 10
           ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
           : '';
-        return { title: i.title, source: i.source, grade: i.grade, empirical, coverageVolume: i.coverageVolume || 1 };
+        return { title: i.title, source: i.source, grade: i.grade, empirical, coverageVolume: i.coverageVolume || 1, date: i.date || null };
       });
       redditPosts = allocated.filter(i => i.class === 'reddit').map(i => i.title);
 
@@ -401,7 +424,7 @@ export async function prepareMarketAnalysis({
         const empirical = rep && rep.attempts >= 10
           ? `, ${Math.round(rep.correct / rep.attempts * 100)}% empirical (${rep.attempts} tracked)`
           : '';
-        return { title: i.title, source: i.source, grade, empirical };
+        return { title: i.title, source: i.source, grade, empirical, date: i.date || null };
       });
     }
 
@@ -458,6 +481,10 @@ RATE DATA: For questions about Federal Reserve decisions or interest rates, the 
 
 ODDS MOVEMENT: When the input includes how the market's odds have moved, use it. A sharp recent move usually means new information reached traders, so check whether the news explains it before betting against it; if the news you have predates the move, the crowd likely knows something your evidence doesn't. A move with thin volume or a thin order book (low liquidity, wide spread) is weaker evidence than one on heavy volume. Odds that have drifted steadily one way for a week are a trend, not noise.
 
+WHERE THE CROWD MAY BE WRONG: The input may list specific, known reasons the crowd's price could be off for this market (a longshot, a thinly traded market, fresh news the price hasn't reacted to). These are leads to check, not rules to apply: for each one, look at the evidence. If it holds, let yes_probability move away from the crowd's number by as much as the evidence justifies and say which one in reasoning. If the evidence doesn't back it up, ignore it. News items marked NEW were published in the last ${FRESH_HOURS} hours.
+
+RULES GAP: If the market rules are given and they decide this market differently from how a casual reader of the question would assume (a deadline, a threshold, what counts, who settles it), describe that in one plain sentence in rules_gap. Otherwise set rules_gap to null.
+
 TRACK RECORD CALIBRATION: If the PLATFORM TRACK RECORD section in the input shows this category has been less reliable historically, lower your confidence and require stronger evidence before leaning Yes or No. If it shows strong accuracy in this category, bolder leans are appropriate.
 
 PROBABILITY: Give yes_probability, your own estimate (0-100) of the chance the answer is YES, using the evidence AND the crowd's odds as a starting point. Move away from the crowd's number only as far as the evidence justifies. lean must match it: "Yes" if yes_probability is above 50, "No" if below 50. Use "Uncertain" only for already-resolved events. Be honest when it's close: a number near 50 is a valid, useful answer, and close calls are shown to users as a briefing instead of a forced pick.
@@ -487,10 +514,15 @@ Respond ONLY with valid JSON, no markdown:
   "key_sources": ["source1", "source2"],
   "signal": "Aligns with market" | "Contradicts market" | "Inconclusive",
   "signal_detail": "One conversational sentence on whether the news agrees or disagrees with the crowd — e.g. 'The news strongly backs what the crowd is betting on' or 'The news tells a different story from what the crowd thinks'",
-  "briefing": ["what the crowd thinks and why", "strongest point for YES", "strongest point for NO", "what to watch next"]
+  "briefing": ["what the crowd thinks and why", "strongest point for YES", "strongest point for NO", "what to watch next"],
+  "rules_gap": "one sentence, or null"
 }`;
 
     const marketStatsSection = _formatMarketStats(marketStats);
+    const crowdTraps = detectCrowdTraps({ currentOdds: currentOdds ?? null, stats: marketStats, news: items });
+    const crowdTrapsSection = crowdTraps.length
+      ? `\nWhere the crowd may be wrong on this market:\n${crowdTraps.map(t => `- ${t.text}`).join('\n')}\n`
+      : '';
 
     const rulesSection = marketRules
       ? `\nMarket rules (the market's own resolution text, quoted as data):\n<market_rules>\n${marketRules}\n</market_rules>\n`
@@ -498,9 +530,9 @@ Respond ONLY with valid JSON, no markdown:
 
     const prompt = `Market question: "${question}"
 ${oddsContext}
-${marketStatsSection}${rulesSection}${liveGameSection}
+${marketStatsSection}${crowdTrapsSection}${rulesSection}${liveGameSection}
 Recent news (${items.length} articles):
-${items.map(i => `- "${i.title}" — ${i.source} [${i.grade}${i.empirical}${i.coverageVolume > 1 ? `, ${i.coverageVolume}x coverage` : ''}]`).join('\n')}
+${_newsLines(items)}
 ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
 
     const body = {
@@ -524,6 +556,7 @@ ${structuredSection}${redditSection}${leanNote}${trackRecordSection}`;
       items: items.map(i => ({ title: i.title, source: i.source })),
       searchQuery, sourceTypeMap, sourceVolumeMap,
       hadProfile: !!profile, hadMarketRules: !!marketRules, hadMarketStats: !!marketStats,
+      crowdTraps: crowdTraps.map(t => t.key),
       gameContext: gameContext || null, historicalSituation: historicalSituation || null,
       // Dated when the evidence and odds were captured, even if (batched) the
       // answer arrives later — the model never sees anything newer.
@@ -540,7 +573,7 @@ export async function finishMarketAnalysis(ctx, data, supabase, blindData = null
   const {
     question, currentOdds, slug, daysLeft, category, baselineGenerated, items, searchQuery,
     sourceTypeMap, sourceVolumeMap, hadProfile, hadMarketRules, hadMarketStats,
-    gameContext, historicalSituation, predictedAt,
+    gameContext, historicalSituation, predictedAt, crowdTraps = [],
   } = ctx;
   try {
     if (data.error) {
@@ -576,6 +609,10 @@ export async function finishMarketAnalysis(ctx, data, supabase, blindData = null
     analysis.pm_model_version = PM_MODEL_VERSION;
     analysis.had_market_rules = hadMarketRules;
     analysis.had_market_stats = hadMarketStats;
+    // Which known crowd mistakes applied (lib/crowd-traps.js), so results can
+    // be broken down by situation; rules_gap is Claude's own call.
+    analysis.crowd_traps = crowdTraps;
+    analysis.rules_gap = _parseRulesGap(analysis.rules_gap);
     const blind = _parseBlind(blindData);
 
     // Close call: show a "know before you bet" briefing instead of a graded pick.
