@@ -311,7 +311,17 @@
   // the dashboard (and whatever it shows about you) just stays on screen after sign-out.
   window._onAuthChange(function(user) { if (!user) window.location.replace('/'); });
   window._onAuthReady(function(user) {
-    if (!user) { window.location.replace('/'); return; }
+    if (!user) {
+      // Clerk failed to load (window._auth.clerk is null) — that's "unknown",
+      // not "signed out". If this browser was signed in last time, stay put
+      // rather than bouncing to '/', which just redirects straight back here.
+      var authDown = !window._auth || !window._auth.clerk;
+      var wasSignedIn = false;
+      try { wasSignedIn = localStorage.getItem('ii_was_signed_in') === '1'; } catch (_) {}
+      if (authDown && wasSignedIn) { _iiReveal(); return; }
+      window.location.replace('/');
+      return;
+    }
 
     var titleEl = document.getElementById('page-title');
     if (titleEl && user.name) titleEl.textContent = 'Welcome back, ' + user.name.split(' ')[0];

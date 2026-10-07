@@ -19,6 +19,17 @@
   // change too, so pages can re-gate themselves live.
   window._onAuthChange = function (fn) { _changeCallbacks.push(fn); };
 
+  // Clicking to another page while this one is still loading Clerk aborts
+  // Clerk's in-flight requests, so init "fails" and we'd report a signed-out
+  // user — home.html then redirects to '/', hijacking the navigation the user
+  // actually asked for and ping-ponging '/' -> '/home.html' (Safari paints a
+  // mash-up of all three pages mid-bounce). A page on its way out shouldn't
+  // report anything; reset on pageshow so a bfcache restore works normally.
+  let _leaving = false;
+  window.addEventListener('beforeunload', () => { _leaving = true; });
+  window.addEventListener('pagehide', () => { _leaving = true; });
+  window.addEventListener('pageshow', () => { _leaving = false; });
+
   // Inject styles for the account badge + its dropdown
   const _styleEl = document.createElement('style');
   _styleEl.textContent = `
@@ -274,6 +285,7 @@
   }
 
   if (!clerk) {
+    if (_leaving) return;
     // Auth state is unknown — the badge shell rendered above already shows
     // the (grey, signed-out-looking) account icon, so there's nothing more
     // to reveal here.
@@ -410,6 +422,7 @@
     _updateUI(_currentUser);
 
     clerk.addListener(({ user }) => {
+      if (_leaving) return;
       const normalized = _normalizeUser(user);
       try { _updateUI(normalized); }
       catch (err) { console.error('[auth.js] UI update on auth change failed:', err); }
