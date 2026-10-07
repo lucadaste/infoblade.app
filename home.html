@@ -39,23 +39,14 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#111111">
   <style>
-    /* Bold, collapsing header — sits pinned just under the top nav and
-       shrinks as you scroll past it, like Robinhood's large-title headers.
-       Scoped to this page only (shared.css's .hero stays the static
-       version everywhere else — this block loads after it and overrides). */
-    .hero { position: sticky; top: var(--ii-nav-h, 84px); z-index: 90; background: var(--paper); transition: padding 0.2s ease; }
+    /* Header with page icon. Not sticky: tab-shell.js puts this page's
+       content inside its horizontal .tab-scroll, which is a scroll container,
+       so position: sticky pinned relative to the strip instead of the
+       window, landing a full nav-height too low on top of Today's Picks
+       even before you scrolled. */
     .hero-head { display: flex; align-items: center; gap: 16px; }
-    .hero-icon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,230,118,0.12); color: var(--accent); transition: width 0.2s ease, height 0.2s ease; }
-    .hero-icon svg { width: 22px; height: 22px; transition: width 0.2s ease, height 0.2s ease; }
-    .hero h1 { transition: font-size 0.2s ease, margin-bottom 0.2s ease; }
-    .hero-tag, .hero-stat { transition: opacity 0.15s ease, max-height 0.2s ease, margin-top 0.2s ease; overflow: hidden; }
-
-    .hero.is-compact { padding-top: 14px; padding-bottom: 14px; }
-    .hero.is-compact .hero-tag { opacity: 0; max-height: 0; margin-bottom: 0; pointer-events: none; }
-    .hero.is-compact .hero-stat { opacity: 0; max-height: 0; margin-top: 0; pointer-events: none; }
-    .hero.is-compact h1 { font-size: 20px; margin-bottom: 0; }
-    .hero.is-compact .hero-icon { width: 32px; height: 32px; }
-    .hero.is-compact .hero-icon svg { width: 16px; height: 16px; }
+    .hero-icon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,230,118,0.12); color: var(--accent); }
+    .hero-icon svg { width: 22px; height: 22px; }
 
     .hero-stat { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
     .hero-stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 20px; color: var(--accent); letter-spacing: -0.3px; }
@@ -210,24 +201,6 @@
       </div>
     </div>
   </div>
-  <script>
-  (function () {
-    var hero = document.getElementById('hero');
-    var nav = document.querySelector('nav');
-    function setNavHeight() {
-      document.documentElement.style.setProperty('--ii-nav-h', nav.offsetHeight + 'px');
-    }
-    setNavHeight();
-    window.addEventListener('resize', setNavHeight);
-
-    var COMPACT_AT = 40;
-    function onScroll() {
-      hero.classList.toggle('is-compact', window.scrollY > COMPACT_AT);
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-  })();
-  </script>
 
   <div class="dash-wrap">
     <div class="page-section">
