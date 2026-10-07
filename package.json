@@ -10,7 +10,7 @@
   "dependencies": {
     "@capacitor/core": "^6.0.0",
     "@clerk/backend": "^1.21.0",
-    "@supabase/supabase-js": "2.78.0"
+    "@supabase/supabase-js": "2.117.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^6.0.0",
