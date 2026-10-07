@@ -22,10 +22,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(
 
 /* ── Tab shell (swipeable Home/Stocks/Markets/Crypto/Track Record) ─────────── */
 /* An embedded pane is a full copy of one of the 5 pages, loaded in an iframe
-   purely for its content — its own header/footer/bottom-nav would duplicate
-   the shell's, so they're hidden and the page's top padding is reclaimed. */
-html.is-embedded nav:not(.bottom-nav), html.is-embedded .bottom-nav, html.is-embedded footer { display: none !important; }
-html.is-embedded body { padding-top: 0 !important; }
+   purely for its content — its own header/bottom-nav would duplicate the
+   shell's, so they're hidden and the space reserved for them reclaimed
+   (the bottom padding exists only to clear the fixed bottom-nav, which the
+   shell page already reserves once). The footer stays: each pane is its
+   own page, and without it a swiped-to tab ended in a blank gap instead of
+   the logo + disclaimer a directly-loaded tab ends with. */
+html.is-embedded nav:not(.bottom-nav), html.is-embedded .bottom-nav { display: none !important; }
+html.is-embedded body { padding-top: 0 !important; padding-bottom: 0 !important; }
 .tab-scroll { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .tab-scroll::-webkit-scrollbar { display: none; }
 .tab-pane { flex: 0 0 100%; min-width: 100%; max-width: 100%; scroll-snap-align: start; scroll-snap-stop: always; }
