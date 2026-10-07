@@ -63,21 +63,42 @@
 
   document.body.insertBefore(tabScroll, bottomNavEl);
 
+  // Measures the iframe's body, not documentElement.scrollHeight: the latter
+  // is never smaller than the iframe's own viewport, i.e. the height we last
+  // set, so it could only ever grow — content that shrank (a collapsed list,
+  // a redirect to a shorter page) left a tall blank pane behind.
   function syncHeight(iframe) {
     try {
       var doc = iframe.contentDocument;
-      if (!doc || !doc.documentElement) return;
+      if (!doc || !doc.body) return;
       var apply = function () {
-        var h = Math.max(doc.documentElement.scrollHeight, doc.body ? doc.body.scrollHeight : 0);
+        var cs = doc.defaultView.getComputedStyle(doc.body);
+        var h = Math.ceil(doc.body.getBoundingClientRect().bottom + (parseFloat(cs.marginBottom) || 0));
         if (h > 0) iframe.style.height = h + 'px';
       };
       apply();
       if ('ResizeObserver' in window) {
-        new ResizeObserver(apply).observe(doc.documentElement);
+        new ResizeObserver(apply).observe(doc.body);
       } else {
         setInterval(apply, 500);
       }
     } catch (e) { /* same-origin should always succeed; ignore if not ready */ }
+  }
+
+  // The panes sit side by side in one flex row, so by default the strip is
+  // as tall as the TALLEST pane — on a short tab (e.g. Stocks) you could
+  // scroll far past its content into blank space that only existed because
+  // a neighboring tab was long. Clamp the strip to the visible pane instead
+  // (overflow-y is already hidden, so neighbors are just clipped).
+  function syncStripHeight() {
+    var pane = panes[activeIndex];
+    if (pane) tabScroll.style.height = pane.offsetHeight + 'px';
+  }
+  if ('ResizeObserver' in window) {
+    var paneObserver = new ResizeObserver(syncStripHeight);
+    panes.forEach(function (p) { paneObserver.observe(p); });
+  } else {
+    setInterval(syncStripHeight, 500);
   }
 
   function ensureLoaded(i) {
@@ -128,6 +149,7 @@
     document.title = t.title;
     setActiveNav(i);
     notifyChatWidget(i);
+    syncStripHeight();
     ensureLoaded(i - 1);
     ensureLoaded(i + 1);
   }
@@ -171,6 +193,7 @@
     document.title = TABS[i].title;
     setActiveNav(i);
     notifyChatWidget(i);
+    syncStripHeight();
   });
 
   var resizeTimer;

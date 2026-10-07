@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
+  <!-- home.html bounces signed-out visitors here, including when it's the
+       Home pane iframe inside tab-shell.js — hide this page's own nav there
+       too, or it stacks a second header under the shell's. -->
+  <script>if (window.self !== window.top || /[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <style id="ii-auth-hide">html { opacity: 0; transition: opacity .2s ease; }</style>
   <script>
     // Most visitors here are signed out — only pay the hide-and-wait cost

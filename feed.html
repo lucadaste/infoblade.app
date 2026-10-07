@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
-  <script>if (/[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
+  <script>if (window.self !== window.top || /[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <title>infoblade | Stock Markets</title>
   <meta name="description" content="Daily AI analysis of market-moving news events. Every headline traced to affected sectors, specific stocks, and confidence ratings across 500+ global sources." />
   <script src="/api-base.js"></script>
