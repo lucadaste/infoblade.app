@@ -292,6 +292,19 @@
     return m ? +m[1] : 0;
   }
 
+  // A call is only worth featuring as THE pick of the day if its own track
+  // record backs it up — otherwise "today's biggest mover has a pending
+  // call" can surface a call with a sub-50% (worse than a coin flip) hit
+  // rate as the flagship headline. Unproven buckets (not enough graded
+  // calls yet) get the benefit of the doubt since they're not yet *known*
+  // to be bad; only a track record with a real number below the bar excludes it.
+  // Callers await TrackRecord.ready once up front so this itself stays sync.
+  function goodCall(p, section) {
+    if (!window.TrackRecord) return true;
+    var hr = window.TrackRecord.hitRate(confNum(p.confidence) || 3, section);
+    return hr == null || hr >= 55;
+  }
+
   var _predictionsPromise = null;
   function fetchPredictions() {
     if (!_predictionsPromise) {
@@ -404,15 +417,19 @@
       var movable = movers.filter(function (m) { return typeof m.changePct === 'number'; });
       movable.sort(function (a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
 
+      if (window.TrackRecord) { await window.TrackRecord.ready; }
       var pickCall = null;
       for (var i = 0; i < movable.length; i++) {
-        if (callByTicker[movable[i].ticker]) { pickCall = callByTicker[movable[i].ticker]; break; }
+        var call = callByTicker[movable[i].ticker];
+        if (call && goodCall(call, 'stocks')) { pickCall = call; break; }
       }
       if (!pickCall && !movable.length && candidates.length) {
-        candidates.sort(function (a, b) {
+        var goodOnes = candidates.filter(function (p) { return goodCall(p, 'stocks'); });
+        var pool = goodOnes.length ? goodOnes : candidates;
+        pool.sort(function (a, b) {
           return confNum(b.confidence) - confNum(a.confidence) || new Date(b.createdAt) - new Date(a.createdAt);
         });
-        pickCall = candidates[0];
+        pickCall = pool[0];
       }
 
       if (pickCall) {
@@ -540,16 +557,20 @@
       var movable = prices.filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
       movable.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
 
+      if (window.TrackRecord) { await window.TrackRecord.ready; }
       var pickCall = null;
       for (var i = 0; i < movable.length; i++) {
         var sym = (movable[i].symbol || '').toUpperCase();
-        if (callBySym[sym]) { pickCall = callBySym[sym]; break; }
+        var call = callBySym[sym];
+        if (call && goodCall(call, 'crypto')) { pickCall = call; break; }
       }
       if (!pickCall && !movable.length && candidates.length) {
-        candidates.sort(function (a, b) {
+        var goodOnes = candidates.filter(function (p) { return goodCall(p, 'crypto'); });
+        var pool = goodOnes.length ? goodOnes : candidates;
+        pool.sort(function (a, b) {
           return confNum(b.confidence) - confNum(a.confidence) || new Date(b.createdAt) - new Date(a.createdAt);
         });
-        pickCall = candidates[0];
+        pickCall = pool[0];
       }
 
       if (pickCall) {

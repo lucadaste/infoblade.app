@@ -24,10 +24,13 @@
     });
   }
 
-  fetch((window.API_BASE || '') + '/api/predictions?track-record=true')
+  // Exposed so a page can wait for real hit-rate data before deciding what
+  // to feature (e.g. home.html screening "pick of the day" candidates),
+  // instead of only using it to label a choice already made.
+  const ready = fetch((window.API_BASE || '') + '/api/predictions?track-record=true')
     .then(r => (r.ok ? r.json() : null))
-    .then(d => { data = d?.sections || {}; fill(); })
-    .catch(() => { data = {}; fill(); });
+    .then(d => { data = d?.sections || {}; fill(); return data; })
+    .catch(() => { data = {}; fill(); return data; });
 
   // Claude's confidence comes back as "4 — reason"; only the reason is shown.
   function reasonText(conf) {
@@ -53,5 +56,14 @@
     return `<span class="track-record-slot" data-level="${lvl}" data-section="${section || 'stocks'}"${horizon ? ` data-horizon="${horizon}"` : ''}></span>`;
   }
 
-  window.TrackRecord = { slot, fill, reasonText, level, horizonOf };
+  // Same lookup `fill()` uses, but returning the raw number (or null when
+  // there isn't enough history yet) instead of rendering a slot.
+  function hitRate(lvl, section, horizon) {
+    const lv = data?.[section || 'stocks']?.[lvl];
+    const byH = horizon ? lv?.byHorizon?.[horizon] : null;
+    const b = byH?.hitRate != null ? byH : lv;
+    return b?.hitRate ?? null;
+  }
+
+  window.TrackRecord = { slot, fill, reasonText, level, horizonOf, ready, hitRate };
 })();
