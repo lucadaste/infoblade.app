@@ -1,6 +1,6 @@
 import { runAnalysis, prepareAnalysis, finishAnalysis } from './analyze.js';
-import { runMarketAnalysis, prepareMarketAnalysis, finishMarketAnalysis } from './market-analyze.js';
-import { callMessages, toBatchParams, submitBatch, getBatch, fetchBatchResults } from '../lib/anthropic.js';
+import { runMarketAnalysis, prepareMarketAnalysis, finishMarketAnalysis, runPreparedMarketAnalysis } from './market-analyze.js';
+import { toBatchParams, submitBatch, getBatch, fetchBatchResults } from '../lib/anthropic.js';
 import { fetchCategoryMarkets, labelMarkets } from './markets.js';
 import { SECTOR_STOCKS } from './sector-stocks.js';
 import { COIN_INFO, CORE_COINS } from '../lib/coin-symbols.js';
@@ -130,6 +130,8 @@ async function _runBatch(items, concurrency, fn) {
   return out;
 }
 
+const BLIND_SUFFIX = '_b';
+
 // Rows still waiting on a batch, or null when the table doesn't exist yet.
 async function _pendingBatchItems(supabase) {
   const { data, error } = await supabase
@@ -175,8 +177,9 @@ async function _collectBatches(supabase, pending) {
       const r = byId.get(item.id);
       if (r?.type !== 'succeeded') return 'failed';
       if (_isStale(item, answeredAt)) return 'stale';
+      const blind = byId.get(item.id + BLIND_SUFFIX);
       const fin = item.kind === 'market'
-        ? await finishMarketAnalysis(item.ctx, r.message, supabase)
+        ? await finishMarketAnalysis(item.ctx, r.message, supabase, blind?.type === 'succeeded' ? blind.message : null)
         : await finishAnalysis(item.ctx, r.message, supabase);
       if (fin?.error) return 'failed';
       if (fin?.predictionSaved) summary.saved++;
@@ -213,7 +216,7 @@ async function _execJobs(supabase, jobs, concurrency, useBatch) {
       const prep = job.kind === 'market' ? await prepareMarketAnalysis(job.args) : await prepareAnalysis(job.args);
       if (prep.result) { results[i] = prep.result; return; }
       if (job.kind === 'market' && (prep.ctx.gameContext?.state === 'in' || (prep.ctx.daysLeft != null && prep.ctx.daysLeft < 1))) {
-        results[i] = await finishMarketAnalysis(prep.ctx, await callMessages(prep.body), supabase);
+        results[i] = await runPreparedMarketAnalysis(prep, supabase);
         return;
       }
       queue.push({ i, job, prep });
@@ -226,7 +229,14 @@ async function _execJobs(supabase, jobs, concurrency, useBatch) {
   const stamp = Date.now().toString(36);
   const ids = queue.map((_, k) => `bl_${stamp}_${k}_${Math.random().toString(36).slice(2, 8)}`);
   try {
-    const batch = await submitBatch(queue.map((q, k) => ({ custom_id: ids[k], params: toBatchParams(q.prep.body) })));
+    // A market's blind estimate (see PM_BLIND_VERSION) rides in the same
+    // batch under its row id + BLIND_SUFFIX, so collecting needs no extra rows.
+    const requests = [];
+    queue.forEach((q, k) => {
+      requests.push({ custom_id: ids[k], params: toBatchParams(q.prep.body) });
+      if (q.prep.blindBody) requests.push({ custom_id: ids[k] + BLIND_SUFFIX, params: toBatchParams(q.prep.blindBody) });
+    });
+    const batch = await submitBatch(requests);
     const { error } = await supabase.from('baseline_batch_items').insert(queue.map((q, k) => ({
       id: ids[k], batch_id: batch.id, kind: q.job.kind, section: q.job.section,
       cover_key: q.job.coverKey || null, ctx: q.prep.ctx, submitted_at: q.prep.ctx.predictedAt,
