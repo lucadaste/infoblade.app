@@ -109,9 +109,8 @@
     .wl-tile-price { font-size: 11.5px; color: var(--muted); }
     .wl-tile-price.dir-bullish { color: #2a9e4f; }
     .wl-tile-price.dir-bearish { color: #c84040; }
-    .wl-tile-remove { width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0; transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease; }
-    .wl-tile:hover .wl-tile-remove, .wl-tile-remove:focus-visible { opacity: 1; }
-    .wl-tile-remove:hover { background: var(--hover-tint); color: #c84040; }
+    .wl-tile-remove { width: 20px; height: 20px; border-radius: 50%; border: none; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.55; transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease; }
+    .wl-tile-remove:hover, .wl-tile-remove:focus-visible { opacity: 1; background: var(--hover-tint); color: #c84040; }
 
     /* Prediction-market row: question + current odds, no icon (none exists) */
     .wl-market-list { display: flex; flex-direction: column; gap: 9px; }
@@ -119,8 +118,6 @@
     .wl-market-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
     .wl-market-q { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-market-odds { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
-    .wl-market-row .wl-tile-remove { opacity: 0; }
-    .wl-market-row:hover .wl-tile-remove, .wl-market-row .wl-tile-remove:focus-visible { opacity: 1; }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -392,12 +389,15 @@
     }
   }
 
-  // Crypto Coin of the Day: best pending AI call on a coin that's actually
-  // shown on crypto.html; falls back to today's single biggest mover among
-  // those same tracked coins when no eligible call is pending, so this card
-  // is rarely empty. The predictions engine recognizes more coins (42) than
-  // crypto.html displays (32) — without this check a pick can name a coin
-  // that doesn't exist anywhere else on the site.
+  // Crypto Coin of the Day: today's single biggest mover among the 32 coins
+  // crypto.html tracks — if the AI has a pending call on that exact coin,
+  // show its call (direction/confidence/track record) instead of a bare
+  // price card, so the pick is always grounded in real movement but still
+  // shows the AI's take when it's actually backing what's moving. Only
+  // falls back to a pure highest-confidence AI call if the price feed is
+  // down entirely. The predictions engine recognizes more coins (42) than
+  // crypto.html displays (32) — the trackedSyms check keeps picks from
+  // naming a coin that doesn't exist anywhere else on the site.
   async function loadCryptoPick() {
     var body = document.getElementById('crypto-pick-body');
     try {
@@ -413,27 +413,44 @@
         var coin = (p.winnerTickers && p.winnerTickers[0]) || (p.loserTickers && p.loserTickers[0]);
         return coin && trackedSyms[coin];
       });
-      candidates.sort(function (a, b) {
-        return confNum(b.confidence) - confNum(a.confidence) ||
-          new Date(b.createdAt) - new Date(a.createdAt);
+      var callBySym = {};
+      candidates.forEach(function (p) {
+        var bullish = !!(p.winnerTickers && p.winnerTickers.length);
+        var coin = bullish ? p.winnerTickers[0] : p.loserTickers[0];
+        if (!callBySym[coin] || confNum(p.confidence) > confNum(callBySym[coin].confidence)) {
+          callBySym[coin] = p;
+        }
       });
-      var top = candidates[0];
-      if (top) {
-        var bullish = !!(top.winnerTickers && top.winnerTickers.length);
-        var coin = bullish ? top.winnerTickers[0] : top.loserTickers[0];
+
+      var movable = prices.filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
+      movable.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
+
+      var pickCall = null;
+      for (var i = 0; i < movable.length; i++) {
+        var sym = (movable[i].symbol || '').toUpperCase();
+        if (callBySym[sym]) { pickCall = callBySym[sym]; break; }
+      }
+      if (!pickCall && !movable.length && candidates.length) {
+        candidates.sort(function (a, b) {
+          return confNum(b.confidence) - confNum(a.confidence) || new Date(b.createdAt) - new Date(a.createdAt);
+        });
+        pickCall = candidates[0];
+      }
+
+      if (pickCall) {
+        var bullish = !!(pickCall.winnerTickers && pickCall.winnerTickers.length);
+        var coin = bullish ? pickCall.winnerTickers[0] : pickCall.loserTickers[0];
         var arrow = bullish ? '↑' : '↓';
         var dirClass = bullish ? 'dir-bullish' : 'dir-bearish';
         body.innerHTML =
           '<div class="pick-headline"><span class="' + dirClass + '">' + arrow + '</span> ' + esc(coin) + '</div>' +
-          (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(top.confidence) || 3, 'crypto') + '</div>' : '') +
-          '<div class="pick-desc">' + esc(top.topic) + '</div>' +
+          (window.TrackRecord ? '<div class="pick-sub track-record-row">' + TrackRecord.slot(confNum(pickCall.confidence) || 3, 'crypto') + '</div>' : '') +
+          '<div class="pick-desc">' + esc(pickCall.topic) + '</div>' +
           '<a class="pick-cta" href="/coin.html?symbol=' + encodeURIComponent(coin) + '">Full analysis &rarr;</a>';
         if (window.TrackRecord) TrackRecord.fill(body);
         return;
       }
 
-      var movable = prices.filter(function (c) { return typeof c.price_change_percentage_24h === 'number'; });
-      movable.sort(function (a, b) { return Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h); });
       var mover = movable[0];
       if (!mover) {
         body.innerHTML = '<div class="pick-empty">Crypto data unavailable right now.</div>';
