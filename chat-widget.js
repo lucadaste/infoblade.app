@@ -711,6 +711,7 @@
   let introStarted = false;
   let introPromise = null;  // lets iiAsk below wait out the first-open intro before sending
   let startersEl = null;
+  let hasChattedBefore = false; // set from playIntro's fetchHasChatted; gates starter chips on "New chat" too
   let sessionId = null;     // set on first send of a conversation; carries that
                              // conversation's turns in chat_messages (see api/chat.js)
   let historyOpen = false;
@@ -987,6 +988,7 @@
 
   async function playIntro() {
     const hasChatted = await fetchHasChatted();
+    hasChattedBefore = hasChatted;
 
     // Ticker pages, signed in: skip the generic walkthrough and ask the real
     // question on the visitor's behalf, so the first thing they see is an
@@ -1009,8 +1011,13 @@
           "You can also ask me how anything on this site works, what the data means, or anything else.",
         ];
     await typeIntroLines(lines);
-    startersEl = buildStarters();
-    msgsEl.appendChild(startersEl);
+    // Same rule as the welcome text above: once someone's actually used the
+    // site (hasChatted), skip the suggested starter chips too, rather than
+    // showing "how does this work?"-style prompts to a returning user.
+    if (!hasChatted) {
+      startersEl = buildStarters();
+      msgsEl.appendChild(startersEl);
+    }
   }
 
   function setOpen(v) {
@@ -1586,8 +1593,10 @@
     history = [];
     sessionId = null;
     clearChatState();
-    startersEl = buildStarters();
-    msgsEl.appendChild(startersEl);
+    if (!hasChattedBefore) {
+      startersEl = buildStarters();
+      msgsEl.appendChild(startersEl);
+    }
     setHistoryOpen(false);
   }
 
