@@ -409,7 +409,17 @@ export async function prepareAnalysis({
     // A coin call is about exactly one coin, so seed its data from coinSymbol.
     // Headline regex alone ($ETH / (ETH)) missed it whenever outlets wrote
     // "Ethereum", leaving the prompt with no price or quant data at all.
-    const candidateTickers = isCoinCall ? [coinSymbol] : _extractTickerCandidates(headlines);
+    // Also search `topic`, not just headlines: a no-news "general outlook"
+    // call (runGeneralStockAnalysis in feed.html) sends headlines: [] but its
+    // topic string always contains "Name (TICKER) stock market outlook...".
+    // Without this, candidateTickers came back empty for every such call,
+    // which meant buildContextGraph below got tickers: [] and so could never
+    // surface that ticker's own bullish/bearish track record or generate a
+    // calibration rule for it — silently skipping the one self-correction
+    // mechanism that would catch a case like TLT (see 2026-10 audit: model
+    // stayed bullish-biased on TLT for 4+ months because this exact path
+    // never ran for it).
+    const candidateTickers = isCoinCall ? [coinSymbol] : _extractTickerCandidates([topic, ...headlines]);
     const isCryptoTopic = isCoinCall || /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
     const [relevantMarkets, technicalSnapshot, quantSnapshot, redditPosts, reputation, contextGraph, liveConflicts, derivs, fearGreed] = await Promise.all([
       _fetchRelevantMarkets(topic),
