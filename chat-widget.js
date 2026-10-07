@@ -1051,10 +1051,23 @@
   // breakpoint.
   const embedMq = window.matchMedia('(min-width: 1180px)');
   let feedDockEnabled = false;
+  // tab-shell.js stitches Home/Stocks/Markets/Crypto/Track Record into one
+  // continuously-scrollable strip on a single top-level document (see that
+  // file) — swiping between them never navigates, so `page` alone (fixed at
+  // load) would keep whichever tab loaded the page's embed/icon mode stuck
+  // on screen no matter which tab is actually scrolled into view. tab-shell
+  // reports the real visible tab here; everywhere else (stock.html, coin.html,
+  // standalone pages) this just stays equal to `page`.
+  let activeTabPage = page;
+  window.iiSetActiveTabPage = function (p) {
+    if (p === activeTabPage) return;
+    activeTabPage = p;
+    applyResponsiveMode();
+  };
   function isEmbedMode() {
     if (!embedMq.matches) return false;
-    if (page === 'home.html' || page === 'stock.html' || page === 'coin.html') return true;
-    return page === 'feed.html' && feedDockEnabled;
+    if (activeTabPage === 'home.html' || page === 'stock.html' || page === 'coin.html') return true;
+    return activeTabPage === 'feed.html' && feedDockEnabled;
   }
 
   // Lets feed.html turn on the permanent dock once a question has been
@@ -1088,7 +1101,7 @@
   // other page has no such bar, so the bubble is the only entry point and
   // always shows.
   function feedBubbleIdle() {
-    return page === 'feed.html' && !feedDockEnabled && history.length === 0;
+    return activeTabPage === 'feed.html' && !feedDockEnabled && history.length === 0;
   }
 
   function applyResponsiveMode() {

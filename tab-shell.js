@@ -100,6 +100,16 @@
 
   var activeIndex = selfIndex;
 
+  // chat-widget.js loads before this script on every tab page (see each
+  // page's <script> order) — tells it which tab is actually scrolled into
+  // view so the AI chat's embed/icon mode tracks the visible tab instead of
+  // staying stuck on whichever tab happened to load the top-level document.
+  function notifyChatWidget(i) {
+    var t = TABS[i];
+    if (t && window.iiSetActiveTabPage) window.iiSetActiveTabPage(t.file.replace(/^\//, ''));
+  }
+  notifyChatWidget(selfIndex);
+
   function setActiveNav(i) {
     document.querySelectorAll('.bottom-nav .bn-item').forEach(function (el, idx) {
       el.classList.toggle('active', idx === i);
@@ -117,6 +127,7 @@
     history.pushState({ tabIndex: i }, '', t.path);
     document.title = t.title;
     setActiveNav(i);
+    notifyChatWidget(i);
     ensureLoaded(i - 1);
     ensureLoaded(i + 1);
   }
@@ -159,6 +170,7 @@
     tabScroll.scrollLeft = i * paneWidth();
     document.title = TABS[i].title;
     setActiveNav(i);
+    notifyChatWidget(i);
   });
 
   var resizeTimer;
