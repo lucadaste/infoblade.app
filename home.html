@@ -118,6 +118,24 @@
     .wl-market-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
     .wl-market-q { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wl-market-odds { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
+
+    /* Top Movers — same gainers/losers rail feed.html shows next to the
+       watchlist, nested under it here instead of beside it. */
+    .movers-block { margin-top: 4px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .movers-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+    .mover-tabs { display: flex; gap: 4px; }
+    .mover-tab { font-family: 'Share Tech Mono', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 3px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+    .mover-tab.active { background: var(--surface-2); color: var(--ink); border-color: var(--border); }
+    .mover-list { display: none; }
+    .mover-list.show { display: block; }
+    .mover-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit; }
+    .mover-item:first-child { border-top: none; }
+    .mover-item:hover .mover-sym { color: var(--accent); }
+    .mover-rank { font-size: 11px; color: var(--muted); width: 14px; flex-shrink: 0; }
+    .mover-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; transition: color 0.15s; flex: 1; min-width: 0; }
+    .mover-figs { text-align: right; flex-shrink: 0; }
+    .mover-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .mover-price { font-size: 11px; color: var(--muted); }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">
 </head>
@@ -192,6 +210,18 @@
       </div>
       <div class="wl-panel" id="wl-card">
         <div id="wl-body"><div class="wl-empty">Loading&hellip;</div></div>
+
+        <div class="movers-block">
+          <div class="movers-head">
+            <span class="wl-group-label">Top Movers</span>
+            <div class="mover-tabs">
+              <button class="mover-tab active" data-list="gainers" onclick="setHomeMoversTab('gainers', this)">Gainers</button>
+              <button class="mover-tab" data-list="losers" onclick="setHomeMoversTab('losers', this)">Losers</button>
+            </div>
+          </div>
+          <div class="mover-list show" id="home-mover-gainers"><div class="wl-empty">Loading&hellip;</div></div>
+          <div class="mover-list" id="home-mover-losers"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -251,6 +281,7 @@
   loadPredictionPick();
   loadCryptoPick();
   loadAccuracyStat();
+  renderHomeMovers();
 
   function esc(v) {
     return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
@@ -293,6 +324,44 @@
         .then(function (d) { return d.tickers || []; });
     }
     return _stockMoversPromise;
+  }
+
+  // Top Movers — same gainers/losers list as feed.html's watch-rail, reusing
+  // the Stock of the Day fetch above instead of hitting the API twice.
+  function setHomeMoversTab(which, btn) {
+    document.querySelectorAll('.mover-tab').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.mover-list').forEach(function (l) { l.classList.remove('show'); });
+    document.getElementById('home-mover-' + which).classList.add('show');
+  }
+
+  async function renderHomeMovers() {
+    var gainersEl = document.getElementById('home-mover-gainers');
+    var losersEl = document.getElementById('home-mover-losers');
+    try {
+      var movers = await fetchStockMovers();
+      var withChg = movers.filter(function (t) { return t.changePct != null && t.price != null; });
+      var gainers = withChg.slice().sort(function (a, b) { return b.changePct - a.changePct; }).slice(0, 5);
+      var losers = withChg.slice().sort(function (a, b) { return a.changePct - b.changePct; }).slice(0, 5);
+
+      var renderList = function (items) {
+        return items.map(function (t, i) {
+          var dirClass = t.changePct >= 0 ? 'dir-bullish' : 'dir-bearish';
+          var sign = t.changePct >= 0 ? '+' : '';
+          return '<a class="mover-item" href="/stock.html?ticker=' + encodeURIComponent(t.ticker) + '">' +
+            '<span class="mover-rank">' + (i + 1) + '</span>' +
+            '<span class="mover-sym">' + esc(t.ticker) + '</span>' +
+            '<div class="mover-figs"><div class="mover-pct ' + dirClass + '">' + sign + t.changePct.toFixed(2) + '%</div>' +
+            '<div class="mover-price">$' + t.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</div></div></a>';
+        }).join('');
+      };
+
+      gainersEl.innerHTML = renderList(gainers) || '<div class="wl-empty">No data right now.</div>';
+      losersEl.innerHTML = renderList(losers) || '<div class="wl-empty">No data right now.</div>';
+    } catch (_) {
+      gainersEl.innerHTML = '<div class="wl-empty">Couldn\'t load movers right now.</div>';
+      losersEl.innerHTML = '';
+    }
   }
 
   async function loadAccuracyStat() {
