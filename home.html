@@ -39,15 +39,11 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#111111">
   <style>
-    /* Header with page icon. Not sticky: tab-shell.js puts this page's
-       content inside its horizontal .tab-scroll, which is a scroll container,
-       so position: sticky pinned relative to the strip instead of the
+    /* Not sticky: tab-shell.js puts this page's content inside its
+       horizontal .tab-scroll, which is a scroll container, so
+       position: sticky pinned relative to the strip instead of the
        window, landing a full nav-height too low on top of Today's Picks
        even before you scrolled. */
-    .hero-head { display: flex; align-items: center; gap: 16px; }
-    .hero-icon { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,230,118,0.12); color: var(--accent); }
-    .hero-icon svg { width: 22px; height: 22px; }
-
     .hero-stat { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
     .hero-stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 20px; color: var(--accent); letter-spacing: -0.3px; }
     .hero-stat-label { font-size: 13px; color: var(--muted); }
@@ -70,8 +66,9 @@
     }
 
     .page-section { display: flex; flex-direction: column; gap: 18px; }
-    .section-label { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
-    .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .section-label { display: inline-flex; align-items: center; gap: 7px; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
+    .section-icon { width: 13px; height: 13px; flex-shrink: 0; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .section-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .section-link:hover { text-decoration: underline; }
 
@@ -189,22 +186,19 @@
   </script>
 
   <div class="hero" id="hero">
-    <div class="hero-head">
-      <div class="hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg></div>
-      <div>
-        <div class="hero-tag"><span class="hero-tag-dot"></span> Your Dashboard</div>
-        <h1 id="page-title">Welcome back</h1>
-        <div class="hero-stat" id="hero-stat" hidden>
-          <span class="hero-stat-value" id="hero-stat-value">—</span>
-          <span class="hero-stat-label" id="hero-stat-label"></span>
-        </div>
+    <div>
+      <div class="hero-tag"><span class="hero-tag-dot"></span> Your Dashboard</div>
+      <h1 id="page-title">Welcome back</h1>
+      <div class="hero-stat" id="hero-stat" hidden>
+        <span class="hero-stat-value" id="hero-stat-value">—</span>
+        <span class="hero-stat-label" id="hero-stat-label"></span>
       </div>
     </div>
   </div>
 
   <div class="dash-wrap">
     <div class="page-section">
-      <div class="section-label">Today's Picks</div>
+      <div class="section-label"><svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg>Today's Picks</div>
       <div class="picks-grid">
         <div class="pick-card" id="stock-pick-card">
           <div class="pick-eyebrow">Stock of the Day</div>
@@ -225,7 +219,7 @@
 
     <div class="page-section">
       <div class="section-head">
-        <div class="section-label">Watchlist</div>
+        <div class="section-label"><svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2.5 14.9 8.6 21.5 9.5 16.8 14.1 17.9 20.8 12 17.6 6.1 20.8 7.2 14.1 2.5 9.5 9.1 8.6 12 2.5"/></svg>Watchlist</div>
         <a class="section-link" href="/watchlist.html">Manage &rarr;</a>
       </div>
       <div id="wl-body"><div class="wl-empty">Loading&hellip;</div></div>
@@ -233,7 +227,7 @@
 
     <div class="page-section">
       <div class="section-head">
-        <div class="section-label">Top Movers</div>
+        <div class="section-label"><svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 18 8.5 10.5 13.5 15.5 23 6"/><path d="M17 6 23 6 23 12"/></svg>Top Movers</div>
         <div class="mover-tabs">
           <button class="mover-tab active" data-list="gainers" onclick="setHomeMoversTab('gainers', this)">Gainers</button>
           <button class="mover-tab" data-list="losers" onclick="setHomeMoversTab('losers', this)">Losers</button>
