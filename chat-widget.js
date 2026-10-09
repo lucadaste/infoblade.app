@@ -921,7 +921,7 @@
   ];
 
   // auth.js resolves window._auth asynchronously (fetch config, load Clerk,
-  // clerk.load()) — a docked page (stock.html, coin.html) calls playIntro() the instant the page
+  // clerk.load()) — a docked page (home.html, stock.html, coin.html) calls playIntro() the instant the page
   // loads (see applyResponsiveMode() below), which otherwise reliably beats
   // that, making every returning user see the full first-time intro forever.
   // window._onAuthReady is exposed synchronously for exactly this race (see
@@ -1035,13 +1035,15 @@
     saveChatState();
   }
 
-  // Home used to dock the panel permanently too, but with tab-shell that
-  // meant the chat sprang open every time you swiped/clicked back to Home —
-  // it now keeps the normal bubble like the other tabs.
-  // stock.html and coin.html (single-ticker quote pages), once there's
-  // enough width to hold both the page content and the chat without
-  // cramping either (see the dock styles above), get an always-on
-  // treatment — their content column is narrow and left-aligned,
+  // Home, once there's enough width to hold both the page content and the
+  // chat without cramping either (see the dock styles above): the panel
+  // isn't a popup the user opens and dismisses there — it's a permanent
+  // part of the page, no trigger icon or close control. This does mean
+  // swiping/clicking back to Home re-opens the dock every time at that
+  // width (activeTabPage below), which is deliberate — Home keeps the
+  // always-on dock, every other tab-shell tab keeps the icon popup.
+  // stock.html and coin.html (single-ticker quote pages) get the same
+  // always-on treatment — their content column is narrow and left-aligned,
   // so wide viewports otherwise sit mostly empty on the right. Stock
   // Markets (feed.html) earns the dock too, but only once the user has
   // actually asked the AI something through the page's own search bar
@@ -1067,7 +1069,7 @@
   };
   function isEmbedMode() {
     if (!embedMq.matches) return false;
-    if (page === 'stock.html' || page === 'coin.html') return true;
+    if (activeTabPage === 'home.html' || page === 'stock.html' || page === 'coin.html') return true;
     return activeTabPage === 'feed.html' && feedDockEnabled;
   }
 
