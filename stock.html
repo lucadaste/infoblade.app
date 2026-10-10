@@ -143,35 +143,6 @@
     .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(0,230,118,0.08); color: #a0cc00; border: 1px solid rgba(0,230,118,0.15); }
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
     .ai-err { color: #ff7070; font-size: 12px; }
-    .ai-events { display: flex; flex-direction: column; gap: 14px; }
-    .ai-events-toggle { background: none; border: none; padding: 0; cursor: default; text-align: left; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; }
-    .ai-events-toggle .toggle-arrow { display: none; font-style: normal; transition: transform 0.2s; }
-
-    /* Wide screens: the AI section lives in the chat dock's pinned slot
-       (chat-widget.js #ii-pinned), so the call and follow-up chat sit side
-       by side with the chart. Below 1180px it stays under the stats. */
-    @media (min-width: 1180px) {
-      html.ii-chat-embedded.ii-quote-dock.ii-quote-pinned { --ii-chat-w: clamp(320px, 30vw, 440px); }
-    }
-    #ai-section.in-dock .ai-cta { flex-direction: column; align-items: stretch; gap: 12px; padding: 14px 16px; }
-    #ai-section.in-dock .ai-cta-text { min-width: 0; }
-    #ai-section.in-dock .ai-cta-btn { text-align: center; }
-    #ai-section.in-dock #ai-panel { margin-top: 14px; gap: 12px; }
-    #ai-section.in-dock .overall-card,
-    #ai-section.in-dock .group-card { padding: 14px; }
-    #ai-section.in-dock .group-topic { font-size: 13px; }
-    #ai-section.in-dock .ai-events-toggle { cursor: pointer; }
-    #ai-section.in-dock .ai-events-toggle .toggle-arrow { display: inline-block; }
-    #ai-section.in-dock .ai-events-toggle.open .toggle-arrow { transform: rotate(90deg); }
-    #ai-section.in-dock .ai-events:not(.open) { display: none; }
-    /* Once a run starts the intro card collapses to a slim header row —
-       the results are the content now. */
-    #ai-section.ai-started .ai-cta { flex-direction: row; align-items: center; padding: 0; background: none; border-left: none; gap: 12px; }
-    #ai-section.ai-started .ai-cta-sub { display: none; }
-    #ai-section.ai-started .ai-cta-title { margin: 0; }
-    #ai-section.ai-started .ai-cta-btn { border-color: var(--border); color: var(--muted); font-size: 11px; padding: 5px 11px; }
-    #ai-section.ai-started .ai-cta-btn:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
-    #ai-section.ai-started .ai-cta-btn:disabled { opacity: 0.6; cursor: default; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton { background: linear-gradient(90deg, var(--card) 25%, var(--surface-2) 50%, var(--card) 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
@@ -246,7 +217,6 @@
 
     <div class="stat-grid" id="stat-grid"></div>
 
-    <section id="ai-section">
     <div class="ai-cta">
       <div class="ai-cta-text">
         <div class="ai-cta-title">AI Analysis</div>
@@ -255,8 +225,6 @@
       <button class="ai-cta-btn" id="ai-cta-btn" type="button">Generate AI Analysis →</button>
     </div>
     <div id="ai-panel" aria-live="polite"></div>
-    </section>
-    <div id="ai-home"></div>
   </div>
 </div>
 
@@ -265,11 +233,6 @@
   const params = new URLSearchParams(window.location.search);
   const TICKER = (params.get('ticker') || '').toUpperCase().replace(/[^A-Z.\-]/g, '').slice(0, 10);
   const NAME   = params.get('name') || TICKER;
-
-  // Tells chat-widget.js this page pins its own AI call in the dock, so it
-  // skips its auto-asked ticker report (see placeAiSection below).
-  window.iiQuotePinned = !!TICKER;
-  if (TICKER) document.documentElement.classList.add('ii-quote-pinned');
 
   if (!TICKER) {
     document.getElementById('s-content').style.display = 'none';
@@ -778,8 +741,6 @@
     }
     btn.disabled = true;
     btn.textContent = 'Analyzing…';
-    document.getElementById('ai-section').classList.add('ai-started');
-    if (document.getElementById('ai-section').classList.contains('in-dock')) window.iiFocusPinned?.();
     showLoading(panel, LW_STOCK, '18px 0');
     try {
       const res = await fetch(`/api/analyze?stock=${encodeURIComponent(TICKER)}&stockName=${encodeURIComponent(name)}&timeframe=today`);
@@ -802,23 +763,17 @@
         overall.innerHTML = `<div class="overall-label">Overall Prediction · ${esc(name)} (${esc(TICKER)})</div>`;
         runOverall(slot(overall), name, groups);
         const lbl = slot(panel);
-        lbl.className = 'ap-section-label ai-events-toggle';
-        lbl.innerHTML = `<i class="toggle-arrow">›</i>${groups.length} market event${groups.length !== 1 ? 's' : ''} analyzed for ${esc(TICKER)}`;
-        const events = slot(panel);
-        events.className = 'ai-events';
-        lbl.addEventListener('click', () => {
-          if (!document.getElementById('ai-section').classList.contains('in-dock')) return;
-          lbl.classList.toggle('open', events.classList.toggle('open'));
-        });
+        lbl.className = 'ap-section-label';
+        lbl.textContent = `${groups.length} market event${groups.length !== 1 ? 's' : ''} analyzed for ${TICKER}`;
         groups.forEach((group, idx) => {
-          const card = slot(events);
+          const card = slot(panel);
           card.className = 'group-card';
           card.style.animationDelay = `${idx * 60}ms`;
           card.innerHTML = `<div class="group-topic">${esc(group.topic)}</div><div class="group-meta">${(group.sources || []).slice(0, 3).map(esc).join(' · ')}</div>`;
           runGroup(slot(card), name, group);
         });
       }
-      btn.textContent = '↻ Refresh';
+      btn.textContent = 'Refresh Analysis ↻';
     } catch (err) {
       panel.innerHTML = `<div class="ai-err" style="font-size:13px">Failed to load news: ${esc(errMsg(err))}</div>`;
       btn.textContent = 'Try Again →';
@@ -826,24 +781,6 @@
       btn.disabled = false;
     }
   }
-  // Wide screens dock the chat on the right (chat-widget.js) — move the AI
-  // section into its pinned slot there, and back under the stats whenever
-  // the dock goes away (resize below 1180px). The widget script loads after
-  // this one, so wait for DOMContentLoaded before looking for the slot.
-  function placeAiSection() {
-    const sec = document.getElementById('ai-section');
-    const pin = document.getElementById('ii-pinned');
-    const docked = !!pin && document.documentElement.classList.contains('ii-chat-embedded');
-    const target = docked ? pin : document.getElementById('ai-home');
-    if (sec.parentNode !== target) target.appendChild(sec);
-    sec.classList.toggle('in-dock', docked);
-    if (pin) pin.hidden = !docked;
-  }
-  document.addEventListener('DOMContentLoaded', () => {
-    placeAiSection();
-    new MutationObserver(placeAiSection).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  });
-
   document.getElementById('ai-cta-btn').addEventListener('click', () => {
     if (typeof gtag !== 'undefined') gtag('event', 'stock_page_ai_analysis', { ticker: TICKER });
     if (window._onAuthReady) window._onAuthReady(runAiAnalysis); else runAiAnalysis();
