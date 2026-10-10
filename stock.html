@@ -8,6 +8,7 @@
   <title>infoblade | Stock</title>
   <meta name="description" content="Live price, today's chart, and AI-driven analysis for any stock or ETF on infoblade." />
   <script src="/api-base.js"></script>
+  <script src="/track-record.js"></script>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HEEV7Y9WQZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -31,8 +32,10 @@
     @media (max-width: 700px) { .main { padding: 20px 20px 40px; } }
     html.ii-chat-embedded .main { max-width: min(1040px, calc(100vw - var(--ii-chat-w, 520px) - 96px)); }
 
-    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 20px; transition: color 0.15s; }
-    .back-link:hover { color: var(--ink); }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 600; color: var(--text-soft); text-decoration: none; margin: -6px 0 18px -6px; padding: 6px 10px 6px 6px; border-radius: 8px; transition: color 0.15s, background 0.15s; }
+    .back-link svg { width: 18px; height: 18px; transition: transform 0.15s; }
+    .back-link:hover { color: var(--ink); background: var(--hover-tint); }
+    .back-link:hover svg { transform: translateX(-2px); }
 
     /* Header */
     .s-head-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
@@ -93,6 +96,53 @@
     .ai-cta-sub { font-size: 13px; color: var(--text-soft); line-height: 1.55; }
     .ai-cta-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; text-decoration: none; white-space: nowrap; transition: all 0.15s; }
     .ai-cta-btn:hover { background: var(--accent); color: #111; }
+    button.ai-cta-btn { cursor: pointer; }
+
+    /* In-page AI analysis — same pipeline and look as the Stocks page panel */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    #ai-panel { display: none; flex-direction: column; gap: 14px; margin-top: 18px; animation: fadeUp 0.3s ease both; }
+    #ai-panel.show { display: flex; }
+    .ai-gate { padding: 8px 0; font-size: 14px; color: var(--text-soft); line-height: 1.6; }
+    .ai-gate a { color: var(--accent); }
+    .lw { display:flex; align-items:center; gap:10px; }
+    .lw-dots { display:flex; gap:4px; flex-shrink:0; }
+    .lw-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:lw-pulse 1.2s ease-in-out infinite; }
+    .lw-dot:nth-child(2) { animation-delay:.2s; } .lw-dot:nth-child(3) { animation-delay:.4s; }
+    @keyframes lw-pulse { 0%,80%,100% { opacity:.2; transform:scale(.75); } 40% { opacity:1; transform:scale(1); } }
+    .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:var(--muted); letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
+    .overall-card { background: linear-gradient(135deg, rgba(0,230,118,0.04) 0%, transparent 60%); border: 1px solid rgba(0,230,118,0.18); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
+    .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+    .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
+    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; align-self: flex-start; }
+    .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
+    .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
+    .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
+    .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-top: 8px; }
+    .group-card { background: var(--card); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
+    .group-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
+    .group-meta { font-size: 12px; color: var(--muted); }
+    .ar-block { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.3s ease both; }
+    .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
+    .ar-row { font-size: 13px; line-height: 1.65; }
+    .ar-row strong { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
+    .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
+    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
+    .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
+    .ar-sources-toggle { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; align-self: flex-start; }
+    .ar-sources-toggle .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
+    .ar-sources-toggle.open .toggle-arrow { transform: rotate(90deg); }
+    .ar-sources-list { display: none; flex-direction: column; gap: 3px; padding: 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-top: 2px; }
+    .ar-sources-list.open { display: flex; }
+    .ar-source-item { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tickers { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .pill-up   { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
+    .pill-down { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
+    .sectors { display: flex; gap: 8px; flex-wrap: wrap; }
+    .sector-up   { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(0,230,118,0.08); color: #a0cc00; border: 1px solid rgba(0,230,118,0.15); }
+    .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
+    .ai-err { color: #ff7070; font-size: 12px; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton { background: linear-gradient(90deg, var(--card) 25%, var(--surface-2) 50%, var(--card) 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
@@ -131,7 +181,7 @@
 </script>
 
 <div class="main">
-  <a class="back-link" href="/feed.html">← Stocks</a>
+  <a class="back-link" href="/feed.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>Stocks</a>
 
   <div id="s-error" style="display:none" class="error-msg"></div>
 
@@ -170,10 +220,11 @@
     <div class="ai-cta">
       <div class="ai-cta-text">
         <div class="ai-cta-title">AI Analysis</div>
-        <div class="ai-cta-sub">Today's news mapped to likely price impact, plus infoblade's overall directional call — the full breakdown lives on the Stocks page.</div>
+        <div class="ai-cta-sub">Today's news mapped to likely price impact, plus infoblade's overall directional call.</div>
       </div>
-      <a class="ai-cta-btn" id="ai-cta-link" href="#">Full AI Analysis →</a>
+      <button class="ai-cta-btn" id="ai-cta-btn" type="button">Generate AI Analysis →</button>
     </div>
+    <div id="ai-panel" aria-live="polite"></div>
   </div>
 </div>
 
@@ -207,7 +258,6 @@
   document.getElementById('s-name').textContent = NAME;
   document.getElementById('s-name').classList.remove('skeleton');
   document.getElementById('s-name').style.cssText = '';
-  document.getElementById('ai-cta-link').href = `/feed.html?ticker=${encodeURIComponent(TICKER)}&name=${encodeURIComponent(NAME)}`;
 
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function fmtPrice(p) {
@@ -541,6 +591,194 @@
       currentRange = btn.dataset.range;
       loadData(currentRange);
     });
+  });
+
+  // ── AI analysis, generated right here under the stats — the same
+  // pipeline feed.html's per-stock panel runs (news groups → per-event
+  // calls + an overall directional call), so results match across pages. ──
+  const AI_IMPACT = '1 month';
+  const AI_CATEGORY = 'any';
+  const LW_STOCK = [
+    'Fetching news across 12+ sources...',
+    'Pulling Yahoo Finance technical data...',
+    'Checking Polymarket for related bets...',
+    'Scanning r/wallstreetbets for retail sentiment...',
+    'Building weighted source consensus...',
+    'Calling direction — bullish or bearish...',
+    'Calibrating against our track record...',
+  ];
+  const LW_GROUP = [
+    'Building weighted consensus from sources...',
+    'Checking Polymarket for related prediction bets...',
+    'Identifying winner and loser tickers...',
+    'Calling direction — bullish or bearish...',
+    'Calibrating confidence against our track record...',
+  ];
+  const LW_OVERALL = ['Synthesizing all news into an overall call...', 'Weighing bullish vs bearish signals...', 'Comparing to historical accuracy on this ticker...', 'Finalising direction and confidence...'];
+
+  // Rotating loading message; stops itself once the element leaves the DOM.
+  function lw(msgs, pad) {
+    const wrap = document.createElement('div');
+    wrap.className = 'lw';
+    wrap.style.padding = pad || '14px 0';
+    wrap.innerHTML = `<div class="lw-dots"><span class="lw-dot"></span><span class="lw-dot"></span><span class="lw-dot"></span></div><span class="lw-msg">${esc(msgs[0])}</span>`;
+    const msg = wrap.querySelector('.lw-msg');
+    let i = 0;
+    const tid = setInterval(() => {
+      if (!wrap.isConnected) { clearInterval(tid); return; }
+      msg.style.opacity = '0'; msg.style.transform = 'translateY(3px)';
+      setTimeout(() => { i = (i + 1) % msgs.length; msg.textContent = msgs[i]; msg.style.opacity = '1'; msg.style.transform = 'translateY(0)'; }, 220);
+    }, 2600);
+    return wrap;
+  }
+  function slot(parent) { const d = document.createElement('div'); parent.appendChild(d); return d; }
+  function showLoading(el, msgs, pad) { el.innerHTML = ''; el.appendChild(lw(msgs, pad)); }
+
+  async function authHeaders() {
+    const t = await window._auth?.getToken();
+    return t ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t } : { 'Content-Type': 'application/json' };
+  }
+  async function analyzePost(body) {
+    const res = await fetch(window.API_BASE + '/api/analyze', { method: 'POST', headers: await authHeaders(), body: JSON.stringify(body) });
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    return d;
+  }
+  const errMsg = err => (window.getOfflineAwareMessage || (e => e?.message || ''))(err);
+
+  function dirBadge(d) {
+    const dir = (d.direction || '').toLowerCase();
+    return dir === 'bullish' ? `<span class="dir-badge dir-bullish">↑ Likely Increase</span>`
+      : dir === 'bearish' ? `<span class="dir-badge dir-bearish">↓ Likely Decrease</span>`
+      : `<span class="dir-badge dir-uncertain">~ Unclear Impact</span>`;
+  }
+
+  function renderStockResult(el, d) {
+    const pills = (list, cls) => list.map(t => `<span class="pill ${cls}">${esc(t)}</span>`).join('');
+    const winnersHtml = (d.winners?.tickers || []).length
+      ? `<div class="ar-row"><strong>Beneficiaries</strong>
+          <div class="tickers" style="margin-top:4px">${pills(d.winners.tickers, 'pill-up')}</div>
+          <div style="font-size:13px;color:var(--text-soft);margin-top:4px">${esc(d.winners.explanation || '')}</div>
+        </div>` : '';
+    const losersHtml = (d.losers?.tickers || []).length
+      ? `<div class="ar-row"><strong>Likely Losers</strong>
+          <div class="tickers" style="margin-top:4px">${pills(d.losers.tickers, 'pill-down')}</div>
+          <div style="font-size:13px;color:var(--text-soft);margin-top:4px">${esc(d.losers.explanation || '')}</div>
+        </div>` : '';
+    const sectorsHtml = ((d.sectors?.positive || []).length || (d.sectors?.negative || []).length)
+      ? `<div class="ar-row"><strong>Sectors in Play</strong>
+          <div class="sectors" style="margin-top:4px">
+            ${(d.sectors.positive || []).map(s => `<span class="sector-up">▲ ${esc(s)}</span>`).join('')}
+            ${(d.sectors.negative || []).map(s => `<span class="sector-down">▼ ${esc(s)}</span>`).join('')}
+          </div>
+        </div>` : '';
+    const crowdHtml = d.crowd_summary ? `<div class="ar-row"><strong>Crowd Signal</strong>${esc(d.crowd_summary)}</div>` : '';
+    const conf = parseInt(d.confidence);
+    const level = isNaN(conf) ? 3 : Math.max(1, Math.min(5, conf));
+    const trackHtml = d.confidence && window.TrackRecord
+      ? `<div class="ar-confidence track-record-row">${TrackRecord.slot(level, 'stocks', TrackRecord.horizonOf?.(d.impact_timeframe))}</div>` : '';
+    const whyHtml = d.confidence && window.TrackRecord?.reasonText(d.confidence)
+      ? `<div class="ar-row"><strong>Why</strong>${esc(TrackRecord.reasonText(d.confidence))}</div>` : '';
+    const srcList = Array.isArray(d.sources) ? d.sources.filter(Boolean) : [];
+    const sourcesHtml = srcList.length ? `
+      <button class="ar-sources-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')"><i class="toggle-arrow">›</i> ${srcList.length} source${srcList.length !== 1 ? 's' : ''}</button>
+      <div class="ar-sources-list">${srcList.map(s => `<span class="ar-source-item">${esc(s)}</span>`).join('')}</div>` : '';
+
+    el.innerHTML = `<div class="ar-block">
+      ${dirBadge(d)}
+      ${d.why_it_matters ? `<div class="ar-summary">${esc(d.why_it_matters)}</div>` : ''}
+      <button class="btn-deep" onclick="this.style.display='none';this.nextElementSibling.style.display='flex'">Deep Analysis →</button>
+      <div class="ar-details">
+        ${d.impact_timeframe ? `<div class="ar-row"><strong>Expected Timeframe</strong>${esc(d.impact_timeframe)}</div>` : ''}
+        ${crowdHtml}${sectorsHtml}${winnersHtml}${losersHtml}${trackHtml}${whyHtml}
+      </div>
+      ${sourcesHtml}
+    </div>`;
+    if (window.TrackRecord) TrackRecord.fill(el);
+  }
+
+  async function runOverall(el, name, groups) {
+    showLoading(el, LW_OVERALL, '10px 0');
+    try {
+      const d = await analyzePost({
+        topic: `Net price direction for ${name} (${TICKER}) over ${AI_IMPACT}. Weigh all news and commit to a directional call.`,
+        headlines: groups.flatMap(g => (g.headlines || []).slice(0, 3)).slice(0, 20),
+        sources: [...new Set(groups.flatMap(g => g.sources || []))].slice(0, 15),
+        impactTimeframe: AI_IMPACT, category: AI_CATEGORY,
+      });
+      el.innerHTML = `${dirBadge(d)}<div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>`;
+    } catch (_) {
+      el.innerHTML = `<div class="ai-err">Could not load overall prediction.</div>`;
+    }
+  }
+
+  async function runGroup(el, name, group) {
+    showLoading(el, LW_GROUP);
+    try {
+      renderStockResult(el, await analyzePost({
+        topic: `${group.topic}: impact on ${name} (${TICKER}) over ${AI_IMPACT}`,
+        headlines: group.headlines || [], sources: group.sources || [],
+        impactTimeframe: AI_IMPACT, category: AI_CATEGORY,
+      }));
+    } catch (err) {
+      el.innerHTML = `<div class="ai-err">Analysis failed: ${esc(errMsg(err))}</div>`;
+    }
+  }
+
+  async function runAiAnalysis() {
+    const panel = document.getElementById('ai-panel');
+    const btn = document.getElementById('ai-cta-btn');
+    const name = document.getElementById('s-name').textContent.trim() || NAME;
+    panel.classList.add('show');
+    if (!window._auth?.user) {
+      panel.innerHTML = `<div class="ai-gate">AI analysis needs a free account. <a href="/?modal=signin">Sign in / Create profile</a></div>`;
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Analyzing…';
+    showLoading(panel, LW_STOCK, '18px 0');
+    try {
+      const res = await fetch(`/api/analyze?stock=${encodeURIComponent(TICKER)}&stockName=${encodeURIComponent(name)}&timeframe=today`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const groups = data.groups || [];
+      panel.innerHTML = '';
+      if (!groups.length) {
+        const note = slot(panel);
+        note.style.cssText = 'color:var(--muted);font-size:14px';
+        note.textContent = `No specific news found for ${TICKER} today — here's the general outlook.`;
+        const out = slot(panel);
+        showLoading(out, LW_GROUP);
+        analyzePost({ topic: `${name} (${TICKER}) stock market outlook over ${AI_IMPACT}`, headlines: [], sources: [], impactTimeframe: AI_IMPACT, category: AI_CATEGORY })
+          .then(d => renderStockResult(out, d))
+          .catch(() => { out.innerHTML = `<div class="ai-err">Analysis failed.</div>`; });
+      } else {
+        const overall = slot(panel);
+        overall.className = 'overall-card';
+        overall.innerHTML = `<div class="overall-label">Overall Prediction · ${esc(name)} (${esc(TICKER)})</div>`;
+        runOverall(slot(overall), name, groups);
+        const lbl = slot(panel);
+        lbl.className = 'ap-section-label';
+        lbl.textContent = `${groups.length} market event${groups.length !== 1 ? 's' : ''} analyzed for ${TICKER}`;
+        groups.forEach((group, idx) => {
+          const card = slot(panel);
+          card.className = 'group-card';
+          card.style.animationDelay = `${idx * 60}ms`;
+          card.innerHTML = `<div class="group-topic">${esc(group.topic)}</div><div class="group-meta">${(group.sources || []).slice(0, 3).map(esc).join(' · ')}</div>`;
+          runGroup(slot(card), name, group);
+        });
+      }
+      btn.textContent = 'Refresh Analysis ↻';
+    } catch (err) {
+      panel.innerHTML = `<div class="ai-err" style="font-size:13px">Failed to load news: ${esc(errMsg(err))}</div>`;
+      btn.textContent = 'Try Again →';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  document.getElementById('ai-cta-btn').addEventListener('click', () => {
+    if (typeof gtag !== 'undefined') gtag('event', 'stock_page_ai_analysis', { ticker: TICKER });
+    if (window._onAuthReady) window._onAuthReady(runAiAnalysis); else runAiAnalysis();
   });
 
   loadData(currentRange).then(() => {
