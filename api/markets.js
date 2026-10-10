@@ -45,6 +45,16 @@ const NONSENSE_KEYWORDS = [
   'zombie apocalypse',
 ];
 
+// Market shapes where the answer is obvious before any analysis: an exact
+// scoreline almost never hits, and a tennis match almost always completes.
+// Their sub-markets are often illiquid and quoted near a fake 50%, so the
+// odds-band filter alone doesn't catch them — and a "No" call on them is
+// free accuracy that says nothing.
+const FOREGONE_RE = /exact score|correct score|completed match/i;
+function _isForegone(text) {
+  return FOREGONE_RE.test(text || '');
+}
+
 function _isNonsenseTitle(title) {
   const t = (title || '').toLowerCase();
   return NONSENSE_KEYWORDS.some(kw => t.includes(kw));
@@ -154,6 +164,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
     const eventTags = (event.tags || []).map(t => (t.slug || t.label || '').toLowerCase());
     if (eventTags.some(t => ESPORTS_TAGS.has(t))) return false;
     if (_isNonsenseTitle(event.title)) return false;
+    if (_isForegone(event.title)) return false;
     if (isSearch) return true; // relevance already handled by public-search
     if (category === 'other') return !Object.values(CATEGORY_TAGS).some(tags => tags.some(tag => eventTags.includes(tag)));
     return targetTags.some(tag => eventTags.includes(tag));
@@ -173,6 +184,7 @@ export async function fetchCategoryMarkets(category, opts = {}) {
       : [...pool].sort((a, b) => parseFloat(b.volume || 0) - parseFloat(a.volume || 0))[0];
 
     if (!primary) return null;
+    if (_isForegone(primary.question)) return null;
 
     const endDate = primary.endDate || event.endDate || null;
     const daysLeft = endDate ? Math.ceil((new Date(endDate) - now) / 86400000) : null;
