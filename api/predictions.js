@@ -830,7 +830,7 @@ async function handleStats(req, res, supabase) {
   // Fetch resolved + pending predictions. Also always include prediction-market
   // predictions (have lean/signal) so they're never pushed off the list by
   // high-volume stock/crypto pending predictions.
-  const PRED_SELECT = 'id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal';
+  const PRED_SELECT = 'id, created_at, topic, winner_tickers, loser_tickers, correct, validation_date, analysis, category, lean, signal, market_odds_at_time';
   const [{ data: resolvedAll, error: rErr }, { data: pendingRecent }, { data: pmPreds }] = await Promise.all([
     supabase
       .from('predictions')
@@ -1080,6 +1080,7 @@ async function handleStats(req, res, supabase) {
       lean: p.lean || p.analysis?.lean || null,
       signal: p.signal || p.analysis?.signal || null,
       yesProbability: p.analysis?.yes_probability ?? null,
+      marketOdds: p.market_odds_at_time ?? null,
       predictedOutcome: p.analysis?.predicted_outcome || null,
       analysis: { resolved_outcome: p.analysis?.resolved_outcome || null },
       // null (no scoring_version at all) means this was graded before

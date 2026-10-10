@@ -496,32 +496,29 @@
     }
   }
 
-  // Prediction of the Day: the pending prediction-market call we're most
-  // convicted on — preferring ones where we disagree with the crowd.
+  // Prediction of the Day: a pending prediction-market call on a genuinely
+  // open question, ranked by how far we disagree with the crowd. Long-shot
+  // markets (exact scores, 1% outsiders) are excluded — "99% it won't
+  // happen" restates the crowd and tells the reader nothing.
   async function loadPredictionPick() {
     var body = document.getElementById('prediction-pick-body');
     try {
       var data = await fetchPredictions();
       var recent = data.recent || [];
-      // Older rows (before predictions started storing yes_probability /
-      // predicted_outcome) only have `lean` + `signal` — still a real call,
-      // just without a plain-language writeup, so they stay eligible rather
-      // than getting filtered out entirely.
       var candidates = recent.filter(function (p) {
-        return (p.lean === 'Yes' || p.lean === 'No') && p.correct == null;
+        if ((p.lean !== 'Yes' && p.lean !== 'No') || p.correct != null) return false;
+        if (typeof p.marketOdds !== 'number' || typeof p.yesProbability !== 'number') return false;
+        // Same 20-80% "real uncertainty" band the Markets page shows.
+        if (p.marketOdds < 20 || p.marketOdds > 80) return false;
+        var ours = p.lean === 'Yes' ? p.yesProbability : 100 - p.yesProbability;
+        return ours >= 55 && ours <= 90;
       });
+      function edge(p) { return Math.abs(p.yesProbability - p.marketOdds); }
       candidates.sort(function (a, b) {
         var aContradicts = a.signal === 'Contradicts market' ? 1 : 0;
         var bContradicts = b.signal === 'Contradicts market' ? 1 : 0;
         if (aContradicts !== bContradicts) return bContradicts - aContradicts;
-        var aHasProb = typeof a.yesProbability === 'number';
-        var bHasProb = typeof b.yesProbability === 'number';
-        if (aHasProb !== bHasProb) return (bHasProb ? 1 : 0) - (aHasProb ? 1 : 0);
-        if (aHasProb && bHasProb) {
-          var aEdge = Math.abs((a.lean === 'Yes' ? a.yesProbability : 100 - a.yesProbability) - 50);
-          var bEdge = Math.abs((b.lean === 'Yes' ? b.yesProbability : 100 - b.yesProbability) - 50);
-          if (aEdge !== bEdge) return bEdge - aEdge;
-        }
+        if (edge(a) !== edge(b)) return edge(b) - edge(a);
         return new Date(b.createdAt) - new Date(a.createdAt);
       });
       var top = candidates[0];
@@ -531,18 +528,13 @@
       }
       var sigClass = top.signal === 'Aligns with market' ? 'aligns' : top.signal === 'Contradicts market' ? 'contradicts' : '';
       var sigHtml = top.signal ? '<div class="pick-badge ' + sigClass + '">' + esc(top.signal) + '</div>' : '';
-      var headline, desc;
-      if (typeof top.yesProbability === 'number') {
-        var ours = top.lean === 'Yes' ? top.yesProbability : 100 - top.yesProbability;
-        var outcome = top.predictedOutcome
-          ? (top.predictedOutcome.charAt(0).toLowerCase() + top.predictedOutcome.slice(1))
-          : top.topic;
-        headline = ours + '%';
-        desc = 'We think ' + esc(outcome) + '.';
-      } else {
-        headline = esc(top.lean.toUpperCase());
-        desc = esc(top.topic);
-      }
+      var ours = top.lean === 'Yes' ? top.yesProbability : 100 - top.yesProbability;
+      var crowd = top.lean === 'Yes' ? top.marketOdds : 100 - top.marketOdds;
+      var outcome = top.predictedOutcome
+        ? (top.predictedOutcome.charAt(0).toLowerCase() + top.predictedOutcome.slice(1))
+        : top.topic;
+      var headline = ours + '%';
+      var desc = 'We think ' + esc(outcome) + '. The market gives it ' + Math.round(crowd) + '%.';
       body.innerHTML =
         '<div class="pick-headline">' + headline + '</div>' +
         sigHtml +
