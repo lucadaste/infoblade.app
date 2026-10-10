@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script src="/theme.js"></script>
+  <script>if (window.self !== window.top || /[?&]embed=1(&|$)/.test(location.search)) document.documentElement.classList.add('is-embedded');</script>
   <title>infoblade | Stock</title>
   <meta name="description" content="Live price, today's chart, and AI-driven analysis for any stock or ETF on infoblade." />
   <script src="/api-base.js"></script>
@@ -65,7 +66,9 @@
     #chart-area { min-height: 222px; transition: opacity 0.15s; }
     #chart-area.is-loading { opacity: 0.45; }
     .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
-    .chart-svg-wrap { position: relative; }
+    /* Right gutter holds the price labels for the grid lines. */
+    .chart-svg-wrap { position: relative; padding-right: 64px; }
+    .chart-grid-label { position: absolute; right: 0; width: 58px; transform: translateY(-50%); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; color: var(--muted); pointer-events: none; }
     .chart-svg-wrap:focus { outline: none; }
     .chart-svg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
     .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; }
@@ -290,7 +293,7 @@
   const RANGE_PERIOD = { '1d': 'Today', '5d': 'Past week', '1mo': 'Past month', '3mo': 'Past 3 months', '1y': 'Past year', '5y': 'Past 5 years' };
 
   let chartResizeObs = null;
-  function renderChart(series, approx, up) {
+  function renderChart(series, approx, up, prevClose) {
     const area = document.getElementById('chart-area');
     if (chartResizeObs) { chartResizeObs.disconnect(); chartResizeObs = null; }
     if (!series || series.length < 2) {
@@ -302,6 +305,8 @@
     const color = up ? 'var(--accent)' : 'var(--red)';
 
     const vals  = series.map(p => p.c);
+    // 1D gets a dotted previous-close line, so keep it inside the frame.
+    if (prevClose != null) vals.push(prevClose);
     const min   = Math.min(...vals), max = Math.max(...vals);
     const range = (max - min) || (max * 0.01) || 1;
     const H = 200, W = 100, PAD_X = 1.5, PAD_Y = 10;
@@ -314,6 +319,21 @@
     const lastPt = points[points.length - 1];
     const areaPath = `${linePath} L ${lastPt.x.toFixed(2)},${H} L ${points[0].x.toFixed(2)},${H} Z`;
     const gradId = 'sChartGrad';
+    const yOf = v => PAD_Y + plotH - ((v - min) / range) * plotH;
+
+    // Horizontal grid at round price levels (~4 lines), labelled on the right.
+    const rawStep = range / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(st => st >= rawStep) || rawStep;
+    const gridVals = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) gridVals.push(v);
+    const gridLines = gridVals.map(v =>
+      `<line x1="0" x2="${W}" y1="${yOf(v).toFixed(2)}" y2="${yOf(v).toFixed(2)}" stroke="var(--divider)" stroke-width="1" vector-effect="non-scaling-stroke"/>`).join('');
+    const gridLabels = gridVals.map(v =>
+      `<div class="chart-grid-label" style="top:${(yOf(v) / H * 100).toFixed(2)}%">${esc(fmtPrice(v))}</div>`).join('');
+    const prevLine = prevClose != null
+      ? `<line x1="0" x2="${W}" y1="${yOf(prevClose).toFixed(2)}" y2="${yOf(prevClose).toFixed(2)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 4" vector-effect="non-scaling-stroke"/>`
+      : '';
 
     area.innerHTML = `
       <div class="chart-svg-wrap" id="s-chart-wrap" tabindex="0" role="slider" aria-orientation="horizontal"
@@ -326,9 +346,12 @@
               <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
             </linearGradient>
           </defs>
+          ${gridLines}
+          ${prevLine}
           <path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>
           <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
         </svg>
+        <div class="chart-grid-labels" style="position:absolute;top:0;right:0;height:${H}px;width:64px">${gridLabels}</div>
         <div class="chart-crosshair" id="s-crosshair"></div>
         <div class="chart-dot" id="s-end-dot" style="background:${color};opacity:1"></div>
         <div class="chart-dot" id="s-dot"></div>
@@ -502,7 +525,7 @@
         chEl.style.display = 'none';
       }
       document.getElementById('s-period').textContent = RANGE_PERIOD[range] || '';
-      renderChart(q.series, q.seriesApprox, up);
+      renderChart(q.series, q.seriesApprox, up, range === '1d' ? q.prevClose : null);
     } catch (err) {
       if (seq !== loadSeq) return;
       area.innerHTML = `<div class="error-msg">Could not load price data for ${esc(TICKER)}.</div>`;
