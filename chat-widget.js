@@ -352,6 +352,10 @@
       padding: 4px 22px 16px;
     }
     .ii-pinned[hidden], .ii-history-mode .ii-pinned { display: none; }
+    /* Pinned content is the focus (see iiFocusPinned) — let it take the
+       whole column until a conversation starts underneath it. */
+    .ii-pinned-focus .ii-pinned { max-height: none; flex: 1 1 auto; }
+    .ii-pinned-focus .ii-msgs { flex: 0 0 auto; padding-top: 0; padding-bottom: 0; }
     .ii-pinned::-webkit-scrollbar { width: 3px; }
     .ii-pinned::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
     .ii-msgs::-webkit-scrollbar { width: 3px; }
@@ -728,6 +732,7 @@
   let history = [];
   let busy = false;
   let introStarted = false;
+  let pinnedFocused = false; // see window.iiFocusPinned
   let introPromise = null;  // lets iiAsk below wait out the first-open intro before sending
   let startersEl = null;
   let hasChattedBefore = false; // set from playIntro's fetchHasChatted; gates starter chips on "New chat" too
@@ -1020,6 +1025,7 @@
     // invite follow-ups instead.
     if (tickerCtx && window.iiQuotePinned) {
       await typeIntroLines([`Ask me anything about ${tickerCtx.name} (${tickerCtx.symbol}) — including follow-ups on the AI call.`]);
+      if (pinnedFocused) { if (!history.length) msgsEl.innerHTML = ''; return; }
       startersEl = buildStarters();
       msgsEl.appendChild(startersEl);
       return;
@@ -1206,6 +1212,17 @@
   });
 
   window.iiToggleChat = () => setOpen(!open);
+
+  // A page's pinned content (stock.html's AI call) just became the main
+  // thing in the dock: drop the untouched intro greeting + starter chips and
+  // give the pinned slot the full height. The first message sent hands the
+  // space back to the conversation.
+  window.iiFocusPinned = function () {
+    pinnedFocused = true;
+    if (!history.length) { msgsEl.innerHTML = ''; startersEl = null; }
+    panel.classList.add('ii-pinned-focus');
+    inp.placeholder = tickerCtx ? `Ask a follow-up about ${tickerCtx.symbol}…` : 'Ask a follow-up…';
+  };
 
   // Restore an in-progress conversation that survived a reload within this
   // tab (see saveChatState above) — e.g. navigating to another page, or the
@@ -1537,6 +1554,7 @@
     }
 
     startersEl?.remove();
+    panel.classList.remove('ii-pinned-focus');
     inp.value = '';
     inp.style.height = 'auto';
     addMsg('user', text, imagesToSend.map(img => img.previewUrl));

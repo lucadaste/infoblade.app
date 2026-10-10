@@ -164,6 +164,14 @@
     #ai-section.in-dock .ai-events-toggle .toggle-arrow { display: inline-block; }
     #ai-section.in-dock .ai-events-toggle.open .toggle-arrow { transform: rotate(90deg); }
     #ai-section.in-dock .ai-events:not(.open) { display: none; }
+    /* Once a run starts the intro card collapses to a slim header row —
+       the results are the content now. */
+    #ai-section.ai-started .ai-cta { flex-direction: row; align-items: center; padding: 0; background: none; border-left: none; gap: 12px; }
+    #ai-section.ai-started .ai-cta-sub { display: none; }
+    #ai-section.ai-started .ai-cta-title { margin: 0; }
+    #ai-section.ai-started .ai-cta-btn { border-color: var(--border); color: var(--muted); font-size: 11px; padding: 5px 11px; }
+    #ai-section.ai-started .ai-cta-btn:hover { border-color: var(--accent); color: var(--accent); background: transparent; }
+    #ai-section.ai-started .ai-cta-btn:disabled { opacity: 0.6; cursor: default; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skeleton { background: linear-gradient(90deg, var(--card) 25%, var(--surface-2) 50%, var(--card) 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
@@ -770,6 +778,8 @@
     }
     btn.disabled = true;
     btn.textContent = 'Analyzing…';
+    document.getElementById('ai-section').classList.add('ai-started');
+    if (document.getElementById('ai-section').classList.contains('in-dock')) window.iiFocusPinned?.();
     showLoading(panel, LW_STOCK, '18px 0');
     try {
       const res = await fetch(`/api/analyze?stock=${encodeURIComponent(TICKER)}&stockName=${encodeURIComponent(name)}&timeframe=today`);
@@ -808,7 +818,7 @@
           runGroup(slot(card), name, group);
         });
       }
-      btn.textContent = 'Refresh Analysis ↻';
+      btn.textContent = '↻ Refresh';
     } catch (err) {
       panel.innerHTML = `<div class="ai-err" style="font-size:13px">Failed to load news: ${esc(errMsg(err))}</div>`;
       btn.textContent = 'Try Again →';
