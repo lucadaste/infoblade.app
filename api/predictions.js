@@ -11,6 +11,7 @@ import { pickPmMarket as _pickPmMarket, pmOutcome as _pmOutcome, pmWordScore as 
 import { isValidTickerFormat } from '../lib/ticker-format.js';
 import { getSupabase, setCors, secretMatches } from '../lib/http.js';
 import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
+import { isExcludedFromStats } from '../lib/foregone-markets.js';
 
 // Grading (resolve / news-grade) writes to the DB and spends LLM/external-API
 // budget, so it must not be publicly triggerable. Vercel automatically sends
@@ -722,12 +723,14 @@ function _pureDirectionCorrect(p) {
 }
 
 async function handleStats(req, res, supabase) {
-  const { data: validated, error: vErr } = await supabase
+  const { data: validatedAll, error: vErr } = await supabase
     .from('predictions')
     .select('id, created_at, topic, winner_tickers, loser_tickers, correct, analysis, validation_date, validated_at, actual_prices, baseline_prices, category, lean, market_odds_at_time')
     .not('correct', 'is', null)
     .order('created_at', { ascending: false });
   if (vErr) throw vErr;
+  // Foregone-market calls (lib/foregone-markets.js) never count anywhere.
+  const validated = (validatedAll ?? []).filter(p => !isExcludedFromStats(p));
 
   // Resolve user identity if auth token provided
   const clerkUser = await getClerkUser(req);
@@ -736,12 +739,14 @@ async function handleStats(req, res, supabase) {
   const { count: pendingCount, error: pErr } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true })
-    .is('correct', null);
+    .is('correct', null)
+    .is('analysis->>excluded_reason', null);
   if (pErr) throw pErr;
   const { count: pendingBaselineCount } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true })
     .is('correct', null)
+    .is('analysis->>excluded_reason', null)
     .eq('analysis->>baseline_generated', 'true');
   const pending = pendingCount;
 
@@ -856,6 +861,7 @@ async function handleStats(req, res, supabase) {
   const seenIds = new Set();
   const recent = [];
   for (const p of [...(pmPreds || []), ...(pendingRecent || []), ...(resolvedAll || [])]) {
+    if (isExcludedFromStats(p)) continue;
     if (!seenIds.has(p.id)) { seenIds.add(p.id); recent.push(p); }
   }
   recent.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
@@ -1259,6 +1265,7 @@ async function handleTrackRecord(req, res, supabase) {
       .from('predictions')
       .select('category, lean, correct, created_at, validation_date, cw:analysis->confidence_weight, conf:analysis->>confidence')
       .not('correct', 'is', null)
+      .is('analysis->>excluded_reason', null)
       .range(from, from + 999);
     if (error) throw error;
     for (const p of data || []) {
