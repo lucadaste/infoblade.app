@@ -413,12 +413,11 @@
     } catch (_) { /* leave hero-stat hidden */ }
   }
 
-  // Stock of the Day: today's single biggest mover among a broad ticker
-  // list — if the AI has a pending call on that exact ticker, show its call
-  // (direction/confidence/track record) instead of a bare price card, so
-  // the pick is always grounded in real movement but still shows the AI's
-  // take when it's actually backing what's moving. Only falls back to a
-  // pure highest-confidence AI call if the movers feed is down entirely.
+  // Stock of the Day: today's biggest gainer among a broad ticker list —
+  // never a loser, so a stock crashing 10% can't be billed as the pick.
+  // If the AI has a pending bullish call on a top gainer, show that call
+  // (confidence/track record) instead of a bare price card. Only falls back
+  // to a pure highest-confidence AI call if the movers feed is down entirely.
   async function loadStockPick() {
     var body = document.getElementById('stock-pick-body');
     try {
@@ -438,16 +437,19 @@
         }
       });
 
-      var movable = movers.filter(function (m) { return typeof m.changePct === 'number'; });
-      movable.sort(function (a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
+      var priced = movers.filter(function (m) { return typeof m.changePct === 'number'; });
+      var movable = priced.filter(function (m) { return m.changePct > 0; });
+      movable.sort(function (a, b) { return b.changePct - a.changePct; });
 
       if (window.TrackRecord) { await window.TrackRecord.ready; }
       var pickCall = null;
-      for (var i = 0; i < movable.length; i++) {
+      // Top 10 gainers only, so a +0.2% stock with an AI call can't beat a +7% one.
+      for (var i = 0; i < Math.min(movable.length, 10); i++) {
         var call = callByTicker[movable[i].ticker];
-        if (call && goodCall(call, 'stocks')) { pickCall = call; break; }
+        // Only a bullish call agrees with a stock that's up.
+        if (call && call.winnerTickers && call.winnerTickers.length && goodCall(call, 'stocks')) { pickCall = call; break; }
       }
-      if (!pickCall && !movable.length && candidates.length) {
+      if (!pickCall && !priced.length && candidates.length) {
         var goodOnes = candidates.filter(function (p) { return goodCall(p, 'stocks'); });
         var pool = goodOnes.length ? goodOnes : candidates;
         pool.sort(function (a, b) {
@@ -472,7 +474,7 @@
 
       var mover = movable[0];
       if (!mover) {
-        body.innerHTML = '<div class="pick-empty">Stock data unavailable right now.</div>';
+        body.innerHTML = '<div class="pick-empty">' + (priced.length ? 'No stocks are up today.' : 'Stock data unavailable right now.') + '</div>';
         return;
       }
       var pct = mover.changePct;
@@ -481,7 +483,7 @@
       body.innerHTML =
         '<div class="pick-headline">' + esc(mover.ticker) + '</div>' +
         '<div class="pick-sub ' + cls + '">' + sign + pct.toFixed(1) + '% today</div>' +
-        '<div class="pick-desc">Today\'s biggest mover.</div>' +
+        '<div class="pick-desc">Today\'s top gainer.</div>' +
         '<a class="pick-cta" href="/stock.html?ticker=' + encodeURIComponent(mover.ticker) + '">Full analysis &rarr;</a>';
     } catch (_) {
       body.innerHTML = '<div class="pick-empty">Couldn\'t load today\'s stock pick right now.</div>';
