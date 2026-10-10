@@ -342,6 +342,18 @@
       -webkit-overflow-scrolling: touch;
       min-height: 0;
     }
+    /* Page-owned slot above the conversation — stock.html docks its AI call
+       here on wide screens so the call and the follow-up chat sit together.
+       Lives outside .ii-msgs so starting a new chat never wipes it. */
+    .ii-pinned {
+      flex-shrink: 0;
+      max-height: 58%;
+      overflow-y: auto;
+      padding: 4px 22px 16px;
+    }
+    .ii-pinned[hidden], .ii-history-mode .ii-pinned { display: none; }
+    .ii-pinned::-webkit-scrollbar { width: 3px; }
+    .ii-pinned::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
     .ii-msgs::-webkit-scrollbar { width: 3px; }
     .ii-msgs::-webkit-scrollbar-track { background: transparent; }
     .ii-msgs::-webkit-scrollbar-thumb { background: var(--divider); border-radius: 2px; }
@@ -607,7 +619,8 @@
       #ii-ai-panel.ii-embedded.ii-open { transform: translateX(var(--ii-dock-shift, 0px)) scale(1); }
       #ii-ai-panel.ii-embedded .ii-close-btn { display: none; }
       #ii-ai-panel.ii-embedded .ii-header { padding-left: 0; padding-right: 0; }
-      #ii-ai-panel.ii-embedded .ii-msgs { padding-left: 0; padding-right: 0; }
+      #ii-ai-panel.ii-embedded .ii-msgs,
+      #ii-ai-panel.ii-embedded .ii-pinned { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-input-row { background: transparent; padding-left: 0; padding-right: 0; }
 
       /* stock.html/coin.html: a single ticker's chart+stats column is much
@@ -656,6 +669,7 @@
       </button>
       <div class="ii-history-list" id="ii-history-list"></div>
     </div>
+    <div class="ii-pinned" id="ii-pinned" hidden></div>
     <div class="ii-msgs" id="ii-msgs"></div>
     <div class="ii-attach-row" id="ii-attach-row" hidden></div>
     <div class="ii-input-row">
@@ -1001,6 +1015,15 @@
     // ticker" line when they very clearly already have. Reuses the same
     // live-news-aware /api/chat pipeline a typed question would hit.
     const token = await window._auth?.getToken();
+    // stock.html pins its own structured AI call above the chat, so an
+    // auto-asked report here would just be a second, competing take —
+    // invite follow-ups instead.
+    if (tickerCtx && window.iiQuotePinned) {
+      await typeIntroLines([`Ask me anything about ${tickerCtx.name} (${tickerCtx.symbol}) — including follow-ups on the AI call.`]);
+      startersEl = buildStarters();
+      msgsEl.appendChild(startersEl);
+      return;
+    }
     if (tickerCtx && token) {
       await typeIntroLines([`Pulling together today's news and outlook for ${tickerCtx.name} (${tickerCtx.symbol})…`]);
       await send(`What's the latest news, trend, and outlook for ${tickerCtx.name} (${tickerCtx.symbol})?`);
@@ -1578,6 +1601,7 @@
     historyOpen = v;
     historyPanel.hidden = !v;
     msgsEl.hidden = v;
+    panel.classList.toggle('ii-history-mode', v);
     historyBtn.innerHTML = v ? BACK_ICON : HISTORY_ICON;
     historyBtn.classList.toggle('ii-active', v);
     historyBtn.setAttribute('aria-label', v ? 'Back to chat' : 'Past conversations');
