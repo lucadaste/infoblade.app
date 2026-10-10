@@ -38,11 +38,11 @@
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     /* ── Unified ask bar — ticker lookups and free-form questions in one box ── */
-    .ask-wrap { padding: 8px 48px 18px; }
+    .ask-wrap { padding: 4px 48px 14px; }
     .ask-box { position: relative; display: flex; align-items: center; gap: 10px; max-width: 760px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 18px; transition: border-color 0.15s; }
     .ask-box:focus-within { border-color: var(--accent); }
     .ask-icon { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
-    .ask-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 12px 0; }
+    .ask-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 9px 0; }
     .ask-input::placeholder { color: var(--muted); }
     .ask-send { flex-shrink: 0; background: var(--accent); color: #111111; border: none; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.15s; }
     .ask-send:hover { opacity: 0.85; }
@@ -56,12 +56,13 @@
       html.ii-chat-embedded #page-body { max-width: calc(100vw - var(--ii-chat-w, 520px) - 96px); }
     }
 
-    .filters { display: flex; flex-direction: column; gap: 16px; padding: 44px 48px 8px; background: var(--paper); }
-    .filter-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .filters { display: flex; flex-direction: column; gap: 12px; padding: 32px 48px 8px; background: var(--paper); }
+    .filter-head { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; flex-wrap: wrap; }
+    .filter-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
+    .filters .filter-select { min-width: 0; }
+    .filters .status-wrap:not(:has(.loader.active)):has(.status-text:empty) { display: none; }
     .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); }
     .filter-note { font-size: 12px; color: var(--muted); }
-    .filter-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; }
-    .filter-row .filter-actions { margin-left: 0; }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
@@ -77,7 +78,9 @@
     .sug-item:hover { background: var(--surface-2); }
     .sug-ticker { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
     .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .hero > div:first-child { min-height: 130px; }
+    .hero { padding-top: 28px; padding-bottom: 18px; }
+    .hero .hero-tag { margin-bottom: 10px; }
+    .hero h1 { margin-bottom: 8px; }
     .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
     .cat-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
@@ -238,10 +241,10 @@
     }
 
     /* Stock card bank — search bar, sector chips, then a 2-row preview that expands */
-    .stock-chips { padding: 0 48px 16px; }
+    .stock-chips { padding: 0 48px 12px; }
     .stock-grid-wrap { padding: 0 48px; }
     .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(n+9) { display: none; }
-    .grid-more { display: block; margin: 14px auto 0; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
+    .grid-more { display: block; margin: 6px auto 0; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
     .grid-more:hover { color: var(--ink); }
     .stock-analysis-panel { margin-top: 28px; }
 
@@ -254,22 +257,25 @@
     #stock-auth-gate-btn:hover { opacity: 0.85; }
 
     /* Stock mode — coin-card grid matching crypto page exactly */
-    .coin-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; cursor: pointer; }
+    .coin-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .coin-card { background: var(--card); border: 2px solid transparent; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s, transform 0.2s; animation: fadeUp 0.3s ease both; position: relative; cursor: pointer; }
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-top { display: flex; align-items: center; gap: 10px; }
     .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 9px; color: var(--muted); flex-shrink: 0; }
-    .coin-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; line-height: 1.2; height: 32px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .coin-id { min-width: 0; flex: 1; }
+    .coin-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .coin-figs { text-align: right; flex-shrink: 0; }
+    .coin-actions { display: flex; gap: 6px; }
     .coin-symbol { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; }
-    .coin-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.5px; }
-    .coin-change { font-size: 12px; font-weight: 600; min-height: 16px; }
+    .coin-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+    .coin-change { font-size: 11px; font-weight: 600; min-height: 14px; }
     .pos { color: #2a9e4f; }
     .neg { color: #c84040; }
-    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; width: 100%; }
+    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; flex: 1; }
     .btn-coin:hover { border-color: var(--accent); color: var(--accent); }
     .coin-card.selected .btn-coin { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
-    .btn-coin-watch { background: none; border: 1px solid var(--divider); border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 5px 10px; transition: all 0.2s; width: 100%; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
+    .btn-coin-watch { background: none; border: 1px solid var(--divider); border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 4px 10px; transition: all 0.2s; flex-shrink: 0; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
     .btn-coin-watch:hover { border-color: var(--accent); color: var(--accent); }
     .btn-coin-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
     .grid-empty { grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted); }
@@ -317,13 +323,13 @@
     .ar-sources-list.open { display: flex; }
     .ar-source-item { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     @media (max-width: 1100px) {
-      .coin-grid { grid-template-columns: repeat(3, 1fr); }
+      .coin-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(9) { display: flex; }
     }
     @media (max-width: 768px) {
-      .coin-grid { grid-template-columns: repeat(2, 1fr); }
-      .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(9) { display: none; }
-      .coin-card { padding: 14px; }
+      .coin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(n+5) { display: none; }
+      .coin-card { padding: 10px 12px; }
       .ap-header { padding: 16px 24px; }
       .tf-bar { padding: 10px 24px; }
       .ap-content { padding: 16px 24px 40px; }
@@ -342,9 +348,6 @@
       .tf-bar { padding: 12px 24px; }
       .ap-content { padding: 20px 24px 40px; }
     }
-    @media (max-width: 1300px) {
-      .filter-actions { margin-left: 0; flex-basis: 100%; }
-    }
     @media (max-width: 768px) {
       .hero > div:first-child { min-height: auto; }
       .hero-stats { gap: 16px; padding-bottom: 0; }
@@ -353,6 +356,7 @@
       .ask-wrap, .stock-chips, .stock-grid-wrap { padding-left: 16px; padding-right: 16px; }
       .filter-group { flex: 1 1 calc(50% - 4px); }
       .filter-select { min-width: 0; width: 100%; font-size: 16px; }
+      .filters .filter-select { flex: 1; width: auto; }
       .coin-search { width: 100%; }
       .cat-chips { gap: 6px; }
       .cat-chip { font-size: 11px; padding: 6px 12px; }
@@ -365,14 +369,16 @@
       .watchlist-sidebar { display: none; }
     }
     @media (max-width: 480px) {
-      .coin-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .coin-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .coin-top { flex-wrap: wrap; row-gap: 6px; }
+      .coin-figs { flex-basis: 100%; display: flex; align-items: baseline; gap: 8px; text-align: left; }
       .cat-chip { font-size: 10px; padding: 5px 9px; }
       .hero h1 { font-size: clamp(22px, 6vw, 32px); }
       .hero { padding: 16px 16px 14px; }
       .hero-tag { margin-bottom: 10px; }
       .hero-sub { font-size: 13px; }
       .hero-stats { display: none; }
-              .filters { padding: 28px 16px 8px; gap: 10px; }
+      .filters { padding: 24px 16px 8px; gap: 10px; }
       .ask-wrap, .stock-chips, .stock-grid-wrap { padding-left: 16px; padding-right: 16px; }
     }
 
@@ -470,13 +476,12 @@
     <div class="ask-wrap">
       <div class="ask-box">
         <svg class="ask-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="text" id="ask-input" class="ask-input" placeholder="Search a ticker, or ask any market question…" autocomplete="off" oninput="handleAskInput()" onkeydown="handleAskKey(event)" />
+        <input type="text" id="ask-input" class="ask-input" placeholder="Search stocks, or ask any market question…" autocomplete="off" oninput="handleAskInput()" onkeydown="handleAskKey(event)" />
         <button type="button" class="ask-send" onclick="submitAsk()" aria-label="Ask">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
         </button>
         <div class="search-suggestions" id="ask-suggestions" style="display:none"></div>
       </div>
-      <p class="ask-hint">Typing filters the cards below. A ticker opens its analysis; anything else goes to the AI Informant.</p>
     </div>
 
     <div class="cat-chips stock-chips" id="stock-sector-chips">
@@ -525,8 +530,24 @@
   <section id="sector-section">
     <div class="filters">
       <div class="filter-head">
-        <span class="section-title">Today's news feed</span>
-        <span class="filter-note">Scans 500+ sources, groups related headlines and traces the economic chain · ~30–60 sec</span>
+        <div class="filter-title">
+          <span class="section-title">Today's news feed</span>
+          <span class="filter-note">Scans 500+ sources and traces the economic chain · ~30–60 sec</span>
+        </div>
+        <div class="filter-actions">
+          <select class="filter-select" id="filter-impact" onchange="handleImpactChange()" aria-label="Impact timeframe" title="Impact timeframe">
+            <option value="1 day">1 day impact</option>
+            <option value="1 week">1 week impact</option>
+            <option value="1 month" selected>1 month impact</option>
+            <option value="3 months">3 months impact</option>
+            <option value="6 months">6 months impact</option>
+            <option value="1 year">1 year impact</option>
+            <option value="any timeframe">All timeframes</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;width:170px;outline:none;" />
+          <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
+        </div>
       </div>
       <input type="hidden" id="filter-category" value="any" />
       <div class="cat-chips" id="feed-cat-chips">
@@ -542,28 +563,9 @@
         <button class="cat-chip" data-cat="real-estate" onclick="quickLoad('real-estate')">Real Estate</button>
         <button class="cat-chip" data-cat="crypto" onclick="quickLoad('crypto')">Crypto</button>
       </div>
-      <div class="filter-row">
-        <div class="filter-group">
-          <div class="filter-label">Impact timeframe</div>
-          <select class="filter-select" id="filter-impact" onchange="handleImpactChange()">
-            <option value="1 day">1 day</option>
-            <option value="1 week">1 week</option>
-            <option value="1 month" selected>1 month</option>
-            <option value="3 months">3 months</option>
-            <option value="6 months">6 months</option>
-            <option value="1 year">1 year</option>
-            <option value="any timeframe">All timeframes</option>
-            <option value="custom">Custom</option>
-          </select>
-          <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
-        </div>
-        <div class="filter-actions">
-          <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
-          <div class="status-wrap">
-            <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
-            <span class="status-text" id="status"></span>
-          </div>
-        </div>
+      <div class="status-wrap">
+        <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
+        <span class="status-text" id="status"></span>
       </div>
     </div>
 
@@ -947,15 +949,16 @@
         <div class="coin-card" style="animation-delay:${i*40}ms">
           <div class="coin-top">
             <div class="coin-logo-placeholder">${esc((sym.startsWith('^')?sym.slice(1):sym).slice(0,3))}</div>
-            <div>
+            <div class="coin-id">
               <div class="coin-name">${esc(name)}</div>
               <div class="coin-symbol">${esc(sym)}</div>
             </div>
+            <div class="coin-figs"><div class="skel" style="height:14px;width:60px;margin-bottom:4px"></div><div class="skel" style="height:11px;width:40px;margin-left:auto"></div></div>
           </div>
-          <div class="skel" style="height:22px;width:76px;margin-top:2px"></div>
-          <div class="skel" style="height:14px;width:60px"></div>
-          <button class="btn-coin" style="opacity:0.4" disabled>Loading…</button>
-          <button class="btn-coin-watch" style="opacity:0.4" disabled>☆ Watch</button>
+          <div class="coin-actions">
+            <button class="btn-coin" style="opacity:0.4" disabled>Loading…</button>
+            <button class="btn-coin-watch" style="opacity:0.4" disabled>☆</button>
+          </div>
         </div>`).join('');
 
       try {
@@ -974,7 +977,7 @@
           const priceStr   = td?.price != null ? `$${td.price.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '—';
           const chg        = td?.changePct;
           const changeHtml = chg != null
-            ? `<div class="coin-change ${chg >= 0 ? 'pos' : 'neg'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% today</div>`
+            ? `<div class="coin-change ${chg >= 0 ? 'pos' : 'neg'}">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>`
             : `<div class="coin-change" style="color:var(--muted)">—</div>`;
           const card = document.createElement('div');
           card.className = 'coin-card' + (isSelected ? ' selected' : '');
@@ -984,19 +987,23 @@
           card.innerHTML = `
             <div class="coin-top">
               ${_logoHtml(sym)}
-              <div>
+              <div class="coin-id">
                 <div class="coin-name">${esc(name)}</div>
                 <div class="coin-symbol">${esc(sym)}</div>
               </div>
+              <div class="coin-figs">
+                <div class="coin-price">${esc(priceStr)}</div>
+                ${changeHtml}
+              </div>
             </div>
-            <div class="coin-price">${esc(priceStr)}</div>
-            ${changeHtml}
-            <button class="btn-coin" onclick="event.stopPropagation(); selectStockCard('${esc(sym)}','${esc(name)}',this)">
-              ${isSelected ? '★ Analyzing' : 'Analyze →'}
-            </button>
-            <button class="btn-coin-watch${isWatched ? ' watching' : ''}" onclick="event.stopPropagation(); toggleStockWatch('${esc(sym)}',this)">
-              ${isWatched ? '★ Watching' : '☆ Watch'}
-            </button>`;
+            <div class="coin-actions">
+              <button class="btn-coin" onclick="event.stopPropagation(); selectStockCard('${esc(sym)}','${esc(name)}',this)">
+                ${isSelected ? '★ Analyzing' : 'Analyze →'}
+              </button>
+              <button class="btn-coin-watch${isWatched ? ' watching' : ''}" title="${isWatched ? 'Watching' : 'Add to watchlist'}" onclick="event.stopPropagation(); toggleStockWatch('${esc(sym)}',this)">
+                ${isWatched ? '★' : '☆'}
+              </button>
+            </div>`;
           grid.appendChild(card);
         });
         filterStockGrid();
@@ -1298,12 +1305,14 @@
     function toggleStockWatch(sym, btn) {
       if (watchlist.tickers.includes(sym)) {
         watchlist.tickers = watchlist.tickers.filter(t => t !== sym);
-        btn.textContent = '☆ Watch';
+        btn.textContent = '☆';
+        btn.title = 'Add to watchlist';
         btn.classList.remove('watching');
         _swApi('DELETE', { symbol: sym });
       } else {
         watchlist.tickers.push(sym);
-        btn.textContent = '★ Watching';
+        btn.textContent = '★';
+        btn.title = 'Watching';
         btn.classList.add('watching');
         if (typeof gtag !== 'undefined') gtag('event', 'watchlist_ticker_added', { ticker: sym });
         _swApi('POST', { symbol: sym });
