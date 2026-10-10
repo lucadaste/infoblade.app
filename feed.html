@@ -1526,14 +1526,29 @@
       }).join('');
     }
 
+    // Gainers/losers come from the market-wide movers feed (whole S&P 500 +
+    // other sizable US stocks), not just the ~100 tickers above; falls back
+    // to those if the movers feed comes back empty.
+    let _marketMovers = null;
+    async function fetchMarketMovers() {
+      if (_marketMovers) return _marketMovers;
+      try {
+        const res  = await fetch(`/api/sector-stocks?sector=market-movers`);
+        const data = await res.json();
+        _marketMovers = data.tickers || [];
+      } catch (_) { _marketMovers = []; }
+      if (!_marketMovers.length) _marketMovers = await fetchAnySectorData();
+      return _marketMovers;
+    }
+
     async function renderMovers() {
-      const data = await fetchAnySectorData();
+      const data = await fetchMarketMovers();
       const withChg = data.filter(t => t.changePct != null && t.price != null);
       const gainers = [...withChg].sort((a, b) => b.changePct - a.changePct).slice(0, 5);
       const losers  = [...withChg].sort((a, b) => a.changePct - b.changePct).slice(0, 5);
 
       const renderList = (items) => items.map((td, i) => {
-        const name = _anyNameMap[td.ticker] || td.ticker;
+        const name = td.name || _anyNameMap[td.ticker] || td.ticker;
         const { priceStr, chgStr, chgClass } = _priceChgHtml(td);
         return `<div class="mover-item" onclick="goToStock('${esc(td.ticker)}','${esc(name)}')">
           <span class="mover-rank">${i + 1}</span>
@@ -1551,7 +1566,7 @@
         stripGroup.style.display = 'flex';
         const chip = (td) => {
           const { chgStr, chgClass } = _priceChgHtml(td);
-          const name = _anyNameMap[td.ticker] || td.ticker;
+          const name = td.name || _anyNameMap[td.ticker] || td.ticker;
           return `<button class="strip-chip" onclick="goToStock('${esc(td.ticker)}','${esc(name)}')">${esc(td.ticker)} <span class="${chgClass}">${esc(chgStr)}</span></button>`;
         };
         stripRow.innerHTML = gainers.slice(0, 3).map(chip).join('')

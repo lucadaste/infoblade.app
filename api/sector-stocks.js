@@ -252,34 +252,99 @@ async function _fetchPopularityRanking() {
   }
 }
 
-// Robinhood's S&P 500 movers — top 10 up and top 10 down across the whole
-// index, so Home's Stock of the Day / Top Movers aren't limited to the
-// ~100 tickers in SECTOR_STOCKS.any (which missed e.g. HUM +11%, TMUS -13%).
+// Market-wide movers for Home's Stock of the Day / Top Movers and feed.html's
+// gainers/losers, so they aren't limited to the ~100 tickers in
+// SECTOR_STOCKS.any (which missed e.g. HUM +11%, TMUS -13%, FSLY +16%).
+// Two Robinhood sources merged:
+//   - S&P 500 movers: top 10 up + top 10 down across the index
+//   - top-movers tag: biggest moves across all US-listed stocks, which is
+//     mostly OTC ADRs and penny stocks, so it's filtered to NYSE/Nasdaq
+//     stocks at $5+ with a $1B+ market cap
+const RH_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json',
+};
+const MOVER_MIN_PRICE = 5;
+const MOVER_MIN_MCAP  = 1e9;
+const LISTED_MARKETS  = new Set(['XNAS', 'XNYS', 'XASE', 'ARCX', 'BATS']);
+
+async function _rhJson(url) {
+  const res = await fetch(url, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) });
+  if (!res.ok) throw new Error(`Robinhood HTTP ${res.status}`);
+  return res.json();
+}
+
+function _instrumentId(url) {
+  const m = String(url || '').match(/\/instruments\/([a-f0-9-]+)\//i);
+  return m ? m[1] : null;
+}
+
 async function _fetchSp500Movers() {
-  const fetchDir = async (direction) => {
-    const res = await fetch(`https://api.robinhood.com/midlands/movers/sp500/?direction=${direction}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) throw new Error(`Robinhood movers HTTP ${res.status}`);
-    const data = await res.json();
+  const dir = async (direction) => {
+    const data = await _rhJson(`https://api.robinhood.com/midlands/movers/sp500/?direction=${direction}`);
     return (data.results || []).map(r => {
       const price     = parseFloat(r.price_movement?.market_hours_last_price);
       const changePct = parseFloat(r.price_movement?.market_hours_last_movement_pct);
       return {
-        ticker:     r.symbol,
-        price:      price > 0 ? +price.toFixed(2) : null,
-        changePct:  !isNaN(changePct) ? +changePct.toFixed(2) : null,
-        week52High: null,
-        week52Low:  null,
+        ticker:    r.symbol,
+        id:        _instrumentId(r.instrument_url),
+        price:     price > 0 ? +price.toFixed(2) : null,
+        changePct: !isNaN(changePct) ? +changePct.toFixed(2) : null,
       };
     }).filter(t => t.ticker);
   };
-  const [up, down] = await Promise.all([fetchDir('up'), fetchDir('down')]);
+  const [up, down] = await Promise.all([dir('up'), dir('down')]);
   return [...up, ...down];
+}
+
+async function _fetchAllMarketMovers() {
+  const tag = await _rhJson('https://api.robinhood.com/midlands/tags/tag/top-movers/');
+  const ids = (tag.instruments || []).map(_instrumentId).filter(Boolean).slice(0, 50);
+  if (!ids.length) return [];
+  const inst = await _rhJson(`https://api.robinhood.com/instruments/?ids=${ids.join(',')}`);
+  const listed = (inst.results || []).filter(i =>
+    i?.symbol && i.type === 'stock' && LISTED_MARKETS.has((String(i.market).match(/markets\/([A-Z]+)\//) || [])[1]));
+  if (!listed.length) return [];
+  const symbols = listed.map(i => i.symbol);
+  const [quotes, fundamentals] = await Promise.all([
+    _fetchFromRobinhood(symbols),
+    _rhJson(`https://api.robinhood.com/fundamentals/?symbols=${symbols.join(',')}`),
+  ]);
+  // fundamentals results come back in the same order as the symbols asked for
+  const mcap = {};
+  (fundamentals.results || []).forEach((f, i) => { mcap[symbols[i]] = parseFloat(f?.market_cap); });
+  return listed
+    .map(i => ({ ticker: i.symbol, id: i.id, name: i.simple_name || i.name, ...quotes[i.symbol] }))
+    .filter(t => t.price >= MOVER_MIN_PRICE && t.changePct != null && mcap[t.ticker] >= MOVER_MIN_MCAP);
+}
+
+async function _fetchMarketMovers() {
+  const [sp500, all] = await Promise.all([
+    _fetchSp500Movers().catch(() => []),
+    _fetchAllMarketMovers().catch(() => []),
+  ]);
+  const byTicker = new Map();
+  for (const t of [...sp500, ...all]) if (!byTicker.has(t.ticker)) byTicker.set(t.ticker, t);
+  const merged = [...byTicker.values()];
+
+  // S&P 500 movers don't carry names — one instruments lookup fills them in
+  const needName = merged.filter(t => !t.name && t.id).map(t => t.id);
+  if (needName.length) {
+    try {
+      const inst = await _rhJson(`https://api.robinhood.com/instruments/?ids=${needName.slice(0, 50).join(',')}`);
+      const nameById = Object.fromEntries((inst.results || []).filter(Boolean).map(i => [i.id, i.simple_name || i.name]));
+      merged.forEach(t => { if (!t.name && nameById[t.id]) t.name = nameById[t.id]; });
+    } catch (_) {}
+  }
+
+  return merged.map(t => ({
+    ticker:     t.ticker,
+    name:       t.name || null,
+    price:      t.price ?? null,
+    changePct:  t.changePct ?? null,
+    week52High: null,
+    week52Low:  null,
+  }));
 }
 
 // Exported so api/generate-baseline.js (the daily baseline generator) can pull
@@ -306,9 +371,9 @@ export default async function handler(req, res) {
 
   const sector = req.query.sector || 'any';
 
-  if (sector === 'sp500-movers') {
+  if (sector === 'market-movers') {
     try {
-      const tickers = await _fetchSp500Movers();
+      const tickers = await _fetchMarketMovers();
       return res.status(200).json({ tickers, sector });
     } catch (_) {
       return res.status(200).json({ tickers: [], sector });
