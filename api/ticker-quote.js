@@ -112,8 +112,11 @@ async function _buildEquityResponse(ticker, rangeKey) {
   // covers enough history to derive it from the series itself.
   let week52High = null, week52Low = null;
   if (rangeKey === '1y' || rangeKey === '5y') {
-    const highs = historicals.map(h => _num(h.high_price)).filter(n => n != null);
-    const lows  = historicals.map(h => _num(h.low_price)).filter(n => n != null);
+    // 5Y bars go back five years — only the last 52 weeks count.
+    const cutoff = Date.now() - 365 * 24 * 3600 * 1000;
+    const lastYear = historicals.filter(h => new Date(h.begins_at).getTime() >= cutoff);
+    const highs = lastYear.map(h => _num(h.high_price)).filter(n => n != null);
+    const lows  = lastYear.map(h => _num(h.low_price)).filter(n => n != null);
     if (highs.length) { week52High = _round(Math.max(...highs)); week52Low = _round(Math.min(...lows)); }
   }
 
