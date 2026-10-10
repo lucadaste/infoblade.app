@@ -764,7 +764,7 @@
       return `
       <a class="ticker-row" href="${_tickerHref(t)}" title="${wins} of ${t.total} graded calls correct — view ${esc(t.ticker)}">
         <div class="ticker-rank">#${i + 1}</div>
-        <div class="ticker-logo"><img src="https://assets.parqet.com/logos/symbol/${encodeURIComponent(t.ticker)}?format=png" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;background:var(--border)" onerror="this.remove()"></div>
+        <div class="ticker-logo"><img data-sym="${esc(t.ticker)}" src="https://assets.parqet.com/logos/symbol/${encodeURIComponent(t.ticker)}?format=png" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;background:var(--border)" onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://financialmodelingprep.com/image-stock/'+encodeURIComponent(this.dataset.sym)+'.png'}else this.remove()"></div>
         <div class="ticker-sym">${esc(t.ticker)}</div>
         <div class="ticker-bar-wrap"><div class="ticker-bar-fill" style="width:${t.winRate}%;background:${color}"></div></div>
         <div class="ticker-pct" style="color:${color}">${t.winRate}%</div>

@@ -623,9 +623,9 @@
       const initials = esc((sym.startsWith('^') ? sym.slice(1) : sym).slice(0, 3));
       return `<div class="coin-logo-placeholder" style="position:relative">
         ${initials}
-        <img src="https://assets.parqet.com/logos/symbol/${encodeURIComponent(sym)}?format=png" alt="" loading="lazy"
+        <img data-sym="${esc(sym)}" src="https://assets.parqet.com/logos/symbol/${encodeURIComponent(sym)}?format=png" alt="" loading="lazy"
              style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:50%;background:var(--border)"
-             onerror="this.remove()">
+             onerror="if(!this.dataset.fb){this.dataset.fb=1;this.src='https://financialmodelingprep.com/image-stock/'+encodeURIComponent(this.dataset.sym)+'.png'}else this.remove()">
       </div>`;
     }
 
