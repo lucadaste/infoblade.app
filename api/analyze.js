@@ -87,6 +87,28 @@ async function _fetchRelevantMarkets(topic) {
   } catch (_) { return []; }
 }
 
+// Tickers the model commonly pulls into its own winner/loser output for a
+// given category without ever being named in the topic or headlines it was
+// given (e.g. a tech headline about one company pulling in semiconductor
+// peers, or a broad "any" outlook pulling in sector ETFs and TLT). Derived
+// from a 2026-10 audit of actual winner_tickers/loser_tickers vs. what
+// candidateTickers would have caught: 96% of organic predictions had at
+// least one such "surprise" ticker. Without this, buildContextGraph never
+// sees that ticker's own track record (see the TLT fix above) because it
+// only learns the ticker exists after the model has already committed to
+// using it. This list exists to pre-seed the lookup, not to constrain or
+// bias what the model is allowed to pick.
+const CATEGORY_RELATED_TICKERS = {
+  'technology':      ['NVDA', 'AMD', 'AVGO', 'SMH', 'ASML', 'AMAT', 'LRCX', 'TSM'],
+  'crypto':          ['IBIT', 'COIN', 'GBTC', 'MSTR', 'FBTC', 'MARA', 'RIOT'],
+  'precious-metals': ['GLD', 'GDX', 'GDXJ', 'IAU', 'SGOL', 'NEM'],
+  'energy':          ['XLE', 'CVX', 'COP', 'MPC', 'PSX', 'LNG'],
+  'defense':         ['NOC', 'RTX', 'LMT', 'ITA'],
+  'financials':      ['JPM', 'GS', 'MS', 'XLF', 'BAC'],
+  'any':             ['QQQ', 'SPY', 'XLU', 'XLP', 'XLF', 'XLE', 'TLT', 'JPM', 'BAC'],
+  'stock':           ['AAPL', 'NVDA', 'QQQ', 'XLK', 'GOOGL', 'AMD', 'META', 'AVGO'],
+};
+
 // ── Yahoo Finance prices ──────────────────────────────────────────────────────
 function _extractTickerCandidates(headlines) {
   const combined = headlines.join(' ');
@@ -420,6 +442,15 @@ export async function prepareAnalysis({
     // stayed bullish-biased on TLT for 4+ months because this exact path
     // never ran for it).
     const candidateTickers = isCoinCall ? [coinSymbol] : _extractTickerCandidates([topic, ...headlines]);
+    // Wider than candidateTickers, and ONLY for the track-record lookup below
+    // — never for the live price/technical snapshot or conflict-check, which
+    // must stay scoped to tickers actually relevant to this topic or every
+    // prediction's prompt fills up with irrelevant category peers' live
+    // prices. buildContextGraph just filters already-fetched recent rows
+    // in-memory per ticker, so widening its input is cheap either way.
+    const trackRecordTickers = isCoinCall
+      ? candidateTickers
+      : [...new Set([...candidateTickers, ...(CATEGORY_RELATED_TICKERS[category] || [])])].slice(0, 20);
     const isCryptoTopic = isCoinCall || /bitcoin|crypto|eth\b|solana|defi|blockchain|binance|coinbase/i.test(topic);
     const [relevantMarkets, technicalSnapshot, quantSnapshot, redditPosts, reputation, contextGraph, liveConflicts, derivs, fearGreed] = await Promise.all([
       _fetchRelevantMarkets(topic),
@@ -436,7 +467,7 @@ export async function prepareAnalysis({
             .catch(() => ({}))
         : Promise.resolve({}),
       supabase
-        ? buildContextGraph(supabase, { tickers: candidateTickers, category }).catch(() => null)
+        ? buildContextGraph(supabase, { tickers: trackRecordTickers, category }).catch(() => null)
         : Promise.resolve(null),
       _fetchLiveConflicts(supabase, candidateTickers, topic),
       isCoinCall ? fetchCryptoDerivs(coinSymbol) : Promise.resolve(null),
