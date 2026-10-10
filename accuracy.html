@@ -273,10 +273,11 @@
       <div class="section-title" style="margin-bottom:0;padding-top:4px">All Predictions</div>
       <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
         <div class="filter-row" id="pred-filters" style="margin-bottom:0">
-          <button class="filter-chip active" data-filter="all">All</button>
+          <button class="filter-chip active" data-filter="graded">Graded</button>
           <button class="filter-chip" data-filter="correct">Correct</button>
           <button class="filter-chip" data-filter="incorrect">Incorrect</button>
           <button class="filter-chip" data-filter="pending">Pending</button>
+          <button class="filter-chip" data-filter="all">All</button>
         </div>
         <div class="filter-row" id="cat-filters" style="margin-bottom:0">
           <button class="filter-chip active" data-catfilter="all">All Types</button>
@@ -782,7 +783,9 @@
   }
 
   // Active filter + pagination state
-  let _activeOutcome = 'all', _activeCat = 'all';
+  // Defaults to graded: newest-first "all" opens on a wall of calls that
+  // aren't due yet, which reads like the track record is missing.
+  let _activeOutcome = 'graded', _activeCat = 'all';
   let _filteredPreds = [], _showCount = 30;
   const _PAGE = 30;
   const _CRYPTO_CATS = new Set(['crypto-coin']);
@@ -792,7 +795,8 @@
     if (resetPage) _showCount = _PAGE;
     let preds = _allPreds;
     if (_activeOutcome !== 'all') {
-      preds = _activeOutcome === 'pending' ? preds.filter(p => p.correct === null || p.correct === undefined)
+      preds = _activeOutcome === 'graded' ? preds.filter(p => p.correct === true || p.correct === false)
+            : _activeOutcome === 'pending' ? preds.filter(p => p.correct === null || p.correct === undefined)
             : _activeOutcome === 'correct' ? preds.filter(p => p.correct === true)
             : preds.filter(p => p.correct === false);
     }
