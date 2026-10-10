@@ -1000,10 +1000,17 @@
     // actual compiled report for this stock — not a canned "drop me a
     // ticker" line when they very clearly already have. Reuses the same
     // live-news-aware /api/chat pipeline a typed question would hit.
-    const token = await window._auth?.getToken();
-    if (tickerCtx && token) {
+    const runTickerReport = async () => {
       await typeIntroLines([`Pulling together today's news and outlook for ${tickerCtx.name} (${tickerCtx.symbol})…`]);
       await send(`What's the latest news, trend, and outlook for ${tickerCtx.name} (${tickerCtx.symbol})?`);
+    };
+    // fetchHasChatted's 4s waitForAuth can time out on a slow Clerk load,
+    // which used to show a signed-in user the "sign in and I'll…" line.
+    // Give ticker pages longer to resolve before deciding.
+    const auth = tickerCtx ? await waitForAuth(10000) : window._auth;
+    const token = await auth?.getToken();
+    if (tickerCtx && token) {
+      await runTickerReport();
       return;
     }
 
@@ -1022,6 +1029,23 @@
     if (!hasChatted) {
       startersEl = buildStarters();
       msgsEl.appendChild(startersEl);
+    }
+
+    // Ticker page shown the signed-out line: if auth resolves late or the
+    // visitor signs in without leaving the page, run the report then —
+    // unless they've already started their own conversation.
+    if (tickerCtx) {
+      const introCount = msgsEl.childElementCount;
+      let fired = false;
+      const onUser = async (user) => {
+        if (fired || !user || busy || msgsEl.childElementCount !== introCount) return;
+        if (!(await window._auth?.getToken())) return;
+        fired = true;
+        startersEl?.remove();
+        await runTickerReport();
+      };
+      window._onAuthReady?.(onUser);
+      window._onAuthChange?.(onUser);
     }
   }
 
