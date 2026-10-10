@@ -303,6 +303,24 @@
       return r.ok ? r.json() : null;
     } catch (_) { return null; }
   }
+  // Called from the sign-in hook further down (a separate <script>, which
+  // can't see this closure — referencing the API helper from there threw a
+  // ReferenceError on every signed-in visit, so the sync never ran).
+  window._iiReconcileWatch = async function () {
+    const remote = await _swApi('GET');
+    const remoteTickers = new Set((remote && remote.symbols) || []);
+    const localTickers = new Set(watchlist.tickers);
+    localTickers.forEach(function (t) { if (!remoteTickers.has(t)) _swApi('POST', { symbol: t }); });
+    let changed = false;
+    remoteTickers.forEach(function (t) {
+      if (t.startsWith('SECTOR:')) return;
+      if (!localTickers.has(t)) { watchlist.tickers.push(t); changed = true; }
+    });
+    if (changed) {
+      localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
+      syncWatchBtn();
+    }
+  };
   window.toggleWatch = function () {
     if (watchlist.tickers.includes(TICKER)) {
       watchlist.tickers = watchlist.tickers.filter(t => t !== TICKER);
@@ -799,22 +817,7 @@
 // Reconcile the local stock watchlist with the account-wide one on sign-in:
 // push up anything saved locally before this page ever synced to the server,
 // and pull in anything saved from another device.
-window._onAuthReady(async function (user) {
-  if (!user) return;
-  const remote = await _swApi('GET');
-  const remoteTickers = new Set((remote && remote.symbols) || []);
-  const localTickers = new Set(watchlist.tickers);
-  localTickers.forEach(function (t) { if (!remoteTickers.has(t)) _swApi('POST', { symbol: t }); });
-  let changed = false;
-  remoteTickers.forEach(function (t) {
-    if (t.startsWith('SECTOR:')) return;
-    if (!localTickers.has(t)) { watchlist.tickers.push(t); changed = true; }
-  });
-  if (changed) {
-    localStorage.setItem('ii_watchlist', JSON.stringify(watchlist));
-    syncWatchBtn();
-  }
-});
+window._onAuthReady(function (user) { if (user && window._iiReconcileWatch) window._iiReconcileWatch(); });
 </script>
 
 <nav class="bottom-nav" aria-label="Mobile navigation">

@@ -61,6 +61,11 @@
     /* Chart — full-bleed on the page background, not boxed; it's the one
        thing on this page that should feel like data, not a dashboard widget */
     .s-chart-wrap { margin-bottom: 28px; }
+    /* Same as stock.html: hold the chart's height while it loads, and on a
+       range switch keep the old chart up (dimmed) instead of collapsing it
+       to a short "Loading…" line and back, which bounced everything below. */
+    #chart-area { min-height: 221px; transition: opacity 0.15s; }
+    #chart-area.is-loading { opacity: 0.45; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 60px 0; }
     .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
     .chart-svg-wrap { position: relative; }
@@ -238,6 +243,21 @@
       return r.ok ? r.json() : null;
     } catch (_) { return null; }
   }
+  // Called from the sign-in hook further down (a separate <script>, which
+  // can't see this closure — referencing the API helper from there threw a
+  // ReferenceError on every signed-in visit, so the sync never ran).
+  window._iiReconcileWatch = async function () {
+    const remote = await _cwApi('GET');
+    const remoteSymbols = new Set((remote && remote.symbols) || []);
+    const localSymbols = new Set(watchlist);
+    localSymbols.forEach(function (s) { if (!remoteSymbols.has(s)) _cwApi('POST', { symbol: s }); });
+    let changed = false;
+    remoteSymbols.forEach(function (s) { if (!localSymbols.has(s)) { watchlist.push(s); changed = true; } });
+    if (changed) {
+      localStorage.setItem('ii_crypto_watchlist', JSON.stringify(watchlist));
+      syncWatchBtn();
+    }
+  };
   window.toggleWatch = function () {
     if (watchlist.includes(SYMBOL)) {
       watchlist = watchlist.filter(s => s !== SYMBOL);
@@ -280,6 +300,7 @@
 
   function renderChart(series) {
     const area = document.getElementById('chart-area');
+    area.classList.remove('is-loading');
     if (!series || series.length < 2) {
       area.innerHTML = '<div class="chart-empty">No chart data for this range.</div>';
       return;
@@ -419,9 +440,13 @@
       const res = await fetch(window.API_BASE + `/api/coin-quote?symbol=${encodeURIComponent(SYMBOL)}&range=${encodeURIComponent(range)}`);
       const q = await res.json();
       if (q.error) throw new Error(q.error);
+      // Tapping ranges quickly can land responses out of order — ignore any
+      // that isn't for the range now selected.
+      if (range !== currentRange) return;
 
       if (q.image) {
-        document.getElementById('s-logo').innerHTML = `<img src="${esc(q.image)}" alt="">`;
+        const logo = document.getElementById('s-logo');
+        if (!logo.querySelector('img')) logo.innerHTML = `<img src="${esc(q.image)}" alt="">`;
       } else {
         document.getElementById('s-logo').textContent = SYMBOL.slice(0, 3);
       }
@@ -446,6 +471,7 @@
       renderStats(q);
       renderChart(q.series);
     } catch (err) {
+      document.getElementById('chart-area').classList.remove('is-loading');
       document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load price data for ${esc(SYMBOL)}.</div>`;
     }
   }
@@ -455,7 +481,7 @@
       if (btn.dataset.range === currentRange) return;
       document.querySelectorAll('#range-row .range-chip').forEach(b => b.classList.toggle('active', b === btn));
       currentRange = btn.dataset.range;
-      document.getElementById('chart-area').innerHTML = '<div class="chart-empty">Loading…</div>';
+      document.getElementById('chart-area').classList.add('is-loading');
       loadData(currentRange);
     });
   });
@@ -469,19 +495,7 @@
 // Reconcile the local crypto watchlist with the account-wide one on sign-in:
 // push up anything saved locally before this page ever synced to the server,
 // and pull in anything saved from another device.
-window._onAuthReady(async function (user) {
-  if (!user) return;
-  const remote = await _cwApi('GET');
-  const remoteSymbols = new Set((remote && remote.symbols) || []);
-  const localSymbols = new Set(watchlist);
-  localSymbols.forEach(function (s) { if (!remoteSymbols.has(s)) _cwApi('POST', { symbol: s }); });
-  let changed = false;
-  remoteSymbols.forEach(function (s) { if (!localSymbols.has(s)) { watchlist.push(s); changed = true; } });
-  if (changed) {
-    localStorage.setItem('ii_crypto_watchlist', JSON.stringify(watchlist));
-    syncWatchBtn();
-  }
-});
+window._onAuthReady(function (user) { if (user && window._iiReconcileWatch) window._iiReconcileWatch(); });
 </script>
 
 <nav class="bottom-nav" aria-label="Mobile navigation">

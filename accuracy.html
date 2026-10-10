@@ -200,14 +200,14 @@
 <div class="main">
 
   <!-- Validation banner (shown while/after validation runs) -->
-  <div id="val-banner" class="val-banner" style="display:none">
+  <div id="val-banner" class="val-banner">
     <span class="val-dot" id="val-dot"></span>
-    <span id="val-msg">Scanning predictions…</span>
+    <span id="val-msg">Loading the latest grading status…</span>
   </div>
 
   <!-- Stats -->
   <div class="stats-row" id="stats-row">
-    <div class="stat-card"><div class="stat-label">Called Direction Correctly</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div id="stat-accuracy-ci" style="font-size:11px;color:var(--muted);margin-top:4px"></div></div>
+    <div class="stat-card"><div class="stat-label">Called Direction Correctly</div><div class="stat-value green skeleton" id="stat-accuracy" style="height:44px;width:80px">&nbsp;</div><div id="stat-accuracy-ci" style="font-size:11px;color:var(--muted);margin-top:4px;min-height:14px"></div></div>
     <div class="stat-card"><div class="stat-label">Predictions Resolved</div><div class="stat-value skeleton" id="stat-correct" style="height:44px;width:80px">&nbsp;</div></div>
     <div class="stat-card"><div class="stat-label">Awaiting Outcome</div><div class="stat-value skeleton" id="stat-pending" style="height:44px;width:80px">&nbsp;</div></div>
   </div>
@@ -227,7 +227,9 @@
   <!-- Per-section breakdown -->
   <div class="section-title">Accuracy by Section</div>
   <div class="cat-grid" id="section-grid">
-    <div class="cat-card"><div class="no-data" style="padding:12px 0">Loading…</div></div>
+    <div class="cat-card" style="min-height:115px"><div class="no-data" style="padding:12px 0">Loading…</div></div>
+    <div class="cat-card" style="min-height:115px"></div>
+    <div class="cat-card" style="min-height:115px"></div>
   </div>
   <!-- Prediction markets vs. the crowd (filled from data.pmEdge; hidden until there's data) -->
   <p id="pm-edge" style="display:none;font-size:13px;color:var(--muted);margin:-12px 0 28px;line-height:1.6"></p>

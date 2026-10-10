@@ -47,7 +47,13 @@
     .hero-stat { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
     .hero-stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 20px; color: var(--accent); letter-spacing: -0.3px; }
     .hero-stat-label { font-size: 13px; color: var(--muted); }
-    .hero-stat-label a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); }
+    .hero-stat-label a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    /* Holds its final space (placeholder text of about the same length) while
+       the accuracy figure loads, instead of appearing late and shoving the
+       whole dashboard down by up to three lines on a phone. Collapses only
+       if there's genuinely nothing to show. */
+    .hero-stat[hidden] { display: flex; visibility: hidden; }
+    .hero-stat.hero-stat-none { display: none; }
     .hero-stat-label a:hover { color: var(--accent); border-color: var(--accent); }
 
     .dash-wrap { padding: 8px 48px 72px; display: flex; flex-direction: column; gap: 48px; max-width: 1040px; }
@@ -84,13 +90,16 @@
        hairline rule between columns rather than a boxed background. */
     .picks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px 48px; }
     .pick-card { display: flex; flex-direction: column; gap: 10px; padding-left: 20px; border-left: 1px solid var(--border); }
+    /* Reserve roughly a loaded pick's height so the picks arriving doesn't
+       push Watchlist and Top Movers down the page. */
+    .pick-card > [id$="-pick-body"] { min-height: 138px; }
 
     /* Below the width a 3-column grid can breathe, Today's Picks becomes a
        swipeable carousel instead of a stacked list — each card snaps full-
        width with a peek of the next one, the same native-app flick-through
        feel as Robinhood's stock carousels. */
     @media (max-width: 720px) {
-      .picks-grid { display: flex; grid-template-columns: none; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+      .picks-grid { display: flex; grid-template-columns: none; gap: 0; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; -webkit-overflow-scrolling: touch; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
       .picks-grid::-webkit-scrollbar { display: none; }
       .pick-card { flex: 0 0 calc(100% - 44px); scroll-snap-align: start; border-left: none; padding-left: 0; padding-right: 28px; }
     }
@@ -196,8 +205,8 @@
       <div class="hero-tag"><span class="hero-tag-dot"></span> Your Dashboard</div>
       <h1 id="page-title">Welcome back</h1>
       <div class="hero-stat" id="hero-stat" hidden>
-        <span class="hero-stat-value" id="hero-stat-value">—</span>
-        <span class="hero-stat-label" id="hero-stat-label"></span>
+        <span class="hero-stat-value" id="hero-stat-value">00%</span>
+        <span class="hero-stat-label" id="hero-stat-label">accurate across 000 graded calls (00–00%) — <a href="/accuracy.html">Track record &rarr;</a></span>
       </div>
     </div>
   </div>
@@ -415,14 +424,14 @@
     try {
       var data = await fetchPredictions();
       var s = data && data.summary;
-      if (!s || s.accuracy == null || s.total < 5) return;
+      if (!s || s.accuracy == null || s.total < 5) { document.getElementById('hero-stat').classList.add('hero-stat-none'); return; }
       var wrap = document.getElementById('hero-stat');
       document.getElementById('hero-stat-value').textContent = s.accuracy + '%';
       var ciStr = s.accuracyCI ? ' (' + s.accuracyCI.lower + '–' + s.accuracyCI.upper + '%)' : '';
       document.getElementById('hero-stat-label').innerHTML =
         'accurate across ' + s.total + ' graded calls' + ciStr + ' — <a href="/accuracy.html">Track record &rarr;</a>';
       wrap.hidden = false;
-    } catch (_) { /* leave hero-stat hidden */ }
+    } catch (_) { document.getElementById('hero-stat').classList.add('hero-stat-none'); }
   }
 
   // Stock of the Day: today's biggest gainer among a broad ticker list —
