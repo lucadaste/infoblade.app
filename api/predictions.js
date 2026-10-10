@@ -840,18 +840,21 @@ async function handleStats(req, res, supabase) {
     supabase
       .from('predictions')
       .select(PRED_SELECT)
+      .is('analysis->>excluded_reason', null)
       .not('correct', 'is', null)
       .order('created_at', { ascending: false })
       .limit(500),
     supabase
       .from('predictions')
       .select(PRED_SELECT)
+      .is('analysis->>excluded_reason', null)
       .is('correct', null)
       .order('created_at', { ascending: false })
       .limit(200),
     supabase
       .from('predictions')
       .select(PRED_SELECT)
+      .is('analysis->>excluded_reason', null)
       .not('lean', 'is', null)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -861,7 +864,6 @@ async function handleStats(req, res, supabase) {
   const seenIds = new Set();
   const recent = [];
   for (const p of [...(pmPreds || []), ...(pendingRecent || []), ...(resolvedAll || [])]) {
-    if (isExcludedFromStats(p)) continue;
     if (!seenIds.has(p.id)) { seenIds.add(p.id); recent.push(p); }
   }
   recent.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
