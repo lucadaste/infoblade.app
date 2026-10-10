@@ -1,4 +1,5 @@
 import { setCors } from '../lib/http.js';
+import { SP400 } from '../lib/sp400.js';
 
 // Display-name aliases → real Yahoo Finance symbols
 const SYMBOL_ALIASES = { 'SPX': '^GSPC' };
@@ -255,8 +256,9 @@ async function _fetchPopularityRanking() {
 // Market-wide movers for Home's Stock of the Day / Top Movers and feed.html's
 // gainers/losers, so they aren't limited to the ~100 tickers in
 // SECTOR_STOCKS.any (which missed e.g. HUM +11%, TMUS -13%, FSLY +16%).
-// Two Robinhood sources merged:
+// Three Robinhood sources merged:
 //   - S&P 500 movers: top 10 up + top 10 down across the index
+//   - S&P MidCap 400: all 400 quoted directly, top 10 up + top 10 down kept
 //   - top-movers tag: biggest moves across all US-listed stocks, which is
 //     mostly OTC ADRs and penny stocks, so it's filtered to NYSE/Nasdaq
 //     stocks at $5+ with a $1B+ market cap
@@ -318,13 +320,34 @@ async function _fetchAllMarketMovers() {
     .filter(t => t.price >= MOVER_MIN_PRICE && t.changePct != null && mcap[t.ticker] >= MOVER_MIN_MCAP);
 }
 
+const SP400_NAMES = Object.fromEntries(SP400);
+
+async function _fetchMidcapMovers() {
+  // Robinhood takes all 400 in one call, but two halves keep the URL modest
+  const symbols = SP400.map(([t]) => t);
+  const half = Math.ceil(symbols.length / 2);
+  const maps = await Promise.all([symbols.slice(0, half), symbols.slice(half)].map(_fetchFromRobinhood));
+  const quoted = Object.entries(Object.assign({}, ...maps))
+    .map(([ticker, q]) => ({ ticker, name: SP400_NAMES[ticker], ...q }))
+    .filter(t => t.changePct != null && t.price >= MOVER_MIN_PRICE)
+    .sort((a, b) => b.changePct - a.changePct);
+  return [...quoted.slice(0, 10), ...quoted.slice(-10)];
+}
+
+// Warm-lambda cache so repeat page loads within a minute don't re-scan
+let _moversCache = null;
+let _moversCacheTs = 0;
+const MOVERS_TTL_MS = 60_000;
+
 async function _fetchMarketMovers() {
-  const [sp500, all] = await Promise.all([
+  if (_moversCache && Date.now() - _moversCacheTs < MOVERS_TTL_MS) return _moversCache;
+  const [sp500, midcap, all] = await Promise.all([
     _fetchSp500Movers().catch(() => []),
+    _fetchMidcapMovers().catch(() => []),
     _fetchAllMarketMovers().catch(() => []),
   ]);
   const byTicker = new Map();
-  for (const t of [...sp500, ...all]) if (!byTicker.has(t.ticker)) byTicker.set(t.ticker, t);
+  for (const t of [...sp500, ...midcap, ...all]) if (!byTicker.has(t.ticker)) byTicker.set(t.ticker, t);
   const merged = [...byTicker.values()];
 
   // S&P 500 movers don't carry names — one instruments lookup fills them in
@@ -337,7 +360,7 @@ async function _fetchMarketMovers() {
     } catch (_) {}
   }
 
-  return merged.map(t => ({
+  const result = merged.map(t => ({
     ticker:     t.ticker,
     name:       t.name || null,
     price:      t.price ?? null,
@@ -345,6 +368,8 @@ async function _fetchMarketMovers() {
     week52High: null,
     week52Low:  null,
   }));
+  if (result.length) { _moversCache = result; _moversCacheTs = Date.now(); }
+  return result;
 }
 
 // Exported so api/generate-baseline.js (the daily baseline generator) can pull
@@ -374,6 +399,7 @@ export default async function handler(req, res) {
   if (sector === 'market-movers') {
     try {
       const tickers = await _fetchMarketMovers();
+      if (tickers.length) res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
       return res.status(200).json({ tickers, sector });
     } catch (_) {
       return res.status(200).json({ tickers: [], sector });
