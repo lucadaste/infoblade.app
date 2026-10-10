@@ -1,6 +1,6 @@
 import { buildContextGraph, formatContextForPrompt } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
-import { COIN_SYMS } from '../lib/coin-symbols.js';
+import { COIN_SYMS, yahooSymbol } from '../lib/coin-symbols.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { parseConfidenceStars as _parseConfidenceStars } from '../lib/confidence.js';
 import { getSourceGrade, staticSourceGrade } from '../lib/source-quality.js';
@@ -130,8 +130,9 @@ async function _fetchQuoteSnapshot(tickers) {
       'recommendationKey','targetMeanPrice',
       'trailingPE','forwardPE','marketCap'
     ].join(',');
-    // Crypto tickers need the -USD suffix on Yahoo Finance; map back to raw symbol in result
-    const yahooSymbols = tickers.map(t => _COIN_SYMS.has(t) ? `${t}-USD` : t);
+    // Crypto tickers need Yahoo's -USD symbol; map back to raw symbol in result
+    const yahooSymbols = tickers.map(yahooSymbol);
+    const rawFor = Object.fromEntries(tickers.map(t => [yahooSymbol(t), t]));
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${yahooSymbols.join(',')}&fields=${fields}`;
     const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: controller.signal });
     clearTimeout(timer);
@@ -140,8 +141,8 @@ async function _fetchQuoteSnapshot(tickers) {
     for (const q of data?.quoteResponse?.result || []) {
       if (!q.regularMarketPrice) continue;
       const price = q.regularMarketPrice;
-      // Strip -USD suffix so snapshot is keyed by the raw symbol (BTC not BTC-USD)
-      const sym = q.symbol.replace(/-USD$/, '');
+      // Key the snapshot by the raw symbol (BTC not BTC-USD)
+      const sym = rawFor[q.symbol] ?? q.symbol.replace(/-USD$/, '');
       const vs50  = q.fiftyDayAverage    ? +((price / q.fiftyDayAverage    - 1) * 100).toFixed(1) : null;
       const vs200 = q.twoHundredDayAverage ? +((price / q.twoHundredDayAverage - 1) * 100).toFixed(1) : null;
       const upside = q.targetMeanPrice   ? +((q.targetMeanPrice / price - 1) * 100).toFixed(1) : null;
@@ -713,6 +714,10 @@ export async function finishAnalysis(ctx, data, supabase) {
       // user_id requires schema cache reload in Supabase after ALTER TABLE —
       // only include when set to avoid "column not found" errors in schema cache.
       if (userId) record.user_id = userId;
+      // No winner or loser means the model declined to make a call. Still
+      // saved (the page shows it honestly, and the baseline generator counts
+      // it as coverage), but stamped so it never sits in "pending" forever.
+      if (!allTickers.length) record.status = 'no_call';
       saveResult = await _savePrediction(supabase, record);
     } else if (!supabase) {
       console.warn('[runAnalysis] Supabase not available — prediction not saved');

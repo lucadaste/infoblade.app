@@ -69,7 +69,9 @@ alter table predictions add column if not exists accuracy_score numeric;
 -- 'resolving' rows older than 15 minutes are treated as stale (crashed
 -- mid-run) and become reclaimable — see _claimReadyPredictions in
 -- api/predictions.js.
--- status: 'pending' | 'resolving' | 'resolved' | 'failed'. 'failed' means
+-- status: 'pending' | 'resolving' | 'resolved' | 'failed' | 'no_call'.
+-- 'no_call' means the analysis named no winner or loser (the model declined
+-- to call it), so there is nothing to grade. 'failed' means
 -- price data was unavailable for retry_count consecutive resolve passes
 -- (see MAX_RESOLVE_RETRIES in api/predictions.js) — distinct from 'pending'
 -- so these predictions stop being retried forever but stay visibly flagged

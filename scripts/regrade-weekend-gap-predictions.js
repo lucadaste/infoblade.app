@@ -29,7 +29,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { computeAccuracyScore, SCORING_VERSION } from '../lib/scoring.js';
 import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
-import { COIN_SYMS } from '../lib/coin-symbols.js';
+import { COIN_SYMS, yahooSymbol } from '../lib/coin-symbols.js';
 
 const WRITE = process.argv.includes('--write');
 
@@ -44,7 +44,7 @@ function getSupabase() {
 async function fetchTickerHistory(ticker, startMs, endMs) {
   const p1 = Math.floor(startMs / 1000) - 7 * 86400;
   const p2 = Math.floor(endMs   / 1000) + 7 * 86400;
-  const yTicker = COIN_SYMS.has(ticker) ? `${ticker}-USD` : ticker;
+  const yTicker = yahooSymbol(ticker);
   try {
     const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yTicker)}?interval=1d&period1=${p1}&period2=${p2}`;
     const r = await fetch(url, {

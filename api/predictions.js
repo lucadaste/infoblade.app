@@ -71,7 +71,9 @@ async function _fetchTickerHistory(ticker, startMs, endMs) {
   const map = {};
   for (let i = 0; i < timestamps.length; i++) {
     if (closes[i] == null) continue;
-    map[new Date(timestamps[i] * 1000).toISOString().slice(0, 10)] = +closes[i].toFixed(4);
+    // Significant figures, not decimals: toFixed(4) zeroed micro-priced coins
+    // (SHIB/BONK/PEPE trade around $0.000005), leaving them ungradeable.
+    map[new Date(timestamps[i] * 1000).toISOString().slice(0, 10)] = +closes[i].toPrecision(6);
   }
   return map;
 }
@@ -215,7 +217,7 @@ async function _resolvePriceBased(supabase, nowStr, nowMs) {
     .select('id, topic, created_at, validation_date, winner_tickers, loser_tickers, baseline_prices, analysis, category, sources, status, retry_count')
     .is('correct', null)
     .is('lean', null)
-    .neq('status', 'failed')
+    .not('status', 'in', '(failed,no_call)')
     .or(`validation_date.is.null,validation_date.lte.${nowStr}`)
     .order('created_at', { ascending: true })
     .limit(1000);
@@ -740,13 +742,15 @@ async function handleStats(req, res, supabase) {
     .from('predictions')
     .select('id', { count: 'exact', head: true })
     .is('correct', null)
-    .is('analysis->>excluded_reason', null);
+    .is('analysis->>excluded_reason', null)
+    .not('status', 'in', '(failed,no_call)');
   if (pErr) throw pErr;
   const { count: pendingBaselineCount } = await supabase
     .from('predictions')
     .select('id', { count: 'exact', head: true })
     .is('correct', null)
     .is('analysis->>excluded_reason', null)
+    .not('status', 'in', '(failed,no_call)')
     .eq('analysis->>baseline_generated', 'true');
   const pending = pendingCount;
 
@@ -849,6 +853,7 @@ async function handleStats(req, res, supabase) {
       .select(PRED_SELECT)
       .is('analysis->>excluded_reason', null)
       .is('correct', null)
+      .not('status', 'in', '(failed,no_call)')
       .order('created_at', { ascending: false })
       .limit(200),
     supabase
@@ -948,7 +953,9 @@ async function handleStats(req, res, supabase) {
   const { data: pendingAll } = await supabase
     .from('predictions')
     .select('id, category, lean')
-    .is('correct', null);
+    .is('correct', null)
+    .is('analysis->>excluded_reason', null)
+    .not('status', 'in', '(failed,no_call)');
   for (const p of pendingAll || []) {
     const sec = (p.lean) ? 'prediction-markets' : _categoryToSection(p.category || 'any');
     pendingBySection[sec] = (pendingBySection[sec] || 0) + 1;
