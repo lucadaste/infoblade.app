@@ -131,6 +131,17 @@
   }
   notifyChatWidget(selfIndex);
 
+  // Live scroll position (scroll events already fire once per frame) for chat-widget.js, so its fixed-position
+  // dock slides with Home instead of hanging over the next tab until the
+  // swipe settles. ii-tab-moving switches off the panel's transitions while
+  // the strip is in motion so the dock never lags its pane.
+  var TAB_FILES = TABS.map(function (t) { return t.file.replace(/^\//, ''); });
+  function reportScrollPos() {
+    var w = paneWidth();
+    if (window.iiSetTabScroll) window.iiSetTabScroll(TAB_FILES, tabScroll.scrollLeft / w, w);
+  }
+  reportScrollPos();
+
   function setActiveNav(i) {
     document.querySelectorAll('.bottom-nav .bn-item').forEach(function (el, idx) {
       el.classList.toggle('active', idx === i);
@@ -155,11 +166,18 @@
   }
 
   var scrollTimer;
+  function settle() {
+    document.documentElement.classList.remove('ii-tab-moving');
+    reportScrollPos();
+    onSettle();
+  }
   tabScroll.addEventListener('scroll', function () {
+    document.documentElement.classList.add('ii-tab-moving');
+    reportScrollPos();
     clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(onSettle, 120);
+    scrollTimer = setTimeout(settle, 120);
   }, { passive: true });
-  tabScroll.addEventListener('scrollend', onSettle);
+  tabScroll.addEventListener('scrollend', settle);
 
   function goTo(i) {
     if (i < 0 || i >= TABS.length) return;

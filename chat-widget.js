@@ -604,7 +604,7 @@
         transform: translateX(14px) scale(0.99);
         transform-origin: right center;
       }
-      #ii-ai-panel.ii-embedded.ii-open { transform: translateX(0) scale(1); }
+      #ii-ai-panel.ii-embedded.ii-open { transform: translateX(var(--ii-dock-shift, 0px)) scale(1); }
       #ii-ai-panel.ii-embedded .ii-close-btn { display: none; }
       #ii-ai-panel.ii-embedded .ii-header { padding-left: 0; padding-right: 0; }
       #ii-ai-panel.ii-embedded .ii-msgs { padding-left: 0; padding-right: 0; }
@@ -614,6 +614,11 @@
          narrower than home.html's dashboard, so the dock doesn't need to
          match home's width to avoid crowding it — give the quote more room
          and keep the chat as a slim sidebar instead. */
+      /* Mid-swipe between tab-shell tabs the dock tracks its pane frame by
+         frame (--ii-dock-shift); any transition would make it lag behind
+         the page it belongs to. */
+      html.ii-tab-moving #ii-ai-panel { transition: none; }
+
       html.ii-chat-embedded.ii-quote-dock {
         --ii-chat-w: clamp(260px, 24vw, 360px);
       }
@@ -1067,9 +1072,38 @@
     activeTabPage = p;
     applyResponsiveMode();
   };
+  // tab-shell.js also streams the strip's live scroll position (fractional
+  // tab index) on every frame, not just once a swipe settles. The dock is a
+  // position: fixed element, so without this it hung over the neighboring
+  // tab for the whole swipe and only vanished ~120ms after it ended. Now the
+  // dock slides horizontally with the pane it belongs to, exactly like the
+  // rest of that pane's content.
+  let tabFiles = null, tabPos = 0, tabWidth = 0;
+  window.iiSetTabScroll = function (files, pos, width) {
+    tabFiles = files; tabPos = pos; tabWidth = width;
+    applyResponsiveMode(true);
+  };
+  function tabHasDock(i) {
+    const f = tabFiles && tabFiles[i];
+    return f === 'home.html' || (f === 'feed.html' && feedDockEnabled);
+  }
+  // Horizontal offset (px) of the dock's owning pane from the viewport, or
+  // null when no on-screen pane has a dock. Two docked panes side by side
+  // share one dock that stays put.
+  function tabDockShift() {
+    const lo = Math.floor(tabPos), hi = Math.ceil(tabPos);
+    const a = tabHasDock(lo), b = tabHasDock(hi);
+    if (a && b) return 0;
+    if (a) return (lo - tabPos) * tabWidth;
+    if (b) return (hi - tabPos) * tabWidth;
+    return null;
+  }
+
   function isEmbedMode() {
     if (!embedMq.matches) return false;
-    if (activeTabPage === 'home.html' || page === 'stock.html' || page === 'coin.html') return true;
+    if (page === 'stock.html' || page === 'coin.html') return true;
+    if (tabFiles) return tabDockShift() !== null;
+    if (activeTabPage === 'home.html') return true;
     return activeTabPage === 'feed.html' && feedDockEnabled;
   }
 
@@ -1107,20 +1141,24 @@
     return activeTabPage === 'feed.html' && !feedDockEnabled && history.length === 0;
   }
 
-  function applyResponsiveMode() {
+  function applyResponsiveMode(fromTabScroll) {
     const embedded = isEmbedMode();
     const wasEmbedded = panel.classList.contains('ii-embedded');
+    const shift = embedded && tabFiles ? tabDockShift() : 0;
+    panel.style.setProperty('--ii-dock-shift', (shift || 0) + 'px');
     panel.classList.toggle('ii-embedded', embedded);
     floatBtn.classList.toggle('ii-bubble-hidden', embedded || feedBubbleIdle());
     document.documentElement.classList.toggle('ii-chat-embedded', embedded);
     if (embedded && !open) {
       setOpen(true);
-    } else if (!embedded && wasEmbedded && open && history.length === 0) {
+    } else if (!embedded && wasEmbedded && open && (fromTabScroll === true || history.length === 0)) {
       // Dropping out of the embedded layout (window narrowed past the point
       // it fits) — go back to the closed icon rather than leaving a popup
       // sitting open that nobody asked to open. Skip this if there's an
       // actual conversation going, so narrowing the window mid-chat doesn't
-      // yank it away.
+      // yank it away. Swiping off the dock's tab always closes it, though —
+      // the dock has already slid fully off screen with its pane by then,
+      // and popping it back up as a popup over the new tab would be a jump.
       setOpen(false);
     }
   }

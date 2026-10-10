@@ -63,6 +63,12 @@
     @media (min-width: 1180px) {
       html.ii-chat-embedded .dash-wrap,
       html.ii-chat-embedded .hero { max-width: min(1040px, calc(100vw - var(--ii-chat-w, 520px) - 96px)); }
+      /* Loaded as a tab-shell iframe (you started on another tab), chat-
+         widget.js doesn't run in here — the top-level page's dock slides in
+         over this pane instead, so always leave its room. Same clamp as
+         --ii-chat-w in chat-widget.js. */
+      html.is-embedded .dash-wrap,
+      html.is-embedded .hero { max-width: min(1040px, calc(100vw - clamp(340px, 34vw, 520px) - 96px)); }
     }
 
     .page-section { display: flex; flex-direction: column; gap: 18px; }
