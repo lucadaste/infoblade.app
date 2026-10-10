@@ -995,28 +995,15 @@
     const hasChatted = await fetchHasChatted();
     hasChattedBefore = hasChatted;
 
-    // Ticker pages, signed in: skip the generic walkthrough and ask the real
-    // question on the visitor's behalf, so the first thing they see is an
-    // actual compiled report for this stock — not a canned "drop me a
-    // ticker" line when they very clearly already have. Reuses the same
-    // live-news-aware /api/chat pipeline a typed question would hit.
-    const runTickerReport = async () => {
-      await typeIntroLines([`Pulling together today's news and outlook for ${tickerCtx.name} (${tickerCtx.symbol})…`]);
-      await send(`What's the latest news, trend, and outlook for ${tickerCtx.name} (${tickerCtx.symbol})?`);
-    };
-    // fetchHasChatted's 4s waitForAuth can time out on a slow Clerk load,
-    // which used to show a signed-in user the "sign in and I'll…" line.
-    // Give ticker pages longer to resolve before deciding.
-    const auth = tickerCtx ? await waitForAuth(10000) : window._auth;
-    const token = await auth?.getToken();
-    if (tickerCtx && token) {
-      await runTickerReport();
+    // Ticker pages: one short question about the ticker on screen, then
+    // wait. The page's own AI Analysis section is the full report, so an
+    // auto-asked report here would just be a second, competing take.
+    if (tickerCtx) {
+      await typeIntroLines([`Curious what's driving ${tickerCtx.symbol} today?`]);
       return;
     }
 
-    const lines = tickerCtx
-      ? [`Looking at ${tickerCtx.name} (${tickerCtx.symbol}) — sign in and I'll pull together the latest news and outlook for it. You can also ask me anything else about the site or markets.`]
-      : hasChatted
+    const lines = hasChatted
       ? [QUIRKY_INTROS[Math.floor(Math.random() * QUIRKY_INTROS.length)]]
       : [
           "Have a stock, event, or topic in mind? Drop a ticker, a headline, or a theme and I'll break down the market implications in real time.",
@@ -1029,23 +1016,6 @@
     if (!hasChatted) {
       startersEl = buildStarters();
       msgsEl.appendChild(startersEl);
-    }
-
-    // Ticker page shown the signed-out line: if auth resolves late or the
-    // visitor signs in without leaving the page, run the report then —
-    // unless they've already started their own conversation.
-    if (tickerCtx) {
-      const introCount = msgsEl.childElementCount;
-      let fired = false;
-      const onUser = async (user) => {
-        if (fired || !user || busy || msgsEl.childElementCount !== introCount) return;
-        if (!(await window._auth?.getToken())) return;
-        fired = true;
-        startersEl?.remove();
-        await runTickerReport();
-      };
-      window._onAuthReady?.(onUser);
-      window._onAuthChange?.(onUser);
     }
   }
 
