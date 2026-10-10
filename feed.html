@@ -38,7 +38,7 @@
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     /* ── Unified ask bar — ticker lookups and free-form questions in one box ── */
-    .ask-wrap { padding: 0 48px 28px; }
+    .ask-wrap { padding: 8px 48px 18px; }
     .ask-box { position: relative; display: flex; align-items: center; gap: 10px; max-width: 760px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 18px; transition: border-color 0.15s; }
     .ask-box:focus-within { border-color: var(--accent); }
     .ask-icon { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
@@ -56,7 +56,12 @@
       html.ii-chat-embedded #page-body { max-width: calc(100vw - var(--ii-chat-w, 520px) - 96px); }
     }
 
-    .filters { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; padding: 28px 48px; background: var(--paper); }
+    .filters { display: flex; flex-direction: column; gap: 16px; padding: 44px 48px 8px; background: var(--paper); }
+    .filter-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+    .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); }
+    .filter-note { font-size: 12px; color: var(--muted); }
+    .filter-row { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-end; }
+    .filter-row .filter-actions { margin-left: 0; }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
@@ -139,16 +144,6 @@
     .empty-state h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
 
-    .pre-load { padding: 52px 0 40px; display: flex; flex-direction: column; align-items: center; gap: 32px; text-align: center; }
-    .pre-load-text h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 8px; }
-    .pre-load-text p { font-size: 14px; color: var(--muted); line-height: 1.65; max-width: 380px; }
-    .quick-cats-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
-    .quick-cats { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 560px; }
-    .quick-cat { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; padding: 9px 20px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
-    .quick-cat:hover { border-color: var(--ink); color: var(--ink); background: var(--paper); }
-    .quick-cat.featured { background: var(--accent); color: #111111; border-color: var(--accent); }
-    .quick-cat.featured:hover { opacity: 0.85; }
-    .pre-load-note { font-size: 12px; color: var(--muted); opacity: 0.7; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .skel { background: linear-gradient(90deg, var(--card) 25%, var(--surface-2) 50%, var(--card) 75%); background-size: 200% 100%; animation: skel-shimmer 1.5s ease-in-out infinite; border-radius: 4px; }
@@ -169,10 +164,6 @@
     .pill.pill-watched .pill-star { opacity: 1; }
     #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: var(--card); border: 1px solid var(--divider); border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; line-height: 1.6; color: var(--text-soft); pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.1s ease; }
 
-    /* Back link — the only way out of stock mode now that the two-tab switcher is gone;
-       mode changes automatically (search a ticker, click a card) instead of being tab-driven. */
-    .back-to-feed { position: relative; z-index: 20; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 5px; padding: 7px 14px; margin: 20px 48px 0; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
-    .back-to-feed:hover { color: var(--ink); border-color: var(--ink); }
 
     /* ── Page layout: main column + a watchlist/movers rail, so the wide
        right-hand gutter that opened up once the two-tab switcher was removed
@@ -240,17 +231,22 @@
     @media (max-width: 900px) {
       .ticker-rail-label, .ticker-rail { margin-left: 24px; margin-right: 24px; padding-left: 0; padding-right: 0; }
       .mobile-strip { padding-left: 24px; padding-right: 24px; }
-      .back-to-feed { margin-left: 24px; margin-right: 24px; }
     }
     @media (max-width: 480px) {
       .ticker-rail-label, .ticker-rail { margin-left: 16px; margin-right: 16px; }
       .mobile-strip { padding-left: 16px; padding-right: 16px; }
-      .back-to-feed { margin-left: 16px; margin-right: 16px; }
     }
 
-    /* Auth gate for Individual Stocks */
-    #stock-section { position: relative; }
-    #stock-auth-gate { display: none; position: absolute; inset: 0; min-height: 420px; z-index: 10; background: var(--paper); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 40px 24px; }
+    /* Stock card bank — search bar, sector chips, then a 2-row preview that expands */
+    .stock-chips { padding: 0 48px 16px; }
+    .stock-grid-wrap { padding: 0 48px; }
+    .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(n+9) { display: none; }
+    .grid-more { display: block; margin: 14px auto 0; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
+    .grid-more:hover { color: var(--ink); }
+    .stock-analysis-panel { margin-top: 28px; }
+
+    /* Auth gate for per-stock analysis — shown inside the panel when signed out */
+    #stock-auth-gate { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 40px 24px; }
     #stock-auth-gate.show { display: flex; }
     #stock-auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(18px, 3vw, 26px); letter-spacing: -0.5px; }
     #stock-auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
@@ -320,9 +316,13 @@
     .ar-sources-list { display: none; flex-direction: column; gap: 3px; padding: 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-top: 2px; }
     .ar-sources-list.open { display: flex; }
     .ar-source-item { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    @media (max-width: 1100px) { .coin-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 1100px) {
+      .coin-grid { grid-template-columns: repeat(3, 1fr); }
+      .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(9) { display: flex; }
+    }
     @media (max-width: 768px) {
       .coin-grid { grid-template-columns: repeat(2, 1fr); }
+      .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(9) { display: none; }
       .coin-card { padding: 14px; }
       .ap-header { padding: 16px 24px; }
       .tf-bar { padding: 10px 24px; }
@@ -331,7 +331,9 @@
 
     @media (max-width: 900px) {
       .hero { padding: 28px 24px 20px; }
-      .filters { padding: 16px 24px; gap: 10px; }
+      .filters { padding: 32px 24px 8px; gap: 12px; }
+      .ask-wrap, .stock-chips, .stock-grid-wrap { padding-left: 24px; padding-right: 24px; }
+      .stock-chips { flex-wrap: nowrap; overflow-x: auto; }
       .feed-container { padding: 28px 24px 60px; }
       .event-card { padding: 24px 28px; }
       .chain-row { flex-direction: column; gap: 6px; }
@@ -347,7 +349,8 @@
       .hero > div:first-child { min-height: auto; }
       .hero-stats { gap: 16px; padding-bottom: 0; }
       .hero-stat-val { font-size: 18px; }
-      .filters { padding: 14px 16px; gap: 8px; }
+      .filters { padding: 28px 16px 8px; gap: 10px; }
+      .ask-wrap, .stock-chips, .stock-grid-wrap { padding-left: 16px; padding-right: 16px; }
       .filter-group { flex: 1 1 calc(50% - 4px); }
       .filter-select { min-width: 0; width: 100%; font-size: 16px; }
       .coin-search { width: 100%; }
@@ -369,26 +372,22 @@
       .hero-tag { margin-bottom: 10px; }
       .hero-sub { font-size: 13px; }
       .hero-stats { display: none; }
-      .pre-load { padding: 28px 16px 32px; }
-      .pre-load-text h3 { font-size: 14px; }
-      .pre-load-text p { font-size: 13px; }
-      .quick-cats { gap: 6px; }
-      .filters { padding: 12px 16px; gap: 6px; }
+              .filters { padding: 28px 16px 8px; gap: 10px; }
+      .ask-wrap, .stock-chips, .stock-grid-wrap { padding-left: 16px; padding-right: 16px; }
     }
 
     /* tactile press — buttons/cards/rows scale down slightly on tap, like a native app.
        Placed last so it wins the specificity tie against earlier :hover rules
        (e.g. .coin-card:hover) when a card is pressed while hovered. */
-    .back-to-feed, .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
-    .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .quick-cat, .pill, .btn-load, .tf-btn {
+    .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
+    .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .pill, .btn-load, .tf-btn {
       transition: transform 0.1s ease, border-color 0.15s, color 0.15s, background-color 0.15s;
     }
-    .back-to-feed:active, .ticker-rail-card:active, .watch-item:active, .mover-item:active, .mover-tab:active,
+    .ticker-rail-card:active, .watch-item:active, .mover-item:active, .mover-tab:active,
     .strip-chip:active, .coin-card:active, .btn-coin:active, .btn-coin-watch:active, .cat-chip:active,
-    .quick-cat:active, .pill:active, .btn-load:active, .tf-btn:active { transform: scale(0.96); }
     @media (prefers-reduced-motion: reduce) {
-      .back-to-feed, .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
-      .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .quick-cat, .pill, .btn-load, .tf-btn { transition: none; }
+      .ticker-rail-card, .watch-item, .mover-item, .mover-tab, .strip-chip,
+      .coin-card, .btn-coin, .btn-coin-watch, .cat-chip, .pill, .btn-load, .tf-btn { transition: none; }
     }
 
     /* tabular numerals so price columns line up digit-for-digit */
@@ -434,7 +433,7 @@
     <div>
       <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
       <h1 id="page-title">Stock markets</h1>
-      <p class="hero-sub" id="hero-sub">World news → economic impact → sectors in play → winners &amp; losers. Pick a sector and load the feed to see today's analysis.</p>
+      <p class="hero-sub" id="hero-sub">Browse any stock or ETF below, or load today's news feed to see which sectors and tickers the headlines move.</p>
     </div>
     <div class="hero-stats">
       <div class="hero-stat">
@@ -452,18 +451,6 @@
     </div>
   </div>
 
-  <div class="ask-wrap">
-    <div class="ask-box">
-      <svg class="ask-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="text" id="ask-input" class="ask-input" placeholder="Ask about a ticker, a sector, or any market question…" autocomplete="off" oninput="handleAskInput()" onkeydown="handleAskKey(event)" />
-      <button type="button" class="ask-send" onclick="submitAsk()" aria-label="Ask">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-      </button>
-      <div class="search-suggestions" id="ask-suggestions" style="display:none"></div>
-    </div>
-    <p class="ask-hint">A ticker opens its full analysis below. Anything else goes to the AI Informant.</p>
-  </div>
-
   <div class="page-layout">
   <div class="main-col">
 
@@ -478,44 +465,104 @@
     </div>
   </div>
 
-  <!-- ═══ SECTOR ANALYSIS MODE ═══ -->
-  <div id="sector-section">
+  <!-- ═══ STOCKS — search bar sits directly above the logo card bank ═══ -->
+  <section id="stock-section">
+    <div class="ask-wrap">
+      <div class="ask-box">
+        <svg class="ask-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="ask-input" class="ask-input" placeholder="Search a ticker, or ask any market question…" autocomplete="off" oninput="handleAskInput()" onkeydown="handleAskKey(event)" />
+        <button type="button" class="ask-send" onclick="submitAsk()" aria-label="Ask">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+        </button>
+        <div class="search-suggestions" id="ask-suggestions" style="display:none"></div>
+      </div>
+      <p class="ask-hint">Typing filters the cards below. A ticker opens its analysis; anything else goes to the AI Informant.</p>
+    </div>
+
+    <div class="cat-chips stock-chips" id="stock-sector-chips">
+      <button class="cat-chip active" onclick="setStockSector('any',this)">All</button>
+      <button class="cat-chip" onclick="setStockSector('technology',this)">Technology</button>
+      <button class="cat-chip" onclick="setStockSector('macro',this)">Macro</button>
+      <button class="cat-chip" onclick="setStockSector('energy',this)">Energy</button>
+      <button class="cat-chip" onclick="setStockSector('financials',this)">Financials</button>
+      <button class="cat-chip" onclick="setStockSector('healthcare',this)">Healthcare</button>
+      <button class="cat-chip" onclick="setStockSector('defense',this)">Defense</button>
+      <button class="cat-chip" onclick="setStockSector('precious-metals',this)">Metals</button>
+      <button class="cat-chip" onclick="setStockSector('consumer',this)">Consumer</button>
+      <button class="cat-chip" onclick="setStockSector('etfs',this)">ETFs</button>
+    </div>
+
+    <div class="stock-grid-wrap">
+      <div class="coin-grid collapsed" id="stock-coin-grid"></div>
+      <button class="grid-more" id="grid-more" onclick="toggleGridExpand()" style="display:none"></button>
+    </div>
+
+    <div class="stock-analysis-panel" id="stock-analysis-panel">
+      <div class="ap-header">
+        <div class="ap-title" id="sap-title">News Analysis</div>
+        <button class="ap-close" onclick="closeStockPanel()">×</button>
+      </div>
+      <div id="stock-auth-gate">
+        <h2>Account required</h2>
+        <p>Per-stock news analysis is available to infoblade account holders. Create a free profile or sign in to continue.</p>
+        <a href="/?modal=signin" id="stock-auth-gate-btn">Sign in / Create profile</a>
+      </div>
+      <div id="sap-body">
+        <div class="tf-bar">
+          <span class="tf-label">Impact window</span>
+          <button class="tf-btn" onclick="setStockImpact('1 week',this)">1 Week</button>
+          <button class="tf-btn active" onclick="setStockImpact('1 month',this)">1 Month</button>
+          <button class="tf-btn" onclick="setStockImpact('3 months',this)">3 Months</button>
+          <button class="tf-btn" onclick="setStockImpact('6 months',this)">6 Months</button>
+        </div>
+        <div id="sap-live-situation"></div>
+        <div class="ap-content" id="sap-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ NEWS FEED — category chips double as one-click quick-load ═══ -->
+  <section id="sector-section">
     <div class="filters">
-      <div class="filter-group">
-        <div class="filter-label">Category</div>
-        <select class="filter-select" id="filter-category">
-          <option value="any" selected>Any / All categories</option>
-          <option value="macro">Macro & Fed Policy</option>
-          <option value="energy">Energy & Oil</option>
-          <option value="technology">Technology & AI</option>
-          <option value="financials">Financials & Banking</option>
-          <option value="precious-metals">Precious Metals</option>
-          <option value="real-estate">Real Estate</option>
-          <option value="crypto">Crypto & Digital Assets</option>
-          <option value="consumer">Consumer & Retail</option>
-          <option value="healthcare">Healthcare & Pharma</option>
-          <option value="defense">Defense & Geopolitics</option>
-        </select>
+      <div class="filter-head">
+        <span class="section-title">Today's news feed</span>
+        <span class="filter-note">Scans 500+ sources, groups related headlines and traces the economic chain · ~30–60 sec</span>
       </div>
-      <div class="filter-group">
-        <div class="filter-label">Impact timeframe</div>
-        <select class="filter-select" id="filter-impact" onchange="handleImpactChange()">
-          <option value="1 day">1 day</option>
-          <option value="1 week">1 week</option>
-          <option value="1 month" selected>1 month</option>
-          <option value="3 months">3 months</option>
-          <option value="6 months">6 months</option>
-          <option value="1 year">1 year</option>
-          <option value="any timeframe">All timeframes</option>
-          <option value="custom">Custom</option>
-        </select>
-        <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
+      <input type="hidden" id="filter-category" value="any" />
+      <div class="cat-chips" id="feed-cat-chips">
+        <button class="cat-chip active" data-cat="any" onclick="quickLoad('any')">All categories</button>
+        <button class="cat-chip" data-cat="macro" onclick="quickLoad('macro')">Macro &amp; Fed</button>
+        <button class="cat-chip" data-cat="energy" onclick="quickLoad('energy')">Energy &amp; Oil</button>
+        <button class="cat-chip" data-cat="technology" onclick="quickLoad('technology')">Tech &amp; AI</button>
+        <button class="cat-chip" data-cat="financials" onclick="quickLoad('financials')">Financials</button>
+        <button class="cat-chip" data-cat="defense" onclick="quickLoad('defense')">Defense &amp; Geopolitics</button>
+        <button class="cat-chip" data-cat="healthcare" onclick="quickLoad('healthcare')">Healthcare</button>
+        <button class="cat-chip" data-cat="precious-metals" onclick="quickLoad('precious-metals')">Precious Metals</button>
+        <button class="cat-chip" data-cat="consumer" onclick="quickLoad('consumer')">Consumer</button>
+        <button class="cat-chip" data-cat="real-estate" onclick="quickLoad('real-estate')">Real Estate</button>
+        <button class="cat-chip" data-cat="crypto" onclick="quickLoad('crypto')">Crypto</button>
       </div>
-      <div class="filter-actions">
-        <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
-        <div class="status-wrap">
-          <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
-          <span class="status-text" id="status"></span>
+      <div class="filter-row">
+        <div class="filter-group">
+          <div class="filter-label">Impact timeframe</div>
+          <select class="filter-select" id="filter-impact" onchange="handleImpactChange()">
+            <option value="1 day">1 day</option>
+            <option value="1 week">1 week</option>
+            <option value="1 month" selected>1 month</option>
+            <option value="3 months">3 months</option>
+            <option value="6 months">6 months</option>
+            <option value="1 year">1 year</option>
+            <option value="any timeframe">All timeframes</option>
+            <option value="custom">Custom</option>
+          </select>
+          <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:white;border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-top:6px;width:100%;outline:none;" />
+        </div>
+        <div class="filter-actions">
+          <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
+          <div class="status-wrap">
+            <div class="loader" id="loader"><span></span><span></span><span></span><span></span><span></span></div>
+            <span class="status-text" id="status"></span>
+          </div>
         </div>
       </div>
     </div>
@@ -527,85 +574,9 @@
         <div class="feed-label" id="feed-label" style="display:none">Today's analysis</div>
         <div id="feed"></div>
         <div class="feed-pending" id="feed-pending"><span></span><span></span><span></span></div>
-        <div class="pre-load" id="pre-load">
-          <div class="pre-load-text">
-            <h3>Select filters above, then load the feed</h3>
-            <p>The AI scans hundreds of sources, groups related headlines, and traces the full economic chain for each event.</p>
-          </div>
-          <div>
-            <div class="quick-cats-label">Or quick-load a category</div>
-            <div class="quick-cats">
-              <button class="quick-cat featured" onclick="quickLoad('any')">All categories</button>
-              <button class="quick-cat" onclick="quickLoad('macro')">Macro & Fed</button>
-              <button class="quick-cat" onclick="quickLoad('energy')">Energy & Oil</button>
-              <button class="quick-cat" onclick="quickLoad('technology')">Technology & AI</button>
-              <button class="quick-cat" onclick="quickLoad('financials')">Financials</button>
-              <button class="quick-cat" onclick="quickLoad('defense')">Defense & Geopolitics</button>
-              <button class="quick-cat" onclick="quickLoad('healthcare')">Healthcare & Pharma</button>
-              <button class="quick-cat" onclick="quickLoad('precious-metals')">Precious Metals</button>
-              <button class="quick-cat" onclick="quickLoad('consumer')">Consumer & Retail</button>
-            </div>
-          </div>
-          <div class="pre-load-note">Analysis takes ~30-60 seconds</div>
-        </div>
       </div>
     </div>
-  </div>
-
-  <!-- ═══ INDIVIDUAL STOCKS MODE ═══ -->
-  <div id="stock-section" style="display:none">
-    <button class="back-to-feed" onclick="setMode('sector')">← Back to Stock Markets feed</button>
-    <div id="stock-auth-gate">
-      <h2>Account required</h2>
-      <p>Individual stock analysis is available to infoblade account holders. Create a free profile or sign in to continue.</p>
-      <a href="/?modal=signin" id="stock-auth-gate-btn">Sign in / Create profile</a>
-    </div>
-    <div class="filters">
-      <div class="filter-group">
-        <div class="filter-label">Search</div>
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input class="coin-search" id="stock-coin-search" type="text" placeholder="Search stocks…" oninput="handleStockSearch()" onkeydown="handleSearchKey(event)" autocomplete="off" />
-          <div class="search-suggestions" id="search-suggestions" style="display:none"></div>
-        </div>
-      </div>
-      <div class="filter-group">
-        <div class="filter-label">Sector</div>
-        <div class="cat-chips" id="stock-sector-chips">
-          <button class="cat-chip active" onclick="setStockSector('any',this)">All</button>
-          <button class="cat-chip" onclick="setStockSector('technology',this)">Technology</button>
-          <button class="cat-chip" onclick="setStockSector('macro',this)">Macro</button>
-          <button class="cat-chip" onclick="setStockSector('energy',this)">Energy</button>
-          <button class="cat-chip" onclick="setStockSector('financials',this)">Financials</button>
-          <button class="cat-chip" onclick="setStockSector('healthcare',this)">Healthcare</button>
-          <button class="cat-chip" onclick="setStockSector('defense',this)">Defense</button>
-          <button class="cat-chip" onclick="setStockSector('precious-metals',this)">Metals</button>
-          <button class="cat-chip" onclick="setStockSector('consumer',this)">Consumer</button>
-          <button class="cat-chip" onclick="setStockSector('etfs',this)">ETFs</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="feed-container" style="padding-top:32px;padding-bottom:32px">
-      <div class="coin-grid" id="stock-coin-grid"></div>
-    </div>
-
-    <div class="stock-analysis-panel" id="stock-analysis-panel">
-      <div class="ap-header">
-        <div class="ap-title" id="sap-title">News Analysis</div>
-        <button class="ap-close" onclick="closeStockPanel()">×</button>
-      </div>
-      <div class="tf-bar">
-        <span class="tf-label">Impact window</span>
-        <button class="tf-btn" onclick="setStockImpact('1 week',this)">1 Week</button>
-        <button class="tf-btn active" onclick="setStockImpact('1 month',this)">1 Month</button>
-        <button class="tf-btn" onclick="setStockImpact('3 months',this)">3 Months</button>
-        <button class="tf-btn" onclick="setStockImpact('6 months',this)">6 Months</button>
-      </div>
-      <div id="sap-live-situation"></div>
-      <div class="ap-content" id="sap-content"></div>
-    </div>
-  </div>
+  </section>
 
   </div>
 
@@ -813,30 +784,10 @@
         return r.ok ? r.json() : null;
       } catch (_) { return null; }
     }
-    let pageMode = 'sector';   // 'sector' | 'stocks'
-    let stockSector = 'any';   // selected sector chip in stock mode
+    let stockSector = 'any';   // selected sector chip above the card bank
     let stockImpact = '1 month'; // impact window for stock analysis
     let selectedStockCard = null;
     let stockAnalysisSession = 0;
-
-    const _heroSub = {
-      sector: 'World news → economic impact → sectors in play → winners &amp; losers. Pick a sector and load the feed to see today’s analysis.',
-      stocks: 'Pick any ticker — the AI maps which of today’s headlines affect it, the economic chain of impact, and the likely price direction.'
-    };
-
-    function setMode(mode) {
-      pageMode = mode;
-      document.getElementById('sector-section').style.display = mode === 'sector' ? '' : 'none';
-      document.getElementById('stock-section').style.display = mode === 'stocks' ? '' : 'none';
-      document.getElementById('hero-sub').innerHTML = _heroSub[mode] || _heroSub.sector;
-      if (mode === 'stocks') {
-        const authed = !!window._auth?.user;
-        document.getElementById('stock-auth-gate').classList.toggle('show', !authed);
-        if (authed && document.getElementById('stock-coin-grid').children.length === 0) {
-          loadStockGrid();
-        }
-      }
-    }
 
     function setStockSector(sector, btn) {
       stockSector = sector;
@@ -855,101 +806,67 @@
       }
     }
 
+    // The ask bar doubles as the card-bank filter. A free-form question
+    // ("will the Fed cut?") matches nothing, so fall back to showing every
+    // card rather than an empty grid.
     function filterStockGrid() {
-      const q = document.getElementById('stock-coin-search').value.toLowerCase().trim();
+      const q = document.getElementById('ask-input').value.toLowerCase().trim();
+      const grid = document.getElementById('stock-coin-grid');
+      const cards = [...grid.querySelectorAll('.coin-card')];
+      const hits = q ? cards.filter(card => {
+        const sym  = (card.querySelector('.coin-symbol')?.textContent || '').toLowerCase();
+        const name = (card.querySelector('.coin-name')?.textContent   || '').toLowerCase();
+        return sym.includes(q) || name.includes(q);
+      }) : [];
+      const filtering = hits.length > 0;
+      cards.forEach(card => { card.style.display = (!filtering || hits.includes(card)) ? '' : 'none'; });
+      grid.classList.toggle('filtering', filtering);
+      updateGridMore();
+    }
+
+    const GRID_PREVIEW = 8;
+    function updateGridMore() {
+      const grid = document.getElementById('stock-coin-grid');
+      const more = document.getElementById('grid-more');
+      const n = grid.querySelectorAll('.coin-card').length;
+      if (grid.classList.contains('filtering') || n <= GRID_PREVIEW) { more.style.display = 'none'; return; }
+      more.style.display = '';
+      more.textContent = grid.classList.contains('collapsed') ? `Show all ${n} →` : 'Show less ↑';
+    }
+
+    function toggleGridExpand() {
+      const grid = document.getElementById('stock-coin-grid');
+      const collapsing = !grid.classList.contains('collapsed');
+      grid.classList.toggle('collapsed', collapsing);
+      updateGridMore();
+      if (collapsing) document.getElementById('stock-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // Opens the in-page news-analysis panel under the card bank. Signed-out
+    // visitors still get the panel, but with the account gate instead of a
+    // run they can't complete.
+    function openStockAnalysis(ticker, name, tickerData) {
+      document.getElementById('ask-suggestions').style.display = 'none';
+      selectedStockCard = { ticker, name, tickerData: tickerData || null };
       document.querySelectorAll('#stock-coin-grid .coin-card').forEach(card => {
-        const sym  = (card.querySelector('.coin-symbol')?.textContent  || '').toLowerCase();
-        const name = (card.querySelector('.coin-name')?.textContent || '').toLowerCase();
-        card.style.display = (!q || sym.includes(q) || name.includes(q)) ? '' : 'none';
+        const isMe = card.querySelector('.coin-symbol')?.textContent === ticker;
+        card.classList.toggle('selected', isMe);
+        const b = card.querySelector('.btn-coin');
+        if (b && !b.disabled) b.textContent = isMe ? '★ Analyzing' : 'Analyze →';
       });
-    }
-
-    function handleStockSearch() {
-      showSuggestions();
-      filterStockGrid();
-    }
-
-    function showSuggestions() {
-      const q = document.getElementById('stock-coin-search').value.toLowerCase().trim();
-      const box = document.getElementById('search-suggestions');
-      if (!q) { box.style.display = 'none'; return; }
-      const matches = [];
-      for (const {s, n} of TICKERS) {
-        const tl = s.toLowerCase(), nl = n.toLowerCase();
-        let base = 0;
-        if (tl === q)                                                      base = 10000;
-        else if (tl.startsWith(q))                                         base = 5000;
-        else if (nl.split(' ').some(w => w.toLowerCase().startsWith(q)))   base = 2000;
-        else if (nl.startsWith(q))                                         base = 1500;
-        else if (tl.includes(q))                                           base = 500;
-        else if (nl.toLowerCase().includes(q))                             base = 100;
-        if (!base) continue;
-        matches.push({ s, n, score: base + (_popularityRank[s] || 0) });
-      }
-      matches.sort((a, b) => b.score - a.score);
-      const top = matches.slice(0, 8);
-      if (!top.length) { box.style.display = 'none'; return; }
-      box.innerHTML = top.map(t =>
-        `<div class="sug-item" data-ticker="${esc(t.s)}" data-name="${esc(t.n)}">
-          <span class="sug-ticker">${esc(t.s)}</span>
-          <span class="sug-name">${esc(t.n)}</span>
-        </div>`
-      ).join('');
-      box.querySelectorAll('.sug-item').forEach(el => {
-        el.addEventListener('click', () => selectSuggestion(el.dataset.ticker, el.dataset.name));
-      });
-      box.style.display = 'block';
-    }
-
-    function selectSuggestion(ticker, name) {
-      const input = document.getElementById('stock-coin-search');
-      input.value = ticker;
-      document.getElementById('search-suggestions').style.display = 'none';
-
-      // Update sector WITHOUT calling setStockSector — that calls closeStockPanel()
-      // which hides the panel and cancels the analysis session.
-      const inCurrent = (SECTOR_STOCKS[stockSector] || []).some(([s]) => s === ticker);
-      if (!inCurrent) {
-        stockSector = 'any';
-        document.querySelectorAll('#stock-sector-chips .cat-chip').forEach(c => c.classList.remove('active'));
-        document.querySelector('#stock-sector-chips .cat-chip').classList.add('active');
-        loadStockGrid();
-      } else {
-        filterStockGrid();
-      }
-
-      // Open panel and start analysis
-      selectedStockCard = { ticker, name, tickerData: null };
       const panel = document.getElementById('stock-analysis-panel');
       panel.style.display = 'block';
       document.getElementById('sap-title').textContent = `${name} (${ticker})`;
       panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const authed = !!window._auth?.user;
+      document.getElementById('stock-auth-gate').classList.toggle('show', !authed);
+      document.getElementById('sap-body').style.display = authed ? '' : 'none';
+      if (!authed) return;
       loadStockSituation(ticker);
-      fetchStockAnalysis(ticker, name, null);
-
-      // After grid finishes loading, highlight the card if it exists
-      setTimeout(() => {
-        document.querySelectorAll('#stock-coin-grid .coin-card').forEach(card => {
-          const sym = card.querySelector('.coin-symbol')?.textContent;
-          const isMe = sym === ticker;
-          card.classList.toggle('selected', isMe);
-          const b = card.querySelector('.btn-coin');
-          if (b && !b.disabled) b.textContent = isMe ? '★ Analyzing' : 'Analyze →';
-        });
-      }, 900);
-    }
-
-    function handleSearchKey(e) {
-      if (e.key === 'Escape') {
-        document.getElementById('search-suggestions').style.display = 'none';
-      }
+      fetchStockAnalysis(ticker, name, selectedStockCard.tickerData);
     }
 
     document.addEventListener('click', function(e) {
-      if (!e.target.closest('.search-wrap')) {
-        const box = document.getElementById('search-suggestions');
-        if (box) box.style.display = 'none';
-      }
       if (!e.target.closest('.ask-box')) {
         const askBox = document.getElementById('ask-suggestions');
         if (askBox) askBox.style.display = 'none';
@@ -962,6 +879,7 @@
     // platform's own track record (see api/chat.js) — no separate pipeline
     // needed here, just handing it the text.
     function handleAskInput() {
+      filterStockGrid();
       const q = document.getElementById('ask-input').value.trim().toLowerCase();
       const box = document.getElementById('ask-suggestions');
       if (!q) { box.style.display = 'none'; return; }
@@ -1000,8 +918,8 @@
 
     function goToTicker(ticker, name) {
       document.getElementById('ask-input').value = '';
-      setMode('stocks');
-      selectSuggestion(ticker, name);
+      filterStockGrid();
+      openStockAnalysis(ticker, name, null);
     }
 
     function submitAsk() {
@@ -1016,6 +934,7 @@
       if (exact) { goToTicker(exact.s, exact.n); return; }
 
       input.value = '';
+      filterStockGrid();
       window.iiSetFeedDock?.(true);
       window.iiAsk?.(q);
     }
@@ -1082,6 +1001,7 @@
         });
         filterStockGrid();
       } catch(err) {
+        document.getElementById('grid-more').style.display = 'none';
         grid.innerHTML = `<div class="grid-empty"><h3>Failed to load stocks</h3><p>${esc((window.getOfflineAwareMessage||((e)=>e?.message||''))(err))}</p></div>`;
       }
     }
@@ -1093,23 +1013,8 @@
       window.location.href = `/stock.html?ticker=${encodeURIComponent(ticker)}&name=${encodeURIComponent(name)}`;
     }
 
-    async function selectStockCard(ticker, name, btn) {
-      const card = btn.closest('.coin-card');
-      const tickerData = card._tickerData;
-      selectedStockCard = { ticker, name, tickerData };
-      document.querySelectorAll('#stock-coin-grid .coin-card').forEach(c => {
-        const sym = c.querySelector('.coin-symbol')?.textContent;
-        const isMe = sym === ticker;
-        c.classList.toggle('selected', isMe);
-        const b = c.querySelector('.btn-coin');
-        if (b) b.textContent = isMe ? '★ Analyzing' : 'Analyze →';
-      });
-      const panel = document.getElementById('stock-analysis-panel');
-      panel.style.display = 'block';
-      document.getElementById('sap-title').textContent = `${name} (${ticker})`;
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      loadStockSituation(ticker);
-      await fetchStockAnalysis(ticker, name, tickerData);
+    function selectStockCard(ticker, name, btn) {
+      openStockAnalysis(ticker, name, btn.closest('.coin-card')._tickerData);
     }
 
     // Short-horizon "similar past situations" stat — independent of the
@@ -1413,8 +1318,9 @@
     }
 
     function quickLoad(category) {
-      setMode('sector');
+      if (document.getElementById('btn').disabled) return;
       document.getElementById('filter-category').value = category;
+      document.querySelectorAll('#feed-cat-chips .cat-chip').forEach(c => c.classList.toggle('active', c.dataset.cat === category));
       loadFeed();
     }
 
@@ -1817,7 +1723,6 @@
         : rawImpact;
 
       btn.disabled = true;
-      document.getElementById('pre-load').style.display = 'none';
       label.style.display = 'block';
       label.textContent = `${sector} · by stock`;
       loader.classList.add('active');
@@ -2056,8 +1961,7 @@
             btn.disabled = true;
             feed.innerHTML = '';
             label.style.display = 'block';
-            document.getElementById('pre-load').style.display = 'none';
-            results.forEach(({ group, analysis }) => {
+                  results.forEach(({ group, analysis }) => {
               feed.appendChild(buildCard(group, analysis, impact));
             });
             const cachedCards = [...feed.querySelectorAll('.event-card')];
@@ -2073,7 +1977,6 @@
       btn.disabled = true;
       feed.innerHTML = skeletonEventCards(3);
       label.style.display = 'none';
-      document.getElementById('pre-load').style.display = 'none';
       loader.classList.add('active');
       status.textContent = 'Fetching and grouping news (takes ~30 seconds)...';
 
@@ -2328,9 +2231,11 @@
   </script>
   <script src="/auth.js"></script>
   <script>
-  // Recheck gate when auth state resolves (handles sign-in while on stocks tab)
+  // Card bank shows to everyone; rerun the panel once auth resolves so a
+  // signed-in visitor isn't left looking at the account gate.
+  loadStockGrid();
   window._onAuthReady(function() {
-    if (pageMode === 'stocks') setMode('stocks');
+    if (selectedStockCard) openStockAnalysis(selectedStockCard.ticker, selectedStockCard.name, selectedStockCard.tickerData);
   });
 
   // Reconcile the local stock watchlist with the account-wide one on sign-in:
@@ -2359,8 +2264,7 @@
     if (!ticker) return;
     const name = params.get('name') || ticker;
     window._onAuthReady(function () {
-      setMode('stocks');
-      selectSuggestion(ticker.toUpperCase(), name);
+      openStockAnalysis(ticker.toUpperCase(), name, null);
     });
   })();
   </script>
