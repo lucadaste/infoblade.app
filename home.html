@@ -349,14 +349,20 @@
     return _cryptoPricesPromise;
   }
 
-  // Same broad ticker + %-change feed feed.html's gainers/losers rail uses,
-  // so Stock of the Day can be judged against real market movement.
+  // Whole-S&P 500 top gainers/losers, so Stock of the Day and Top Movers
+  // reflect the real day's movers. Falls back to the ~100-ticker list
+  // feed.html's rail uses if the S&P 500 movers feed comes back empty.
   var _stockMoversPromise = null;
   function fetchStockMovers() {
     if (!_stockMoversPromise) {
-      _stockMoversPromise = fetch((window.API_BASE || '') + '/api/sector-stocks?sector=any')
-        .then(function (r) { if (!r.ok) throw new Error('bad status'); return r.json(); })
-        .then(function (d) { return d.tickers || []; });
+      var get = function (sector) {
+        return fetch((window.API_BASE || '') + '/api/sector-stocks?sector=' + sector)
+          .then(function (r) { if (!r.ok) throw new Error('bad status'); return r.json(); })
+          .then(function (d) { return d.tickers || []; });
+      };
+      _stockMoversPromise = get('sp500-movers')
+        .catch(function () { return []; })
+        .then(function (t) { return t.length ? t : get('any'); });
     }
     return _stockMoversPromise;
   }

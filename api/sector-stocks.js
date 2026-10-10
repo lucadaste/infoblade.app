@@ -252,6 +252,36 @@ async function _fetchPopularityRanking() {
   }
 }
 
+// Robinhood's S&P 500 movers — top 10 up and top 10 down across the whole
+// index, so Home's Stock of the Day / Top Movers aren't limited to the
+// ~100 tickers in SECTOR_STOCKS.any (which missed e.g. HUM +11%, TMUS -13%).
+async function _fetchSp500Movers() {
+  const fetchDir = async (direction) => {
+    const res = await fetch(`https://api.robinhood.com/midlands/movers/sp500/?direction=${direction}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`Robinhood movers HTTP ${res.status}`);
+    const data = await res.json();
+    return (data.results || []).map(r => {
+      const price     = parseFloat(r.price_movement?.market_hours_last_price);
+      const changePct = parseFloat(r.price_movement?.market_hours_last_movement_pct);
+      return {
+        ticker:     r.symbol,
+        price:      price > 0 ? +price.toFixed(2) : null,
+        changePct:  !isNaN(changePct) ? +changePct.toFixed(2) : null,
+        week52High: null,
+        week52Low:  null,
+      };
+    }).filter(t => t.ticker);
+  };
+  const [up, down] = await Promise.all([fetchDir('up'), fetchDir('down')]);
+  return [...up, ...down];
+}
+
 // Exported so api/generate-baseline.js (the daily baseline generator) can pull
 // the same 'any'-sector candidate pool feed.html's ticker list is built from,
 // instead of keeping a second, driftable copy.
@@ -275,6 +305,15 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
   const sector = req.query.sector || 'any';
+
+  if (sector === 'sp500-movers') {
+    try {
+      const tickers = await _fetchSp500Movers();
+      return res.status(200).json({ tickers, sector });
+    } catch (_) {
+      return res.status(200).json({ tickers: [], sector });
+    }
+  }
 
   const baseSymbols = SECTOR_STOCKS[sector] || SECTOR_STOCKS['any'];
   let finalSymbols = baseSymbols;
