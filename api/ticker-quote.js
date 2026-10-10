@@ -57,6 +57,19 @@ async function _rhQuote(ticker) {
   return data?.results?.[0] || null;
 }
 
+// The ticker alone (e.g. "T") is easy to mistake for the wrong company — the
+// page needs the real name on screen, not just the symbol. Best-effort: a
+// failure here shouldn't take down the whole quote.
+async function _rhCompanyName(ticker) {
+  try {
+    const res = await fetch(`https://api.robinhood.com/instruments/?symbol=${encodeURIComponent(ticker)}`, { headers: RH_HEADERS, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const inst = data?.results?.[0];
+    return inst?.simple_name || inst?.name || null;
+  } catch (_) { return null; }
+}
+
 async function _rhHistoricals(ticker, rangeKey) {
   const rh = RH_RANGE[rangeKey];
   const url = `https://api.robinhood.com/marketdata/historicals/${encodeURIComponent(ticker)}/?interval=${rh.interval}&span=${rh.span}${rh.bounds ? `&bounds=${rh.bounds}` : ''}`;
@@ -67,7 +80,7 @@ async function _rhHistoricals(ticker, rangeKey) {
 
 // ── Equity / ETF path (Robinhood) ───────────────────────────────────────────
 async function _buildEquityResponse(ticker, rangeKey) {
-  const [q, histData] = await Promise.all([_rhQuote(ticker), _rhHistoricals(ticker, rangeKey)]);
+  const [q, histData, companyName] = await Promise.all([_rhQuote(ticker), _rhHistoricals(ticker, rangeKey), _rhCompanyName(ticker)]);
   if (!q) throw new Error('No Robinhood quote for ticker');
 
   const price      = _num(q.last_trade_price) ?? _num(q.last_extended_hours_trade_price);
@@ -105,7 +118,7 @@ async function _buildEquityResponse(ticker, rangeKey) {
   }
 
   return {
-    ticker, price: _round(price), changePct, changeAbs, prevClose: _round(prevClose),
+    ticker, companyName, price: _round(price), changePct, changeAbs, prevClose: _round(prevClose),
     open: openPrice, dayHigh, dayLow, week52High, week52Low, volume,
     currency: 'USD', exchangeName: null,
     asOf: Date.now(), range: rangeKey, series, seriesApprox: false,
