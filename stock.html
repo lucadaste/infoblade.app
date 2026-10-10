@@ -48,6 +48,7 @@
     .s-change { font-size: 14px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
     .s-change.pos { color: var(--accent); background: rgba(0,230,118,0.12); }
     .s-change.neg { color: var(--red); background: rgba(255,82,82,0.1); }
+    .s-period { font-size: 13px; color: var(--muted); }
     .s-asof { font-size: 11px; color: var(--muted); margin-bottom: 24px; }
 
     /* Range tabs */
@@ -60,6 +61,9 @@
        thing on this page that should feel like data, not a dashboard widget */
     .s-chart-wrap { margin-bottom: 28px; }
     .chart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 60px 0; }
+    /* Fixed height so switching ranges never makes the page jump. */
+    #chart-area { min-height: 222px; transition: opacity 0.15s; }
+    #chart-area.is-loading { opacity: 0.45; }
     .error-msg { color: var(--red); font-size: 14px; padding: 16px; background: rgba(255,82,82,0.08); border: 1px solid rgba(255,82,82,0.2); border-radius: 6px; }
     .chart-svg-wrap { position: relative; }
     .chart-svg-wrap:focus { outline: none; }
@@ -141,6 +145,7 @@
     <div class="s-price-row">
       <div class="s-price skeleton" id="s-price" style="height:40px;width:160px">&nbsp;</div>
       <div class="s-change" id="s-change" style="display:none"></div>
+      <div class="s-period" id="s-period"></div>
     </div>
     <div class="s-asof" id="s-asof">&nbsp;</div>
 
@@ -262,24 +267,39 @@
 
   const INDEX_PROXY_LABEL = { 'SPX': 'SPY (S&P 500 ETF)' };
   let currentRange = '1d';
-  const RANGE_FMT = {
-    '1d':  p => new Date(p.t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-    '5d':  p => new Date(p.t).toLocaleDateString('en-US', { weekday: 'short', hour: 'numeric' }),
-    '1mo': p => new Date(p.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    '3mo': p => new Date(p.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    '1y':  p => new Date(p.t).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    '5y':  p => new Date(p.t).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+  const _d = (p, opts) => new Date(p.t).toLocaleString('en-US', opts);
+  // Tooltip: as precise as the bars are — time for intraday/hourly data,
+  // date for daily, week-of for weekly.
+  const RANGE_TIP = {
+    '1d':  p => _d(p, { hour: 'numeric', minute: '2-digit' }),
+    '5d':  p => _d(p, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    '1mo': p => _d(p, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    '3mo': p => _d(p, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    '1y':  p => _d(p, { month: 'short', day: 'numeric', year: 'numeric' }),
+    '5y':  p => 'Week of ' + _d(p, { month: 'short', day: 'numeric', year: 'numeric' }),
   };
+  // Axis endpoints: just enough to read the span at a glance.
+  const RANGE_AXIS = {
+    '1d':  p => _d(p, { hour: 'numeric', minute: '2-digit' }),
+    '5d':  p => _d(p, { weekday: 'short', month: 'short', day: 'numeric' }),
+    '1mo': p => _d(p, { month: 'short', day: 'numeric' }),
+    '3mo': p => _d(p, { month: 'short', day: 'numeric' }),
+    '1y':  p => _d(p, { month: 'short', year: 'numeric' }),
+    '5y':  p => _d(p, { month: 'short', year: 'numeric' }),
+  };
+  const RANGE_PERIOD = { '1d': 'Today', '5d': 'Past week', '1mo': 'Past month', '3mo': 'Past 3 months', '1y': 'Past year', '5y': 'Past 5 years' };
 
-  function renderChart(series, approx) {
+  let chartResizeObs = null;
+  function renderChart(series, approx, up) {
     const area = document.getElementById('chart-area');
+    if (chartResizeObs) { chartResizeObs.disconnect(); chartResizeObs = null; }
     if (!series || series.length < 2) {
       area.innerHTML = '<div class="chart-empty">No chart data for this range.</div>';
       return;
     }
-    const fmt = RANGE_FMT[currentRange] || RANGE_FMT['1d'];
-    const first = series[0].c, last = series[series.length - 1].c;
-    const color = last >= first ? 'var(--accent)' : 'var(--red)';
+    const fmt  = RANGE_TIP[currentRange]  || RANGE_TIP['1d'];
+    const axis = RANGE_AXIS[currentRange] || RANGE_AXIS['1d'];
+    const color = up ? 'var(--accent)' : 'var(--red)';
 
     const vals  = series.map(p => p.c);
     const min   = Math.min(...vals), max = Math.max(...vals);
@@ -313,7 +333,7 @@
         <div class="chart-dot" id="s-end-dot" style="background:${color};opacity:1"></div>
         <div class="chart-dot" id="s-dot"></div>
         <div class="chart-tooltip" id="s-tooltip"><span class="tt-date"></span> · <span class="tt-val"></span></div>
-        <div class="chart-axis-row"><span>${esc(fmt(series[0]))}</span><span>${esc(fmt(series[series.length - 1]))}</span></div>
+        <div class="chart-axis-row"><span>${esc(axis(series[0]))}</span><span>${esc(axis(series[series.length - 1]))}</span></div>
       </div>
       ${approx ? `<div class="chart-approx-note">Shaped from ${esc(INDEX_PROXY_LABEL[TICKER] || 'a tracking ETF')} — ${esc(TICKER)} has no direct tick data, so this line approximates its path rather than plotting the index itself.</div>` : ''}`;
 
@@ -343,7 +363,8 @@
       endDot.style.top  = py + 'px';
     }
     placeEndDot();
-    new ResizeObserver(placeEndDot).observe(svgEl);
+    chartResizeObs = new ResizeObserver(placeEndDot);
+    chartResizeObs.observe(svgEl);
 
     function showAt(idx) {
       idx = Math.max(0, Math.min(points.length - 1, idx));
@@ -391,6 +412,17 @@
     });
   }
 
+  // Open/day range/volume only come with the 1D response and the 52-week
+  // range with 1Y/5Y — merge them so the tiles stay filled on every range.
+  const stats = {};
+  const STAT_KEYS = ['open', 'dayHigh', 'dayLow', 'prevClose', 'volume', 'week52High', 'week52Low', 'currency'];
+  function mergeStats(q) {
+    STAT_KEYS.forEach(k => {
+      if (q[k] == null) return;
+      if (q.range === '1d' || stats[k] == null) stats[k] = q[k];
+    });
+  }
+
   function renderStats(q) {
     const tiles = [
       ['Open',          fmtPrice(q.open)],
@@ -407,36 +439,75 @@
       </div>`).join('');
   }
 
+  // One request per range, reused for a minute — switching back and forth
+  // is instant, and the other ranges are prefetched after the first paint.
+  const CACHE_MS = 60 * 1000;
+  const rangeCache = {};
+  function fetchRange(range) {
+    const hit = rangeCache[range];
+    if (hit && Date.now() - hit.at < CACHE_MS) return hit.p;
+    const p = fetch(window.API_BASE + `/api/ticker-quote?ticker=${encodeURIComponent(TICKER)}&range=${encodeURIComponent(range)}`)
+      .then(res => res.json())
+      .then(q => {
+        if (q.error) throw new Error(q.error);
+        mergeStats(q);
+        renderStats(stats);
+        return q;
+      });
+    rangeCache[range] = { at: Date.now(), p };
+    p.catch(() => { if (rangeCache[range] && rangeCache[range].p === p) delete rangeCache[range]; });
+    return p;
+  }
+
+  function renderHeader(q) {
+    document.getElementById('s-price').textContent = fmtPrice(q.price);
+    document.getElementById('s-price').classList.remove('skeleton');
+    document.getElementById('s-price').style.cssText = '';
+    document.getElementById('s-exchange').textContent = q.exchangeName || '';
+    // The API's own lookup is authoritative — overrides the ticker-only
+    // fallback (and any wrong guess) a caller's URL ?name= might carry.
+    if (q.companyName) {
+      document.getElementById('s-name').textContent = q.companyName;
+      document.title = `infoblade | ${q.companyName} (${TICKER})`;
+    }
+    document.getElementById('s-asof').textContent = q.asOf ? `As of ${new Date(q.asOf).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
+  }
+
+  // The badge tracks the selected range: today's move vs. prior close on 1D,
+  // otherwise the move from the first bar in the range to the live price.
+  function periodChange(q) {
+    if (q.range === '1d') return { abs: q.changeAbs, pct: q.changePct };
+    const base = q.series && q.series.length ? q.series[0].c : null;
+    if (base == null || q.price == null) return { abs: null, pct: null };
+    return { abs: q.price - base, pct: Math.round((q.price - base) / base * 10000) / 100 };
+  }
+
+  let loadSeq = 0;
   async function loadData(range) {
+    const seq = ++loadSeq;
+    const area = document.getElementById('chart-area');
+    if (area.querySelector('svg')) area.classList.add('is-loading');
     try {
-      const res = await fetch(window.API_BASE + `/api/ticker-quote?ticker=${encodeURIComponent(TICKER)}&range=${encodeURIComponent(range)}`);
-      const q = await res.json();
-      if (q.error) throw new Error(q.error);
-
-      document.getElementById('s-price').textContent = fmtPrice(q.price);
-      document.getElementById('s-price').classList.remove('skeleton');
-      document.getElementById('s-price').style.cssText = '';
-      document.getElementById('s-exchange').textContent = q.exchangeName || '';
-      // The API's own lookup is authoritative — overrides the ticker-only
-      // fallback (and any wrong guess) a caller's URL ?name= might carry.
-      if (q.companyName) {
-        document.getElementById('s-name').textContent = q.companyName;
-        document.title = `infoblade | ${q.companyName} (${TICKER})`;
-      }
-
+      const q = await fetchRange(range);
+      if (seq !== loadSeq) return; // a newer range was picked meanwhile
+      renderHeader(q);
+      const { abs, pct } = periodChange(q);
       const chEl = document.getElementById('s-change');
-      if (q.changePct != null) {
-        const pos = q.changePct >= 0;
+      const up = pct != null ? pct >= 0 : true;
+      if (pct != null) {
         chEl.style.display = '';
-        chEl.className = 's-change ' + (pos ? 'pos' : 'neg');
-        chEl.textContent = `${pos ? '+' : ''}${q.changeAbs != null ? fmtPrice(Math.abs(q.changeAbs)) : ''} (${pos ? '+' : ''}${q.changePct}%)`;
+        chEl.className = 's-change ' + (up ? 'pos' : 'neg');
+        chEl.textContent = `${up ? '+' : '-'}${abs != null ? fmtPrice(Math.abs(abs)) : ''} (${up ? '+' : ''}${pct.toFixed(2)}%)`;
+      } else {
+        chEl.style.display = 'none';
       }
-      document.getElementById('s-asof').textContent = q.asOf ? `As of ${new Date(q.asOf).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
-
-      renderStats(q);
-      renderChart(q.series, q.seriesApprox);
+      document.getElementById('s-period').textContent = RANGE_PERIOD[range] || '';
+      renderChart(q.series, q.seriesApprox, up);
     } catch (err) {
-      document.getElementById('chart-area').innerHTML = `<div class="error-msg">Could not load price data for ${esc(TICKER)}.</div>`;
+      if (seq !== loadSeq) return;
+      area.innerHTML = `<div class="error-msg">Could not load price data for ${esc(TICKER)}.</div>`;
+    } finally {
+      if (seq === loadSeq) area.classList.remove('is-loading');
     }
   }
 
@@ -445,12 +516,15 @@
       if (btn.dataset.range === currentRange) return;
       document.querySelectorAll('#range-row .range-chip').forEach(b => b.classList.toggle('active', b === btn));
       currentRange = btn.dataset.range;
-      document.getElementById('chart-area').innerHTML = '<div class="chart-empty">Loading…</div>';
       loadData(currentRange);
     });
   });
 
-  loadData(currentRange);
+  loadData(currentRange).then(() => {
+    document.querySelectorAll('#range-row .range-chip').forEach(b => {
+      if (b.dataset.range !== currentRange) fetchRange(b.dataset.range).catch(() => {});
+    });
+  });
 })();
 </script>
 <script src="/chat-widget.js"></script>

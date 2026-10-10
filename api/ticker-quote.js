@@ -257,6 +257,9 @@ export default async function handler(req, res) {
     const data = SYMBOL_ALIASES[rawTicker]
       ? await _buildIndexResponse(rawTicker, rangeKey)
       : await _buildEquityResponse(rawTicker, rangeKey);
+    // Short edge cache: repeat range switches and prefetches across visitors
+    // come back from the CDN instead of re-hitting Robinhood/Yahoo.
+    res.setHeader('Cache-Control', 's-maxage=15, stale-while-revalidate=45');
     return res.status(200).json(data);
   } catch (err) {
     console.error('[ticker-quote]', rawTicker, err.message);
