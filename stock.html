@@ -254,21 +254,10 @@
   };
   syncWatchBtn();
 
-  // ── Catmull-Rom smoothed path, same technique as accuracy.html's chart —
-  // one curve through every point instead of a jagged polyline. ───────────
-  function smoothPath(points) {
-    if (points.length < 2) return '';
-    let d = `M ${points[0].x.toFixed(2)},${points[0].y.toFixed(2)}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i - 1] || points[i];
-      const p1 = points[i];
-      const p2 = points[i + 1];
-      const p3 = points[i + 2] || p2;
-      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-      d += ` C ${c1x.toFixed(2)},${c1y.toFixed(2)} ${c2x.toFixed(2)},${c2y.toFixed(2)} ${p2.x.toFixed(2)},${p2.y.toFixed(2)}`;
-    }
-    return d;
+  // ── Straight segments between every point, like a real price chart —
+  // smoothing rounds off the actual moves and hides how jagged price is. ──
+  function linePathFor(points) {
+    return points.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
   }
 
   const INDEX_PROXY_LABEL = { 'SPX': 'SPY (S&P 500 ETF)' };
@@ -301,7 +290,7 @@
       x: PAD_X + (i / (series.length - 1)) * plotW,
       y: PAD_Y + plotH - ((p.c - min) / range) * plotH,
     }));
-    const linePath = smoothPath(points);
+    const linePath = linePathFor(points);
     const lastPt = points[points.length - 1];
     const areaPath = `${linePath} L ${lastPt.x.toFixed(2)},${H} L ${points[0].x.toFixed(2)},${H} Z`;
     const gradId = 'sChartGrad';

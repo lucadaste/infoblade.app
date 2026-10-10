@@ -41,8 +41,8 @@ const RANGES = {
 const RH_RANGE = {
   '1d':  { interval: '5minute',  span: 'day',   bounds: 'trading' },
   '5d':  { interval: '10minute', span: 'week'   },
-  '1mo': { interval: 'day',      span: 'month'  },
-  '3mo': { interval: 'day',      span: '3month' },
+  '1mo': { interval: 'hour',     span: 'month'  },
+  '3mo': { interval: 'hour',     span: '3month' },
   '1y':  { interval: 'day',      span: 'year'   },
   '5y':  { interval: 'week',     span: '5year'  },
 };
@@ -169,8 +169,8 @@ async function _yahooChart(symbol, interval, range) {
 
 const YAHOO_RANGE = {
   '1d': { interval: '5m', range: '1d' }, '5d': { interval: '15m', range: '5d' },
-  '1mo': { interval: '1d', range: '1mo' }, '3mo': { interval: '1d', range: '3mo' },
-  '1y': { interval: '1wk', range: '1y' }, '5y': { interval: '1mo', range: '5y' },
+  '1mo': { interval: '1h', range: '1mo' }, '3mo': { interval: '1h', range: '3mo' },
+  '1y': { interval: '1d', range: '1y' }, '5y': { interval: '1wk', range: '5y' },
 };
 
 async function _buildIndexResponse(rawTicker, rangeKey) {
