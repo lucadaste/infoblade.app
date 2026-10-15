@@ -6,6 +6,6 @@ httpx==0.27.2
 transformers==4.46.3
 torch==2.4.1
 apscheduler==3.10.4
-yfinance==0.2.48
+yfinance==1.7.0
 python-dotenv==1.0.1
 pydantic==2.9.2
