@@ -37,6 +37,10 @@
     @media (max-width: 700px) { .hero { padding: 28px 20px 24px; } .hero h1 { font-size: clamp(22px, 6vw, 32px); } .hero-sub { font-size: 13px; } }
 
     .main { padding: 40px 48px; max-width: 1200px; }
+    .uc-notice { margin: 0 48px; max-width: 1104px; padding: 16px 20px; border-radius: 8px; background: var(--surface-2); color: var(--text-soft); font-size: 14px; line-height: 1.5; }
+    .uc-notice strong { color: var(--ink); }
+    @media (max-width: 700px) { .uc-notice { margin: 0 20px; } }
+    .main.under-construction { filter: grayscale(1); opacity: 0.35; pointer-events: none; user-select: none; }
     @media (max-width: 700px) { .main { padding: 24px 20px; } }
 
     /* Stats row */
@@ -192,12 +196,14 @@
 </script>
 
 <div class="hero">
-  <div class="hero-tag"><span class="hero-tag-dot"></span> Live Market Intelligence</div>
+  <div class="hero-tag">Under Construction</div>
   <h1>Prediction <em>Performance</em></h1>
   <p class="hero-sub">Every market prediction this platform makes is logged the moment it's generated, then automatically graded against real price data when the timeframe expires. The score you see is the score it earned.</p>
 </div>
 
-<div class="main">
+<div class="uc-notice" role="status"><strong>This page is being rebuilt.</strong> We found problems in how predictions are graded and counted, so the numbers below aren't reliable yet. They're shown greyed out until the fix is done.</div>
+
+<div class="main under-construction" aria-hidden="true" inert>
 
   <!-- Validation banner (shown while/after validation runs) -->
   <div id="val-banner" class="val-banner">
