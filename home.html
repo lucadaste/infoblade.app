@@ -30,7 +30,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/images/favicon-32.png" type="image/png" sizes="32x32">
@@ -45,7 +45,7 @@
        window, landing a full nav-height too low on top of Today's Picks
        even before you scrolled. */
     .hero-stat { margin-top: 14px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-    .hero-stat-value { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 20px; color: var(--accent); letter-spacing: -0.3px; }
+    .hero-stat-value { font-family: var(--font-sans); font-weight: 700; font-size: 20px; color: var(--accent); letter-spacing: -0.3px; }
     .hero-stat-label { font-size: 13px; color: var(--muted); }
     .hero-stat-label a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--border); white-space: nowrap; }
     /* Holds its final space (placeholder text of about the same length) while
@@ -78,7 +78,7 @@
     }
 
     .page-section { display: flex; flex-direction: column; gap: 18px; }
-    .section-label { display: inline-flex; align-items: center; gap: 7px; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
+    .section-label { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; color: var(--muted); }
     .section-icon { width: 13px; height: 13px; flex-shrink: 0; }
     .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .section-link { font-size: 12px; color: var(--accent); text-decoration: none; white-space: nowrap; }
@@ -103,8 +103,8 @@
       .picks-grid::-webkit-scrollbar { display: none; }
       .pick-card { flex: 0 0 calc(100% - 44px); scroll-snap-align: start; border-left: none; padding-left: 0; padding-right: 28px; }
     }
-    .pick-eyebrow { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-    .pick-headline { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 36px; letter-spacing: -0.8px; line-height: 1.05; display: flex; align-items: center; gap: 9px; }
+    .pick-eyebrow { font-family: var(--font-sans); font-weight: 700; font-size: 11.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .pick-headline { font-family: var(--font-sans); font-weight: 700; font-size: 36px; letter-spacing: -0.8px; line-height: 1.05; display: flex; align-items: center; gap: 9px; }
     .dir-bullish { color: #2a9e4f; }
     .dir-bearish { color: #c84040; }
     .pick-sub { font-size: 12.5px; color: var(--muted); }
@@ -125,7 +125,7 @@
     .wl-empty { color: var(--muted); font-size: 13px; line-height: 1.6; }
 
     .wl-group { display: flex; flex-direction: column; gap: 10px; }
-    .wl-group-label { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+    .wl-group-label { font-family: var(--font-sans); font-weight: 700; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
     .wl-row { display: flex; flex-wrap: wrap; gap: 10px; }
 
     /* Stock / crypto chip: icon + symbol (+ live price for crypto), plus a
@@ -135,8 +135,8 @@
     .wl-tile-link { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); transition: filter 0.15s; }
     .wl-tile-link:hover { filter: brightness(1.12); }
     .wl-tile-icon { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; object-fit: cover; }
-    .wl-tile-icon-fallback { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--border); color: var(--muted); font-size: 10px; font-weight: 700; font-family: 'Share Tech Mono', sans-serif; }
-    .wl-tile-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .wl-tile-icon-fallback { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--border); color: var(--muted); font-size: 10px; font-weight: 700; font-family: var(--font-sans); }
+    .wl-tile-sym { font-family: var(--font-sans); font-weight: 700; font-size: 13px; }
     .wl-tile-price { font-size: 11.5px; color: var(--muted); }
     .wl-tile-price.dir-bullish { color: #2a9e4f; }
     .wl-tile-price.dir-bearish { color: #c84040; }
@@ -148,12 +148,12 @@
     .wl-market-row { display: flex; align-items: center; gap: 8px; }
     .wl-market-link { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
     .wl-market-q { flex: 1; min-width: 0; font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .wl-market-odds { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
+    .wl-market-odds { font-family: var(--font-sans); font-weight: 700; font-size: 12.5px; color: var(--accent); white-space: nowrap; flex-shrink: 0; }
 
     /* Top Movers — its own flat section, same gainers/losers rail feed.html
        shows next to the watchlist there. */
     .mover-tabs { display: flex; gap: 4px; }
-    .mover-tab { font-family: 'Share Tech Mono', sans-serif; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 3px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
+    .mover-tab { font-family: var(--font-sans); font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 3px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); cursor: pointer; }
     .mover-tab.active { background: var(--surface-2); color: var(--ink); border-color: var(--border); }
     .mover-list { display: none; }
     .mover-list.show { display: block; }
@@ -161,9 +161,9 @@
     .mover-item:first-child { border-top: none; }
     .mover-item:hover .mover-sym { color: var(--accent); }
     .mover-rank { font-size: 11px; color: var(--muted); width: 14px; flex-shrink: 0; }
-    .mover-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; transition: color 0.15s; flex: 1; min-width: 0; }
+    .mover-sym { font-family: var(--font-sans); font-weight: 700; font-size: 13px; transition: color 0.15s; flex: 1; min-width: 0; }
     .mover-figs { text-align: right; flex-shrink: 0; }
-    .mover-pct { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .mover-pct { font-family: var(--font-sans); font-weight: 700; font-size: 13px; }
     .mover-price { font-size: 11px; color: var(--muted); }
   </style>
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" as="script" crossorigin="anonymous">

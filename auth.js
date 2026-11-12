@@ -60,7 +60,7 @@
     .ib-menu-item {
       display: flex; align-items: center; gap: 10px; width: 100%;
       padding: 10px 18px; background: none; border: none;
-      font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+      font-family: var(--font-sans); font-size: 14px; font-weight: 500;
       color: var(--muted); text-align: left; text-decoration: none; cursor: pointer;
       transition: color 0.15s, background 0.15s;
     }

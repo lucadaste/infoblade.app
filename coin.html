@@ -17,7 +17,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/images/favicon-32.png" type="image/png" sizes="32x32">
@@ -36,17 +36,17 @@
 
     /* Header */
     .s-head-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-    .s-logo { width: 42px; height: 42px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--muted); flex-shrink: 0; overflow: hidden; }
+    .s-logo { width: 42px; height: 42px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); font-weight: 700; font-size: 12px; color: var(--muted); flex-shrink: 0; overflow: hidden; }
     .s-logo img { width: 100%; height: 100%; object-fit: contain; }
     .s-name-wrap { flex: 1; min-width: 0; }
     .s-name { font-size: 15px; font-weight: 500; }
-    .s-rank { font-size: 11px; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; letter-spacing: 0.3px; }
-    .s-watch-btn { background: none; border: 1px solid var(--divider); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 7px 14px; transition: all 0.2s; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; flex-shrink: 0; }
+    .s-rank { font-size: 11px; color: var(--muted); font-family: var(--font-sans); letter-spacing: 0.3px; }
+    .s-watch-btn { background: none; border: 1px solid var(--divider); border-radius: 6px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 7px 14px; transition: all 0.2s; font-family: var(--font-sans); font-weight: 600; letter-spacing: 0.3px; flex-shrink: 0; }
     .s-watch-btn:hover { border-color: var(--accent); color: var(--accent); }
     .s-watch-btn.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
 
     .s-price-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 2px; }
-    .s-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(32px, 6vw, 44px); letter-spacing: -1.5px; line-height: 1; }
+    .s-price { font-family: var(--font-sans); font-weight: 700; font-size: clamp(32px, 6vw, 44px); letter-spacing: -1.5px; line-height: 1; }
     .s-change { font-size: 14px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
     .s-change.pos { color: var(--accent); background: rgba(0,230,118,0.12); }
     .s-change.neg { color: var(--red); background: rgba(255,82,82,0.1); }
@@ -54,7 +54,7 @@
 
     /* Range tabs */
     .range-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .range-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .range-chip { font-family: var(--font-sans); font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; }
     .range-chip:hover { border-color: var(--ink); color: var(--ink); }
     .range-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
 
@@ -71,27 +71,27 @@
     .chart-svg-wrap { position: relative; }
     .chart-svg-wrap:focus { outline: none; }
     .chart-svg-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
-    .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: 'Share Tech Mono', sans-serif; }
+    .chart-axis-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 8px; font-family: var(--font-sans); }
     .chart-crosshair { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--divider); pointer-events: none; opacity: 0; }
     .chart-dot { position: absolute; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 50%; border: 2px solid var(--card); pointer-events: none; opacity: 0; }
     .chart-tooltip { position: absolute; top: 0; transform: translate(-50%, -115%); background: var(--surface-2); border-radius: 7px; padding: 7px 10px; font-size: 11px; line-height: 1.5; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.1s; z-index: 5; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
     .chart-tooltip .tt-date { color: var(--muted); }
-    .chart-tooltip .tt-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; }
+    .chart-tooltip .tt-val { font-family: var(--font-sans); font-weight: 700; }
 
     /* Key stats — a flat data sheet, not six stamped-out dashboard tiles */
     .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 22px; column-gap: 16px; margin: 0 0 36px; }
     @media (max-width: 560px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
     .stat-tile-label { font-size: 10px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    .stat-tile-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
+    .stat-tile-val { font-family: var(--font-sans); font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
     .stat-tile-val.neg { color: var(--red); }
 
     /* AI CTA — the one deliberately accented moment on the page, so it
        doesn't read as just another gray card like everywhere else on the site */
     .ai-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; padding: 18px 20px 18px 18px; border-left: 2px solid var(--accent); background: linear-gradient(90deg, rgba(0,230,118,0.07), transparent 70%); }
     .ai-cta-text { flex: 1; min-width: 200px; }
-    .ai-cta-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--accent); letter-spacing: 0.3px; text-transform: uppercase; }
+    .ai-cta-title { font-family: var(--font-sans); font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--accent); letter-spacing: 0.3px; text-transform: uppercase; }
     .ai-cta-sub { font-size: 13px; color: var(--text-soft); line-height: 1.55; }
-    .ai-cta-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; text-decoration: none; white-space: nowrap; transition: all 0.15s; }
+    .ai-cta-btn { font-family: var(--font-sans); font-size: 12px; font-weight: 700; padding: 9px 16px; border-radius: 6px; border: 1px solid var(--accent); color: var(--accent); background: transparent; text-decoration: none; white-space: nowrap; transition: all 0.15s; }
     .ai-cta-btn:hover { background: var(--accent); color: #111; }
 
     @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }

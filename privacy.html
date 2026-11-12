@@ -7,7 +7,7 @@
   <title>infoblade | Privacy Policy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700&family=DM+Sans:wght@300;400;500&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/images/favicon-32.png" type="image/png" sizes="32x32">
   <link rel="icon" href="/images/favicon-16.png" type="image/png" sizes="16x16">
@@ -15,6 +15,8 @@
   <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#111111">
   <style>
+    :root { --font-sans: 'Hanken Grotesk', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; --font-serif: 'Newsreader', 'Iowan Old Style', Georgia, serif; }
+    h1 { font-family: var(--font-serif) !important; font-weight: 500 !important; letter-spacing: -0.015em !important; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
       --ink: #e8e6e0; --paper: #111111; --accent: #00e676; --muted: #888888; --border: #272727; --card: #1c1c1c; --text-soft: #c4c4c4;
@@ -30,10 +32,10 @@
         color-scheme: light;
       }
     }
-    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.7; padding-top: env(safe-area-inset-top, 0px); transition: background 0.2s ease, color 0.2s ease; }
+    body { font-family: var(--font-sans); background: var(--paper); color: var(--ink); -webkit-font-smoothing: antialiased; line-height: 1.7; padding-top: env(safe-area-inset-top, 0px); transition: background 0.2s ease, color 0.2s ease; }
 
     nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 48px; border-bottom: 1px solid var(--border); background: var(--paper); }
-    .nav-logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 33px; letter-spacing: -0.5px; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
+    .nav-logo { font-family: var(--font-serif); font-weight: 500; font-size: 33px; letter-spacing: -0.01em; text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; gap: 0; }
     .nav-logo span { color: var(--accent); }
     .nav-back { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink); font-size: 14px; font-weight: 500; text-decoration: none; white-space: nowrap; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease; }
     .nav-back:hover { border-color: var(--accent); color: var(--accent); background: var(--card); text-decoration: none; }
@@ -41,11 +43,11 @@
 
     .hero { padding: 44px 48px 32px; }
     .hero-tag { font-size: 12px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
-    .hero h1 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; margin-bottom: 10px; }
+    .hero h1 { font-family: var(--font-sans); font-weight: 700; font-size: clamp(28px, 4vw, 42px); letter-spacing: -1.5px; margin-bottom: 10px; }
     .hero-sub { font-size: 15px; color: var(--muted); font-weight: 300; }
 
     .content { max-width: 720px; padding: 48px 48px 80px; }
-    h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; margin: 40px 0 12px; color: var(--ink); }
+    h2 { font-family: var(--font-sans); font-weight: 700; font-size: 18px; letter-spacing: -0.3px; margin: 40px 0 12px; color: var(--ink); }
     h2:first-child { margin-top: 0; }
     p { font-size: 15px; color: var(--text-soft); margin-bottom: 14px; font-weight: 300; }
     ul { padding-left: 20px; margin-bottom: 14px; }

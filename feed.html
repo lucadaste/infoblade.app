@@ -31,7 +31,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/images/favicon-32.png" type="image/png" sizes="32x32">
@@ -42,7 +42,7 @@
   <style>
     .hero-stats { display: flex; gap: 28px; flex-shrink: 0; padding-bottom: 4px; }
     .hero-stat { text-align: right; }
-    .hero-stat-val { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
+    .hero-stat-val { font-family: var(--font-sans); font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
     .hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 2px; }
 
     /* ── Unified ask bar — ticker lookups and free-form questions in one box ── */
@@ -50,7 +50,7 @@
     .ask-box { position: relative; display: flex; align-items: center; gap: 10px; max-width: 760px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 4px 8px 4px 18px; transition: border-color 0.15s; }
     .ask-box:focus-within { border-color: var(--accent); }
     .ask-icon { width: 18px; height: 18px; color: var(--muted); flex-shrink: 0; }
-    .ask-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 9px 0; }
+    .ask-input { flex: 1; min-width: 0; background: none; border: none; outline: none; color: var(--ink); font-family: var(--font-sans); font-size: 15px; padding: 9px 0; }
     .ask-input::placeholder { color: var(--muted); }
     .ask-send { flex-shrink: 0; background: var(--accent); color: #111111; border: none; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: opacity 0.15s; }
     .ask-send:hover { opacity: 0.85; }
@@ -69,14 +69,14 @@
     .filter-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
     .filters .filter-select { min-width: 0; }
     .filters .status-wrap:not(:has(.loader.active)):has(.status-text:empty) { display: none; }
-    .section-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); }
+    .section-title { font-family: var(--font-sans); font-weight: 700; font-size: 16px; color: var(--ink); }
     .filter-note { font-size: 12px; color: var(--muted); }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
     .filter-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-    .filter-select { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
+    .filter-select { font-family: var(--font-sans); font-size: 13px; font-weight: 500; color: var(--ink); background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 32px 8px 12px; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; cursor: pointer; min-width: 180px; transition: border-color 0.2s; }
     .filter-select:focus { outline: none; border-color: var(--ink); }
     .search-wrap { position: relative; }
-    .coin-search { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px 8px 32px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink); outline: none; width: 200px; transition: border-color 0.2s; }
+    .coin-search { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px 8px 32px; font-family: var(--font-sans); font-size: 13px; font-weight: 500; color: var(--ink); outline: none; width: 200px; transition: border-color 0.2s; }
     .coin-search:focus { border-color: var(--ink); }
     .coin-search::placeholder { color: var(--muted); }
     .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
@@ -84,17 +84,17 @@
     .sug-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
     .sug-item:last-child { border-bottom: none; }
     .sug-item:hover { background: var(--surface-2); }
-    .sug-ticker { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
+    .sug-ticker { font-family: var(--font-sans); font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; flex-shrink: 0; }
     .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .hero { padding-top: 28px; padding-bottom: 18px; }
     .hero .hero-tag { margin-bottom: 10px; }
     .hero h1 { margin-bottom: 8px; }
     .cat-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-    .cat-chip { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .cat-chip { font-family: var(--font-sans); font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
     .cat-chip:hover { border-color: var(--ink); color: var(--ink); }
     .cat-chip.active { background: var(--accent); color: #111111; border-color: var(--accent); }
     .filter-actions { display: flex; gap: 12px; align-items: center; margin-left: auto; }
-    .btn-load { background: var(--accent); color: #111111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
+    .btn-load { background: var(--accent); color: #111111; font-family: var(--font-sans); font-weight: 700; font-size: 14px; padding: 10px 24px; border-radius: 4px; border: none; cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.2s; white-space: nowrap; }
     .btn-load:hover { opacity: 0.85; }
     .btn-load:disabled { opacity: 0.4; cursor: not-allowed; }
     .status-wrap { display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0; flex: 1; max-width: 420px; }
@@ -124,8 +124,8 @@
     .event-card:hover { transform: translateY(-2px); }
     @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
     .event-card.watchlist-match { border-color: var(--accent); }
-    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: 'Share Tech Mono', sans-serif; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
-    .event-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
+    .watchlist-badge { position: absolute; top: -10px; right: 20px; background: var(--accent); color: #111111; font-family: var(--font-sans); font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .event-topic { font-family: var(--font-sans); font-weight: 700; font-size: 19px; line-height: 1.3; margin-bottom: 6px; }
     .event-sources { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
     .event-sources span { color: var(--muted); }
     .chain-row { display: flex; align-items: flex-start; gap: 24px; padding: 18px 0; border-top: 1px solid var(--border); }
@@ -133,7 +133,7 @@
     .chain-content { font-size: 14px; color: var(--text-soft); line-height: 1.7; flex: 1; }
     .impact-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: rgba(200,255,0,0.1); color: var(--accent); border: 1px solid rgba(200,255,0,0.2); margin-top: 6px; }
     .tickers { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .pill { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
+    .pill { font-family: var(--font-sans); font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 4px; letter-spacing: 0.5px; }
     .pill-up      { background: rgba(0,230,118,0.12); color: var(--accent); border: 1px solid rgba(0,230,118,0.25); }
     .pill-down    { background: rgba(255,80,80,0.1);  color: #ff7070; border: 1px solid rgba(255,80,80,0.2); }
     .pill-watched { background: rgba(0,230,118,0.3); color: var(--ink); border: 1px solid var(--accent); }
@@ -142,17 +142,17 @@
     .sector-down { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(255,80,80,0.08); color: #cc5555; border: 1px solid rgba(255,80,80,0.15); }
     .tech-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
     .tech-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-    .tech-sym { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; color: var(--ink); min-width: 44px; }
+    .tech-sym { font-family: var(--font-sans); font-size: 11px; font-weight: 700; color: var(--ink); min-width: 44px; }
     .tech-price { font-size: 12px; color: var(--text-soft); }
     .tech-stat { font-size: 11px; padding: 2px 7px; border-radius: 3px; }
     .tech-stat-up   { background: rgba(0,230,118,0.1); color: var(--accent); }
     .tech-stat-down { background: rgba(255,80,80,0.1); color: #ff7070; }
     .tech-stat-neu  { background: var(--hover-tint); color: var(--muted); }
     .tech-rating { font-size: 11px; color: var(--muted); }
-    .track-record { font-family: 'Share Tech Mono', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .track-record { font-family: var(--font-sans); font-size: 14px; font-weight: 700; color: var(--ink); }
     .track-record-sub { font-size: 12px; color: var(--muted); margin-left: 6px; }
     .empty-state { text-align: center; padding: 80px 0; color: var(--muted); }
-    .empty-state h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+    .empty-state h3 { font-family: var(--font-sans); font-weight: 700; font-size: 18px; margin-bottom: 8px; color: var(--ink); }
     .empty-state p { font-size: 14px; }
 
 
@@ -163,17 +163,17 @@
     .lw-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:lw-pulse 1.2s ease-in-out infinite; }
     .lw-dot:nth-child(2) { animation-delay:.2s; } .lw-dot:nth-child(3) { animation-delay:.4s; }
     @keyframes lw-pulse { 0%,80%,100% { opacity:.2; transform:scale(.75); } 40% { opacity:1; transform:scale(1); } }
-    .lw-msg { font-family:'Share Tech Mono',sans-serif; font-size:13px; color:var(--muted); letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
+    .lw-msg { font-family:var(--font-sans); font-size:13px; color:var(--muted); letter-spacing:.2px; transition:opacity .2s ease,transform .2s ease; }
 
     [data-tip] { position: relative; }
-    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--divider); border-radius: 6px; padding: 7px 11px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 400; color: var(--ink); line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--divider); border-radius: 6px; padding: 7px 11px; font-family: var(--font-sans); font-size: 12px; font-weight: 400; color: var(--ink); line-height: 1.5; width: max-content; max-width: 220px; white-space: normal; text-align: center; letter-spacing: 0; text-transform: none; pointer-events: none; z-index: 500; opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     [data-tip]:hover::after, [data-tip]:focus::after { opacity: 1; visibility: visible; }
 
     .pill { cursor: pointer; user-select: none; }
     .pill:hover { opacity: 0.8; }
     .pill-star { font-size: 10px; opacity: 0.5; margin-left: 3px; }
     .pill.pill-watched .pill-star { opacity: 1; }
-    #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: var(--card); border: 1px solid var(--divider); border-radius: 8px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; line-height: 1.6; color: var(--text-soft); pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.1s ease; }
+    #ticker-blurb-tip { position: fixed; z-index: 9000; max-width: 272px; background: var(--card); border: 1px solid var(--divider); border-radius: 8px; padding: 11px 14px; font-family: var(--font-sans); font-size: 12px; line-height: 1.6; color: var(--text-soft); pointer-events: none; box-shadow: 0 8px 32px rgba(0,0,0,0.85); opacity: 0; transition: opacity 0.1s ease; }
 
 
     /* ── Page layout: main column + a watchlist/movers rail, so the wide
@@ -187,9 +187,9 @@
     .ticker-rail:empty { margin-bottom: 0; }
     .ticker-rail-card { flex-shrink: 0; width: 148px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
     .ticker-rail-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .trc-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; }
+    .trc-sym { font-family: var(--font-sans); font-weight: 700; font-size: 13px; }
     .trc-name { font-size: 11px; color: var(--muted); margin: 2px 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .trc-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; }
+    .trc-price { font-family: var(--font-sans); font-weight: 700; font-size: 15px; }
     .trc-chg { font-size: 11.5px; font-weight: 600; margin-top: 2px; }
 
     .watch-rail { width: 272px; flex-shrink: 0; position: sticky; top: 24px; padding: 44px 48px 0 32px; border-left: 1px solid var(--border); margin-left: 8px; }
@@ -201,10 +201,10 @@
     .watch-item:first-child { border-top: none; }
     .watch-item:hover .watch-sym { color: var(--accent); }
     .watch-id { min-width: 0; flex: 1; }
-    .watch-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; transition: color 0.15s; }
+    .watch-sym { font-family: var(--font-sans); font-weight: 700; font-size: 12.5px; transition: color 0.15s; }
     .watch-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
     .watch-figs { text-align: right; flex-shrink: 0; }
-    .watch-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; }
+    .watch-price { font-family: var(--font-sans); font-weight: 700; font-size: 12.5px; }
     .watch-chg { font-size: 11px; font-weight: 600; }
     .watch-note { font-size: 11.5px; color: var(--muted); line-height: 1.6; margin-top: 14px; }
 
@@ -215,7 +215,7 @@
     .strip-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
     .strip-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .strip-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
-    .strip-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--ink); cursor: pointer; white-space: nowrap; }
+    .strip-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-sans); font-size: 12px; font-weight: 700; padding: 7px 13px; border-radius: 16px; border: 1px solid var(--border); background: var(--card); color: var(--ink); cursor: pointer; white-space: nowrap; }
     .strip-chip .star { color: var(--accent); opacity: 0.8; font-size: 10px; }
     .strip-div { width: 1px; align-self: stretch; background: var(--border); flex-shrink: 0; margin: 0 2px; }
 
@@ -236,7 +236,7 @@
     .stock-chips { padding: 0 48px 12px; }
     .stock-grid-wrap { padding: 0 48px; }
     .coin-grid.collapsed:not(.filtering) .coin-card:nth-child(n+9) { display: none; }
-    .grid-more { display: block; margin: 6px auto 0; background: none; border: none; color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.3px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
+    .grid-more { display: block; margin: 6px auto 0; background: none; border: none; color: var(--muted); font-family: var(--font-sans); font-size: 12px; font-weight: 700; letter-spacing: 0.3px; padding: 8px 14px; cursor: pointer; transition: color 0.15s; }
     .grid-more:hover { color: var(--ink); }
     .stock-analysis-panel { margin-top: 28px; scroll-margin-top: 100px; }
     html.is-embedded .stock-analysis-panel { scroll-margin-top: 16px; }
@@ -245,8 +245,8 @@
     .feed-empty { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; padding: 8px 0 24px; }
     #feed:not(:empty) ~ .feed-empty { display: none; }
     .fe-step { display: flex; flex-direction: column; gap: 6px; }
-    .fe-num { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--accent); }
-    .fe-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; color: var(--ink); }
+    .fe-num { font-family: var(--font-sans); font-weight: 700; font-size: 12px; color: var(--accent); }
+    .fe-title { font-family: var(--font-sans); font-weight: 700; font-size: 14px; color: var(--ink); }
     .fe-text { font-size: 13px; color: var(--muted); line-height: 1.6; }
     @media (max-width: 600px) { .feed-empty { grid-template-columns: 1fr; gap: 16px; } }
     .chip-sep { width: 1px; align-self: stretch; background: var(--border); margin: 4px 2px; flex-shrink: 0; }
@@ -258,9 +258,9 @@
     /* Auth gate for per-stock analysis — shown inside the panel when signed out */
     #stock-auth-gate { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 40px 24px; }
     #stock-auth-gate.show { display: flex; }
-    #stock-auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(18px, 3vw, 26px); letter-spacing: -0.5px; }
+    #stock-auth-gate h2 { font-family: var(--font-sans); font-weight: 700; font-size: clamp(18px, 3vw, 26px); letter-spacing: -0.5px; }
     #stock-auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
-    #stock-auth-gate-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
+    #stock-auth-gate-btn { background: var(--accent); color: #111; font-family: var(--font-sans); font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
     #stock-auth-gate-btn:hover { opacity: 0.85; }
 
     /* Stock mode — coin-card grid matching crypto page exactly */
@@ -269,34 +269,34 @@
     .coin-card:hover { transform: translateY(-2px); }
     .coin-card.selected { border-color: var(--accent); }
     .coin-top { display: flex; align-items: center; gap: 10px; }
-    .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 9px; color: var(--muted); flex-shrink: 0; }
+    .coin-logo-placeholder { width: 30px; height: 30px; border-radius: 50%; background: var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--font-sans); font-weight: 700; font-size: 9px; color: var(--muted); flex-shrink: 0; }
     .coin-id { min-width: 0; flex: 1; }
-    .coin-name { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .coin-name { font-family: var(--font-sans); font-weight: 700; font-size: 12.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .coin-figs { text-align: right; flex-shrink: 0; }
     .coin-actions { display: flex; gap: 6px; }
     .coin-symbol { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; }
-    .coin-price { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
+    .coin-price { font-family: var(--font-sans); font-weight: 700; font-size: 14px; letter-spacing: -0.3px; }
     .coin-change { font-size: 11px; font-weight: 600; min-height: 14px; }
     .pos { color: #2a9e4f; }
     .neg { color: #c84040; }
-    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; flex: 1; }
+    .btn-coin { background: transparent; border: 1px solid var(--border); color: var(--muted); font-family: var(--font-sans); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; text-align: center; flex: 1; }
     .btn-coin:hover { border-color: var(--accent); color: var(--accent); }
     .coin-card.selected .btn-coin { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
-    .btn-coin-watch { background: none; border: 1px solid var(--divider); border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 4px 10px; transition: all 0.2s; flex-shrink: 0; font-family: 'Share Tech Mono', sans-serif; font-weight: 600; letter-spacing: 0.3px; }
+    .btn-coin-watch { background: none; border: 1px solid var(--divider); border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 12px; padding: 4px 10px; transition: all 0.2s; flex-shrink: 0; font-family: var(--font-sans); font-weight: 600; letter-spacing: 0.3px; }
     .btn-coin-watch:hover { border-color: var(--accent); color: var(--accent); }
     .btn-coin-watch.watching { border-color: var(--accent); color: var(--accent); background: rgba(0,230,118,0.06); }
     .grid-empty { grid-column: 1/-1; text-align: center; padding: 60px 0; color: var(--muted); }
-    .grid-empty h3 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
+    .grid-empty h3 { font-family: var(--font-sans); font-weight: 700; font-size: 16px; margin-bottom: 6px; color: var(--ink); }
 
     /* Stock analysis panel */
     .stock-analysis-panel { border-top: 2px solid var(--accent); background: var(--card); display: none; }
     .ap-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 48px 16px; border-bottom: 1px solid var(--border); }
-    .ap-title { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+    .ap-title { font-family: var(--font-sans); font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
     .ap-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px; border-radius: 4px; transition: color 0.15s; }
     .ap-close:hover { color: var(--ink); }
     .tf-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 48px; border-bottom: 1px solid var(--border); background: var(--card); }
     .tf-label { font-size: 10px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); flex-shrink: 0; margin-right: 4px; }
-    .tf-btn { font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
+    .tf-btn { font-family: var(--font-sans); font-size: 11px; font-weight: 700; padding: 5px 13px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; }
     .tf-btn:hover { border-color: var(--ink); color: var(--ink); }
     .tf-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
     .ap-content { padding: 24px 48px 52px; display: flex; flex-direction: column; gap: 16px; max-width: 900px; }
@@ -306,13 +306,13 @@
     .live-situation-disclaimer { font-size: 11px; color: var(--muted); margin-top: 6px; }
     .overall-label { font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
     .overall-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
-    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .dir-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-sans); font-size: 11px; font-weight: 700; padding: 4px 11px; border-radius: 5px; letter-spacing: 0.6px; text-transform: uppercase; }
     .dir-bullish  { background: rgba(42,158,79,0.12);   color: #2a9e4f; border: 1px solid rgba(42,158,79,0.3); }
     .dir-bearish  { background: rgba(200,64,64,0.10);   color: #c84040; border: 1px solid rgba(200,64,64,0.25); }
     .dir-uncertain{ background: rgba(136,136,136,0.08); color: var(--muted); border: 1px solid var(--border); }
     .ap-section-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
     .group-card { background: var(--card); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 12px; animation: fadeUp 0.3s ease both; }
-    .group-topic { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 15px; line-height: 1.4; }
+    .group-topic { font-family: var(--font-sans); font-weight: 700; font-size: 15px; line-height: 1.4; }
     .group-meta { font-size: 12px; color: var(--muted); }
     .ar-block { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; animation: fadeUp 0.3s ease both; }
     .ar-summary { font-size: 14px; line-height: 1.7; color: var(--ink); }
@@ -320,9 +320,9 @@
     .ar-row strong { color: var(--accent); font-weight: 600; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 2px; }
     .ar-confidence { font-size: 12px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--border); }
     .ar-details { display: none; flex-direction: column; gap: 10px; animation: fadeUp 0.25s ease both; }
-    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Share Tech Mono', sans-serif; font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
+    .btn-deep { background: none; border: 1px solid var(--border); color: var(--muted); font-family: var(--font-sans); font-size: 11px; font-weight: 700; padding: 6px 14px; border-radius: 5px; cursor: pointer; transition: all 0.15s; letter-spacing: 0.3px; align-self: flex-start; margin-top: 2px; }
     .btn-deep:hover { border-color: var(--accent); color: var(--accent); }
-    .ar-sources-toggle { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 2px; }
+    .ar-sources-toggle { background: none; border: none; color: var(--muted); font-family: var(--font-sans); font-size: 11px; font-weight: 500; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s; margin-top: 2px; }
     .ar-sources-toggle:hover { color: var(--muted); }
     .ar-sources-toggle .toggle-arrow { display: inline-block; transition: transform 0.2s; font-style: normal; }
     .ar-sources-toggle.open .toggle-arrow { transform: rotate(90deg); }
@@ -583,7 +583,7 @@
             <option value="any timeframe">All timeframes</option>
             <option value="custom">Custom…</option>
           </select>
-          <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;width:170px;outline:none;" />
+          <input type="text" id="filter-impact-custom" placeholder="e.g. 2 weeks, 18 months…" style="display:none;font-family:var(--font-sans);font-size:13px;font-weight:500;color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 12px;width:170px;outline:none;" />
           <button class="btn-load" onclick="loadFeed()" id="btn" data-tip="Scans 500+ sources, groups by topic, and traces market impact. Takes ~30-60 sec">Load feed →</button>
         </div>
       </div>
@@ -700,7 +700,7 @@
     ];
 
     function skeletonEventCards(n = 3) {
-      return `<div style="padding:48px 40px 32px">${_lw(LW_SECTOR,'0')}<p style="font-size:12px;color:var(--muted);margin-top:10px;font-family:'Share Tech Mono',sans-serif">This takes 20–30 seconds on first load</p></div>`;
+      return `<div style="padding:48px 40px 32px">${_lw(LW_SECTOR,'0')}<p style="font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-sans)">This takes 20–30 seconds on first load</p></div>`;
     }
 
     function _REMOVED_skeletonStockCard(ticker, name, price, changePct, idx) {
@@ -710,11 +710,11 @@
       return `<div class="skel-stock-card" data-stock-slot-idx="${idx}" style="background:var(--card);border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;color:var(--ink)">${ticker.replace(/</g,'&lt;')}</div>
+            <div style="font-family:var(--font-sans);font-weight:800;font-size:28px;letter-spacing:-1px;color:var(--ink)">${ticker.replace(/</g,'&lt;')}</div>
             <div style="font-size:14px;color:var(--muted);margin-top:4px">${name.replace(/</g,'&lt;')}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:22px">${priceStr}</div>
+            <div style="font-family:var(--font-sans);font-weight:700;font-size:22px">${priceStr}</div>
             <div style="font-size:14px;font-weight:600;color:${changeColor}">${changeStr}</div>
           </div>
         </div>
@@ -740,7 +740,7 @@
     function skeletonCardForGroup(topic, idx) {
       const safeText = (topic.length > 90 ? topic.slice(0, 87) + '…' : topic).replace(/</g,'&lt;').replace(/>/g,'&gt;');
       return `<div class="skel-event-card" data-slot-idx="${idx}" style="background:var(--card);border-radius:12px;padding:36px 40px;margin-bottom:20px;animation:fadeUp 0.4s ease both;animation-delay:${idx * 60}ms">
-        <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:4px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText}</div>
+        <div style="font-family:var(--font-sans);font-weight:700;font-size:17px;letter-spacing:-0.3px;margin-bottom:4px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${safeText}</div>
         ${_lw(LW_GROUP, '18px 0 4px')}
       </div>`;
     }
@@ -1218,7 +1218,7 @@
         const signalHtml = signalColor ? `
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
             <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
-            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:12px;color:${signalColor}">${signalLabel}</div>
+            <div style="font-family:var(--font-sans);font-weight:700;font-size:12px;color:${signalColor}">${signalLabel}</div>
           </div>` : '';
         resultEl.innerHTML = `${badge}
           <div class="overall-summary" style="margin-top:8px">${esc(d.why_it_matters || '')}</div>
@@ -1254,7 +1254,7 @@
         el.innerHTML = `
           <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Market Signal</div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:12px;color:${leanColor}">${leanLabel}</span>
+            <span style="font-family:var(--font-sans);font-weight:700;font-size:12px;color:${leanColor}">${leanLabel}</span>
             ${confBadge}
           </div>
           ${d.reasoning ? `<div style="font-size:13px;color:var(--text-soft);line-height:1.6">${esc(d.reasoning)}</div>` : ''}`;
@@ -1677,11 +1677,11 @@
         ${match ? '<div class="watchlist-badge">★ In your watchlist</div>' : ''}
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-family:'Share Tech Mono',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px">${esc(ticker)}</div>
+            <div style="font-family:var(--font-sans);font-weight:800;font-size:28px;letter-spacing:-1px">${esc(ticker)}</div>
             <div style="font-size:14px;color:var(--muted);margin-top:4px">${esc(name)}</div>
           </div>
           <div style="text-align:right">
-            ${priceStr ? `<div style="font-family:'Share Tech Mono',sans-serif;font-weight:700;font-size:22px">${esc(priceStr)}</div>` : ''}
+            ${priceStr ? `<div style="font-family:var(--font-sans);font-weight:700;font-size:22px">${esc(priceStr)}</div>` : ''}
             ${changeStr ? `<div style="font-size:14px;font-weight:600;color:${changeColor}">${esc(changeStr)}</div>` : ''}
             ${range52w}
           </div>

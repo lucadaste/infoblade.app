@@ -22,7 +22,7 @@
       padding: 28px 32px 22px;
       border: 1px solid #1e1e1e;
       margin-bottom: 24px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-sans);
     }
     .sw-header {
       display: flex;
@@ -38,7 +38,7 @@
       gap: 8px;
     }
     .sw-section-label {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -46,7 +46,7 @@
       color: #888;
     }
     .sw-beta {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 1px;
@@ -63,7 +63,7 @@
       gap: 10px;
     }
     .sw-ticker-input {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 13px;
       font-weight: 700;
       text-transform: uppercase;
@@ -97,7 +97,7 @@
       font-size: 11px;
       color: #444;
       white-space: nowrap;
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-sans);
     }
     /* ── Body ── */
     .sw-body {
@@ -115,7 +115,7 @@
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 22px;
       font-weight: 700;
       letter-spacing: -0.5px;
@@ -171,7 +171,7 @@
     }
     @media (max-width: 600px) { .sw-accounts-wrap { max-width: 100%; min-width: unset; } }
     .sw-accounts-label {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 2px;
@@ -188,7 +188,7 @@
     }
     .sw-account-row:last-child { border-bottom: none; }
     .sw-acct-name {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 11px;
       color: #c8c6c0;
       flex: 1;
@@ -203,7 +203,7 @@
       flex-shrink: 0;
     }
     .sw-acct-dir {
-      font-family: 'Share Tech Mono', monospace;
+      font-family: var(--font-sans);
       font-size: 11px;
       font-weight: 700;
       flex-shrink: 0;

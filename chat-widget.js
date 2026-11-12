@@ -151,7 +151,7 @@
       transform: translateY(-50%) translateX(4px);
       background: var(--ink);
       color: var(--paper);
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-size: 12px;
       font-weight: 600;
       white-space: nowrap;
@@ -242,7 +242,7 @@
       border-radius: 10px 10px 0 0;
     }
     .ii-header-title {
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-weight: 600;
       font-size: 12px;
       letter-spacing: 0.8px;
@@ -289,7 +289,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-size: 13.5px;
       font-weight: 600;
       color: var(--ink);
@@ -313,7 +313,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       transition: background 0.15s;
     }
     .ii-history-item:hover { background: var(--hover-tint); }
@@ -348,7 +348,7 @@
     .ii-msgs[hidden], .ii-history-panel[hidden] { display: none; }
 
     .ii-m {
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-size: 14.5px;
       line-height: 1.6;
       white-space: pre-wrap;
@@ -374,7 +374,7 @@
          row's line box shorter than the one the avatar's margin-top is
          centered against, throwing off the icon/text alignment here only. */
       line-height: 1.6;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       padding-top: 3px;
       padding-bottom: 3px;
     }
@@ -384,7 +384,7 @@
       gap: 6px;
       color: var(--muted);
       font-size: 13px;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       padding-top: 3px;
       padding-bottom: 3px;
     }
@@ -401,7 +401,7 @@
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 9px 12px;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-size: 13px;
       color: var(--muted);
       cursor: pointer;
@@ -434,7 +434,7 @@
     #ii-inp {
       flex: 1;
       min-width: 0;
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-size: 14px;
       border: none;
       padding: 10px 2px;
@@ -533,8 +533,8 @@
     .ii-mkt-body { flex: 1; min-width: 0; }
     .ii-mkt-title { font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
     .ii-mkt-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
-    .ii-mkt-odds { flex-shrink: 0; text-align: right; font-family: 'Share Tech Mono', monospace; font-size: 16px; font-weight: 700; color: var(--ink); }
-    .ii-mkt-odds span { display: block; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 500; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ii-mkt-odds { flex-shrink: 0; text-align: right; font-family: var(--font-sans); font-size: 16px; font-weight: 700; color: var(--ink); }
+    .ii-mkt-odds span { display: block; font-family: var(--font-sans); font-size: 10px; font-weight: 500; color: var(--muted); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ii-mkts-all { font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; margin-top: 2px; }
     .ii-mkts-all:hover { text-decoration: underline; }
 
@@ -551,7 +551,7 @@
       pointer-events: none;
     }
     .ii-drop-overlay span {
-      font-family: 'Space Grotesk', sans-serif;
+      font-family: var(--font-sans);
       font-weight: 600;
       font-size: 14px;
       color: var(--ink);

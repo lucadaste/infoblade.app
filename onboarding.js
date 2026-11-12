@@ -72,7 +72,7 @@
       border-radius: 22px;
       width: 100%; max-width: 400px;
       padding: 36px 30px 30px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: var(--font-sans);
       box-shadow: 0 24px 70px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.02) inset;
       transform: scale(0.94) translateY(10px);
       opacity: 0;
@@ -105,7 +105,7 @@
     .ii-ob-bullets li .dash { color: var(--ob-accent, var(--accent)); flex-shrink: 0; margin-top: 2px; font-size: 10px; font-weight: 700; }
     .ii-ob-btn {
       width: 100%; padding: 14px; border-radius: 12px; border: 1px solid transparent;
-      font-size: 15px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer;
+      font-size: 15px; font-family: var(--font-sans); font-weight: 600; cursor: pointer;
       transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.15s ease, background 0.2s ease;
       position: relative; z-index: 1;
       background: var(--surface-2); color: var(--ink); border-color: var(--border);

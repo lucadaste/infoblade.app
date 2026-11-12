@@ -16,7 +16,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&family=Plus+Jakarta+Sans:wght@700&family=Inconsolata:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400..800&family=Newsreader:ital,opsz,wght@0,6..72,400..600;1,6..72,400..600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/shared.css" />
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" href="/images/favicon-32.png" type="image/png" sizes="32x32">
@@ -28,7 +28,7 @@
 
     /* ── Tab bar ─────────────────────────────────────────── */
     .tab-bar { display: flex; border-bottom: 2px solid var(--border); background: var(--paper); }
-    .tab-btn { padding: 20px 36px; background: none; border: none; border-bottom: 3px solid transparent; position: relative; bottom: -2px; cursor: pointer; transition: all 0.15s; text-align: left; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; color: var(--muted); white-space: nowrap; }
+    .tab-btn { padding: 20px 36px; background: none; border: none; border-bottom: 3px solid transparent; position: relative; bottom: -2px; cursor: pointer; transition: all 0.15s; text-align: left; font-family: var(--font-sans); font-weight: 700; font-size: 14px; color: var(--muted); white-space: nowrap; }
     .tab-btn.active { border-bottom-color: var(--accent); color: var(--ink); }
     .tab-btn:hover:not(.active) { color: var(--text-soft); }
 
@@ -38,16 +38,16 @@
 
     /* ── Section labels ──────────────────────────────────── */
     .wl-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
-    .wl-count { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.2); border-radius: 10px; padding: 2px 9px; font-size: 10px; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; }
+    .wl-count { background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.2); border-radius: 10px; padding: 2px 9px; font-size: 10px; color: var(--accent); font-family: var(--font-sans); }
     .wl-section { margin-bottom: 40px; }
 
     /* ── Add input row ───────────────────────────────────── */
     .add-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 40px; }
     .add-input-wrap { position: relative; flex: 1; max-width: 380px; }
-    .add-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); outline: none; transition: border-color 0.2s; }
+    .add-input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-family: var(--font-sans); font-size: 14px; color: var(--ink); outline: none; transition: border-color 0.2s; }
     .add-input:focus { border-color: var(--divider); }
     .add-input::placeholder { color: var(--muted); }
-    .add-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
+    .add-btn { background: var(--accent); color: #111; font-family: var(--font-sans); font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
     .add-btn:hover { opacity: 0.85; }
 
     /* ── Search suggestions ──────────────────────────────── */
@@ -56,19 +56,19 @@
     .sug-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s; }
     .sug-item:last-child { border-bottom: none; }
     .sug-item:hover { background: var(--surface-2); }
-    .sug-sym { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; }
+    .sug-sym { font-family: var(--font-sans); font-weight: 700; font-size: 12px; color: var(--ink); min-width: 52px; }
     .sug-name { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ── Sector toggle chips ─────────────────────────────── */
     .sector-toggles { display: flex; flex-wrap: wrap; gap: 8px; }
-    .sector-toggle { font-family: 'Share Tech Mono', sans-serif; font-size: 12px; font-weight: 600; padding: 7px 15px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 0; }
+    .sector-toggle { font-family: var(--font-sans); font-size: 12px; font-weight: 600; padding: 7px 15px; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 0; }
     .sector-toggle:hover { border-color: var(--divider); color: var(--text-soft); }
     .sector-toggle.active { background: rgba(0,230,118,0.1); color: var(--accent); border-color: rgba(0,230,118,0.3); }
     .sector-toggle .st-check { font-size: 11px; }
 
     /* ── Ticker / coin chips ─────────────────────────────── */
     .chip-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,230,118,0.06); border: 1px solid rgba(0,230,118,0.2); border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; background: rgba(0,230,118,0.06); border: 1px solid rgba(0,230,118,0.2); border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: var(--font-sans); font-weight: 700; color: var(--accent); letter-spacing: 0.3px; }
     .chip-link { color: inherit; text-decoration: none; }
     .chip-link:hover { text-decoration: underline; }
     .chip-remove { background: none; border: none; color: rgba(0,230,118,0.4); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; transition: color 0.15s; display: flex; align-items: center; }
@@ -79,16 +79,16 @@
     .market-list { display: flex; flex-direction: column; gap: 10px; }
     .market-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; background: var(--card); border-radius: 8px; padding: 16px 18px; }
     .market-item-body { flex: 1; min-width: 0; }
-    .market-item-question { font-family: 'Share Tech Mono', sans-serif; font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
+    .market-item-question { font-family: var(--font-sans); font-weight: 600; font-size: 14px; line-height: 1.5; margin-bottom: 6px; }
     .market-item-meta { display: flex; gap: 16px; flex-wrap: wrap; }
-    .market-item-odds { font-size: 12px; font-weight: 700; color: var(--accent); font-family: 'Share Tech Mono', sans-serif; }
+    .market-item-odds { font-size: 12px; font-weight: 700; color: var(--accent); font-family: var(--font-sans); }
     .market-item-date { font-size: 12px; color: var(--muted); }
     .market-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 0 0 0 4px; transition: color 0.15s; flex-shrink: 0; }
     .market-item-remove:hover { color: #ff6060; }
 
     /* ── CTA link ────────────────────────────────────────── */
     .tab-cta { margin-top: 48px; padding-top: 28px; }
-    .cta-link { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; transition: border-color 0.2s, color 0.2s; letter-spacing: 0.3px; display: inline-block; }
+    .cta-link { font-family: var(--font-sans); font-weight: 700; font-size: 13px; padding: 10px 22px; border-radius: 6px; border: 1.5px solid var(--border); color: var(--ink); text-decoration: none; transition: border-color 0.2s, color 0.2s; letter-spacing: 0.3px; display: inline-block; }
     .cta-link:hover { border-color: var(--accent); color: var(--accent); }
 
     /* ── Responsive ──────────────────────────────────────── */
@@ -107,9 +107,9 @@
     /* Auth gate */
     #auth-gate { display: none; position: fixed; inset: 0; z-index: 500; background: var(--paper); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); align-items: center; justify-content: center; flex-direction: column; gap: 20px; text-align: center; padding: 24px; }
     #auth-gate.show { display: flex; }
-    #auth-gate h2 { font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: clamp(20px, 4vw, 28px); letter-spacing: -0.5px; }
+    #auth-gate h2 { font-family: var(--font-sans); font-weight: 700; font-size: clamp(20px, 4vw, 28px); letter-spacing: -0.5px; }
     #auth-gate p { font-size: 15px; color: var(--muted); max-width: 380px; line-height: 1.7; }
-    #auth-gate-btn { background: var(--accent); color: #111; font-family: 'Share Tech Mono', sans-serif; font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
+    #auth-gate-btn { background: var(--accent); color: #111; font-family: var(--font-sans); font-weight: 700; font-size: 14px; padding: 13px 28px; border: none; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-block; transition: opacity 0.15s; }
     #auth-gate-btn:hover { opacity: 0.85; }
     /* Supabase sync indicator */
     .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; margin-left: 6px; opacity: 0.7; }
