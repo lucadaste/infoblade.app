@@ -364,6 +364,9 @@
     .ii-m-ai {
       align-self: flex-start;
       color: var(--ink);
+      font-family: var(--font-serif);
+      font-size: 16.5px;
+      line-height: 1.65;
     }
     .ii-m-ai strong { color: var(--ink); }
     .ii-m-thinking {

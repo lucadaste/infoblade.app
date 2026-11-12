@@ -166,6 +166,6 @@ body { padding-bottom: 72px; }
 }
 
 /* ── Type: Claude-style pairing — serif display, grotesk UI ───── */
-body { font-feature-settings: 'kern', 'liga'; }
-h1, .hero h1 { font-family: var(--font-serif) !important; font-weight: 500 !important; letter-spacing: -0.015em !important; font-optical-sizing: auto; }
+body { font-feature-settings: 'kern', 'liga'; letter-spacing: -0.003em; }
+h1, .hero h1 { font-family: var(--font-serif) !important; font-weight: 400 !important; letter-spacing: -0.015em !important; font-optical-sizing: auto; }
 .nav-wordmark, .footer-logo { font-weight: 500; letter-spacing: -0.01em; }
