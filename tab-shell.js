@@ -139,6 +139,15 @@
       navigate(href);
       return;
     }
+    // Signed out, the Home pane is the landing page, not home.html — it has
+    // no room reserved for the chat dock, so tell chat-widget.js which page
+    // is really in there or the dock gets drawn over the landing's hero.
+    var file = (path === '/' ? '/index.html' : path).replace(/^\//, '');
+    if (TAB_FILES[i] !== file) {
+      TAB_FILES[i] = file;
+      reportScrollPos();
+      if (i === activeIndex) notifyChatWidget(i);
+    }
     syncHeight(iframe);
     hookLinks(w.document);
   }
@@ -155,13 +164,16 @@
 
   var activeIndex = selfIndex;
 
+  // Which file each pane is actually showing (see onFrameLoad).
+  var TAB_FILES = TABS.map(function (t) { return t.file.replace(/^\//, ''); });
+
   // chat-widget.js loads before this script on every tab page (see each
   // page's <script> order) — tells it which tab is actually scrolled into
   // view so the AI chat's embed/icon mode tracks the visible tab instead of
   // staying stuck on whichever tab happened to load the top-level document.
   function notifyChatWidget(i) {
-    var t = TABS[i];
-    if (t && window.iiSetActiveTabPage) window.iiSetActiveTabPage(t.file.replace(/^\//, ''));
+    var f = TAB_FILES[i];
+    if (f && window.iiSetActiveTabPage) window.iiSetActiveTabPage(f);
   }
   notifyChatWidget(selfIndex);
 
@@ -169,7 +181,6 @@
   // dock slides with Home instead of hanging over the next tab until the
   // swipe settles. ii-tab-moving switches off the panel's transitions while
   // the strip is in motion so the dock never lags its pane.
-  var TAB_FILES = TABS.map(function (t) { return t.file.replace(/^\//, ''); });
   function reportScrollPos() {
     var w = paneWidth();
     if (window.iiSetTabScroll) window.iiSetTabScroll(TAB_FILES, tabScroll.scrollLeft / w, w);
