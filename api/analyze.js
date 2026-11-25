@@ -8,6 +8,8 @@ import { getSupabase, setCors, checkRateLimit, clientIp } from '../lib/http.js';
 import { isValidTickerFormat } from '../lib/ticker-format.js';
 import { PROMPT_LAYOUT_VERSION, CACHE_1H, logCacheUsage } from '../lib/prompt-layout.js';
 import { fetchQuantSignals } from '../lib/quant-signals.js';
+import { PATTERN_VERSION, matchValidatedPatterns, describePattern } from '../lib/patterns.js';
+import { PATTERN_REGISTRY, PATTERNS_REVIEWED } from '../lib/pattern-registry.js';
 import { fetchYahooChartSeries } from '../lib/yahoo-chart.js';
 import { fetchCryptoDerivs, formatDerivsForPrompt } from '../lib/crypto-derivs.js';
 import { callMessages } from '../lib/anthropic.js';
@@ -227,6 +229,24 @@ function _buildQuantSection(snapshot) {
   return lines.length
     ? `\nQUANT SIGNALS (daily price data, not news):\n${lines.join('\n')}\nUse this alongside the news, not instead of it: RSI above 70 or below 30 means a move may already be stretched and due to cool off or reverse, even if the news is still fresh. Positive relative strength vs. the benchmark means the stock is already outperforming the broader market/crypto trend, which supports (not guarantees) a bullish continuation case; negative relative strength supports a bearish one. Elevated volatility means price swings are wider than usual right now, so a given news catalyst can move the stock further than its historical pattern would suggest, in either direction, which should widen your uncertainty rather than just push confidence up or down.\n`
     : '';
+}
+
+// Validated historical patterns (lib/pattern-registry.js) that fire on the
+// latest bar for these tickers. `matched` is recorded on every call, shown or
+// not, so the on/off arms can be compared only where a pattern applied.
+function _buildPatternSection(snapshot, show) {
+  const matched = [], lines = [];
+  for (const [sym, d] of Object.entries(snapshot)) {
+    const assetClass = _COIN_SYMS.has(sym) ? 'crypto' : 'stock';
+    for (const p of matchValidatedPatterns(d.patternEvents, assetClass, PATTERN_REGISTRY)) {
+      matched.push(`${sym}:${p.event}:${p.horizon}`);
+      lines.push(describePattern(p, sym));
+    }
+  }
+  const section = show && lines.length
+    ? `\nPATTERN HISTORY (price/volume patterns tested on years of past data, then re-checked on later data):\n${lines.join('\n')}\nThese are base rates, not forecasts: a pattern typically shifts the odds by a few points. Weigh them against the news. Company-specific news can override them, but if your call goes against a pattern, say why.\n`
+    : '';
+  return { section, matched };
 }
 
 // Other unresolved predictions from the last 24h that already called one of these
@@ -493,6 +513,13 @@ export async function prepareAnalysis({
 
     const technicalSection = _buildTechnicalSection(technicalSnapshot);
     const quantSection = _buildQuantSection(quantSnapshot);
+    // Pattern history only reaches the prompt once a person has reviewed the
+    // validated list (PATTERNS_REVIEWED). Background calls get it at random
+    // half the time, so its effect on accuracy can be measured.
+    const patternArm = !PATTERNS_REVIEWED ? null
+      : baselineGenerated ? (Math.random() < 0.5 ? 'on' : 'off')
+      : 'on';
+    const { section: patternSection, matched: patternsMatched } = _buildPatternSection(quantSnapshot, patternArm === 'on');
 
     const redditSection = redditPosts.length
       ? `\nRetail investor sentiment (Reddit — r/${isCryptoTopic ? 'CryptoCurrency+Bitcoin+ethereum' : 'wallstreetbets+investing+stocks'}):\n${redditPosts.map(p => `- "${p}"`).join('\n')}\nThis reflects retail trader/investor discussion. Use it to gauge crowd psychology and momentum but weight it below institutional news sources.\n`
@@ -574,7 +601,7 @@ Sources and factuality grades:
 ${sources.map(name => `- ${name}: ${getSourceGrade(name, reputation)}`).join('\n')}
 
 Consensus summary: ${consensus}
-${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSection}${redditSection}${trackRecordSection}${conflictSection}`;
+${marketsSection}${technicalSection}${quantSection}${patternSection}${derivsSection}${fearGreedSection}${redditSection}${trackRecordSection}${conflictSection}`;
 
     // Crypto coin calls: the saved (graded) verdict gets the stronger model;
     // display-only group cards (skipSave) get Haiku, since they're never graded
@@ -600,6 +627,7 @@ ${marketsSection}${technicalSection}${quantSection}${derivsSection}${fearGreedSe
     const ctx = {
       topic, headlines, sources, sourceGrades, minGrade, impactTimeframe, category,
       coinSymbol, userId, skipSave, baselineGenerated, isCoinCall, technicalSnapshot,
+      patternArm, patternsMatched,
       // The call is dated when its data was gathered, even if (batched) the
       // answer arrives later — the model never sees anything newer.
       predictedAt: new Date().toISOString(),
@@ -615,6 +643,7 @@ export async function finishAnalysis(ctx, data, supabase) {
   const {
     topic, headlines, sources, sourceGrades, minGrade, impactTimeframe, category,
     coinSymbol, userId, skipSave, baselineGenerated, isCoinCall, technicalSnapshot, predictedAt,
+    patternArm = null, patternsMatched = [],
   } = ctx;
   try {
     if (data.error) {
@@ -699,7 +728,7 @@ export async function finishAnalysis(ctx, data, supabase) {
         created_at:      predictedAt,
         topic,
         category:        category || null,
-        analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(isCoinCall ? { crypto_model_version: CRYPTO_MODEL_VERSION } : {}), ...(baselineGenerated ? { baseline_generated: true } : {}) },
+        analysis:        { ...analysis, prompt_layout: PROMPT_LAYOUT_VERSION, ...(isCoinCall ? { crypto_model_version: CRYPTO_MODEL_VERSION } : {}), ...(baselineGenerated ? { baseline_generated: true } : {}), ...(patternArm ? { pattern_version: PATTERN_VERSION, pattern_arm: patternArm, patterns_matched: patternsMatched } : {}) },
         winner_tickers:  winnerTickers,
         loser_tickers:   loserTickers,
         baseline_prices: Object.fromEntries(allTickers.map(t => [t, fullSnapshot[t]?.price]).filter(([,v]) => v)),

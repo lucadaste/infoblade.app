@@ -11,6 +11,13 @@ startups. Everything serves one claim: *"here is how often the AI is right,
 measured honestly."* Accuracy work is about making real calls better, never
 about making the number look better.
 
+The mission is to **level the playing field**: give an average person the
+below-the-surface research a dedicated trader does (filings, contracts,
+insider and fund activity), made readable. The aim is parity with
+experienced traders, not beating them. Surface signals like price moves and
+headlines are already priced in (the pattern gate confirmed this: 0 of 72
+price patterns showed an edge).
+
 ## Ground rules (don't break these)
 
 1. **No retroactive edits to grades.** When the grading rule changes, bump the
@@ -56,6 +63,12 @@ about making the number look better.
 - The local `.env` has placeholder keys, so the production DB and real
   Anthropic calls can't be run from this machine. Say so when something
   is unverified against real data.
-- Analysis runs on `claude-sonnet-5-5`; chat and display cards on Haiku.
+- Models: stock analysis on `claude-sonnet-4-6`; crypto verdicts and
+  prediction markets on `claude-sonnet-5-5`; chat and display cards on Haiku.
+- Pattern library: `lib/patterns.js` → history via
+  `scripts/backfill-pattern-events.js` → testing gate
+  `scripts/test-patterns.js --write` → `lib/pattern-registry.js`. Only
+  patterns that held up on later data reach the prompt, and only after a
+  person sets `PATTERNS_REVIEWED = true`.
 - Two people work on this repo (the user and their partner). Pull before
   pushing and keep the partner's UI changes when rebasing.

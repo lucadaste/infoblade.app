@@ -152,3 +152,6 @@ ios/
 android/
 .vercel
 .env*
+
+# Pattern-library history cache (rebuilt by scripts/backfill-pattern-events.js)
+data/pattern-cache/
