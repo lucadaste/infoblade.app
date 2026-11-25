@@ -2,7 +2,7 @@ import { buildContextGraph } from '../lib/context-graph.js';
 import { getClerkUser } from '../lib/auth.js';
 import { COIN_SYMS } from '../lib/coin-symbols.js';
 import { SECTION_CATS as _SECTION_CATS, SECTION_LABELS as _SECTION_LABELS, categoryToSection as _categoryToSection } from '../lib/prediction-sections.js';
-import { computeAccuracyScore, SCORING_VERSION, HIT_THRESHOLD_PCT, hitRateBonus, classifyScore, tickerScore } from '../lib/scoring.js';
+import { computeAccuracyScore, SCORING_VERSION, HIT_THRESHOLD_PCT, hitRateBonus, hitMissCounts, classifyScore, tickerScore } from '../lib/scoring.js';
 import { benchmarkFor, ALL_BENCHMARKS } from '../lib/benchmarks.js';
 import { parseTimeframeDays as _parseTimeframeDays } from '../lib/timeframe.js';
 import { wilsonInterval, wilsonIntervalFromP, wilsonLowerBound } from '../lib/stats.js';
@@ -716,10 +716,17 @@ function _pureDirectionCorrect(p) {
   const moves = Object.values(p.analysis?.ticker_moves || {})
     .filter(m => typeof m.pct === 'number' && (m.direction === 'bullish' || m.direction === 'bearish'));
   if (!moves.length) return null;
-  const hitCount = moves.filter(m =>
-    m.direction === 'bullish' ? m.pct >= HIT_THRESHOLD_PCT : m.pct <= -HIT_THRESHOLD_PCT
-  ).length;
-  const bonus  = hitRateBonus(hitCount, moves.length);
+  // Same bonus rule the row was graded under, so older rows aren't regraded here.
+  let bonus;
+  if ((p.analysis?.scoring_version ?? 0) >= 4) {
+    const { hits, misses } = hitMissCounts(moves, m => m.pct);
+    bonus = hitRateBonus(hits, hits + misses);
+  } else {
+    const hitCount = moves.filter(m =>
+      m.direction === 'bullish' ? m.pct >= HIT_THRESHOLD_PCT : m.pct <= -HIT_THRESHOLD_PCT
+    ).length;
+    bonus = hitRateBonus(hitCount, moves.length);
+  }
   const avgRaw = moves.reduce((sum, m) => sum + tickerScore(m.pct, m.direction), 0) / moves.length;
   return classifyScore(avgRaw + bonus).correct;
 }

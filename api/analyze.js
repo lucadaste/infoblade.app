@@ -823,6 +823,10 @@ export default async function handler(req, res) {
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=600');
         return res.status(200).json({ ticker, blurb: hit.blurb });
       }
+      // Cache misses spend Claude budget, so they're limited (and refused if the limiter can't be checked).
+      if (!await checkRateLimit(getSupabase(), clientIp(req), 'analyze:blurb', 30)) {
+        return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
+      }
       const prompt = `Write exactly one plain-text sentence about ${ticker}. Start with the full name of the stock or ETF (not the ticker symbol), then briefly state what it is. No markdown, no hashtags, no bullet points, no headers — just the sentence.`;
       try {
         const cr = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1384,10 +1388,14 @@ Respond ONLY with valid JSON, no markdown:
     let supabase = null;
     try { supabase = getSupabase({ required: true }); } catch (_) { /* Supabase not configured — skip rate limiting and persistence */ }
 
-    // skipSave requests (display-only analysis cards) don't persist — don't count against save limit
+    // skipSave requests (display-only analysis cards) don't persist, so they get their own bucket
+    // rather than counting against the save limit — but they still run a full analysis, so they're
+    // limited too. Both refuse when the limiter can't be checked, since every call spends LLM budget.
     const isSkipSave = !!(req.body?.skipSave);
-    if (supabase && !isSkipSave) {
-      const allowed = await checkRateLimit(supabase, ip, 'analyze', 60, { failOpen: true });
+    if (supabase) {
+      const allowed = isSkipSave
+        ? await checkRateLimit(supabase, ip, 'analyze:display', 30)
+        : await checkRateLimit(supabase, ip, 'analyze', 60);
       if (!allowed) return res.status(429).json({ error: 'Too many requests — try again in a minute.' });
     }
 
